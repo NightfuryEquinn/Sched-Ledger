@@ -10,9 +10,6 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 30
-    },
-    "api/index.js": {
-      "maxDuration": 30
     }
   }
 }
