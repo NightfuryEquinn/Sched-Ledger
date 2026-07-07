@@ -112,3 +112,5 @@ api/index.js
 
 # TernJS port file
 .tern-port
+.vercel
+.env*

@@ -12,6 +12,10 @@ import { usersRoutes } from "./users";
 export function createApiRoutes() {
   const api = new Hono();
 
+  api.get("/ping", (c) =>
+    c.json({ ok: true, runtime: process.versions.bun ? `bun ${process.versions.bun}` : process.version }),
+  );
+
   api.use("*", securityHeaders);
   api.use("*", globalRateLimit);
 

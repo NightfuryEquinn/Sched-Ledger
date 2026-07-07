@@ -1,5 +1,13 @@
+import dns from "node:dns";
 import { MongoClient, type Db } from "mongodb";
 import { resolveMongoUri } from "./resolve-uri";
+
+// Bun's c-ares SRV resolution hangs for Atlas hosts on Vercel
+// (oven-sh/bun#25718); public resolvers make `mongodb+srv` lookups work.
+// Local Windows dev uses the nslookup fallback in resolve-uri instead.
+if (process.env.VERCEL) {
+  dns.setServers(["1.1.1.1", "8.8.8.8"]);
+}
 
 const dbName = process.env.MONGODB_DB ?? "ledger";
 
