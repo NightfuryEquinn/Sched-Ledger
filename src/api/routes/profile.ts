@@ -1,0 +1,90 @@
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
+import { cacheDel, cacheGet, cacheSet } from "@/api/lib/cache";
+import { serializeDoc } from "@/api/lib/serialize";
+import type { SessionVariables } from "@/api/middleware/session";
+import { sessionAuth } from "@/api/middleware/session";
+import { getCollections, getDb } from "@/db";
+import { defaultProfile, updateBudgetsSchema, updateProfileSchema } from "@/schemas/profile";
+
+const PROFILE_CACHE_TTL_MS = 30_000;
+
+export const profileRoutes = new Hono<{ Variables: SessionVariables }>();
+
+profileRoutes.use("*", sessionAuth);
+
+function profileCacheKey(address: string) {
+  return `profile:${address}`;
+}
+
+async function getOrCreateProfile(walletAddress: string) {
+  const cached = cacheGet<Awaited<ReturnType<typeof fetchProfile>>>(profileCacheKey(walletAddress));
+  if (cached) return cached;
+
+  const profile = await fetchProfile(walletAddress);
+  cacheSet(profileCacheKey(walletAddress), profile, PROFILE_CACHE_TTL_MS);
+  return profile;
+}
+
+async function fetchProfile(walletAddress: string) {
+  const { ledgerProfiles } = getCollections(getDb());
+  const existing = await ledgerProfiles.findOne({ userAddress: walletAddress });
+  if (existing) return existing;
+
+  const now = new Date();
+  const seed = defaultProfile(walletAddress);
+  const result = await ledgerProfiles.insertOne({
+    ...seed,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const created = await ledgerProfiles.findOne({ _id: result.insertedId });
+  if (!created) throw new Error("Failed to create ledger profile");
+  return created;
+}
+
+function invalidateProfile(walletAddress: string) {
+  cacheDel(profileCacheKey(walletAddress));
+}
+
+profileRoutes.get("/", async (c) => {
+  const walletAddress = c.get("walletAddress");
+  const profile = await getOrCreateProfile(walletAddress);
+  c.header("Cache-Control", "private, max-age=30");
+  return c.json({ profile: serializeDoc(profile) });
+});
+
+profileRoutes.patch("/", zValidator("json", updateProfileSchema), async (c) => {
+  const walletAddress = c.get("walletAddress");
+  const body = c.req.valid("json");
+  const { ledgerProfiles } = getCollections(getDb());
+
+  await fetchProfile(walletAddress);
+  invalidateProfile(walletAddress);
+
+  const updated = await ledgerProfiles.findOneAndUpdate(
+    { userAddress: walletAddress },
+    { $set: { ...body, updatedAt: new Date() } },
+    { returnDocument: "after" },
+  );
+
+  return c.json({ profile: serializeDoc(updated!) });
+});
+
+profileRoutes.put("/budgets", zValidator("json", updateBudgetsSchema), async (c) => {
+  const walletAddress = c.get("walletAddress");
+  const { budgets } = c.req.valid("json");
+  const { ledgerProfiles } = getCollections(getDb());
+
+  await fetchProfile(walletAddress);
+  invalidateProfile(walletAddress);
+
+  const updated = await ledgerProfiles.findOneAndUpdate(
+    { userAddress: walletAddress },
+    { $set: { budgets, updatedAt: new Date() } },
+    { returnDocument: "after" },
+  );
+
+  return c.json({ profile: serializeDoc(updated!) });
+});
