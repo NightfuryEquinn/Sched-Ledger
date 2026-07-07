@@ -83,7 +83,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
 
   return (
     <div className="app">
-      <Sidebar view={view} setView={setView} onAdd={() => setModal({ add: true })} />
+      <Sidebar view={view} setView={setView} />
       <main className="main">
         <header className="topbar">
           <div className="tb-left">
@@ -92,9 +92,6 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           <div className="tb-right">
             <ThemeToggle />
             <MonthSwitcher months={MONTHS} current={month} onChange={setMonth} />
-            <button className="add-btn add-btn--top" type="button" onClick={() => setModal({ add: true })}>
-              <Icon name="plus" size={18} /> <span className="abt-txt">Add</span>
-            </button>
             <AccountMenu account={account} onSignOut={onSignOut} expenses={expenses} />
           </div>
         </header>
@@ -141,10 +138,16 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
             <Icon name={ic} size={22} />
           </button>
         ))}
-        <button className="bn-add" type="button" onClick={() => setModal({ add: true })}>
-          <Icon name="plus" size={24} />
-        </button>
       </nav>
+
+      <button
+        className="fab"
+        type="button"
+        aria-label="Add expense"
+        onClick={() => setModal({ add: true })}
+      >
+        <Icon name="plus" size={26} />
+      </button>
 
       {modal && (
         <AddExpenseModal

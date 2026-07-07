@@ -56,7 +56,7 @@ function CatDot({ color, size = 9 }) {
 }
 
 // ── Sidebar (desktop) / bottom nav (mobile via CSS) ─────────────────
-function Sidebar({ view, setView, onAdd }) {
+function Sidebar({ view, setView }) {
   const items = [
     ["overview", "Overview", "overview"],
     ["transactions", "Transactions", "list"],
@@ -76,9 +76,6 @@ function Sidebar({ view, setView, onAdd }) {
           </button>
         ))}
       </nav>
-      <button className="add-btn add-btn--side" onClick={onAdd}>
-        <Icon name="plus" size={18} /> <span>Add expense</span>
-      </button>
     </aside>
   );
 }

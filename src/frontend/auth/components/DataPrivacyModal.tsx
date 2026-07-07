@@ -66,12 +66,13 @@ export function DataPrivacyModal({ account, expenses, onClose, onSignedOut }: Da
 
   return createPortal(
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal sm modal-scroll">
+      <div className="modal sm">
         <div className="modal-head">
           <h3>Data &amp; privacy</h3>
           <button className="icon-btn" type="button" onClick={onClose}><Icon name="close" size={18} /></button>
         </div>
 
+        <div className="modal-body modal-scroll">
         <div className="dm-sec">
           <span className="fld-label">Active sessions</span>
           <p className="dm-lead">Each sign-in creates a secure session on this device or browser. Revoke any session you do not recognize to protect against phishing or unauthorized access.</p>
@@ -138,6 +139,7 @@ export function DataPrivacyModal({ account, expenses, onClose, onSignedOut }: Da
           <button className="ghost-btn danger full" type="button" disabled={clearBusy} onClick={clearEverything}>
             {clearBusy ? "Clearing…" : "Clear sessions, cookies & local data"}
           </button>
+        </div>
         </div>
       </div>
     </div>,
