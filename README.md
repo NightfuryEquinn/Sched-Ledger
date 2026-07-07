@@ -28,8 +28,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 ## Project structure
 
 ```
-api/
-└── index.ts              # Vercel serverless entry (Hono handler)
+src/vercel-api.ts         # Vercel API source (bundled → api/index.js at build)
 src/
 ├── index.ts              # Bun server (API + SPA)
 ├── index.html
@@ -128,7 +127,7 @@ Set `NODE_ENV=production` so session cookies are marked `Secure` over HTTPS.
 
 ## Deploy on Vercel
 
-The app deploys as a **static SPA** (`dist/`) plus a **serverless API** ([`api/index.ts`](api/index.ts) wrapping the existing Hono app). Local development with `bun dev` is unchanged.
+The API is bundled into `api/index.js` during `bun run build` so Vercel can resolve TypeScript path aliases at runtime.
 
 ### Environment variables
 
