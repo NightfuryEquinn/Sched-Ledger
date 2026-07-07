@@ -28,6 +28,8 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 ## Project structure
 
 ```
+api/
+└── index.ts              # Vercel serverless entry (Hono handler)
 src/
 ├── index.ts              # Bun server (API + SPA)
 ├── index.html
@@ -115,7 +117,7 @@ Manage sessions under **Account → Data & privacy** (revoke devices, sign out e
 
 All mutating routes require a valid session cookie. Auth endpoints have stricter rate limits.
 
-## Production
+## Production (self-hosted)
 
 ```bash
 bun run build   # static frontend → dist/
@@ -123,6 +125,53 @@ bun start       # NODE_ENV=production
 ```
 
 Set `NODE_ENV=production` so session cookies are marked `Secure` over HTTPS.
+
+## Deploy on Vercel
+
+The app deploys as a **static SPA** (`dist/`) plus a **serverless API** ([`api/index.ts`](api/index.ts) wrapping the existing Hono app). Local development with `bun dev` is unchanged.
+
+### Environment variables
+
+Set these in **Vercel → Project → Settings → Environment Variables** for Production and Preview:
+
+| Variable | Description |
+|----------|-------------|
+| `MONGODB_URI` | Atlas `mongodb+srv://…` connection string |
+| `MONGODB_DB` | Database name (default: `ledger`) |
+| `APP_ORIGIN` | Public app URL, e.g. `https://your-project.vercel.app` (used in sign-in messages) |
+| `NODE_ENV` | `production` (Vercel usually sets this; enables `Secure` session cookies) |
+
+**Atlas network access:** allow `0.0.0.0/0` so Vercel's dynamic egress IPs can reach your cluster.
+
+### Deploy
+
+1. Push the repo to GitHub.
+2. Import the project at [vercel.com/new](https://vercel.com/new).
+3. Framework preset: **Other** (build/output are defined in [`vercel.json`](vercel.json)).
+4. Add the environment variables above.
+5. Deploy.
+
+CLI alternative:
+
+```bash
+bunx vercel login
+bunx vercel          # preview deployment
+bunx vercel --prod   # production
+```
+
+Optional: run `bunx vercel dev` locally to test Vercel routing before deploying.
+
+### Verify after deploy
+
+1. **Health check** — `GET https://<your-app>.vercel.app/api/health` should return `{ "ok": true, "service": "ledger-api", "db": "connected" }`.
+2. **Sign-in** — open the app, create or restore a wallet, complete the sign-in challenge, and confirm you land in the main UI.
+3. **CRUD** — add an expense and a schedule event; refresh the page and confirm data persists.
+4. **Sessions** — open **Account → Data & privacy**, confirm your device appears in the session list, and test revoke / sign out.
+
+### Serverless notes
+
+- Rate limiting and profile cache are in-memory per function instance (acceptable for v1).
+- Cold starts may add latency on the first request while MongoDB connects; warm instances reuse the cached client.
 
 ## License
 
