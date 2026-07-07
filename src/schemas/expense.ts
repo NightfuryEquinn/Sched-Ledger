@@ -1,38 +1,63 @@
 import { z } from "zod";
-import { isoDateSchema, subcategoryIdSchema, walletAddressSchema } from "./common";
+import { isoDateSchema, objectIdSchema, subcategoryIdSchema, walletAddressSchema } from "./common";
+
+export const txnKindSchema = z.enum(["expense", "income"]);
+
+export const RECURRING_INTERVALS = ["monthly", "quarterly", "yearly"] as const;
+export const recurringIntervalSchema = z.enum(RECURRING_INTERVALS);
+export type RecurringInterval = z.infer<typeof recurringIntervalSchema>;
+
+export const recurringFieldSchema = z.preprocess(
+  (val) => {
+    if (val === true) return "monthly";
+    if (val === false || val === null || val === undefined) return false;
+    return val;
+  },
+  z.union([recurringIntervalSchema, z.literal(false)]),
+);
+
+export const recurringFieldInputSchema = z.union([recurringIntervalSchema, z.literal(false)]).default(false);
 
 export const expenseSchema = z.object({
   userAddress: walletAddressSchema,
+  walletId: objectIdSchema.optional(),
+  kind: txnKindSchema.default("expense"),
   date: isoDateSchema,
   sub: subcategoryIdSchema,
   amount: z.number().positive(),
   note: z.string().max(500).default(""),
-  recurring: z.boolean().default(false),
+  recurring: recurringFieldSchema.default(false),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
 export const createExpenseSchema = z.object({
+  walletId: objectIdSchema,
+  kind: txnKindSchema.optional().default("expense"),
   date: isoDateSchema,
   sub: subcategoryIdSchema,
   amount: z.number().positive(),
   note: z.string().max(500).optional().default(""),
-  recurring: z.boolean().optional().default(false),
+  recurring: recurringFieldInputSchema.optional().default(false),
 });
 
 export const updateExpenseSchema = z
   .object({
+    walletId: objectIdSchema.optional(),
+    kind: txnKindSchema.optional(),
     date: isoDateSchema.optional(),
     sub: subcategoryIdSchema.optional(),
     amount: z.number().positive().optional(),
     note: z.string().max(500).optional(),
-    recurring: z.boolean().optional(),
+    recurring: recurringFieldInputSchema.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
   });
 
 export const listExpensesQuerySchema = z.object({
+  walletId: objectIdSchema.optional(),
+  kind: txnKindSchema.optional(),
   month: z
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
@@ -44,6 +69,7 @@ export const listExpensesQuerySchema = z.object({
   sub: subcategoryIdSchema.optional(),
 });
 
+export type TxnKind = z.infer<typeof txnKindSchema>;
 export type Expense = z.infer<typeof expenseSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;

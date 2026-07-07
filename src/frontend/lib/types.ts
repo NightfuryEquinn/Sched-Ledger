@@ -1,10 +1,25 @@
+export type RecurringInterval = "monthly" | "quarterly" | "yearly";
+
 export type Expense = {
   id: string;
+  walletId: string;
+  kind: "expense" | "income";
   date: string;
   sub: string;
   amount: number;
   note: string;
-  recurring: boolean;
+  recurring: RecurringInterval | false;
+};
+
+export type FinancialWallet = {
+  id: string;
+  name: string;
+  currency: string;
+  fundingMode: "monthly" | "starting";
+  income: number;
+  startingBalance: number;
+  budgets: Budgets;
+  isDefault: boolean;
 };
 
 export type EventComment = {
@@ -39,9 +54,11 @@ export type ViewId =
   | "overview"
   | "transactions"
   | "budgets"
+  | "categories"
   | "schedule"
   | "insights"
-  | "recurring";
+  | "recurring"
+  | "todos";
 
 export type MonthEntry = {
   key: string;
@@ -54,7 +71,24 @@ export type Category = {
   name: string;
   color: string;
   glyph: string;
+  type?: "expense" | "income";
+  builtin?: boolean;
   subs: { id: string; name: string }[];
+};
+
+export type CategoryIndex = import("./categories").CategoryIndex;
+
+export type TodoTask = {
+  id: string;
+  title: string;
+  done: boolean;
+};
+
+export type TodoList = {
+  id: string;
+  name: string;
+  icon: string;
+  tasks: TodoTask[];
 };
 
 export type IdentityRecord = {

@@ -4,15 +4,22 @@ import type { Expense } from "@/schemas/expense";
 import type { Event } from "@/schemas/event";
 import type { LedgerProfile } from "@/schemas/profile";
 import type { User } from "@/schemas/user";
+import type { CategoryTaxonomy } from "@/schemas/category";
+import type { TodoList } from "@/schemas/todo";
+import type { FinancialWallet } from "@/schemas/wallet";
 
 export const COLLECTIONS = {
   users: "users",
   ledgerProfiles: "ledger_profiles",
+  financialWallets: "financial_wallets",
+  categoryTaxonomies: "category_taxonomies",
   expenses: "expenses",
   events: "events",
   consent: "consent",
   authNonces: "auth_nonces",
   sessions: "sessions",
+  reminderLogs: "reminder_logs",
+  todoLists: "todo_lists",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
@@ -24,6 +31,18 @@ export type UserDocument = Omit<User, "createdAt" | "updatedAt"> & {
 };
 
 export type LedgerProfileDocument = Omit<LedgerProfile, "createdAt" | "updatedAt"> & {
+  _id: ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type FinancialWalletDocument = Omit<FinancialWallet, "createdAt" | "updatedAt"> & {
+  _id: ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type CategoryTaxonomyDocument = Omit<CategoryTaxonomy, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -69,24 +88,47 @@ export type SessionDocument = {
   revokedAt?: Date;
 };
 
+export type ReminderLogDocument = {
+  _id: ObjectId;
+  eventId: ObjectId;
+  occurrenceIso: string;
+  lead: string;
+  email: string;
+  sentAt: Date;
+};
+
+export type TodoListDocument = Omit<TodoList, "createdAt" | "updatedAt"> & {
+  _id: ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type Collections = {
   users: Collection<UserDocument>;
   ledgerProfiles: Collection<LedgerProfileDocument>;
+  financialWallets: Collection<FinancialWalletDocument>;
+  categoryTaxonomies: Collection<CategoryTaxonomyDocument>;
   expenses: Collection<ExpenseDocument>;
   events: Collection<EventDocument>;
   consent: Collection<ConsentDocument>;
   authNonces: Collection<AuthNonceDocument>;
   sessions: Collection<SessionDocument>;
+  reminderLogs: Collection<ReminderLogDocument>;
+  todoLists: Collection<TodoListDocument>;
 };
 
 export function getCollections(db: Db): Collections {
   return {
     users: db.collection<UserDocument>(COLLECTIONS.users),
     ledgerProfiles: db.collection<LedgerProfileDocument>(COLLECTIONS.ledgerProfiles),
+    financialWallets: db.collection<FinancialWalletDocument>(COLLECTIONS.financialWallets),
+    categoryTaxonomies: db.collection<CategoryTaxonomyDocument>(COLLECTIONS.categoryTaxonomies),
     expenses: db.collection<ExpenseDocument>(COLLECTIONS.expenses),
     events: db.collection<EventDocument>(COLLECTIONS.events),
     consent: db.collection<ConsentDocument>(COLLECTIONS.consent),
     authNonces: db.collection<AuthNonceDocument>(COLLECTIONS.authNonces),
     sessions: db.collection<SessionDocument>(COLLECTIONS.sessions),
+    reminderLogs: db.collection<ReminderLogDocument>(COLLECTIONS.reminderLogs),
+    todoLists: db.collection<TodoListDocument>(COLLECTIONS.todoLists),
   };
 }

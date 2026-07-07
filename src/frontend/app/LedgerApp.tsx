@@ -1,23 +1,35 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "@/frontend/auth";
 import {
   AddExpenseModal,
   Icon,
   MonthSwitcher,
+  NAV_ITEMS,
   Sidebar,
 } from "@/frontend/components/ui";
+import { WalletManageModal, WalletSwitcher } from "@/frontend/components/Wallets";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
-import { MONTHS } from "@/frontend/lib/data";
+import { CURRENT_MONTH_KEY, MONTHS } from "@/frontend/lib/data";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import type { Account, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
 import { EventModal, Schedule } from "@/frontend/views/Schedule";
+import { TodoListView } from "@/frontend/views/TodoList";
 import {
   Budgets as BudgetsView,
+  Categories as CategoriesView,
   Insights,
   Overview,
   Recurring,
   Transactions,
 } from "@/frontend/views";
+
+/*
+ * LedgerApp — authenticated app shell
+ * ───────────────────────────────────
+ * Desktop: sidebar + topbar + scrollable view.
+ * Mobile (≤860px): bottom navigation replaces the sidebar.
+ * Hosts the global modals (expense, wallet management, event).
+ */
 
 type LedgerAppProps = {
   account: Account;
@@ -28,7 +40,9 @@ const VIEW_TITLES: Record<ViewId, string> = {
   overview: "Overview",
   transactions: "Transactions",
   budgets: "Budgets",
+  categories: "Categories",
   schedule: "Schedule",
+  todos: "TO-DO List",
   insights: "Insights",
   recurring: "Recurring",
 };
@@ -38,6 +52,16 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   const [view, setView] = useState<ViewId>("overview");
   const [modal, setModal] = useState<Expense | { add: true } | null>(null);
   const [evModal, setEvModal] = useState<LedgerEvent | { add: true; date: string } | null>(null);
+  const [walletModal, setWalletModal] = useState(false);
+  const monthInitialized = useRef(false);
+
+  useEffect(() => {
+    if (ledger.isLoading || ledger.error || monthInitialized.current || !ledger.profile) return;
+    monthInitialized.current = true;
+    if (ledger.profile.currentMonth !== CURRENT_MONTH_KEY) {
+      ledger.setMonth(CURRENT_MONTH_KEY);
+    }
+  }, [ledger.isLoading, ledger.error, ledger.profile, ledger.setMonth]);
 
   if (ledger.isLoading) {
     return (
@@ -57,10 +81,12 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     );
   }
 
-  const { expenses, budgets, income, events, month, setMonth, setBudgets } = ledger;
+  const { expenses, allExpenses, budgets, wallet, currency, events, month, wallets, activeWallet, setMonth, setBudgets, setActiveWalletId } = ledger;
 
   const saveExpense = async (data: Expense & { id?: string }) => {
-    await ledger.saveExpense(data);
+    const walletId = data.walletId || activeWallet?.id;
+    if (!walletId) return;
+    await ledger.saveExpense({ ...data, walletId });
     setModal(null);
   };
 
@@ -79,7 +105,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     setEvModal(null);
   };
 
-  const viewProps = { expenses, budgets, income, month };
+  const viewProps = { expenses, budgets, wallet, month, currency, categoryIndex: ledger.categoryIndex };
 
   return (
     <div className="app">
@@ -91,8 +117,16 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           </div>
           <div className="tb-right">
             <ThemeToggle />
+            {activeWallet && wallets.length ? (
+              <WalletSwitcher
+                wallets={wallets}
+                activeId={activeWallet.id}
+                onChange={setActiveWalletId}
+                onManage={() => setWalletModal(true)}
+              />
+            ) : null}
             <MonthSwitcher months={MONTHS} current={month} onChange={setMonth} />
-            <AccountMenu account={account} onSignOut={onSignOut} expenses={expenses} />
+            <AccountMenu account={account} onSignOut={onSignOut} expenses={allExpenses} wallets={wallets} categoryIndex={ledger.categoryIndex} />
           </div>
         </header>
 
@@ -104,6 +138,12 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
             <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
           )}
           {view === "budgets" && <BudgetsView {...viewProps} setBudgets={setBudgets} />}
+          {view === "categories" && (
+            <CategoriesView
+              categoryIndex={ledger.categoryIndex}
+              onSave={ledger.saveCategories}
+            />
+          )}
           {view === "schedule" && (
             <Schedule
               events={events}
@@ -112,30 +152,31 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
               onEditEvent={(ev: LedgerEvent) => setEvModal(ev)}
             />
           )}
+          {view === "todos" && (
+            <TodoListView
+              todoLists={ledger.todoLists}
+              onSave={ledger.saveTodoList}
+              onDelete={ledger.deleteTodoList}
+            />
+          )}
           {view === "insights" && <Insights {...viewProps} setMonth={setMonth} />}
           {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}
           <div className="scroll-pad" />
         </div>
       </main>
 
+      {/* Mobile bottom navigation (hidden on desktop via CSS) */}
       <nav className="bottom-nav">
-        {(
-          [
-            ["overview", "overview"],
-            ["transactions", "list"],
-            ["budgets", "budget"],
-            ["schedule", "calendar"],
-            ["insights", "insights"],
-            ["recurring", "recurring"],
-          ] as const
-        ).map(([id, ic]) => (
+        {NAV_ITEMS.map(([id, label, icon]) => (
           <button
             key={id}
             type="button"
             className={"bn-item" + (view === id ? " active" : "")}
             onClick={() => setView(id)}
+            aria-label={label}
           >
-            <Icon name={ic} size={22} />
+            <Icon name={icon} size={21} />
+            <span className="bn-label">{id === "todos" ? "To-dos" : label}</span>
           </button>
         ))}
       </nav>
@@ -149,15 +190,27 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         <Icon name="plus" size={26} />
       </button>
 
-      {modal && (
+      {modal && activeWallet ? (
         <AddExpenseModal
           initial={"add" in modal ? null : modal}
           defaultMonth={month}
+          wallets={wallets}
+          defaultWalletId={activeWallet.id}
+          categoryIndex={ledger.categoryIndex}
           onSave={saveExpense}
           onClose={() => setModal(null)}
           onDelete={deleteExpense}
         />
-      )}
+      ) : null}
+      {walletModal ? (
+        <WalletManageModal
+          wallets={wallets}
+          activeId={activeWallet?.id ?? ""}
+          onSave={ledger.saveWallet}
+          onDelete={ledger.deleteWallet}
+          onClose={() => setWalletModal(false)}
+        />
+      ) : null}
       {evModal && (
         <EventModal
           initial={"add" in evModal ? null : evModal}

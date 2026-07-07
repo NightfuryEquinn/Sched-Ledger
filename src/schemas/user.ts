@@ -5,6 +5,8 @@ export const userSchema = z.object({
   address: walletAddressSchema,
   codename: z.string().min(1).max(64),
   notifyEmail: z.string().email().optional().or(z.literal("")),
+  /* Global kill-switch for all reminder emails (default: enabled). */
+  emailRemindersEnabled: z.boolean().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -19,6 +21,7 @@ export const updateUserSchema = z
   .object({
     codename: z.string().min(1).max(64).optional(),
     notifyEmail: z.string().email().optional().or(z.literal("")),
+    emailRemindersEnabled: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",

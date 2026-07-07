@@ -71,9 +71,15 @@ usersRoutes.patch("/me", sessionAuth, zValidator("json", updateUserSchema), asyn
   return c.json({ user: serializeDoc(updated) });
 });
 
-usersRoutes.get("/:address", async (c) => {
+/* Session-gated and self-only: user records include a notification email,
+   so they must never be readable by other (or anonymous) callers. */
+usersRoutes.get("/:address", sessionAuth, async (c) => {
+  const walletAddress = c.get("walletAddress");
   const parsed = walletAddressSchema.safeParse(c.req.param("address"));
   if (!parsed.success) notFound("User not found");
+  if (parsed.data.toLowerCase() !== walletAddress) {
+    forbidden("You can only view your own profile");
+  }
 
   const { users } = getCollections(getDb());
   const user = await users.findOne({ address: parsed.data });

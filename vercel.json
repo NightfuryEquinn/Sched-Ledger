@@ -3,6 +3,12 @@
   "installCommand": "bun install",
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }

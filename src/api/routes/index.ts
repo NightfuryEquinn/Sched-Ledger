@@ -3,11 +3,15 @@ import { ensureDb } from "@/api/middleware/db";
 import { globalRateLimit } from "@/api/middleware/rate-limit";
 import { securityHeaders } from "@/api/middleware/security";
 import { authRoutes } from "./auth";
+import { cronRoutes } from "./cron";
 import { consentRoutes } from "./consent";
 import { eventsRoutes } from "./events";
 import { expensesRoutes } from "./expenses";
 import { profileRoutes } from "./profile";
 import { usersRoutes } from "./users";
+import { categoriesRoutes } from "./categories";
+import { todoListsRoutes } from "./todo-lists";
+import { walletsRoutes } from "./wallets";
 
 export function createApiRoutes() {
   const api = new Hono();
@@ -35,9 +39,13 @@ export function createApiRoutes() {
   api.route("/auth", authRoutes);
   api.route("/users", usersRoutes);
   api.route("/profile", profileRoutes);
+  api.route("/wallets", walletsRoutes);
+  api.route("/categories", categoriesRoutes);
   api.route("/expenses", expensesRoutes);
   api.route("/events", eventsRoutes);
+  api.route("/todo-lists", todoListsRoutes);
   api.route("/consent", consentRoutes);
+  api.route("/cron", cronRoutes);
 
   return api;
 }

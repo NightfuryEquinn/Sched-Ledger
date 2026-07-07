@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { ObjectId } from "mongodb";
+import { clearReminderLogsForEvent, sendEventConfirmation } from "@/api/lib/reminders";
 import { notFound } from "@/api/lib/errors";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
@@ -61,6 +62,10 @@ eventsRoutes.post("/", zValidator("json", createEventSchema), async (c) => {
   const doc = await events.findOne({ _id: result.insertedId });
   if (!doc) notFound("Event not found");
 
+  void sendEventConfirmation(doc).catch((err) =>
+    console.error("[reminders] confirmation email failed:", err),
+  );
+
   return c.json({ event: serializeDoc(doc) }, 201);
 });
 
@@ -79,6 +84,11 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
   );
 
   if (!updated) notFound("Event not found");
+  if (body.notify === true) {
+    void sendEventConfirmation(updated).catch((err) =>
+      console.error("[reminders] confirmation email failed:", err),
+    );
+  }
   return c.json({ event: serializeDoc(updated) });
 });
 
@@ -120,5 +130,6 @@ eventsRoutes.delete("/:id", async (c) => {
   });
 
   if (result.deletedCount === 0) notFound("Event not found");
+  await clearReminderLogsForEvent(new ObjectId(id.data));
   return c.json({ ok: true });
 });

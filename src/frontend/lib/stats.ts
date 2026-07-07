@@ -1,5 +1,127 @@
-import { SUB_BY_ID } from "./data";
-import type { Budgets, Expense } from "./types";
+import { CURRENT_MONTH_KEY, monthLabel, monthsWindow, SUB_BY_ID, TODAY_ISO } from "./data";
+import type { Budgets, Expense, FinancialWallet } from "./types";
+import type { CategoryIndex } from "./categories";
+import { catOfSub, isSavingsSub } from "./categories";
+
+export type ChartPeriod = "daily" | "monthly" | "quarterly" | "yearly";
+export type ChartBar = { key: string; label: string; spent: number };
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function quarterOf(monthKey: string) {
+  const [year, month] = monthKey.split("-").map(Number);
+  return { year, quarter: Math.ceil(month / 3) };
+}
+
+function quartersWindow(anchorMonth: string, size = 6) {
+  let { year, quarter } = quarterOf(anchorMonth);
+  const out: { year: number; quarter: number; key: string; label: string }[] = [];
+  for (let i = 0; i < size; i++) {
+    out.unshift({ year, quarter, key: `${year}-Q${quarter}`, label: `Q${quarter}` });
+    quarter -= 1;
+    if (quarter < 1) {
+      quarter = 4;
+      year -= 1;
+    }
+  }
+  return out;
+}
+
+function outgoingSpend(expenses: Expense[], index?: CategoryIndex) {
+  return expenses.filter((e) => isOutgoing(e) && !isSavings(e, index));
+}
+
+function roundSpent(expenses: Expense[]) {
+  return Math.round(expenses.reduce((s, e) => s + e.amount, 0));
+}
+
+export function spendingChartSeries(
+  period: ChartPeriod,
+  expenses: Expense[],
+  anchorMonth: string,
+  index?: CategoryIndex,
+): ChartBar[] {
+  if (period === "daily") {
+    const [year, month] = anchorMonth.split("-").map(Number);
+    const days = new Date(year, month, 0).getDate();
+    const bars: ChartBar[] = [];
+    for (let d = 1; d <= days; d++) {
+      const key = `${anchorMonth}-${pad2(d)}`;
+      const spent = roundSpent(outgoingSpend(expenses.filter((e) => e.date === key), index));
+      bars.push({ key, label: String(d), spent });
+    }
+    return bars;
+  }
+
+  if (period === "monthly") {
+    return monthsWindow(anchorMonth).map((mo) => {
+      const spent = roundSpent(outgoingSpend(monthExpenses(expenses, mo.key), index));
+      return { key: mo.key, label: monthLabel(mo.key).split(" ")[0], spent };
+    });
+  }
+
+  if (period === "quarterly") {
+    return quartersWindow(anchorMonth).map(({ year, quarter, key, label }) => {
+      const startM = (quarter - 1) * 3 + 1;
+      let spent = 0;
+      for (let i = 0; i < 3; i++) {
+        const monthKey = `${year}-${pad2(startM + i)}`;
+        spent += roundSpent(outgoingSpend(monthExpenses(expenses, monthKey), index));
+      }
+      return { key, label: `${label} '${String(year).slice(2)}`, spent };
+    });
+  }
+
+  const anchorYear = Number(anchorMonth.split("-")[0]);
+  const bars: ChartBar[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const year = anchorYear - i;
+    const key = String(year);
+    const spent = roundSpent(
+      outgoingSpend(expenses.filter((e) => e.date.startsWith(`${year}-`)), index),
+    );
+    bars.push({ key, label: key, spent });
+  }
+  return bars;
+}
+
+export function chartActiveKey(period: ChartPeriod, anchorMonth: string) {
+  if (period === "monthly") return anchorMonth;
+  if (period === "daily") {
+    return anchorMonth === CURRENT_MONTH_KEY ? TODAY_ISO : `${anchorMonth}-01`;
+  }
+  if (period === "quarterly") {
+    const { year, quarter } = quarterOf(anchorMonth);
+    return `${year}-Q${quarter}`;
+  }
+  return anchorMonth.split("-")[0];
+}
+
+export function chartBudgetForPeriod(period: ChartPeriod, monthlyBudget: number, anchorMonth: string) {
+  if (!monthlyBudget) return 0;
+  if (period === "monthly") return monthlyBudget;
+  if (period === "daily") {
+    const [year, month] = anchorMonth.split("-").map(Number);
+    const days = new Date(year, month, 0).getDate();
+    return monthlyBudget / days;
+  }
+  if (period === "quarterly") return monthlyBudget * 3;
+  return monthlyBudget * 12;
+}
+
+export function chartSelectionMonth(period: ChartPeriod, key: string) {
+  if (period === "monthly") return key;
+  if (period === "daily") return key.slice(0, 7);
+  if (period === "quarterly") {
+    const [yearPart, quarterPart] = key.split("-Q");
+    const quarter = Number(quarterPart);
+    const month = pad2((quarter - 1) * 3 + 1);
+    return `${yearPart}-${month}`;
+  }
+  return `${key}-01`;
+}
 
 export const inMonth = (iso: string, key: string) => iso.slice(0, 7) === key;
 
@@ -16,19 +138,146 @@ export function sumBy<T>(list: T[], keyFn: (item: T) => string) {
   return m;
 }
 
-export const catOf = (sub: string) => SUB_BY_ID[sub]!.catId;
-export const isSavings = (e: Expense) => catOf(e.sub) === "savings";
+export const isIncome = (e: Expense) => e.kind === "income";
+export const isOutgoing = (e: Expense) => e.kind !== "income";
+
+export type RecurringInterval = "monthly" | "quarterly" | "yearly";
+export type RecurringField = RecurringInterval | false;
+
+export function normalizeRecurring(value: unknown): RecurringField {
+  if (value === true || value === "monthly") return "monthly";
+  if (value === "quarterly" || value === "yearly") return value;
+  return false;
+}
+
+export function isRecurring(e: Pick<Expense, "recurring">) {
+  return normalizeRecurring(e.recurring) !== false;
+}
+
+export function recurringLabel(freq: RecurringField | unknown) {
+  const f = normalizeRecurring(freq);
+  if (f === "monthly") return "Monthly";
+  if (f === "quarterly") return "Quarterly";
+  if (f === "yearly") return "Yearly";
+  return "";
+}
+
+export function recurringOccursInMonth(
+  expense: Pick<Expense, "date" | "recurring">,
+  monthKey: string,
+) {
+  const freq = normalizeRecurring(expense.recurring);
+  if (!freq) return false;
+
+  const [anchorY, anchorM] = expense.date.split("-").map(Number);
+  const [viewY, viewM] = monthKey.split("-").map(Number);
+  const anchorIndex = anchorY * 12 + anchorM;
+  const viewIndex = viewY * 12 + viewM;
+  if (viewIndex < anchorIndex) return false;
+
+  if (freq === "monthly") return true;
+  if (freq === "quarterly") return (viewIndex - anchorIndex) % 3 === 0;
+  return viewM === anchorM;
+}
+
+export function recurringScheduleKey(expense: Pick<Expense, "walletId" | "sub" | "note" | "recurring">) {
+  return `${expense.walletId}|${expense.sub}|${expense.note}|${normalizeRecurring(expense.recurring)}`;
+}
+
+export function recurringDueDay(expense: Pick<Expense, "date">, monthKey: string) {
+  const anchorD = Number(expense.date.split("-")[2]);
+  const [viewY, viewM] = monthKey.split("-").map(Number);
+  const days = new Date(viewY, viewM, 0).getDate();
+  return Math.min(anchorD, days);
+}
+
+export function recurringMonthlyEquivalent(amount: number, freq: RecurringField | unknown) {
+  const f = normalizeRecurring(freq);
+  if (f === "quarterly") return amount / 3;
+  if (f === "yearly") return amount / 12;
+  return amount;
+}
+
+export function recurringSchedulesForMonth(expenses: Expense[], monthKey: string) {
+  const anchors = expenses.filter((e) => isOutgoing(e) && isRecurring(e));
+  const byKey = new Map<string, Expense>();
+  anchors.forEach((e) => {
+    const key = recurringScheduleKey(e);
+    const prev = byKey.get(key);
+    if (!prev || e.date > prev.date) byKey.set(key, e);
+  });
+  return [...byKey.values()]
+    .filter((e) => recurringOccursInMonth(e, monthKey))
+    .sort(
+      (a, b) =>
+        recurringDueDay(a, monthKey) - recurringDueDay(b, monthKey) ||
+        a.note.localeCompare(b.note),
+    );
+}
+
+export function catOf(sub: string, index?: CategoryIndex) {
+  if (index) return catOfSub(sub, index.subById);
+  return SUB_BY_ID[sub]?.catId ?? "food";
+}
+
+export function isSavings(e: Expense, index?: CategoryIndex) {
+  if (isIncome(e)) return false;
+  if (index) return isSavingsSub(e.sub, index.subById);
+  return catOf(e.sub) === "savings";
+}
+
+export type WalletFunding = Pick<FinancialWallet, "fundingMode" | "income" | "startingBalance">;
+
+export function walletBalance(expenses: Expense[], wallet: WalletFunding, index?: CategoryIndex) {
+  const outgoing = expenses.filter(isOutgoing);
+  const incomeTx = expenses.filter(isIncome);
+  const spent = outgoing.filter((e) => !isSavings(e, index)).reduce((s, e) => s + e.amount, 0);
+  const saved = outgoing.filter((e) => isSavings(e, index)).reduce((s, e) => s + e.amount, 0);
+  const earned = incomeTx.reduce((s, e) => s + e.amount, 0);
+  return wallet.startingBalance + earned - spent - saved;
+}
 
 export function monthStats(
   expenses: Expense[],
   budgets: Budgets,
-  income: number,
+  wallet: WalletFunding,
   key: string,
+  index?: CategoryIndex,
 ) {
   const list = monthExpenses(expenses, key);
-  const spent = list.filter((e) => !isSavings(e)).reduce((s, e) => s + e.amount, 0);
-  const saved = list.filter(isSavings).reduce((s, e) => s + e.amount, 0);
-  const byCat = sumBy(list, (e) => catOf(e.sub));
-  const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0);
-  return { list, spent, saved, byCat, totalBudget, remaining: income - spent - saved };
+  const outgoing = list.filter(isOutgoing);
+  const incomeList = list.filter(isIncome);
+  const spent = outgoing.filter((e) => !isSavings(e, index)).reduce((s, e) => s + e.amount, 0);
+  const saved = outgoing.filter((e) => isSavings(e, index)).reduce((s, e) => s + e.amount, 0);
+  const earned = incomeList.reduce((s, e) => s + e.amount, 0);
+  const byCat = sumBy(
+    outgoing.filter((e) => !isSavings(e, index)),
+    (e) => catOf(e.sub, index),
+  );
+  const spendingBudgets = Object.fromEntries(
+    Object.entries(budgets).filter(([id]) => {
+      const cat = index?.catById[id];
+      return cat ? cat.type !== "income" : id !== "income";
+    }),
+  );
+  const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
+  const balance = walletBalance(expenses, wallet, index);
+  const monthlyPool = wallet.fundingMode === "monthly" ? wallet.income + earned : earned;
+  const remaining =
+    wallet.fundingMode === "monthly"
+      ? wallet.income + earned - spent - saved
+      : balance;
+
+  return {
+    list,
+    spent,
+    saved,
+    earned,
+    byCat,
+    totalBudget,
+    remaining,
+    balance,
+    fundingMode: wallet.fundingMode,
+    monthlyPool,
+  };
 }

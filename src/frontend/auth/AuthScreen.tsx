@@ -178,7 +178,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         <textarea className="phrase-in" placeholder="Enter your 12-word recovery phrase, separated by spaces" value={phrase} onChange={(e) => setPhrase(e.target.value)} />
         {error ? <div className="auth-error">{error}</div> : null}
         <button className="primary-btn lg full" type="button" disabled={busy || !phrase.trim()} onClick={doImport}>{busy ? "Restoring…" : "Restore identity"}</button>
-        {walletClient.hasInjected() ? <button className="ghost-btn full" type="button" style={{ marginTop: 10 }} onClick={connectInjected}><Icon name="wallet" size={17} /> Connect browser wallet</button> : null}
+        {walletClient.hasInjected() ? <button className="ghost-btn full u-gap-top" type="button" onClick={connectInjected}><Icon name="wallet" size={17} /> Connect browser wallet</button> : null}
       </div></div>
     );
   }
@@ -193,7 +193,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         <button className="ghost-btn lg full" type="button" onClick={() => { setError(""); setMode("restore"); }}><Icon name="key" size={17} /> I already have one</button>
       </div>
       {walletClient.hasInjected() ? <button className="link-btn auth-injected" type="button" onClick={connectInjected}>or connect your browser wallet</button> : null}
-      {error ? <div className="auth-error" style={{ marginTop: 16 }}>{error}</div> : null}
+      {error ? <div className="auth-error auth-error--gap">{error}</div> : null}
       <ul className="auth-feat">
         <li><Icon name="check" /> No email, phone, or password</li>
         <li><Icon name="check" /> Your data stays on your device</li>

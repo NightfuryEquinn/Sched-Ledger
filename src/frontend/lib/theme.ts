@@ -1,38 +1,15 @@
-export const FONT_PAIRS = {
-  warm: {
-    display: "'Spectral', Georgia, serif",
-    body: "'Hanken Grotesk', system-ui, sans-serif",
-    label: "Warm serif",
-  },
-  grotesque: {
-    display: "'Bricolage Grotesque', system-ui, sans-serif",
-    body: "'Hanken Grotesk', system-ui, sans-serif",
-    label: "Grotesque",
-  },
-  editorial: {
-    display: "'Newsreader', Georgia, serif",
-    body: "'Instrument Sans', system-ui, sans-serif",
-    label: "Editorial",
-  },
-} as const;
+/* ────────────────────────────────────────────────────────────────────
+   Theme helpers
+   ────────────────────────────────────────────────────────────────────
+   The design system lives in styles/ledger.css (tokens for color,
+   radius, spacing). This module only handles the light/dark preference
+   and exposes the accent color to SVG charts.
+   ──────────────────────────────────────────────────────────────────── */
 
-export const ACCENTS = ["#c97a4a", "#6f8b6f", "#4a6fa5", "#8a6fa5", "#b5654a"] as const;
-
-export type FontPairId = keyof typeof FONT_PAIRS;
-export type Density = "compact" | "balanced" | "spacious";
 export type ThemePreference = "light" | "dark" | "system";
 
-export type TweakValues = {
-  accent: string;
-  font: FontPairId;
-  density: Density;
-};
-
-export const TWEAK_DEFAULTS: TweakValues = {
-  accent: "#c97a4a",
-  font: "warm",
-  density: "spacious",
-};
+/** Default accent — keep in sync with --accent in ledger.css. */
+export const DEFAULT_ACCENT = "#4a6fa5";
 
 const THEME_KEY = "ledger:theme";
 
@@ -71,9 +48,10 @@ export function applyTheme(dark: boolean): void {
   root.style.colorScheme = dark ? "dark" : "light";
 }
 
+/** Read the live accent token (used by SVG charts that can't use CSS vars). */
 export function getAccent(): string {
   return (
     getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() ||
-    "#c97a4a"
+    DEFAULT_ACCENT
   );
 }

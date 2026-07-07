@@ -5,6 +5,7 @@ export {
   type Collections,
   type UserDocument,
   type LedgerProfileDocument,
+  type FinancialWalletDocument,
   type ExpenseDocument,
   type EventDocument,
   type ConsentDocument,

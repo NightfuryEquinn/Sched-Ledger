@@ -4,41 +4,66 @@ import {
   BudgetBar,
   CatDot,
   EmptyState,
+  glyphTint,
   Icon,
   SummaryCard,
+  Segmented,
   TransactionRow,
 } from "@/frontend/components/ui";
 import {
-  CAT_BY_ID,
-  CATEGORIES,
-  CURRENCY,
   CURRENT_DAY,
   CURRENT_MONTH_KEY,
-  DEFAULT_INCOME,
   MONTHS,
-  SUB_BY_ID,
+  monthsWindow,
   dayLabel,
   fmtMoney,
   fmtMoneyShort,
+  getCurrency,
   monthLabel,
   weekdayLabel,
 } from "@/frontend/lib/data";
-import { catOf, isSavings, monthExpenses, monthStats } from "@/frontend/lib/stats";
+import { catOf, isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
+  chartActiveKey,
+  chartBudgetForPeriod,
+  chartSelectionMonth,
+  spendingChartSeries,
+  type ChartPeriod,
+  isRecurring,
+  recurringDueDay,
+  recurringLabel,
+  recurringMonthlyEquivalent,
+  recurringScheduleKey,
+  recurringSchedulesForMonth,
+} from "@/frontend/lib/stats";
 import { getAccent } from "@/frontend/lib/theme";
-import type { Budgets, Expense } from "@/frontend/lib/types";
+import type { Budgets, CategoryIndex, Expense } from "@/frontend/lib/types";
 
-export function Overview({ expenses, budgets, income, month, setView, onEdit }) {
-  const accent = "var(--accent)";
-  const st = useMemo(() => monthStats(expenses, budgets, income, month), [expenses, budgets, income, month]);
+export { Categories } from "./Categories";
+
+/*
+ * Ledger views
+ * ────────────
+ *   Overview     — summary cards, spend trend, donut, budgets, recent
+ *   Transactions — searchable / filterable list grouped by date
+ *   Budgets      — per-category budget editing
+ *   Insights     — month-over-month and category trends
+ *   Recurring    — fixed monthly commitments
+ */
+
+// ── Overview ────────────────────────────────────────────────────────
+export function Overview({ expenses, budgets, wallet, month, currency, categoryIndex, setView, onEdit }) {
+  const st = useMemo(
+    () => monthStats(expenses, budgets, wallet, month, categoryIndex),
+    [expenses, budgets, wallet, month, categoryIndex],
+  );
   const [hoverCat, setHoverCat] = useState(null);
 
-  const donutData = CATEGORIES
+  const donutData = categoryIndex.expenseCategories
     .map((c) => ({ id: c.id, label: c.name, value: st.byCat[c.id] || 0, color: c.color }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value);
   const totalAll = donutData.reduce((s, d) => s + d.value, 0);
 
-  // cumulative daily spend (non-savings) for trend
   const [yy, mm] = month.split("-").map(Number);
   const days = new Date(yy, mm, 0).getDate();
   const todayCap = month === CURRENT_MONTH_KEY ? CURRENT_DAY : days;
@@ -46,24 +71,34 @@ export function Overview({ expenses, budgets, income, month, setView, onEdit }) 
   let run = 0;
   for (let d = 1; d <= todayCap; d++) {
     const dayKey = `${month}-${String(d).padStart(2, "0")}`;
-    run += st.list.filter((e) => e.date === dayKey && !isSavings(e)).reduce((s, e) => s + e.amount, 0);
+    run += st.list
+      .filter((e) => e.date === dayKey && isOutgoing(e) && !isSavings(e, categoryIndex))
+      .reduce((s, e) => s + e.amount, 0);
     cum.push({ x: String(d), v: Math.round(run) });
   }
 
   const recent = st.list.slice(0, 6);
   const spentPct = st.totalBudget ? st.spent / st.totalBudget : 0;
   const activeCat = hoverCat;
+  const isStarting = wallet?.fundingMode === "starting";
+  const poolLabel = isStarting ? "Balance" : "Income";
+  const poolValue = isStarting ? st.balance : st.monthlyPool;
+  const poolSub = isStarting
+    ? `starting ${fmtMoney(wallet?.startingBalance ?? 0, { cents: false, currency })}`
+    : st.earned
+      ? `${fmtMoney(wallet?.income ?? 0, { cents: false, currency })} + ${fmtMoney(st.earned, { cents: false, currency })} earned`
+      : monthLabel(month, true);
 
   return (
     <div className="view">
       <div className="summary-grid">
-        <SummaryCard label="Income" value={fmtMoney(income, { cents: false })} sub={monthLabel(month, true)} />
-        <SummaryCard label="Spent" tone="spent" value={fmtMoney(st.spent, { cents: false })}
+        <SummaryCard label={poolLabel} value={fmtMoney(poolValue, { cents: false, currency })} sub={poolSub} />
+        <SummaryCard label="Spent" tone="spent" value={fmtMoney(st.spent, { cents: false, currency })}
           sub={`${Math.round(spentPct * 100)}% of budget`} />
-        <SummaryCard label="Saved" tone="saved" value={fmtMoney(st.saved, { cents: false })}
-          sub={income ? `${Math.round((st.saved / income) * 100)}% of income` : ""} />
-        <SummaryCard label="Remaining" tone={st.remaining < 0 ? "danger" : "ok"}
-          value={fmtMoney(st.remaining, { cents: false })} sub="after spend & savings" />
+        <SummaryCard label="Saved" tone="saved" value={fmtMoney(st.saved, { cents: false, currency })}
+          sub={st.monthlyPool ? `${Math.round((st.saved / st.monthlyPool) * 100)}% of pool` : ""} />
+        <SummaryCard label={isStarting ? "Available" : "Remaining"} tone={st.remaining < 0 ? "danger" : "ok"}
+          value={fmtMoney(st.remaining, { cents: false, currency })} sub={isStarting ? "current wallet balance" : "after spend & savings"} />
       </div>
 
       <div className="ov-grid">
@@ -71,9 +106,9 @@ export function Overview({ expenses, budgets, income, month, setView, onEdit }) 
           <div className="panel-head">
             <div>
               <h2>Spending this month</h2>
-              <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget)}</p>
+              <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}</p>
             </div>
-            <div className="trend-now">{fmtMoney(st.spent, { cents: false })}</div>
+            <div className="trend-now">{fmtMoney(st.spent, { cents: false, currency })}</div>
           </div>
           <AreaTrend points={cum.length ? cum : [{ x: "1", v: 0 }]} accent={getAccent()} height={210} budgetLine={st.totalBudget} />
         </section>
@@ -84,8 +119,8 @@ export function Overview({ expenses, budgets, income, month, setView, onEdit }) 
             <div className="donut-stage">
               <Donut data={donutData} size={188} thickness={26} onHover={setHoverCat} activeId={activeCat} />
               <div className="donut-center">
-                <div className="dc-label">{activeCat ? CAT_BY_ID[activeCat].name : "Total"}</div>
-                <div className="dc-value">{fmtMoney(activeCat ? (st.byCat[activeCat] || 0) : totalAll, { cents: false })}</div>
+                <div className="dc-label">{activeCat ? categoryIndex.catById[activeCat].name : "Total"}</div>
+                <div className="dc-value">{fmtMoney(activeCat ? (st.byCat[activeCat] || 0) : totalAll, { cents: false, currency })}</div>
               </div>
             </div>
             <ul className="legend">
@@ -108,8 +143,8 @@ export function Overview({ expenses, budgets, income, month, setView, onEdit }) 
             <button className="link-btn" onClick={() => setView("budgets")}>Manage</button>
           </div>
           <div className="budget-list">
-            {CATEGORIES.map((c) => (
-              <BudgetBar key={c.id} cat={c} spent={st.byCat[c.id] || 0} budget={budgets[c.id]} onClick={() => setView("budgets")} />
+            {categoryIndex.expenseCategories.map((c) => (
+              <BudgetBar key={c.id} cat={c} spent={st.byCat[c.id] || 0} budget={budgets[c.id]} onClick={() => setView("budgets")} currency={currency} />
             ))}
           </div>
         </section>
@@ -120,16 +155,21 @@ export function Overview({ expenses, budgets, income, month, setView, onEdit }) 
             <button className="link-btn" onClick={() => setView("transactions")}>See all</button>
           </div>
           <div className="recent-list">
-            {recent.length ? recent.map((e) => (
-              <button key={e.id} className="recent-row" onClick={() => onEdit(e)}>
-                <span className="rr-glyph" style={{ color: CAT_BY_ID[catOf(e.sub)].color, background: CAT_BY_ID[catOf(e.sub)].color + "1f" }}>{CAT_BY_ID[catOf(e.sub)].glyph}</span>
-                <span className="rr-main">
-                  <span className="rr-note">{e.note}</span>
-                  <span className="rr-sub">{SUB_BY_ID[e.sub].name} · {dayLabel(e.date)}</span>
-                </span>
-                <span className="rr-amt">{fmtMoney(e.amount)}</span>
-              </button>
-            )) : <EmptyState title="No expenses yet" sub="Add your first one for this month." />}
+            {recent.length ? recent.map((e) => {
+              const cat = categoryIndex.catById[catOf(e.sub, categoryIndex)];
+              return (
+                <button key={e.id} className="recent-row" onClick={() => onEdit(e)}>
+                  <span className="rr-glyph" style={glyphTint(cat.color)}>{cat.glyph}</span>
+                  <span className="rr-main">
+                    <span className="rr-note">{e.note}</span>
+                    <span className="rr-sub">{categoryIndex.subById[e.sub]?.name ?? e.sub} · {dayLabel(e.date)}</span>
+                  </span>
+                  <span className={"rr-amt" + (isIncome(e) ? " income" : "")}>
+                    {isIncome(e) ? "+" : ""}{fmtMoney(e.amount, { currency })}
+                  </span>
+                </button>
+              );
+            }) : <EmptyState title="No expenses yet" sub="Add your first one for this month." />}
           </div>
         </section>
       </div>
@@ -138,16 +178,21 @@ export function Overview({ expenses, budgets, income, month, setView, onEdit }) 
 }
 
 // ── Transactions ────────────────────────────────────────────────────
-export function Transactions({ expenses, month, onEdit, onDelete }) {
+export function Transactions({ expenses, month, currency, categoryIndex, onEdit, onDelete }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   let list = monthExpenses(expenses, month);
-  if (filter !== "all") list = list.filter((e) => catOf(e.sub) === filter);
+  if (filter === "income") list = list.filter(isIncome);
+  else if (filter !== "all") list = list.filter((e) => catOf(e.sub, categoryIndex) === filter);
   if (q.trim()) {
     const s = q.toLowerCase();
-    list = list.filter((e) => e.note.toLowerCase().includes(s) || SUB_BY_ID[e.sub].name.toLowerCase().includes(s) || CAT_BY_ID[catOf(e.sub)].name.toLowerCase().includes(s));
+    list = list.filter((e) =>
+      e.note.toLowerCase().includes(s) ||
+      (categoryIndex.subById[e.sub]?.name ?? "").toLowerCase().includes(s) ||
+      (categoryIndex.catById[catOf(e.sub, categoryIndex)]?.name ?? "").toLowerCase().includes(s),
+    );
   }
-  const total = list.reduce((s, e) => s + e.amount, 0);
+  const netTotal = list.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
   // group by date
   const groups = {};
   list.forEach((e) => { (groups[e.date] = groups[e.date] || []).push(e); });
@@ -160,11 +205,14 @@ export function Transactions({ expenses, month, onEdit, onDelete }) {
           <Icon name="search" size={17} />
           <input placeholder="Search notes & categories" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <div className="txn-count">{list.length} entries · {fmtMoney(total, { cents: false })}</div>
+        <div className="txn-count">{list.length} entries · {netTotal >= 0 ? "+" : "−"}{fmtMoney(Math.abs(netTotal), { cents: false, currency })} net</div>
       </div>
       <div className="filter-chips">
         <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => setFilter("all")}>All</button>
-        {CATEGORIES.map((c) => (
+        <button className={"fchip" + (filter === "income" ? " active" : "")} onClick={() => setFilter("income")}>
+          <CatDot color={categoryIndex.incomeCategory.color} size={8} /> Income
+        </button>
+        {categoryIndex.expenseCategories.map((c) => (
           <button key={c.id} className={"fchip" + (filter === c.id ? " active" : "")} onClick={() => setFilter(c.id)}>
             <CatDot color={c.color} size={8} /> {c.name}
           </button>
@@ -176,9 +224,21 @@ export function Transactions({ expenses, month, onEdit, onDelete }) {
           <div key={d} className="txn-group">
             <div className="txn-group-head">
               <span>{dayLabel(d)} · {weekdayLabel(d)}</span>
-              <span>{fmtMoney(groups[d].reduce((s, e) => s + e.amount, 0))}</span>
+              <span>{(() => {
+                const dayNet = groups[d].reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
+                return (dayNet >= 0 ? "+" : "−") + fmtMoney(Math.abs(dayNet), { currency });
+              })()}</span>
             </div>
-            {groups[d].map((e) => <TransactionRow key={e.id} exp={e} onEdit={onEdit} onDelete={onDelete} />)}
+            {groups[d].map((e) => (
+              <TransactionRow
+                key={e.id}
+                exp={e}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                currency={currency}
+                categoryIndex={categoryIndex}
+              />
+            ))}
           </div>
         )) : <EmptyState title="Nothing matches" sub="Try a different search or filter." />}
       </section>
@@ -187,8 +247,11 @@ export function Transactions({ expenses, month, onEdit, onDelete }) {
 }
 
 // ── Budgets ─────────────────────────────────────────────────────────
-export function Budgets({ expenses, budgets, setBudgets, income, month }) {
-  const st = useMemo(() => monthStats(expenses, budgets, income, month), [expenses, budgets, income, month]);
+export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency, categoryIndex }) {
+  const st = useMemo(
+    () => monthStats(expenses, budgets, wallet, month, categoryIndex),
+    [expenses, budgets, wallet, month, categoryIndex],
+  );
   const [editId, setEditId] = useState(null);
   const [draft, setDraft] = useState("");
   const totalBudget = st.totalBudget;
@@ -197,22 +260,22 @@ export function Budgets({ expenses, budgets, setBudgets, income, month }) {
   const startEdit = (id) => { setEditId(id); setDraft(String(budgets[id])); };
   const commit = () => {
     const v = Math.max(0, Math.round(parseFloat(draft) || 0));
-    setBudgets((b) => ({ ...b, [editId]: v }));
+    setBudgets({ ...budgets, [editId]: v });
     setEditId(null);
   };
 
   return (
     <div className="view">
       <div className="summary-grid sg-3">
-        <SummaryCard label="Total budget" value={fmtMoney(totalBudget, { cents: false })} sub="across all categories" />
-        <SummaryCard label="Allocated so far" tone="spent" value={fmtMoney(totalSpent, { cents: false })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
-        <SummaryCard label="Left to spend" tone={totalBudget - totalSpent < 0 ? "danger" : "ok"} value={fmtMoney(totalBudget - totalSpent, { cents: false })} sub={monthLabel(month, true)} />
+        <SummaryCard label="Total budget" value={fmtMoney(totalBudget, { cents: false, currency })} sub="across all categories" />
+        <SummaryCard label="Allocated so far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
+        <SummaryCard label="Left to spend" tone={totalBudget - totalSpent < 0 ? "danger" : "ok"} value={fmtMoney(totalBudget - totalSpent, { cents: false, currency })} sub={monthLabel(month, true)} />
       </div>
 
       <section className="panel">
         <div className="panel-head"><h2>Budget by category</h2><p className="panel-sub">Tap an amount to adjust</p></div>
         <div className="budget-edit-list">
-          {CATEGORIES.map((c) => {
+          {categoryIndex.expenseCategories.map((c) => {
             const spent = st.byCat[c.id] || 0;
             const budget = budgets[c.id];
             const pct = budget ? spent / budget : 0;
@@ -223,13 +286,13 @@ export function Budgets({ expenses, budgets, setBudgets, income, month }) {
                   <div className="be-name"><CatDot color={c.color} /> {c.name}</div>
                   {editId === c.id ? (
                     <div className="be-edit">
-                      <span className="be-cur">{CURRENCY.symbol}</span>
+                      <span className="be-cur">{getCurrency(currency).symbol}</span>
                       <input autoFocus type="number" value={draft} onChange={(e) => setDraft(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditId(null); }} onBlur={commit} />
                     </div>
                   ) : (
                     <button className={"be-amt" + (over ? " over" : "")} onClick={() => startEdit(c.id)}>
-                      {fmtMoney(spent, { cents: false })} <span className="br-of">/ {fmtMoney(budget, { cents: false })}</span>
+                      {fmtMoney(spent, { cents: false, currency })} <span className="br-of">/ {fmtMoney(budget, { cents: false, currency })}</span>
                     </button>
                   )}
                 </div>
@@ -237,8 +300,8 @@ export function Budgets({ expenses, budgets, setBudgets, income, month }) {
                   <div className="br-fill" style={{ width: Math.min(pct, 1) * 100 + "%", background: over ? "var(--danger)" : c.color }} />
                 </div>
                 <div className="be-meta">
-                  {over ? <span className="br-over-txt">Over budget by {fmtMoney(spent - budget, { cents: false })}</span>
-                        : <span>{fmtMoney(budget - spent, { cents: false })} remaining · {Math.round(pct * 100)}% used</span>}
+                  {over ? <span className="br-over-txt">Over budget by {fmtMoney(spent - budget, { cents: false, currency })}</span>
+                        : <span>{fmtMoney(budget - spent, { cents: false, currency })} remaining · {Math.round(pct * 100)}% used</span>}
                   <span className="be-subs">{c.subs.map((s) => s.name).join(" · ")}</span>
                 </div>
               </div>
@@ -251,48 +314,90 @@ export function Budgets({ expenses, budgets, setBudgets, income, month }) {
 }
 
 // ── Insights ────────────────────────────────────────────────────────
-export function Insights({ expenses, budgets, income, month, setMonth }) {
-  const totalBudget = Object.values(budgets).reduce((s, v) => s + v, 0);
-  const perMonth = MONTHS.map((mo) => {
-    const list = monthExpenses(expenses, mo.key).filter((e) => !isSavings(e));
+export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, setMonth }) {
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
+  const spendingBudgets = Object.fromEntries(Object.entries(budgets).filter(([id]) => id !== "income"));
+  const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
+  const chartMonths = monthsWindow(month);
+  const chartBars = useMemo(
+    () => spendingChartSeries(chartPeriod, expenses, month, categoryIndex),
+    [chartPeriod, expenses, month, categoryIndex],
+  );
+  const chartBudget = useMemo(
+    () => chartBudgetForPeriod(chartPeriod, totalBudget, month),
+    [chartPeriod, totalBudget, month],
+  );
+  const activeChartKey = chartActiveKey(chartPeriod, month);
+  const perMonth = chartMonths.map((mo) => {
+    const list = monthExpenses(expenses, mo.key).filter((e) => isOutgoing(e) && !isSavings(e, categoryIndex));
     return { key: mo.key, label: monthLabel(mo.key).split(" ")[0], spent: Math.round(list.reduce((s, e) => s + e.amount, 0)) };
   });
-  const cur = monthStats(expenses, budgets, income, month);
+  const cur = monthStats(expenses, budgets, wallet, month, categoryIndex);
   const idx = MONTHS.findIndex((m) => m.key === month);
   const prevKey = idx > 0 ? MONTHS[idx - 1].key : null;
-  const prev = prevKey ? monthStats(expenses, budgets, income, prevKey) : null;
+  const prev = prevKey ? monthStats(expenses, budgets, wallet, prevKey, categoryIndex) : null;
 
-  const catRows = CATEGORIES.map((c) => {
+  const catRows = categoryIndex.expenseCategories.map((c) => {
     const now = cur.byCat[c.id] || 0;
     const was = prev ? (prev.byCat[c.id] || 0) : 0;
-    const series = MONTHS.map((mo) => Math.round(monthExpenses(expenses, mo.key).filter((e) => catOf(e.sub) === c.id).reduce((s, e) => s + e.amount, 0)));
+    const series = chartMonths.map((mo) => Math.round(
+      monthExpenses(expenses, mo.key).filter((e) => isOutgoing(e) && catOf(e.sub, categoryIndex) === c.id).reduce((s, e) => s + e.amount, 0),
+    ));
     const delta = was ? (now - was) / was : (now > 0 ? 1 : 0);
     return { c, now, was, delta, series };
   }).sort((a, b) => b.now - a.now);
 
   // top subcategories this month
   const subTotals = {};
-  cur.list.forEach((e) => { subTotals[e.sub] = (subTotals[e.sub] || 0) + e.amount; });
+  cur.list.filter(isOutgoing).forEach((e) => { subTotals[e.sub] = (subTotals[e.sub] || 0) + e.amount; });
   const topSubs = Object.entries(subTotals).map(([sub, v]) => ({ sub, v })).sort((a, b) => b.v - a.v).slice(0, 6);
   const maxSub = topSubs.length ? topSubs[0].v : 1;
 
   const avgSpent = Math.round(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
 
+  const chartSub =
+    chartPeriod === "daily"
+      ? `Daily spend in ${monthLabel(month, true)} · dashed line is daily budget`
+      : chartPeriod === "quarterly"
+        ? "Total spend by quarter · dashed line is quarterly budget · tap a bar to view"
+        : chartPeriod === "yearly"
+          ? "Total spend by year · dashed line is yearly budget · tap a bar to view"
+          : "Total spend · dashed line is budget · tap a bar to view";
+
   return (
     <div className="view">
       <div className="summary-grid sg-3">
-        <SummaryCard label="This month" tone="spent" value={fmtMoney(cur.spent, { cents: false })} sub={monthLabel(month)} />
+        <SummaryCard label="This month" tone="spent" value={fmtMoney(cur.spent, { cents: false, currency })} sub={monthLabel(month)} />
         <SummaryCard label="vs last month" tone={prev && cur.spent > prev.spent ? "danger" : "saved"}
-          value={prev ? (cur.spent >= prev.spent ? "+" : "−") + fmtMoney(Math.abs(cur.spent - prev.spent), { cents: false }).replace(CURRENCY.symbol, CURRENCY.symbol) : "—"}
-          sub={prev ? `${prev ? Math.round(Math.abs(cur.spent - prev.spent) / (prev.spent || 1) * 100) : 0}% ${cur.spent >= prev.spent ? "higher" : "lower"}` : "no prior data"} />
-        <SummaryCard label="6-month average" value={fmtMoney(avgSpent, { cents: false })} sub="monthly spend" />
+          value={prev ? (cur.spent >= prev.spent ? "+" : "−") + fmtMoney(Math.abs(cur.spent - prev.spent), { cents: false, currency }) : "—"}
+          sub={prev ? `${Math.round(Math.abs(cur.spent - prev.spent) / (prev.spent || 1) * 100)}% ${cur.spent >= prev.spent ? "higher" : "lower"}` : "no prior data"} />
+        <SummaryCard label="6-month average" value={fmtMoney(avgSpent, { cents: false, currency })} sub="monthly spend" />
       </div>
 
       <section className="panel">
-        <div className="panel-head">
-          <div><h2>Month over month</h2><p className="panel-sub">Total spend · dashed line is budget · tap a bar to view</p></div>
+        <div className="panel-head insights-chart-head">
+          <div>
+            <h2>Month over month</h2>
+            <p className="panel-sub">{chartSub}</p>
+          </div>
+          <Segmented
+            options={[
+              { v: "daily", label: "Daily" },
+              { v: "monthly", label: "Monthly" },
+              { v: "quarterly", label: "Quarterly" },
+              { v: "yearly", label: "Yearly" },
+            ]}
+            value={chartPeriod}
+            onChange={setChartPeriod}
+          />
         </div>
-        <MoMBars months={perMonth} accent={getAccent()} activeKey={month} onSelect={setMonth} budget={totalBudget} />
+        <MoMBars
+          months={chartBars}
+          accent={getAccent()}
+          activeKey={activeChartKey}
+          onSelect={(key) => setMonth(chartSelectionMonth(chartPeriod, key))}
+          budget={chartBudget}
+        />
       </section>
 
       <div className="ov-grid">
@@ -303,7 +408,7 @@ export function Insights({ expenses, budgets, income, month, setMonth }) {
               <div key={c.id} className="ctrow">
                 <div className="ct-name"><CatDot color={c.color} /> {c.name}</div>
                 <MiniSpark values={series} color={c.color} />
-                <div className="ct-amt">{fmtMoney(now, { cents: false })}</div>
+                <div className="ct-amt">{fmtMoney(now, { cents: false, currency })}</div>
                 <div className={"ct-delta " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")}>
                   {delta > 0.001 ? "▲" : delta < -0.001 ? "▼" : "—"} {Math.abs(Math.round(delta * 100))}%
                 </div>
@@ -316,10 +421,12 @@ export function Insights({ expenses, budgets, income, month, setMonth }) {
           <div className="panel-head"><h2>Top subcategories</h2><p className="panel-sub">{monthLabel(month, true)}</p></div>
           <div className="topsub-list">
             {topSubs.map(({ sub, v }) => {
-              const s = SUB_BY_ID[sub]; const c = CAT_BY_ID[s.catId];
+              const s = categoryIndex.subById[sub];
+              const c = s ? categoryIndex.catById[s.catId] : null;
+              if (!s || !c) return null;
               return (
                 <div key={sub} className="ts-row">
-                  <div className="ts-head"><span>{s.name} <span className="ts-cat">· {c.name}</span></span><span className="ts-amt">{fmtMoney(v, { cents: false })}</span></div>
+                  <div className="ts-head"><span>{s.name} <span className="ts-cat">· {c.name}</span></span><span className="ts-amt">{fmtMoney(v, { cents: false, currency })}</span></div>
                   <div className="ts-track"><div className="ts-fill" style={{ width: (v / maxSub) * 100 + "%", background: c.color }} /></div>
                 </div>
               );
@@ -332,27 +439,37 @@ export function Insights({ expenses, budgets, income, month, setMonth }) {
 }
 
 // ── Recurring ───────────────────────────────────────────────────────
-export function Recurring({ expenses, month, onEdit }) {
-  const list = monthExpenses(expenses, month).filter((e) => e.recurring)
-    .sort((a, b) => a.date < b.date ? -1 : 1);
+export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) {
+  const list = recurringSchedulesForMonth(expenses, month);
   const total = list.reduce((s, e) => s + e.amount, 0);
+  const monthlyEq = Math.round(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
   return (
     <div className="view">
       <div className="summary-grid sg-2">
-        <SummaryCard label="Recurring this month" value={fmtMoney(total, { cents: false })} sub={`${list.length} subscriptions & bills`} />
-        <SummaryCard label="Share of income" tone="spent" value={total ? Math.round(total / DEFAULT_INCOME * 100) + "%" : "0%"} sub="fixed commitments" />
+        <SummaryCard label="Recurring this month" value={fmtMoney(total, { cents: false, currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
+        <SummaryCard label="Monthly equivalent" tone="spent" value={fmtMoney(monthlyEq, { cents: false, currency })} sub="normalized across intervals" />
       </div>
       <section className="panel">
-        <div className="panel-head"><h2>Fixed & recurring</h2><p className="panel-sub">Charged automatically each month</p></div>
+        <div className="panel-head"><h2>Fixed & recurring</h2><p className="panel-sub">Monthly, quarterly, and yearly schedules</p></div>
         <div className="rec-list">
           {list.length ? list.map((e) => {
-            const s = SUB_BY_ID[e.sub]; const c = CAT_BY_ID[s.catId];
+            const s = categoryIndex.subById[e.sub];
+            const c = s ? categoryIndex.catById[s.catId] : null;
+            if (!s || !c) return null;
+            const dueDay = recurringDueDay(e, month);
+            const scheduleKey = recurringScheduleKey(e);
             return (
-              <button key={e.id} className="rec-row" onClick={() => onEdit(e)}>
-                <span className="rec-glyph" style={{ color: c.color, background: c.color + "1f" }}>{c.glyph}</span>
-                <span className="rec-main"><span className="rec-note">{e.note}</span><span className="rec-sub">{c.name} · {s.name}</span></span>
-                <span className="rec-day"><span className="rec-day-n">{new Date(e.date + "T00:00:00").getDate()}</span><span className="rec-day-l">{monthLabel(month)}</span></span>
-                <span className="rec-amt">{fmtMoney(e.amount)}</span>
+              <button key={scheduleKey} className="rec-row" onClick={() => onEdit(e)}>
+                <span className="rec-glyph" style={glyphTint(c.color)}>{c.glyph}</span>
+                <span className="rec-main">
+                  <span className="rec-note">{e.note}</span>
+                  <span className="rec-sub">{c.name} · {s.name} · {recurringLabel(e.recurring)}</span>
+                </span>
+                <span className="rec-day">
+                  <span className="rec-day-n">{dueDay}</span>
+                  <span className="rec-day-l">{monthLabel(month)}</span>
+                </span>
+                <span className="rec-amt">{fmtMoney(e.amount, { currency })}</span>
               </button>
             );
           }) : <EmptyState title="No recurring items" sub="Mark an expense as recurring when adding it." />}

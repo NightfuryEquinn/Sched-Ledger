@@ -1,4 +1,4 @@
-import type { Account, Budgets, Expense, LedgerEvent } from "./types";
+import type { Account, Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "./types";
 
 export class ApiError extends Error {
   status: number;
@@ -25,6 +25,21 @@ export type ApiSession = {
   current: boolean;
   createdAt: string;
   lastSeenAt: string;
+};
+
+export type ApiUser = {
+  id: string;
+  address: string;
+  codename: string;
+  notifyEmail?: string;
+  emailRemindersEnabled?: boolean;
+};
+
+export type ApiConsent = {
+  id: string;
+  userAddress: string;
+  optedIn: boolean;
+  updatedAt: string;
 };
 
 type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
@@ -96,9 +111,27 @@ export const api = {
 
   users: {
     upsert(body: { address: string; codename: string; notifyEmail?: string }) {
-      return request<{ user: { id: string; address: string; codename: string } }>("/users", {
+      return request<{ user: ApiUser }>("/users", {
         method: "POST",
         body,
+      });
+    },
+    me() {
+      return request<{ user: ApiUser }>("/users/me");
+    },
+    updateMe(body: { codename?: string; notifyEmail?: string; emailRemindersEnabled?: boolean }) {
+      return request<{ user: ApiUser }>("/users/me", { method: "PATCH", body });
+    },
+  },
+
+  consent: {
+    get() {
+      return request<{ consent: ApiConsent }>("/consent");
+    },
+    update(optedIn: boolean) {
+      return request<{ consent: ApiConsent }>("/consent", {
+        method: "PATCH",
+        body: { optedIn },
       });
     },
   },
@@ -118,15 +151,49 @@ export const api = {
     },
   },
 
+  wallets: {
+    list() {
+      return request<{ wallets: FinancialWallet[] }>("/wallets");
+    },
+    create(body: { name: string; currency: string; fundingMode?: string; income?: number; startingBalance?: number }) {
+      return request<{ wallet: FinancialWallet }>("/wallets", { method: "POST", body });
+    },
+    update(id: string, body: Partial<Pick<FinancialWallet, "name" | "currency" | "fundingMode" | "income" | "startingBalance" | "budgets" | "isDefault">>) {
+      return request<{ wallet: FinancialWallet }>(`/wallets/${id}`, { method: "PATCH", body });
+    },
+    updateBudgets(id: string, budgets: Budgets) {
+      return request<{ wallet: FinancialWallet }>(`/wallets/${id}/budgets`, {
+        method: "PUT",
+        body: { budgets },
+      });
+    },
+    remove(id: string) {
+      return request<{ ok: boolean }>(`/wallets/${id}`, { method: "DELETE" });
+    },
+  },
+
+  categories: {
+    list() {
+      return request<{ categories: Category[] }>("/categories");
+    },
+    update(categories: Category[]) {
+      return request<{ categories: Category[] }>("/categories", {
+        method: "PUT",
+        body: { categories },
+      });
+    },
+  },
+
   expenses: {
-    list(query?: { month?: string; recurring?: boolean }) {
+    list(query?: { month?: string; recurring?: boolean; walletId?: string }) {
       const params = new URLSearchParams();
       if (query?.month) params.set("month", query.month);
       if (query?.recurring !== undefined) params.set("recurring", String(query.recurring));
+      if (query?.walletId) params.set("walletId", query.walletId);
       const qs = params.toString();
       return request<{ expenses: Expense[] }>(`/expenses${qs ? `?${qs}` : ""}`);
     },
-    create(body: Pick<Expense, "date" | "sub" | "amount" | "note" | "recurring">) {
+    create(body: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring">) {
       return request<{ expense: Expense }>("/expenses", { method: "POST", body });
     },
     update(id: string, body: Partial<Omit<Expense, "id">>) {
@@ -156,6 +223,21 @@ export const api = {
         method: "POST",
         body: { text },
       });
+    },
+  },
+
+  todoLists: {
+    list() {
+      return request<{ todoLists: TodoList[] }>("/todo-lists");
+    },
+    create(body: { name: string; icon: string }) {
+      return request<{ todoList: TodoList }>("/todo-lists", { method: "POST", body });
+    },
+    update(id: string, body: Partial<Pick<TodoList, "name" | "icon" | "tasks">>) {
+      return request<{ todoList: TodoList }>(`/todo-lists/${id}`, { method: "PATCH", body });
+    },
+    remove(id: string) {
+      return request<{ ok: boolean }>(`/todo-lists/${id}`, { method: "DELETE" });
     },
   },
 };

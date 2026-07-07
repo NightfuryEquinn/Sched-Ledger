@@ -5,11 +5,30 @@ import type { Expense, LedgerEvent, MonthEntry } from "./types";
 
 export const CURRENCY = { code: "MYR", symbol: "RM" };
 
+export const CURRENCIES = [
+  { code: "MYR", symbol: "RM", label: "Malaysian Ringgit" },
+  { code: "USD", symbol: "$", label: "US Dollar" },
+  { code: "SGD", symbol: "S$", label: "Singapore Dollar" },
+  { code: "EUR", symbol: "€", label: "Euro" },
+  { code: "GBP", symbol: "£", label: "British Pound" },
+  { code: "JPY", symbol: "¥", label: "Japanese Yen" },
+  { code: "AUD", symbol: "A$", label: "Australian Dollar" },
+  { code: "THB", symbol: "฿", label: "Thai Baht" },
+  { code: "IDR", symbol: "Rp", label: "Indonesian Rupiah" },
+  { code: "CNY", symbol: "¥", label: "Chinese Yuan" },
+] as const;
+
+export const CURRENCY_BY_CODE = Object.fromEntries(CURRENCIES.map((c) => [c.code, c]));
+
+export function getCurrency(code?: string) {
+  return CURRENCY_BY_CODE[code ?? CURRENCY.code] ?? CURRENCY;
+}
+
 // ── Category taxonomy ───────────────────────────────────────────────
-// Each category: id, name, color (warm earthy chart palette), icon glyph, subs[]
+// Each category: id, name, color (cool muted chart palette), icon glyph, subs[]
 export const CATEGORIES = [
   {
-    id: "food", name: "Food & Dining", color: "#c97a4a", glyph: "◓",
+    id: "food", name: "Food & Dining", color: "#5b7a8a", glyph: "◓",
     subs: [
       { id: "groceries", name: "Groceries" },
       { id: "meal", name: "Meal" },
@@ -24,7 +43,7 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: "utilities", name: "Bills & Utilities", color: "#d9a441", glyph: "◈",
+    id: "utilities", name: "Bills & Utilities", color: "#4f8a7b", glyph: "◈",
     subs: [
       { id: "electricity", name: "Electricity" },
       { id: "water", name: "Water" },
@@ -32,13 +51,13 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: "sport", name: "Health & Sport", color: "#5b7a8a", glyph: "△",
+    id: "sport", name: "Health & Sport", color: "#4a6fa5", glyph: "△",
     subs: [
       { id: "gym", name: "Sport" },
     ],
   },
   {
-    id: "fun", name: "Entertainment", color: "#b5654a", glyph: "◐",
+    id: "fun", name: "Entertainment", color: "#a06f95", glyph: "◐",
     subs: [
       { id: "streaming", name: "Streaming" },
       { id: "outings", name: "Outings" },
@@ -46,13 +65,25 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: "savings", name: "Savings", color: "#8a6fa5", glyph: "◆",
+    id: "savings", name: "Savings", color: "#7a6fa5", glyph: "◆",
     subs: [
       { id: "saving", name: "Saving" },
     ],
   },
+  {
+    id: "income", name: "Income", color: "#6f8b6f", glyph: "◇",
+    subs: [
+      { id: "salary", name: "Salary" },
+      { id: "wages", name: "Wages" },
+      { id: "bonus", name: "Bonus" },
+      { id: "funds", name: "Funds" },
+      { id: "other_income", name: "Other" },
+    ],
+  },
 ];
 
+export const INCOME_CATEGORY = CATEGORIES.find((c) => c.id === "income")!;
+export const EXPENSE_CATEGORIES = CATEGORIES.filter((c) => c.id !== "income");
 export const CAT_BY_ID = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 export const SUB_BY_ID: Record<string, { id: string; name: string; catId: string; color: string }> =
   {};
@@ -70,6 +101,7 @@ export const DEFAULT_BUDGETS = {
   sport: 180,
   fun: 350,
   savings: 1000,
+  income: 0,
 };
 export const DEFAULT_INCOME = 5600;
 
@@ -85,18 +117,74 @@ export function rng(seed) {
 }
 export const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
 export const between = (r, lo, hi) => lo + r() * (hi - lo);
+export function pad(n: number) { return String(n).padStart(2, "0"); }
 
-// The 6 months we seed, oldest→newest. "now" anchor = June 2026.
-export const MONTHS = [
-  { key: "2026-01", year: 2026, m: 0 },
-  { key: "2026-02", year: 2026, m: 1 },
-  { key: "2026-03", year: 2026, m: 2 },
-  { key: "2026-04", year: 2026, m: 3 },
-  { key: "2026-05", year: 2026, m: 4 },
-  { key: "2026-06", year: 2026, m: 5 },
-];
-export const CURRENT_MONTH_KEY = "2026-06";
-export const CURRENT_DAY = 8; // sample "today" — June only filled to the 8th
+export const MIN_MONTH_KEY = "2020-01";
+
+const _now = new Date();
+export const CURRENT_YEAR = _now.getFullYear();
+export const CURRENT_MONTH = _now.getMonth();
+export const CURRENT_DAY = _now.getDate();
+export const CURRENT_MONTH_KEY = `${CURRENT_YEAR}-${pad(CURRENT_MONTH + 1)}`;
+export const TODAY_ISO = `${CURRENT_MONTH_KEY}-${pad(CURRENT_DAY)}`;
+export const MAX_MONTH_KEY = `${CURRENT_YEAR + 10}-${pad(CURRENT_MONTH + 1)}`;
+
+export function buildMonths(fromKey: string, toKey: string): MonthEntry[] {
+  const [fromY, fromM] = fromKey.split("-").map(Number);
+  const [toY, toM] = toKey.split("-").map(Number);
+  const out: MonthEntry[] = [];
+  let y = fromY;
+  let m = fromM - 1;
+  const end = new Date(toY, toM - 1, 1).getTime();
+  while (new Date(y, m, 1).getTime() <= end) {
+    out.push({ key: `${y}-${pad(m + 1)}`, year: y, m });
+    m += 1;
+    if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+  }
+  return out;
+}
+
+/** Navigable months, oldest → newest (Jan 2020 through same month 10 years ahead). */
+export const MONTHS = buildMonths(MIN_MONTH_KEY, MAX_MONTH_KEY);
+
+export function clampMonthKey(key?: string | null) {
+  const month = key || CURRENT_MONTH_KEY;
+  if (month < MIN_MONTH_KEY) return MIN_MONTH_KEY;
+  if (month > MAX_MONTH_KEY) return MAX_MONTH_KEY;
+  return month;
+}
+
+export function monthRangeBounds() {
+  const [minY, minM] = MIN_MONTH_KEY.split("-").map(Number);
+  const [maxY, maxM] = MAX_MONTH_KEY.split("-").map(Number);
+  return { minY, minM, maxY, maxM };
+}
+
+export function yearsInRange() {
+  const { minY, maxY } = monthRangeBounds();
+  const years: number[] = [];
+  for (let y = minY; y <= maxY; y++) years.push(y);
+  return years;
+}
+
+export function monthsInYear(year: number) {
+  const { minY, minM, maxY, maxM } = monthRangeBounds();
+  const start = year === minY ? minM : 1;
+  const end = year === maxY ? maxM : 12;
+  const months: number[] = [];
+  for (let m = start; m <= end; m++) months.push(m);
+  return months;
+}
+
+/** Last N navigable months ending at anchor (for charts). */
+export function monthsWindow(anchorKey: string, size = 6) {
+  const idx = MONTHS.findIndex((m) => m.key === anchorKey);
+  if (idx < 0) return MONTHS.slice(-size);
+  return MONTHS.slice(Math.max(0, idx - size + 1), idx + 1);
+}
 
 // Note pools per subcategory for believable entries
 export const NOTES = {
@@ -129,8 +217,6 @@ export const RECURRING = [
 let _idc = 1;
 export const nid = () => "e" + _idc++;
 
-export function pad(n) { return String(n).padStart(2, "0"); }
-
 // Build a realistic spread of expenses for one month
 export function seedMonth(monthObj, r, partialDay) {
   const { year, m, key } = monthObj;
@@ -147,7 +233,7 @@ export function seedMonth(monthObj, r, partialDay) {
     if (rc.sub === "water") amt = Math.round(between(r, 28, 52));
     out.push({
       id: nid(), date: iso(rc.day), sub: rc.sub, amount: amt,
-      note: rc.note, recurring: true,
+      note: rc.note, recurring: "monthly",
     });
   });
 
@@ -177,8 +263,9 @@ export function seedMonth(monthObj, r, partialDay) {
 
 export function buildSeedData() {
   _idc = 1;
+  const seedMonths = monthsWindow(CURRENT_MONTH_KEY, 6);
   let all = [];
-  MONTHS.forEach((mo, i) => {
+  seedMonths.forEach((mo, i) => {
     const r = rng(1000 + i * 97);
     const partial = mo.key === CURRENT_MONTH_KEY ? CURRENT_DAY : null;
     all = all.concat(seedMonth(mo, r, partial));
@@ -196,14 +283,14 @@ export function buildSeedData() {
 
 // ── Schedule: event types, recurrence, reminders ────────────────────
 // Event categories cover a mix of financial and general life events,
-// reusing the warm earthy palette.
+// reusing the cool muted palette.
 export const EVENT_CATS = [
-  { id: "bill",        name: "Bill / Payment", color: "#d9a441", glyph: "◈" },
+  { id: "bill",        name: "Bill / Payment", color: "#4f8a7b", glyph: "◈" },
   { id: "income",      name: "Income",         color: "#6f8b6f", glyph: "◇" },
-  { id: "savings",     name: "Savings",        color: "#8a6fa5", glyph: "◆" },
-  { id: "renewal",     name: "Renewal",        color: "#c97a4a", glyph: "◓" },
-  { id: "appointment", name: "Appointment",    color: "#5b7a8a", glyph: "△" },
-  { id: "personal",    name: "Personal",       color: "#b5654a", glyph: "●" },
+  { id: "savings",     name: "Savings",        color: "#7a6fa5", glyph: "◆" },
+  { id: "renewal",     name: "Renewal",        color: "#5b7a8a", glyph: "◓" },
+  { id: "appointment", name: "Appointment",    color: "#4a6fa5", glyph: "△" },
+  { id: "personal",    name: "Personal",       color: "#a06f95", glyph: "●" },
 ];
 export const EVENT_CAT_BY_ID = Object.fromEntries(EVENT_CATS.map((c) => [c.id, c]));
 
@@ -224,8 +311,6 @@ export const LEAD_TIMES = [
   { id: "1w",  label: "1 week before",     short: "1 wk before" },
 ];
 export const LEAD_BY_ID = Object.fromEntries(LEAD_TIMES.map((l) => [l.id, l]));
-
-export const TODAY_ISO = `${CURRENT_MONTH_KEY}-${pad(CURRENT_DAY)}`;
 
 // Seed schedule — a believable mix of money + life events around "today".
 export const SEED_EVENTS = [
@@ -297,17 +382,19 @@ export function fullDayLabel(iso) {
 }
 
 // ── Formatting helpers ──────────────────────────────────────────────
-export function fmtMoney(n, opts = {}) {
+export function fmtMoney(n, opts: { cents?: boolean; currency?: string } = {}) {
+  const cur = getCurrency(opts.currency);
   const v = Math.abs(n);
   const s = v.toLocaleString("en-MY", {
     minimumFractionDigits: opts.cents === false ? 0 : 2,
     maximumFractionDigits: opts.cents === false ? 0 : 2,
   });
-  return `${n < 0 ? "−" : ""}${CURRENCY.symbol}${s}`;
+  return `${n < 0 ? "−" : ""}${cur.symbol}${s}`;
 }
-export function fmtMoneyShort(n) {
-  if (Math.abs(n) >= 1000) return `${CURRENCY.symbol}${(n / 1000).toFixed(1)}k`;
-  return `${CURRENCY.symbol}${Math.round(n)}`;
+export function fmtMoneyShort(n, currency?: string) {
+  const cur = getCurrency(currency);
+  if (Math.abs(n) >= 1000) return `${cur.symbol}${(n / 1000).toFixed(1)}k`;
+  return `${cur.symbol}${Math.round(n)}`;
 }
 export function monthLabel(key, long) {
   const [y, mm] = key.split("-").map(Number);

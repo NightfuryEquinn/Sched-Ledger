@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/frontend/components/ui";
-import type { Account, Expense } from "@/frontend/lib/types";
+import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { Identicon } from "./components/Identicon";
 import { RecoveryReveal } from "./components/RecoveryReveal";
@@ -12,9 +12,11 @@ type AccountMenuProps = {
   account: Account;
   onSignOut: () => void;
   expenses: Expense[];
+  wallets?: FinancialWallet[];
+  categoryIndex?: CategoryIndex;
 };
 
-export function AccountMenu({ account, onSignOut, expenses }: AccountMenuProps) {
+export function AccountMenu({ account, onSignOut, expenses, wallets = [], categoryIndex }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
@@ -56,7 +58,7 @@ export function AccountMenu({ account, onSignOut, expenses }: AccountMenuProps) 
             </button>
           ) : null}
           {stored?.injected ? (
-            <div className="am-item" style={{ cursor: "default", color: "var(--ink-faint)" }}>
+            <div className="am-item am-item--static">
               <Icon name="wallet" size={16} /> Browser wallet
             </div>
           ) : null}
@@ -76,6 +78,8 @@ export function AccountMenu({ account, onSignOut, expenses }: AccountMenuProps) 
         <DataPrivacyModal
           account={account}
           expenses={expenses}
+          wallets={wallets}
+          categoryIndex={categoryIndex}
           onClose={() => setDataOpen(false)}
           onSignedOut={onSignOut}
         />

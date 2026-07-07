@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   EmptyState,
+  glyphTint,
   Icon,
   SummaryCard,
 } from "@/frontend/components/ui";
@@ -24,8 +25,16 @@ import {
 } from "@/frontend/lib/data";
 import type { LedgerEvent } from "@/frontend/lib/types";
 
+/*
+ * Schedule view
+ * ─────────────
+ *   Schedule   — month calendar + upcoming agenda
+ *   EventModal — add / edit an event, incl. email-reminder opt-in
+ */
+
 const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// ── Schedule (calendar + agenda) ────────────────────────────────────
 export function Schedule({ events, month, onAddEvent, onEditEvent }) {
   const [y, m] = month.split("-").map(Number);
   const days = new Date(y, m, 0).getDate();
@@ -130,7 +139,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
                   const c = EVENT_CAT_BY_ID[ev.catId];
                   return (
                     <button key={ev.id} className="agenda-row" onClick={() => onEditEvent(ev)}>
-                      <span className="ag-glyph" style={{ color: c.color, background: c.color + "1f" }}>{c.glyph}</span>
+                      <span className="ag-glyph" style={glyphTint(c.color)}>{c.glyph}</span>
                       <span className="ag-main">
                         <span className="ag-title">
                           {ev.title}
@@ -152,7 +161,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
   );
 }
 
-// ── Add / edit event modal ──────────────────────────────────────────
+// ── EventModal (add / edit event) ───────────────────────────────────
 export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) {
   const editing = !!(initial && initial.id);
   const lastEmail = (() => { try { return localStorage.getItem("ledger:notifyEmail") || ""; } catch (e) { return ""; } })();
@@ -163,7 +172,9 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
   const [allDay, setAllDay] = useState(initial ? !!initial.allDay : true);
   const [time, setTime] = useState(initial && initial.time ? initial.time : "09:00");
   const [repeat, setRepeat] = useState(initial ? initial.repeat : "once");
-  const [notify, setNotify] = useState(initial ? !!initial.notify : true);
+  // Email reminders are opt-in: new events start with notifications off,
+  // matching the API schema default.
+  const [notify, setNotify] = useState(initial ? !!initial.notify : false);
   const [lead, setLead] = useState(initial ? initial.lead : "1d");
   const [email, setEmail] = useState(initial && initial.email ? initial.email : lastEmail);
   const [comments, setComments] = useState(initial && initial.comments ? initial.comments : []);

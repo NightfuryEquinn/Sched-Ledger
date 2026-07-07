@@ -24,7 +24,7 @@ function Donut({ data, size = 220, thickness = 30, onHover, activeId }) {
               cx={R} cy={R} r={r}
               fill="none"
               stroke={s.color}
-              strokeWidth={activeId === s.id ? thickness + 6 : thickness}
+              strokeWidth={activeId === s.id ? thickness + 4 : thickness}
               strokeDasharray={`${Math.max(s.dash - 1.5, 0)} ${C - Math.max(s.dash - 1.5, 0)}`}
               strokeDashoffset={-s.offset * C}
               strokeLinecap="butt"
@@ -114,14 +114,18 @@ function MoMBars({ months, accent, height = 220, activeKey, onSelect, budget }) 
         const cx = padL + slot * i + slot / 2;
         const active = m.key === activeKey;
         const h = innerH - (y(m.spent) - padT);
+        const labelEvery = months.length > 24 ? 5 : months.length > 14 ? 3 : months.length > 8 ? 2 : 1;
+        const showLabel = i % labelEvery === 0 || i === months.length - 1;
         return (
           <g key={m.key} style={{ cursor: "pointer" }} onClick={() => onSelect && onSelect(m.key)}>
             <rect x={cx - bw / 2} y={y(m.spent)} width={bw} height={Math.max(h, 1)} rx="6"
               fill={accent} opacity={active ? 1 : 0.32}
               style={{ transition: "opacity .2s" }} />
-            <text x={cx} y={H - 9} fontSize="11" textAnchor="middle"
-              fill={active ? "var(--ink)" : "var(--ink-faint)"}
-              fontFamily="var(--font-mono)" fontWeight={active ? 700 : 400}>{m.label}</text>
+            {showLabel ? (
+              <text x={cx} y={H - 9} fontSize="11" textAnchor="middle"
+                fill={active ? "var(--ink)" : "var(--ink-faint)"}
+                fontFamily="var(--font-mono)" fontWeight={active ? 700 : 400}>{m.label}</text>
+            ) : null}
           </g>
         );
       })}
