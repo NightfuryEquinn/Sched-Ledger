@@ -24,7 +24,8 @@ const LEAD_LABELS: Record<LeadId, string> = {
   "1w": "1 week before",
 };
 
-export const CRON_WINDOW_MS = 20 * 60 * 1000;
+/** Lookback for daily Vercel Cron (Hobby: once/day, ±59 min). */
+export const CRON_WINDOW_MS = 25 * 60 * 60 * 1000;
 
 export function leadOffsetMs(lead: LeadId): number {
   return LEAD_MS[lead] ?? 0;
