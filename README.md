@@ -28,7 +28,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 ## Project structure
 
 ```
-src/vercel-api.ts         # Vercel API source (bundled → api/index.js at build)
+src/vercel-api.ts         # API bundle source (built → api/index.js during deploy)
 src/
 ├── index.ts              # Bun server (API + SPA)
 ├── index.html
