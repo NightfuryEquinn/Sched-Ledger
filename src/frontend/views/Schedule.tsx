@@ -5,6 +5,7 @@ import {
   Icon,
   SummaryCard,
 } from "@/frontend/components/ui";
+import { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 import {
   CURRENT_MONTH_KEY,
   EVENT_CAT_BY_ID,
@@ -146,7 +147,15 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
                           {ev.repeat !== "once" && <span className="ag-rep" title={repeatLabel(ev)}><Icon name="repeat" size={12} /></span>}
                           {ev.comments && ev.comments.length > 0 && <span className="ag-cmt"><Icon name="comment" size={12} /> {ev.comments.length}</span>}
                         </span>
-                        <span className="ag-sub">{c.name}{ev.notify ? <span className="ag-bell"><Icon name="bell" size={11} /> {leadLabel(ev.lead).toLowerCase()}</span> : ""}</span>
+                        <span className="ag-sub">
+                          <span>{c.name}</span>
+                          {ev.notify ? (
+                            <span className="ag-bell">
+                              <Icon name="bell" size={11} />
+                              <span>{leadLabel(ev.lead).toLowerCase()}</span>
+                            </span>
+                          ) : null}
+                        </span>
                       </span>
                       <span className="ag-time">{eventTimeLabel(ev)}</span>
                     </button>
@@ -231,13 +240,13 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
         <div className="fld-2col">
           <div>
             <label className="fld-label">Date</label>
-            <input className="text-in" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <DatePicker value={date} onChange={setDate} />
           </div>
           <div>
             <label className="fld-label">Time</label>
             {allDay
               ? <div className="time-allday">All day</div>
-              : <input className="text-in" type="time" value={time} onChange={(e) => setTime(e.target.value)} />}
+              : <TimePicker value={time} onChange={setTime} />}
           </div>
         </div>
 

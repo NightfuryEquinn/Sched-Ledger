@@ -3,19 +3,22 @@ import { createPortal } from "react-dom";
 import {
   CURRENCIES,
   clampMonthKey,
+  CURRENT_MONTH_KEY,
   fmtMoney,
   getCurrency,
+  MAX_MONTH_KEY,
+  MIN_MONTH_KEY,
   monthLabel,
-  monthsInYear,
+  monthRangeBounds,
   pad,
   weekdayLabel,
-  yearsInRange,
 } from "@/frontend/lib/data";
 import type { Expense, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 import type { MonthEntry } from "@/frontend/lib/types";
 import type { ViewId } from "@/frontend/lib/types";
 import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
 import { Brand } from "@/frontend/components/Brand";
+import { DatePicker } from "@/frontend/components/DateTimePicker";
 
 /*
  * Shared UI primitives
@@ -112,20 +115,20 @@ function Sidebar({ view, setView }) {
 }
 
 // ── MonthSwitcher: prev / label picker / next ─────────────────────
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 function MonthSwitcher({ months, current, onChange }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<Record<string, string | number>>({});
   const rootRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [curY, curM] = current.split("-").map(Number);
-  const [pickY, setPickY] = useState(curY);
-  const [pickM, setPickM] = useState(curM);
+  const [pickY, setPickY] = useState(() => Number(current.split("-")[0]));
+  const { minY, maxY } = monthRangeBounds();
 
   useEffect(() => {
-    const [y, m] = current.split("-").map(Number);
+    const [y] = current.split("-").map(Number);
     setPickY(y);
-    setPickM(m);
   }, [current]);
 
   const idx = months.findIndex((m) => m.key === current);
@@ -135,12 +138,15 @@ function MonthSwitcher({ months, current, onChange }) {
     const el = labelRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
+    const menuW = 280;
+    let left = r.left + r.width / 2 - menuW / 2;
+    if (left + menuW > window.innerWidth - 12) left = window.innerWidth - menuW - 12;
+    if (left < 12) left = 12;
     setMenuStyle({
       position: "fixed",
       top: r.bottom + 8,
-      left: r.left + r.width / 2,
-      transform: "translateX(-50%)",
-      minWidth: 220,
+      left,
+      width: menuW,
       zIndex: 60,
     });
   };
@@ -164,45 +170,50 @@ function MonthSwitcher({ months, current, onChange }) {
     };
   }, [open]);
 
-  const applyPick = (year: number, month: number) => {
-    onChange(clampMonthKey(`${year}-${pad(month)}`));
+  const pickMonth = (month: number) => {
+    onChange(clampMonthKey(`${pickY}-${pad(month)}`));
     setOpen(false);
   };
 
-  const onYearChange = (year: number) => {
-    setPickY(year);
-    const valid = monthsInYear(year);
-    const month = valid.includes(pickM) ? pickM : valid[valid.length - 1];
-    setPickM(month);
-    onChange(clampMonthKey(`${year}-${pad(month)}`));
+  const goYear = (delta: number) => {
+    const nextY = pickY + delta;
+    if (nextY < minY || nextY > maxY) return;
+    setPickY(nextY);
   };
 
-  const onMonthChange = (month: number) => {
-    setPickM(month);
-    applyPick(pickY, month);
-  };
+  const canPrevYear = pickY > minY;
+  const canNextYear = pickY < maxY;
 
   const picker = open ? (
-    <div ref={menuRef} className="month-pick-menu" style={menuStyle}>
-      <div className="month-pick-row">
-        <label className="month-pick-field">
-          <span className="month-pick-label">Month</span>
-          <select value={pickM} onChange={(e) => onMonthChange(Number(e.target.value))}>
-            {monthsInYear(pickY).map((m) => (
-              <option key={m} value={m}>
-                {new Date(pickY, m - 1, 1).toLocaleString("en-US", { month: "long" })}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="month-pick-field">
-          <span className="month-pick-label">Year</span>
-          <select value={pickY} onChange={(e) => onYearChange(Number(e.target.value))}>
-            {yearsInRange().map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-        </label>
+    <div ref={menuRef} className="month-pick-menu" style={menuStyle} role="dialog" aria-modal="true">
+      <div className="picker-cal-head">
+        <button type="button" className="picker-nav-btn" disabled={!canPrevYear} onClick={() => goYear(-1)} aria-label="Previous year">
+          <Icon name="chevL" size={16} />
+        </button>
+        <span className="picker-cal-title">{pickY}</span>
+        <button type="button" className="picker-nav-btn" disabled={!canNextYear} onClick={() => goYear(1)} aria-label="Next year">
+          <Icon name="chevR" size={16} />
+        </button>
+      </div>
+      <div className="month-pick-grid">
+        {MONTH_SHORT.map((label, i) => {
+          const month = i + 1;
+          const key = `${pickY}-${pad(month)}`;
+          const enabled = key >= MIN_MONTH_KEY && key <= MAX_MONTH_KEY;
+          const active = key === current;
+          const today = key === CURRENT_MONTH_KEY;
+          return (
+            <button
+              key={label}
+              type="button"
+              className={"month-pick-cell" + (active ? " active" : "") + (today && !active ? " today" : "")}
+              disabled={!enabled}
+              onClick={() => pickMonth(month)}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
   ) : null;
@@ -218,6 +229,7 @@ function MonthSwitcher({ months, current, onChange }) {
         aria-haspopup="dialog"
         onClick={() => setOpen((o) => !o)}
       >
+        <Icon name="calendar" size={15} />
         <span>{monthLabel(current, true)}</span>
         <Icon name="chevD" size={14} />
       </button>
@@ -517,7 +529,7 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
         <div className="fld-2col">
           <div>
             <label className="fld-label">Date</label>
-            <input className="text-in" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <DatePicker value={date} onChange={setDate} />
           </div>
           <div>
             <label className="fld-label">Note</label>
@@ -575,3 +587,4 @@ export {
   WalletPicker,
   AddExpenseModal,
 };
+export { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
