@@ -89,10 +89,12 @@ async function findWritableShard(
 
 /**
  * Converts `mongodb+srv://` to a direct `mongodb://` URI.
- * Needed because Bun on Windows cannot resolve Atlas SRV records.
+ * Only needed on Windows where Bun cannot resolve Atlas SRV records.
+ * Vercel/Linux should pass the SRV URI through to the MongoDB driver.
  */
 export async function resolveMongoUri(uri: string): Promise<string> {
   if (!uri.startsWith("mongodb+srv://")) return uri;
+  if (process.platform !== "win32") return uri;
 
   const parsed = new URL(uri.replace("mongodb+srv://", "https://"));
   const srvName = `_mongodb._tcp.${parsed.hostname}`;

@@ -14,17 +14,19 @@ export function createApiRoutes() {
 
   api.use("*", securityHeaders);
   api.use("*", globalRateLimit);
-  api.use("*", ensureDb);
 
   api.get("/health", async (c) => {
     try {
-      const { getDb } = await import("@/db/client");
-      getDb();
+      const { connectDb } = await import("@/db/client");
+      await connectDb();
       return c.json({ ok: true, service: "ledger-api", db: "connected" });
-    } catch {
-      return c.json({ ok: false, service: "ledger-api", db: "disconnected" }, 503);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "disconnected";
+      return c.json({ ok: false, service: "ledger-api", db: "disconnected", error: message }, 503);
     }
   });
+
+  api.use("*", ensureDb);
 
   api.route("/auth", authRoutes);
   api.route("/users", usersRoutes);
