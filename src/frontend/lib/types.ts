@@ -1,4 +1,6 @@
-export type RecurringInterval = "monthly" | "quarterly" | "yearly";
+import type { RecurringInterval } from "@/lib/recurring";
+
+export type { RecurringInterval };
 
 export type Expense = {
   id: string;

@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { RECURRING_INTERVALS } from "@/lib/recurring";
 import { isoDateSchema, objectIdSchema, subcategoryIdSchema, walletAddressSchema } from "./common";
 
 export const txnKindSchema = z.enum(["expense", "income"]);
 
-export const RECURRING_INTERVALS = ["monthly", "quarterly", "yearly"] as const;
+export { RECURRING_INTERVALS };
 export const recurringIntervalSchema = z.enum(RECURRING_INTERVALS);
 export type RecurringInterval = z.infer<typeof recurringIntervalSchema>;
 

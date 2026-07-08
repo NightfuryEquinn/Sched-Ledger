@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
-import { formatTimezoneOption, timezoneOptions } from "@/lib/timezone";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { Identicon } from "./components/Identicon";
 import { CopyrightModal, TermsModal } from "./components/LegalModals";
@@ -39,8 +39,6 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
   const [tzBusy, setTzBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const tzOptions = useMemo(() => timezoneOptions(timezone), [timezone]);
-
   useEffect(() => {
     api.users
       .me()
@@ -55,7 +53,10 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
 
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Element | null;
+      // Portaled pickers render outside `.acct`; ignore their interactions.
+      if (target?.closest?.(".picker-scrim")) return;
+      if (ref.current && target && !ref.current.contains(target)) setOpen(false);
     };
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
@@ -108,23 +109,13 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
             <p className="am-tz-hint">
               Event times and email reminders follow this zone. Vercel cron runs in UTC (Hobby: ±1 hour window).
             </p>
-            <div className="select-wrap am-tz-select">
-              <select
-                id="acct-tz"
-                value={timezone}
-                disabled={tzBusy}
-                onChange={(e) => saveTimezone(e.target.value)}
-              >
-                {tzOptions.map((tz) => (
-                  <option key={tz} value={tz}>
-                    {formatTimezoneOption(tz)}
-                  </option>
-                ))}
-              </select>
-              <span className="select-caret">
-                <Icon name="chevD" size={15} />
-              </span>
-            </div>
+            <TimezonePicker
+              id="acct-tz"
+              className="am-tz-select"
+              value={timezone}
+              disabled={tzBusy}
+              onChange={saveTimezone}
+            />
             {!timezoneSaved ? (
               <p className="am-tz-note">Pick your timezone so reminders fire at the right local time.</p>
             ) : null}

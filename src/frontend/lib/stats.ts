@@ -1,7 +1,27 @@
+import {
+  normalizeRecurring,
+  recurringDueDay,
+  recurringLabel,
+  recurringMonthlyEquivalent,
+  recurringOccursInMonth,
+  recurringScheduleKey,
+  type RecurringField,
+  type RecurringInterval,
+} from "@/lib/recurring";
 import { CURRENT_MONTH_KEY, monthLabel, monthsWindow, SUB_BY_ID, TODAY_ISO } from "./data";
 import type { Budgets, Expense, FinancialWallet } from "./types";
 import type { CategoryIndex } from "./categories";
 import { catOfSub, isSavingsSub } from "./categories";
+
+export type { RecurringField, RecurringInterval };
+export {
+  normalizeRecurring,
+  recurringDueDay,
+  recurringLabel,
+  recurringMonthlyEquivalent,
+  recurringOccursInMonth,
+  recurringScheduleKey,
+};
 
 export type ChartPeriod = "daily" | "monthly" | "quarterly" | "yearly";
 export type ChartBar = { key: string; label: string; spent: number };
@@ -141,61 +161,8 @@ export function sumBy<T>(list: T[], keyFn: (item: T) => string) {
 export const isIncome = (e: Expense) => e.kind === "income";
 export const isOutgoing = (e: Expense) => e.kind !== "income";
 
-export type RecurringInterval = "monthly" | "quarterly" | "yearly";
-export type RecurringField = RecurringInterval | false;
-
-export function normalizeRecurring(value: unknown): RecurringField {
-  if (value === true || value === "monthly") return "monthly";
-  if (value === "quarterly" || value === "yearly") return value;
-  return false;
-}
-
 export function isRecurring(e: Pick<Expense, "recurring">) {
   return normalizeRecurring(e.recurring) !== false;
-}
-
-export function recurringLabel(freq: RecurringField | unknown) {
-  const f = normalizeRecurring(freq);
-  if (f === "monthly") return "Monthly";
-  if (f === "quarterly") return "Quarterly";
-  if (f === "yearly") return "Yearly";
-  return "";
-}
-
-export function recurringOccursInMonth(
-  expense: Pick<Expense, "date" | "recurring">,
-  monthKey: string,
-) {
-  const freq = normalizeRecurring(expense.recurring);
-  if (!freq) return false;
-
-  const [anchorY, anchorM] = expense.date.split("-").map(Number);
-  const [viewY, viewM] = monthKey.split("-").map(Number);
-  const anchorIndex = anchorY * 12 + anchorM;
-  const viewIndex = viewY * 12 + viewM;
-  if (viewIndex < anchorIndex) return false;
-
-  if (freq === "monthly") return true;
-  if (freq === "quarterly") return (viewIndex - anchorIndex) % 3 === 0;
-  return viewM === anchorM;
-}
-
-export function recurringScheduleKey(expense: Pick<Expense, "walletId" | "sub" | "note" | "recurring">) {
-  return `${expense.walletId}|${expense.sub}|${expense.note}|${normalizeRecurring(expense.recurring)}`;
-}
-
-export function recurringDueDay(expense: Pick<Expense, "date">, monthKey: string) {
-  const anchorD = Number(expense.date.split("-")[2]);
-  const [viewY, viewM] = monthKey.split("-").map(Number);
-  const days = new Date(viewY, viewM, 0).getDate();
-  return Math.min(anchorD, days);
-}
-
-export function recurringMonthlyEquivalent(amount: number, freq: RecurringField | unknown) {
-  const f = normalizeRecurring(freq);
-  if (f === "quarterly") return amount / 3;
-  if (f === "yearly") return amount / 12;
-  return amount;
 }
 
 export function recurringSchedulesForMonth(expenses: Expense[], monthKey: string) {

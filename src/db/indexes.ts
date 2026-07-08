@@ -14,6 +14,17 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db.collection(COLLECTIONS.expenses).createIndex({ userAddress: 1, walletId: 1, date: -1 }),
     db.collection(COLLECTIONS.expenses).createIndex({ userAddress: 1, date: -1 }),
     db.collection(COLLECTIONS.expenses).createIndex({ userAddress: 1, recurring: 1, date: -1 }),
+    /* Lookup for cron materialization dedupe (series × occurrence date). */
+    db.collection(COLLECTIONS.expenses).createIndex(
+      { userAddress: 1, walletId: 1, sub: 1, note: 1, recurring: 1, date: 1 },
+      {
+        name: "recurring_occurrence_lookup",
+        partialFilterExpression: {
+          recurring: { $in: [true, "monthly", "quarterly", "yearly"] },
+          walletId: { $exists: true },
+        },
+      },
+    ),
     db.collection(COLLECTIONS.events).createIndex({ userAddress: 1, date: 1 }),
     db.collection(COLLECTIONS.consent).createIndex({ userAddress: 1 }, { unique: true }),
     db.collection(COLLECTIONS.authNonces).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),

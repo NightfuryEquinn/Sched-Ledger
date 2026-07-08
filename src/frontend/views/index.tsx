@@ -549,7 +549,7 @@ export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) 
         <SummaryCard label="Monthly equivalent" tone="spent" value={fmtMoney(monthlyEq, { cents: false, currency })} sub="normalized across intervals" />
       </div>
       <section className="panel">
-        <div className="panel-head"><h2>Fixed & recurring</h2><p className="panel-sub">Monthly, quarterly, and yearly schedules</p></div>
+        <div className="panel-head"><h2>Fixed & recurring</h2><p className="panel-sub">Auto-posted on due dates from your last amount</p></div>
         <div className="rec-list">
           {list.length ? list.map((e) => {
             const s = categoryIndex.subById[e.sub];

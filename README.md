@@ -8,7 +8,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ## Features
 
-- **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with category breakdowns
+- **Overview, transactions, budgets, insights, recurring** — monthly expense tracking; recurring items auto-post on due dates via daily cron
 - **Schedule** — bills, appointments, and reminders with recurrence
 - **Web3 identity** — create or restore a wallet; sign in with a cryptographic challenge (SIWE-style)
 - **Dark mode** — system-aware theme toggle, persisted locally
@@ -112,7 +112,7 @@ Manage sessions under **Account → Data & privacy** (revoke devices, sign out e
 | `CRUD /api/expenses` | Transactions |
 | `CRUD /api/events` | Schedule events |
 | `GET/PATCH /api/consent` | Data-sharing consent |
-| `GET/POST/PATCH /api/users` | User profile (codename, notify email) |
+| `GET /api/cron/reminders` | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminder emails and materializes recurring expense/income rows |
 
 All mutating routes require a valid session cookie. Auth endpoints have stricter rate limits.
 

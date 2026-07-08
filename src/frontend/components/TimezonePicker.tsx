@@ -1,0 +1,135 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  timezoneOptions,
+  timezoneShortName,
+} from "@/lib/timezone";
+
+function ChevDown({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function timezoneCity(timeZone: string) {
+  return timeZone.split("/").pop()?.replace(/_/g, " ") ?? timeZone;
+}
+
+type TimezonePickerProps = {
+  value: string;
+  onChange: (tz: string) => void;
+  className?: string;
+  disabled?: boolean;
+  id?: string;
+};
+
+export function TimezonePicker({
+  value,
+  onChange,
+  className,
+  disabled,
+  id,
+}: TimezonePickerProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+  const options = useMemo(() => timezoneOptions(value), [value]);
+  const offset = timezoneShortName(value);
+  const city = timezoneCity(value);
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
+
+  const choose = (tz: string) => {
+    onChange(tz);
+    setOpen(false);
+  };
+
+  const menu = open && !disabled ? (
+    <div
+      className="picker-scrim"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) setOpen(false);
+      }}
+    >
+      <div
+        ref={menuRef}
+        className="picker-menu picker-menu--timezone"
+        role="listbox"
+        aria-label="Timezone"
+      >
+        <div className="picker-timezone-list">
+          {options.map((tz) => {
+            const active = tz === value;
+            return (
+              <button
+                key={tz}
+                ref={active ? activeRef : undefined}
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={"picker-timezone-item" + (active ? " active" : "")}
+                onClick={() => choose(tz)}
+              >
+                <span className="pti-offset num">{timezoneShortName(tz)}</span>
+                <span className="pti-label">{timezoneCity(tz)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <div className={"picker-wrap" + (className ? ` ${className}` : "")} ref={rootRef}>
+      <button
+        ref={triggerRef}
+        id={id}
+        type="button"
+        className="picker-trigger"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((o) => !o)}
+      >
+        <span className="picker-trigger-label">
+          <span className="picker-tz-offset num">{offset}</span>
+          <span className="picker-tz-city">{city}</span>
+        </span>
+        <ChevDown />
+      </button>
+      {menu ? createPortal(menu, document.body) : null}
+    </div>
+  );
+}

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { processDueRecurringExpenses } from "@/api/lib/recurring-expenses";
 import { processDueReminders } from "@/api/lib/reminders";
 import { ensureDb } from "@/api/middleware/db";
 
@@ -18,9 +19,15 @@ function assertCronAuth(authHeader: string | undefined): void {
   }
 }
 
-/** Vercel Cron (or manual curl) — processes due event reminders. */
+/**
+ * Vercel Cron (or manual curl) — due event reminder emails + recurring expense rows.
+ * Hobby plan allows one cron; both run in this handler.
+ */
 cronRoutes.get("/reminders", async (c) => {
   assertCronAuth(c.req.header("Authorization"));
-  const result = await processDueReminders();
-  return c.json({ ok: true, ...result });
+  const [reminders, recurring] = await Promise.all([
+    processDueReminders(),
+    processDueRecurringExpenses(),
+  ]);
+  return c.json({ ok: true, reminders, recurring });
 });

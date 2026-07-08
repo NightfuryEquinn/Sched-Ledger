@@ -614,3 +614,4 @@ export {
 };
 export { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 export { CurrencyPicker } from "@/frontend/components/CurrencyPicker";
+export { TimezonePicker } from "@/frontend/components/TimezonePicker";
