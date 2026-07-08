@@ -38,13 +38,13 @@ type LedgerAppProps = {
 
 const VIEW_TITLES: Record<ViewId, string> = {
   overview: "Overview",
+  todos: "TO-DO List",
+  schedule: "Schedule",
   transactions: "Transactions",
   budgets: "Budgets",
   categories: "Categories",
-  schedule: "Schedule",
-  todos: "TO-DO List",
-  insights: "Insights",
   recurring: "Recurring",
+  insights: "Insights",
 };
 
 export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
@@ -112,11 +112,14 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
       <Sidebar view={view} setView={setView} />
       <main className="main">
         <header className="topbar">
-          <div className="tb-left">
+          <div className="tb-row tb-row--main">
             <h1 className="page-title">{VIEW_TITLES[view]}</h1>
+            <div className="tb-actions">
+              <ThemeToggle />
+              <AccountMenu account={account} onSignOut={onSignOut} expenses={allExpenses} wallets={wallets} categoryIndex={ledger.categoryIndex} />
+            </div>
           </div>
-          <div className="tb-right">
-            <ThemeToggle />
+          <div className="tb-row tb-row--tools">
             {activeWallet && wallets.length ? (
               <WalletSwitcher
                 wallets={wallets}
@@ -126,23 +129,12 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
               />
             ) : null}
             <MonthSwitcher months={MONTHS} current={month} onChange={setMonth} />
-            <AccountMenu account={account} onSignOut={onSignOut} expenses={allExpenses} wallets={wallets} categoryIndex={ledger.categoryIndex} />
           </div>
         </header>
 
         <div className="scroll">
           {view === "overview" && (
             <Overview {...viewProps} setView={setView} onEdit={setModal} />
-          )}
-          {view === "transactions" && (
-            <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
-          )}
-          {view === "budgets" && <BudgetsView {...viewProps} setBudgets={setBudgets} />}
-          {view === "categories" && (
-            <CategoriesView
-              categoryIndex={ledger.categoryIndex}
-              onSave={ledger.saveCategories}
-            />
           )}
           {view === "schedule" && (
             <Schedule
@@ -159,8 +151,18 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
               onDelete={ledger.deleteTodoList}
             />
           )}
-          {view === "insights" && <Insights {...viewProps} setMonth={setMonth} />}
+          {view === "transactions" && (
+            <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
+          )}
+          {view === "budgets" && <BudgetsView {...viewProps} setBudgets={setBudgets} />}
+          {view === "categories" && (
+            <CategoriesView
+              categoryIndex={ledger.categoryIndex}
+              onSave={ledger.saveCategories}
+            />
+          )}
           {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}
+          {view === "insights" && <Insights {...viewProps} setMonth={setMonth} />}
           <div className="scroll-pad" />
         </div>
       </main>

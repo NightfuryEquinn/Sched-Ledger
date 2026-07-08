@@ -24,6 +24,7 @@ import {
   scheduleForMonth,
   weekdayLabel,
 } from "@/frontend/lib/data";
+import { displayGlyph } from "@/lib/glyphs";
 import type { LedgerEvent } from "@/frontend/lib/types";
 
 /*
@@ -35,11 +36,61 @@ import type { LedgerEvent } from "@/frontend/lib/types";
 
 const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+function shiftIso(iso: string, delta: number): string {
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() + delta);
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${day}`;
+}
+
+function AgendaEventRow({ ev, onEditEvent }: { ev: LedgerEvent; onEditEvent: (ev: LedgerEvent) => void }) {
+  const c = EVENT_CAT_BY_ID[ev.catId];
+  return (
+    <button type="button" className="agenda-row" onClick={() => onEditEvent(ev)}>
+      <span className="ag-glyph" style={glyphTint(c.color)}>{displayGlyph(c.glyph, c.id)}</span>
+      <span className="ag-main">
+        <span className="ag-title">
+          {ev.title}
+          {ev.repeat !== "once" && (
+            <span className="ag-rep" title={repeatLabel(ev)}>
+              <Icon name="repeat" size={12} />
+            </span>
+          )}
+          {ev.comments && ev.comments.length > 0 && (
+            <span className="ag-cmt">
+              <Icon name="comment" size={12} /> {ev.comments.length}
+            </span>
+          )}
+        </span>
+        <span className="ag-sub">
+          <span>{c.name}</span>
+          {ev.notify ? (
+            <span className="ag-bell">
+              <Icon name="bell" size={11} />
+              <span>{leadLabel(ev.lead).toLowerCase()}</span>
+            </span>
+          ) : null}
+        </span>
+      </span>
+      <span className="ag-time">{eventTimeLabel(ev)}</span>
+    </button>
+  );
+}
+
 // ── Schedule (calendar + agenda) ────────────────────────────────────
 export function Schedule({ events, month, onAddEvent, onEditEvent }) {
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [y, m] = month.split("-").map(Number);
   const days = new Date(y, m, 0).getDate();
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${String(days).padStart(2, "0")}`;
   const startOffset = (new Date(y, m - 1, 1).getDay() + 6) % 7; // Monday-first
+
+  useEffect(() => {
+    setSelectedDay(null);
+  }, [month]);
 
   const cells = [];
   for (let i = 0; i < startOffset; i++) cells.push(null);
@@ -50,21 +101,39 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
   const occ = useMemo(() => scheduleForMonth(events, month), [events, month]);
   const agenda = isCurrent ? occ.filter((o) => o.iso >= TODAY_ISO) : occ;
 
-  // group agenda by date
-  const groups = [];
-  const gmap = {};
-  agenda.forEach((o) => {
-    if (!gmap[o.iso]) { gmap[o.iso] = []; groups.push(o.iso); }
-    gmap[o.iso].push(o.ev);
-  });
-
   const nextRem = agenda.find((o) => o.ev.notify);
   const alertsCount = occ.filter((o) => o.ev.notify).length;
 
-  const eventsOn = (d) => {
+  const eventsOn = (d: number) => {
     const iso = `${month}-${String(d).padStart(2, "0")}`;
     return events.filter((ev) => occursOn(ev, iso));
   };
+
+  const eventsOnIso = (iso: string) => events.filter((ev) => occursOn(ev, iso));
+
+  const defaultFocusDay =
+    isCurrent && TODAY_ISO >= monthStart && TODAY_ISO <= monthEnd ? TODAY_ISO : monthStart;
+  const viewDay = selectedDay ?? defaultFocusDay;
+  const navAnchor = viewDay;
+
+  const handleDayClick = (iso: string, dayEvents: LedgerEvent[]) => {
+    if (dayEvents.length === 0) {
+      onAddEvent(iso);
+      return;
+    }
+    setSelectedDay(iso);
+  };
+
+  const navigateDay = (delta: number) => {
+    const next = shiftIso(navAnchor, delta);
+    if (next < monthStart || next > monthEnd) return;
+    setSelectedDay(next);
+  };
+
+  const focusedEvents = eventsOnIso(viewDay);
+  const canPrevDay = navAnchor > monthStart;
+  const canNextDay = navAnchor < monthEnd;
+  const upcomingTitle = isCurrent ? "Upcoming" : "Agenda";
 
   return (
     <div className="view">
@@ -80,7 +149,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
         <div className="panel-head">
           <div>
             <h2>{monthLabel(month, true)}</h2>
-            <p className="panel-sub">Click any day to schedule · click an event to edit</p>
+            <p className="panel-sub">Click a day to view or add · click an event to edit</p>
           </div>
           <button className="add-btn add-btn--top" onClick={() => onAddEvent(isCurrent ? TODAY_ISO : `${month}-01`)}>
             <Icon name="plus" size={17} /> <span className="abt-txt">New event</span>
@@ -99,8 +168,16 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
               const today = iso === TODAY_ISO;
               const past = isCurrent && iso < TODAY_ISO;
               return (
-                <div key={i} className={"cal-cell" + (today ? " today" : "") + (past ? " past" : "")}
-                  onClick={() => onAddEvent(iso)}>
+                <div
+                  key={i}
+                  className={
+                    "cal-cell"
+                    + (today ? " today" : "")
+                    + (past ? " past" : "")
+                    + (viewDay === iso ? " selected" : "")
+                  }
+                  onClick={() => handleDayClick(iso, list)}
+                >
                   <div className="cal-daynum">{d}</div>
                   <div className="cal-events">
                     {list.slice(0, 3).map((ev) => {
@@ -109,7 +186,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
                         <button key={ev.id} className="cal-chip" style={{ background: c.color + "1c", color: c.color }}
                           title={ev.title}
                           onClick={(e) => { e.stopPropagation(); onEditEvent(ev); }}>
-                          <span className="cal-chip-dot" style={{ background: c.color }} />
+                          <span className="cal-chip-glyph">{displayGlyph(c.glyph, c.id)}</span>
                           <span className="cal-chip-txt">{ev.allDay ? ev.title : `${fmtTime(ev.time)} ${ev.title}`}</span>
                         </button>
                       );
@@ -124,46 +201,59 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
       </section>
 
       <section className="panel">
-        <div className="panel-head">
-          <h2>{isCurrent ? "Upcoming" : "Agenda"}</h2>
-          <p className="panel-sub">{agenda.length} {agenda.length === 1 ? "event" : "events"}</p>
+        <div className="panel-head panel-head--agenda">
+          <div className="agenda-head">
+            <button
+              type="button"
+              className="agenda-nav-btn"
+              disabled={!canPrevDay}
+              onClick={() => navigateDay(-1)}
+              aria-label="Previous day"
+            >
+              <Icon name="chevL" size={18} />
+            </button>
+            <div className="agenda-head-main">
+              <h2>{upcomingTitle}</h2>
+              <p className="panel-sub">
+                {dayLabel(viewDay)} · {weekdayLabel(viewDay)}
+                {" · "}
+                {focusedEvents.length} {focusedEvents.length === 1 ? "event" : "events"}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="agenda-nav-btn"
+              disabled={!canNextDay}
+              onClick={() => navigateDay(1)}
+              aria-label="Next day"
+            >
+              <Icon name="chevR" size={18} />
+            </button>
+          </div>
         </div>
         <div className="agenda">
-          {groups.length ? groups.map((iso) => (
-            <div key={iso} className="agenda-group">
+          {focusedEvents.length ? (
+            <div className="agenda-group">
               <div className="agenda-date">
-                <span className="agenda-dnum">{new Date(iso + "T00:00:00").getDate()}</span>
-                <span className="agenda-dwd">{weekdayLabel(iso)}</span>
+                <span className="agenda-dnum">{new Date(viewDay + "T00:00:00").getDate()}</span>
+                <span className="agenda-dwd">{weekdayLabel(viewDay)}</span>
               </div>
               <div className="agenda-items">
-                {gmap[iso].map((ev) => {
-                  const c = EVENT_CAT_BY_ID[ev.catId];
-                  return (
-                    <button key={ev.id} className="agenda-row" onClick={() => onEditEvent(ev)}>
-                      <span className="ag-glyph" style={glyphTint(c.color)}>{c.glyph}</span>
-                      <span className="ag-main">
-                        <span className="ag-title">
-                          {ev.title}
-                          {ev.repeat !== "once" && <span className="ag-rep" title={repeatLabel(ev)}><Icon name="repeat" size={12} /></span>}
-                          {ev.comments && ev.comments.length > 0 && <span className="ag-cmt"><Icon name="comment" size={12} /> {ev.comments.length}</span>}
-                        </span>
-                        <span className="ag-sub">
-                          <span>{c.name}</span>
-                          {ev.notify ? (
-                            <span className="ag-bell">
-                              <Icon name="bell" size={11} />
-                              <span>{leadLabel(ev.lead).toLowerCase()}</span>
-                            </span>
-                          ) : null}
-                        </span>
-                      </span>
-                      <span className="ag-time">{eventTimeLabel(ev)}</span>
-                    </button>
-                  );
-                })}
+                {focusedEvents.map((ev) => (
+                  <AgendaEventRow key={ev.id} ev={ev} onEditEvent={onEditEvent} />
+                ))}
               </div>
             </div>
-          )) : <EmptyState title="Nothing scheduled" sub={isCurrent ? "You're all clear for the rest of the month." : "Add an event to this month."} />}
+          ) : (
+            <EmptyState
+              title="No events this day"
+              sub={
+                viewDay === defaultFocusDay && !selectedDay
+                  ? "Nothing on today — add an event or browse other days with the arrows."
+                  : "Add something to this date or use the arrows to browse the month."
+              }
+            />
+          )}
         </div>
       </section>
     </div>
@@ -232,7 +322,7 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
             <button key={c.id} className={"cat-chip" + (catId === c.id ? " active" : "")}
               style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
               onClick={() => setCatId(c.id)}>
-              <span className="cc-glyph" style={{ color: c.color }}>{c.glyph}</span>{c.name}
+              <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>{c.name}
             </button>
           ))}
         </div>

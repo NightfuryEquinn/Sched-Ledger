@@ -1,12 +1,22 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/frontend/components/ui";
+import { api } from "@/frontend/lib/api";
 import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
+import { formatTimezoneOption, timezoneOptions } from "@/lib/timezone";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { Identicon } from "./components/Identicon";
 import { RecoveryReveal } from "./components/RecoveryReveal";
 import { copyText } from "./lib/clipboard";
 import { shortAddr } from "./lib/format";
 import { identityStorage } from "./lib/identity-storage";
+
+function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
+}
 
 type AccountMenuProps = {
   account: Account;
@@ -21,7 +31,24 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
   const [reveal, setReveal] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [timezone, setTimezone] = useState(() => browserTimezone());
+  const [timezoneSaved, setTimezoneSaved] = useState(false);
+  const [tzBusy, setTzBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const tzOptions = useMemo(() => timezoneOptions(timezone), [timezone]);
+
+  useEffect(() => {
+    api.users
+      .me()
+      .then(({ user }) => {
+        if (user.timezone) {
+          setTimezone(user.timezone);
+          setTimezoneSaved(true);
+        }
+      })
+      .catch(() => {});
+  }, [account.address]);
 
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
@@ -30,6 +57,22 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
+
+  const saveTimezone = async (next: string) => {
+    setTimezone(next);
+    setTzBusy(true);
+    try {
+      await api.users.updateMe({ timezone: next });
+      setTimezoneSaved(true);
+    } catch {
+      api.users
+        .me()
+        .then(({ user }) => setTimezone(user.timezone ?? browserTimezone()))
+        .catch(() => {});
+    } finally {
+      setTzBusy(false);
+    }
+  };
 
   const stored = identityStorage.find(account.address);
 
@@ -49,6 +92,35 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
               <div className="am-addr num">{shortAddr(account.address)}</div>
             </div>
           </div>
+          <div className="am-tz">
+            <label className="am-tz-label" htmlFor="acct-tz">
+              Default timezone
+            </label>
+            <p className="am-tz-hint">
+              Event times and email reminders follow this zone. Vercel cron runs in UTC (Hobby: ±1 hour window).
+            </p>
+            <div className="select-wrap am-tz-select">
+              <select
+                id="acct-tz"
+                value={timezone}
+                disabled={tzBusy}
+                onChange={(e) => saveTimezone(e.target.value)}
+              >
+                {tzOptions.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {formatTimezoneOption(tz)}
+                  </option>
+                ))}
+              </select>
+              <span className="select-caret">
+                <Icon name="chevD" size={15} />
+              </span>
+            </div>
+            {!timezoneSaved ? (
+              <p className="am-tz-note">Pick your timezone so reminders fire at the right local time.</p>
+            ) : null}
+          </div>
+          <div className="am-div" />
           <button className="am-item" type="button" onClick={() => { copyText(account.address); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>
             <Icon name={copied ? "check" : "copy"} size={16} /> {copied ? "Address copied" : "Copy address"}
           </button>

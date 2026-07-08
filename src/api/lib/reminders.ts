@@ -10,6 +10,7 @@ import {
   occursOn,
   remindAtMs,
 } from "@/lib/schedule";
+import { DEFAULT_TIMEZONE } from "@/lib/timezone";
 import type { LeadId } from "@/schemas/common";
 
 const EVENT_CAT_NAMES: Record<string, string> = {
@@ -32,18 +33,28 @@ export type ReminderProcessResult = {
  * Global email opt-out: users can disable all reminder emails from the
  * Data & privacy modal. Absent field means enabled (default opt-in per event).
  */
-async function emailRemindersEnabledFor(userAddress: string): Promise<boolean> {
+type UserReminderPrefs = {
+  emailEnabled: boolean;
+  timezone: string;
+};
+
+async function userReminderPrefs(userAddress: string): Promise<UserReminderPrefs> {
   const { users } = getCollections(getDb());
   const user = await users.findOne({ address: userAddress });
-  return user?.emailRemindersEnabled !== false;
+  return {
+    emailEnabled: user?.emailRemindersEnabled !== false,
+    timezone: user?.timezone ?? DEFAULT_TIMEZONE,
+  };
 }
 
 export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   if (!doc.notify || !doc.email?.trim()) return;
   if (!emailConfigured()) return;
-  if (!(await emailRemindersEnabledFor(doc.userAddress))) return;
 
-  const when = formatEventWhen(doc.date, doc.time, doc.allDay);
+  const prefs = await userReminderPrefs(doc.userAddress);
+  if (!prefs.emailEnabled) return;
+
+  const when = formatEventWhen(doc.date, doc.time, doc.allDay, prefs.timezone);
   const category = EVENT_CAT_NAMES[doc.catId] ?? doc.catId;
   const lead = leadDescription(doc.lead as LeadId);
   const { html, text, subject } = reminderEmailHtml({
@@ -75,8 +86,8 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
 
   result.scanned = notifyEvents.length;
 
-  /* Cache the per-user opt-out lookup across events in this run. */
-  const optOutCache = new Map<string, boolean>();
+  /* Cache per-user reminder prefs across events in this run. */
+  const prefsCache = new Map<string, UserReminderPrefs>();
 
   for (const ev of notifyEvents) {
     const email = ev.email?.trim();
@@ -85,12 +96,12 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       continue;
     }
 
-    let enabled = optOutCache.get(ev.userAddress);
-    if (enabled === undefined) {
-      enabled = await emailRemindersEnabledFor(ev.userAddress);
-      optOutCache.set(ev.userAddress, enabled);
+    let prefs = prefsCache.get(ev.userAddress);
+    if (!prefs) {
+      prefs = await userReminderPrefs(ev.userAddress);
+      prefsCache.set(ev.userAddress, prefs);
     }
-    if (!enabled) {
+    if (!prefs.emailEnabled) {
       result.skipped++;
       continue;
     }
@@ -100,7 +111,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
     for (const iso of dates) {
       if (!occursOn(ev, iso)) continue;
 
-      const remindAt = remindAtMs(ev, iso);
+      const remindAt = remindAtMs(ev, iso, prefs.timezone);
       if (remindAt < windowStart || remindAt > windowEnd) continue;
 
       const logKey = {
@@ -115,7 +126,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
         continue;
       }
 
-      const when = formatEventWhen(iso, ev.time, ev.allDay);
+      const when = formatEventWhen(iso, ev.time, ev.allDay, prefs.timezone);
       const category = EVENT_CAT_NAMES[ev.catId] ?? ev.catId;
       const lead = leadDescription(ev.lead as LeadId);
       const { html, text, subject } = reminderEmailHtml({

@@ -17,13 +17,15 @@ import type { Expense, FinancialWallet, RecurringInterval } from "@/frontend/lib
 import type { MonthEntry } from "@/frontend/lib/types";
 import type { ViewId } from "@/frontend/lib/types";
 import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
+import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import { displayGlyph } from "@/lib/glyphs";
 import { Brand } from "@/frontend/components/Brand";
 import { DatePicker } from "@/frontend/components/DateTimePicker";
 
 /*
  * Shared UI primitives
  * ────────────────────
- *   Icon, CatDot, glyphTint  — visual atoms
+ *   Icon, CatGlyph, glyphTint  — visual atoms
  *   Sidebar, MonthSwitcher   — navigation
  *   SummaryCard, BudgetBar, TransactionRow — data display
  *   Segmented, EmptyState    — controls & placeholders
@@ -79,21 +81,25 @@ function Icon({ name, size = 20 }) {
   return <svg viewBox="0 0 24 24" style={s}>{paths[name]}</svg>;
 }
 
-// ── CatDot: small colored dot for category legends ──────────────────
-function CatDot({ color, size = 9 }) {
-  return <span style={{ width: size, height: size, borderRadius: "50%", background: color, display: "inline-block", flex: "none" }} />;
+// ── CatGlyph: category / type emoji marker ──────────────────────────
+function CatGlyph({ glyph, id }) {
+  return (
+    <span className="cat-glyph-inline" aria-hidden>
+      {displayGlyph(glyph, id)}
+    </span>
+  );
 }
 
 /** One entry per view: [id, label, icon]. Shared by Sidebar and bottom nav. */
 export const NAV_ITEMS = [
   ["overview", "Overview", "overview"],
+  ["todos", "TO-DO List", "checklist"],
+  ["schedule", "Schedule", "calendar"],
   ["transactions", "Transactions", "list"],
   ["budgets", "Budgets", "budget"],
   ["categories", "Categories", "tags"],
-  ["schedule", "Schedule", "calendar"],
-  ["todos", "TO-DO List", "checklist"],
-  ["insights", "Insights", "insights"],
   ["recurring", "Recurring", "recurring"],
+  ["insights", "Insights", "insights"],
 ] as const;
 
 // ── Sidebar (desktop navigation) ────────────────────────────────────
@@ -259,7 +265,7 @@ function BudgetBar({ cat, spent, budget, onClick, currency }) {
   return (
     <button className="budget-row" onClick={onClick}>
       <div className="br-head">
-        <div className="br-name"><CatDot color={cat.color} /> {cat.name}</div>
+        <div className="br-name"><CatGlyph glyph={cat.glyph} id={cat.id} /> {cat.name}</div>
         <div className={"br-amt" + (over ? " over" : "")}>
           {fmtMoney(spent, { cents: false, currency })} <span className="br-of">/ {fmtMoney(budget, { cents: false, currency })}</span>
         </div>
@@ -288,7 +294,7 @@ function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryI
         <div className="txn-day">{new Date(exp.date + "T00:00:00").getDate()}</div>
         <div className="txn-wd">{weekdayLabel(exp.date)}</div>
       </div>
-      <div className="txn-glyph" style={glyphTint(cat.color)}>{cat.glyph}</div>
+      <div className="txn-glyph" style={glyphTint(cat.color)}>{displayGlyph(cat.glyph, cat.id)}</div>
       <div className="txn-main">
         <div className="txn-note">{exp.note}{isRecurring(exp) ? <span className="txn-rep" title={recurringLabel(exp.recurring)}><Icon name="repeat" size={13} /></span> : null}</div>
         <div className="txn-cat">{cat.name} · {sub.name}{walletName ? <span className="txn-wallet"> · {walletName}</span> : null}</div>
@@ -504,8 +510,21 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
 
         <div className={"amount-field" + (kind === "income" ? " amount-field--income" : "")}>
           <span className="amount-cur">{kind === "income" ? "+" : ""}{cur.symbol}</span>
-          <input ref={amtRef} type="number" inputMode="decimal" placeholder="0.00" value={amount}
-            onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+          <input
+            ref={amtRef}
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(stripNegativeInput(e.target.value))}
+            onKeyDown={(e) => {
+              preventNegativeKeys(e);
+              if (e.key === "Enter") submit();
+            }}
+            onWheel={preventWheelChange}
+          />
         </div>
 
         <label className="fld-label">{kind === "income" ? "Source" : "Category"}</label>
@@ -514,7 +533,7 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
             <button key={c.id} className={"cat-chip" + (catId === c.id ? " active" : "")}
               style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
               onClick={() => chooseCat(c.id)}>
-              <span className="cc-glyph" style={{ color: c.color }}>{c.glyph}</span>{c.name}
+              <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>{c.name}
             </button>
           ))}
         </div>
@@ -575,7 +594,7 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
 
 export {
   Icon,
-  CatDot,
+  CatGlyph,
   glyphTint,
   Sidebar,
   MonthSwitcher,

@@ -22,7 +22,7 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
         id: "income",
         name: "Income",
         color: "#6f8b6f",
-        glyph: "◇",
+        glyph: "💵",
         type: "income",
         subs: [],
       },

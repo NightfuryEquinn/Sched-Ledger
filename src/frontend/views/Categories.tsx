@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { CatDot, EmptyState, glyphTint, Icon, Segmented } from "@/frontend/components/ui";
+import { EmptyState, glyphTint, Icon, Segmented } from "@/frontend/components/ui";
 import { nextCategoryColor, slugId } from "@/frontend/lib/categories";
+import { CATEGORY_GLYPH_OPTIONS, DEFAULT_GLYPH, displayGlyph } from "@/lib/glyphs";
 import type { Category, CategoryIndex } from "@/frontend/lib/types";
 
 /*
@@ -23,7 +24,7 @@ type EditorMode =
   | { type: "edit-sub"; catId: string; subId: string }
   | null;
 
-const GLYPHS = ["◓", "◇", "◈", "△", "◐", "◆", "●", "◎", "◉", "□"];
+const GLYPHS = CATEGORY_GLYPH_OPTIONS;
 
 export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
   const [categories, setCategories] = useState(categoryIndex.categories);
@@ -31,7 +32,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [editor, setEditor] = useState<EditorMode>(null);
   const [name, setName] = useState("");
-  const [glyph, setGlyph] = useState("●");
+  const [glyph, setGlyph] = useState(DEFAULT_GLYPH);
   const [color, setColor] = useState("#4a6fa5");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -62,7 +63,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
   const openAddCat = (catType: "expense" | "income") => {
     setEditor({ type: "add-cat", catType });
     setName("");
-    setGlyph("●");
+    setGlyph(DEFAULT_GLYPH);
     setColor(nextCategoryColor(categories));
     setError("");
   };
@@ -76,7 +77,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
   const openEditCat = (cat: Category) => {
     setEditor({ type: "edit-cat", catId: cat.id });
     setName(cat.name);
-    setGlyph(cat.glyph);
+    setGlyph(displayGlyph(cat.glyph, cat.id));
     setColor(cat.color);
     setError("");
   };
@@ -183,11 +184,11 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
           onChange={setFilter}
         />
         <div className="cat-toolbar-actions">
-          <button className="ghost-btn" type="button" onClick={() => openAddCat("expense")}>
-            <Icon name="plus" size={15} /> Category
+          <button className="primary-btn" type="button" onClick={() => openAddCat("expense")}>
+            <Icon name="plus" size={15} /> Expense
           </button>
           <button className="primary-btn" type="button" onClick={() => openAddCat("income")}>
-            <Icon name="plus" size={15} /> Income type
+            <Icon name="plus" size={15} /> Income
           </button>
         </div>
       </div>
@@ -218,22 +219,28 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                     <Icon name={open ? "chevD" : "chevR"} size={16} />
                   </button>
                   <span className="cat-block-glyph" style={glyphTint(cat.color)}>
-                    {cat.glyph}
+                    {displayGlyph(cat.glyph, cat.id)}
                   </span>
                   <div className="cat-block-main">
-                    <div className="cat-block-name">
-                      {cat.name}
-                      {cat.builtin ? <span className="wallet-badge">Built-in</span> : null}
-                      {isIncome ? <span className="wallet-badge">Income</span> : null}
-                    </div>
+                    <div className="cat-block-name">{cat.name}</div>
+                    {(cat.builtin || isIncome) ? (
+                      <div className="cat-block-tags">
+                        {cat.builtin ? <span className="wallet-badge">Built-in</span> : null}
+                        {isIncome ? <span className="wallet-badge">Income</span> : null}
+                      </div>
+                    ) : null}
                     <div className="cat-block-meta">{cat.subs.length} subcategories</div>
                   </div>
                   <div className="cat-block-actions">
-                    <button className="ghost-btn" type="button" onClick={() => openEditCat(cat)}>Edit</button>
-                    <button className="ghost-btn" type="button" onClick={() => openAddSub(cat.id)}>Add sub</button>
+                    <button type="button" onClick={() => openEditCat(cat)} aria-label="Edit">
+                      <Icon name="edit" size={16} />
+                    </button>
+                    <button type="button" onClick={() => openAddSub(cat.id)} aria-label="Add subcategory">
+                      <Icon name="plus" size={16} />
+                    </button>
                     {!cat.builtin ? (
-                      <button className="ghost-btn danger" type="button" disabled={busy} onClick={() => removeCategory(cat.id)}>
-                        Delete
+                      <button type="button" className="danger" disabled={busy} onClick={() => removeCategory(cat.id)} aria-label="Delete">
+                        <Icon name="trash" size={16} />
                       </button>
                     ) : null}
                   </div>
@@ -243,14 +250,17 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                   <ul className="cat-sub-list">
                     {cat.subs.map((sub) => (
                       <li key={sub.id} className="cat-sub-row">
-                        <CatDot color={cat.color} size={8} />
-                        <span className="cat-sub-name">{sub.name}</span>
-                        <span className="cat-sub-id num">{sub.id}</span>
+                        <div className="cat-sub-main">
+                          <span className="cat-sub-name">{sub.name}</span>
+                          <span className="cat-sub-id num">{sub.id}</span>
+                        </div>
                         <div className="cat-sub-actions">
-                          <button className="ghost-btn sm" type="button" onClick={() => openEditSub(cat.id, sub)}>Rename</button>
+                          <button type="button" onClick={() => openEditSub(cat.id, sub)} aria-label="Rename">
+                            <Icon name="edit" size={16} />
+                          </button>
                           {cat.subs.length > 1 ? (
-                            <button className="ghost-btn sm danger" type="button" disabled={busy} onClick={() => removeSub(cat.id, sub.id)}>
-                              Remove
+                            <button type="button" className="danger" disabled={busy} onClick={() => removeSub(cat.id, sub.id)} aria-label="Remove">
+                              <Icon name="trash" size={16} />
                             </button>
                           ) : null}
                         </div>

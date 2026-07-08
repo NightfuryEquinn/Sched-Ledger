@@ -1,3 +1,4 @@
+import { DEFAULT_TIMEZONE, zonedLocalToUtcMs } from "@/lib/timezone";
 import type { LeadId } from "@/schemas/common";
 
 export type ScheduleEvent = {
@@ -69,30 +70,44 @@ export function candidateOccurrenceDates(lead: LeadId, now = new Date()): string
   return out;
 }
 
-export function eventTimeMs(iso: string, time: string | null, allDay: boolean): number {
-  const offset = process.env.APP_TZ_OFFSET ?? "+08:00";
+export function eventTimeMs(
+  iso: string,
+  time: string | null,
+  allDay: boolean,
+  timeZone = DEFAULT_TIMEZONE,
+): number {
   const hhmm = allDay ? "09:00" : (time ?? "09:00");
-  return new Date(`${iso}T${hhmm}:00${offset}`).getTime();
+  return zonedLocalToUtcMs(iso, hhmm, timeZone);
 }
 
-export function remindAtMs(ev: ScheduleEvent, occurrenceIso: string): number {
-  return eventTimeMs(occurrenceIso, ev.time, ev.allDay) - leadOffsetMs(ev.lead);
+export function remindAtMs(ev: ScheduleEvent, occurrenceIso: string, timeZone = DEFAULT_TIMEZONE): number {
+  return eventTimeMs(occurrenceIso, ev.time, ev.allDay, timeZone) - leadOffsetMs(ev.lead);
 }
 
-export function formatEventWhen(iso: string, time: string | null, allDay: boolean): string {
-  const d = new Date(`${iso}T00:00:00`);
-  const day = d.toLocaleDateString("en-MY", {
+export function formatEventWhen(
+  iso: string,
+  time: string | null,
+  allDay: boolean,
+  timeZone = DEFAULT_TIMEZONE,
+): string {
+  const noonMs = zonedLocalToUtcMs(iso, "12:00", timeZone);
+  const day = new Intl.DateTimeFormat("en-US", {
+    timeZone,
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-  });
+  }).format(new Date(noonMs));
   if (allDay) return `${day} (all day)`;
   if (!time) return day;
   const [h, m] = time.split(":").map(Number);
   const ap = h < 12 ? "AM" : "PM";
   const hh = ((h + 11) % 12) + 1;
-  return `${day} at ${hh}:${String(m).padStart(2, "0")} ${ap}`;
+  const tzLabel = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "short" })
+    .formatToParts(new Date(noonMs))
+    .find((p) => p.type === "timeZoneName")?.value;
+  const suffix = tzLabel ? ` ${tzLabel}` : "";
+  return `${day} at ${hh}:${String(m).padStart(2, "0")} ${ap}${suffix}`;
 }
 
 function formatIsoDate(d: Date): string {

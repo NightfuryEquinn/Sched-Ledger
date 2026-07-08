@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState, Icon } from "@/frontend/components/ui";
 import { slugId } from "@/frontend/lib/categories";
+import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import type { TodoList, TodoTask } from "@/frontend/lib/types";
 
 /*
@@ -11,7 +12,7 @@ import type { TodoList, TodoTask } from "@/frontend/lib/types";
  * creation and renaming.
  */
 
-const ICONS = ["☑", "✦", "★", "♥", "⚡", "◆", "◇", "△", "●", "◎", "□", "◉"] as const;
+const ICONS = TODO_ICON_OPTIONS;
 
 type TodoListViewProps = {
   todoLists: TodoList[];
@@ -35,7 +36,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
   const [activeId, setActiveId] = useState<string | null>(todoLists[0]?.id ?? null);
   const [editor, setEditor] = useState<EditorMode>(null);
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState<string>("☑");
+  const [icon, setIcon] = useState<string>("📋");
   const [taskDraft, setTaskDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -95,7 +96,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
   const openAddList = () => {
     setEditor({ type: "add-list" });
     setName("");
-    setIcon("☑");
+    setIcon("📋");
     setError("");
   };
 

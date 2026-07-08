@@ -1,20 +1,8 @@
 import { z } from "zod";
+import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import { walletAddressSchema } from "./address";
 
-export const TODO_ICONS = [
-  "☑",
-  "✦",
-  "★",
-  "♥",
-  "⚡",
-  "◆",
-  "◇",
-  "△",
-  "●",
-  "◎",
-  "□",
-  "◉",
-] as const;
+export const TODO_ICONS = TODO_ICON_OPTIONS;
 
 export const todoIconSchema = z.enum(TODO_ICONS);
 
@@ -34,7 +22,7 @@ export const todoTaskSchema = z.object({
 export const todoListSchema = z.object({
   userAddress: walletAddressSchema,
   name: z.string().trim().min(1).max(80),
-  icon: todoIconSchema.default("☑"),
+  icon: todoIconSchema.default("📋"),
   tasks: z.array(todoTaskSchema).default([]),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -42,7 +30,7 @@ export const todoListSchema = z.object({
 
 export const createTodoListSchema = z.object({
   name: z.string().trim().min(1).max(80),
-  icon: todoIconSchema.default("☑"),
+  icon: todoIconSchema.default("📋"),
 });
 
 export const updateTodoListSchema = z.object({

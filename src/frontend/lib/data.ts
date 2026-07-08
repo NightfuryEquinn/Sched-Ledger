@@ -28,7 +28,7 @@ export function getCurrency(code?: string) {
 // Each category: id, name, color (cool muted chart palette), icon glyph, subs[]
 export const CATEGORIES = [
   {
-    id: "food", name: "Food & Dining", color: "#5b7a8a", glyph: "◓",
+    id: "food", name: "Food & Dining", color: "#5b7a8a", glyph: "🍽️",
     subs: [
       { id: "groceries", name: "Groceries" },
       { id: "meal", name: "Meal" },
@@ -36,14 +36,14 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: "transport", name: "Transport", color: "#6f8b6f", glyph: "◇",
+    id: "transport", name: "Transport", color: "#6f8b6f", glyph: "🚗",
     subs: [
       { id: "petrol", name: "Petrol" },
       { id: "transportation", name: "Transportation" },
     ],
   },
   {
-    id: "utilities", name: "Bills & Utilities", color: "#4f8a7b", glyph: "◈",
+    id: "utilities", name: "Bills & Utilities", color: "#4f8a7b", glyph: "💡",
     subs: [
       { id: "electricity", name: "Electricity" },
       { id: "water", name: "Water" },
@@ -51,13 +51,13 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: "sport", name: "Health & Sport", color: "#4a6fa5", glyph: "△",
+    id: "sport", name: "Health & Sport", color: "#4a6fa5", glyph: "🏃",
     subs: [
       { id: "gym", name: "Sport" },
     ],
   },
   {
-    id: "fun", name: "Entertainment", color: "#a06f95", glyph: "◐",
+    id: "fun", name: "Entertainment", color: "#a06f95", glyph: "🎬",
     subs: [
       { id: "streaming", name: "Streaming" },
       { id: "outings", name: "Outings" },
@@ -65,13 +65,13 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: "savings", name: "Savings", color: "#7a6fa5", glyph: "◆",
+    id: "savings", name: "Savings", color: "#7a6fa5", glyph: "🐷",
     subs: [
       { id: "saving", name: "Saving" },
     ],
   },
   {
-    id: "income", name: "Income", color: "#6f8b6f", glyph: "◇",
+    id: "income", name: "Income", color: "#6f8b6f", glyph: "💵",
     subs: [
       { id: "salary", name: "Salary" },
       { id: "wages", name: "Wages" },
@@ -285,12 +285,12 @@ export function buildSeedData() {
 // Event categories cover a mix of financial and general life events,
 // reusing the cool muted palette.
 export const EVENT_CATS = [
-  { id: "bill",        name: "Bill / Payment", color: "#4f8a7b", glyph: "◈" },
-  { id: "income",      name: "Income",         color: "#6f8b6f", glyph: "◇" },
-  { id: "savings",     name: "Savings",        color: "#7a6fa5", glyph: "◆" },
-  { id: "renewal",     name: "Renewal",        color: "#5b7a8a", glyph: "◓" },
-  { id: "appointment", name: "Appointment",    color: "#4a6fa5", glyph: "△" },
-  { id: "personal",    name: "Personal",       color: "#a06f95", glyph: "●" },
+  { id: "bill",        name: "Bill / Payment", color: "#4f8a7b", glyph: "🧾" },
+  { id: "income",      name: "Income",         color: "#6f8b6f", glyph: "💵" },
+  { id: "savings",     name: "Savings",        color: "#7a6fa5", glyph: "🐷" },
+  { id: "renewal",     name: "Renewal",        color: "#5b7a8a", glyph: "🔄" },
+  { id: "appointment", name: "Appointment",    color: "#4a6fa5", glyph: "📅" },
+  { id: "personal",    name: "Personal",       color: "#a06f95", glyph: "📌" },
 ];
 export const EVENT_CAT_BY_ID = Object.fromEntries(EVENT_CATS.map((c) => [c.id, c]));
 

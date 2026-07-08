@@ -32,6 +32,7 @@ export type ApiUser = {
   address: string;
   codename: string;
   notifyEmail?: string;
+  timezone?: string;
   emailRemindersEnabled?: boolean;
 };
 
@@ -119,7 +120,12 @@ export const api = {
     me() {
       return request<{ user: ApiUser }>("/users/me");
     },
-    updateMe(body: { codename?: string; notifyEmail?: string; emailRemindersEnabled?: boolean }) {
+    updateMe(body: {
+      codename?: string;
+      notifyEmail?: string;
+      timezone?: string;
+      emailRemindersEnabled?: boolean;
+    }) {
       return request<{ user: ApiUser }>("/users/me", { method: "PATCH", body });
     },
   },

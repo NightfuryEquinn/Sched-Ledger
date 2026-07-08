@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { AreaTrend, Donut, MiniSpark, MoMBars } from "@/frontend/charts";
 import {
   BudgetBar,
-  CatDot,
+  CatGlyph,
   EmptyState,
   glyphTint,
   Icon,
@@ -35,6 +35,8 @@ import { catOf, isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
   recurringScheduleKey,
   recurringSchedulesForMonth,
 } from "@/frontend/lib/stats";
+import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import { displayGlyph } from "@/lib/glyphs";
 import { getAccent } from "@/frontend/lib/theme";
 import type { Budgets, CategoryIndex, Expense } from "@/frontend/lib/types";
 
@@ -59,7 +61,13 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
   const [hoverCat, setHoverCat] = useState(null);
 
   const donutData = categoryIndex.expenseCategories
-    .map((c) => ({ id: c.id, label: c.name, value: st.byCat[c.id] || 0, color: c.color }))
+    .map((c) => ({
+      id: c.id,
+      label: c.name,
+      value: st.byCat[c.id] || 0,
+      color: c.color,
+      glyph: displayGlyph(c.glyph, c.id),
+    }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value);
   const totalAll = donutData.reduce((s, d) => s + d.value, 0);
@@ -127,7 +135,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
               {donutData.map((d) => (
                 <li key={d.id} className={activeCat && activeCat !== d.id ? "dim" : ""}
                   onMouseEnter={() => setHoverCat(d.id)} onMouseLeave={() => setHoverCat(null)}>
-                  <CatDot color={d.color} /> <span className="lg-name">{d.label}</span>
+                  <CatGlyph glyph={d.glyph} id={d.id} /> <span className="lg-name">{d.label}</span>
                   <span className="lg-pct">{Math.round((d.value / totalAll) * 100)}%</span>
                 </li>
               ))}
@@ -159,7 +167,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
               const cat = categoryIndex.catById[catOf(e.sub, categoryIndex)];
               return (
                 <button key={e.id} className="recent-row" onClick={() => onEdit(e)}>
-                  <span className="rr-glyph" style={glyphTint(cat.color)}>{cat.glyph}</span>
+                  <span className="rr-glyph" style={glyphTint(cat.color)}>{displayGlyph(cat.glyph, cat.id)}</span>
                   <span className="rr-main">
                     <span className="rr-note">{e.note}</span>
                     <span className="rr-sub">{categoryIndex.subById[e.sub]?.name ?? e.sub} · {dayLabel(e.date)}</span>
@@ -210,11 +218,11 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
       <div className="filter-chips">
         <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => setFilter("all")}>All</button>
         <button className={"fchip" + (filter === "income" ? " active" : "")} onClick={() => setFilter("income")}>
-          <CatDot color={categoryIndex.incomeCategory.color} size={8} /> Income
+          <CatGlyph glyph={categoryIndex.incomeCategory.glyph} id={categoryIndex.incomeCategory.id} /> Income
         </button>
         {categoryIndex.expenseCategories.map((c) => (
           <button key={c.id} className={"fchip" + (filter === c.id ? " active" : "")} onClick={() => setFilter(c.id)}>
-            <CatDot color={c.color} size={8} /> {c.name}
+            <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
           </button>
         ))}
       </div>
@@ -283,12 +291,25 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
             return (
               <div key={c.id} className="bedit">
                 <div className="be-top">
-                  <div className="be-name"><CatDot color={c.color} /> {c.name}</div>
+                  <div className="be-name"><CatGlyph glyph={c.glyph} id={c.id} /> {c.name}</div>
                   {editId === c.id ? (
                     <div className="be-edit">
                       <span className="be-cur">{getCurrency(currency).symbol}</span>
-                      <input autoFocus type="number" value={draft} onChange={(e) => setDraft(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditId(null); }} onBlur={commit} />
+                      <input
+                        autoFocus
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={draft}
+                        onChange={(e) => setDraft(stripNegativeInput(e.target.value))}
+                        onKeyDown={(e) => {
+                          preventNegativeKeys(e);
+                          if (e.key === "Enter") commit();
+                          if (e.key === "Escape") setEditId(null);
+                        }}
+                        onWheel={preventWheelChange}
+                        onBlur={commit}
+                      />
                     </div>
                   ) : (
                     <button className={"be-amt" + (over ? " over" : "")} onClick={() => startEdit(c.id)}>
@@ -406,7 +427,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           <div className="cat-trend-list">
             {catRows.map(({ c, now, delta, series }) => (
               <div key={c.id} className="ctrow">
-                <div className="ct-name"><CatDot color={c.color} /> {c.name}</div>
+                <div className="ct-name"><CatGlyph glyph={c.glyph} id={c.id} /> {c.name}</div>
                 <MiniSpark values={series} color={c.color} />
                 <div className="ct-amt">{fmtMoney(now, { cents: false, currency })}</div>
                 <div className={"ct-delta " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")}>
@@ -460,7 +481,7 @@ export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) 
             const scheduleKey = recurringScheduleKey(e);
             return (
               <button key={scheduleKey} className="rec-row" onClick={() => onEdit(e)}>
-                <span className="rec-glyph" style={glyphTint(c.color)}>{c.glyph}</span>
+                <span className="rec-glyph" style={glyphTint(c.color)}>{displayGlyph(c.glyph, c.id)}</span>
                 <span className="rec-main">
                   <span className="rec-note">{e.note}</span>
                   <span className="rec-sub">{c.name} · {s.name} · {recurringLabel(e.recurring)}</span>
