@@ -23,7 +23,7 @@ export function buildAuthMessage(address: string, nonce: string, uri: string): s
   const normalized = getAddress(address);
   const issuedAt = new Date().toISOString();
   return [
-    "Ledger Sched wants you to sign in with your Web3 identity.",
+    "Sched Ledger wants you to sign in with your Web3 identity.",
     "",
     `Address: ${normalized}`,
     "Sign in to verify you control this key. This will not send a transaction or cost gas.",

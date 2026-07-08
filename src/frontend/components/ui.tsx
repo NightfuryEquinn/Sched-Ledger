@@ -65,6 +65,7 @@ function Icon({ name, size = 20 }) {
     wallet: <><rect x="3" y="6" width="18" height="13" rx="3" /><path d="M21 10.5h-4a2 2 0 0 0 0 4h4" /></>,
     logout: <><path d="M15 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2" /><path d="M10 12h9" /><path d="M16 9l3 3-3 3" /></>,
     chevD: <path d="M6 9l6 6 6-6" />,
+    chevU: <path d="M6 15l6-6 6 6" />,
     download: <><path d="M12 4v11" /><path d="M8 11l4 4 4-4" /><path d="M5 19h14" /></>,
     database: <><ellipse cx="12" cy="6" rx="7" ry="3" /><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" /><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" /></>,
     calendar: <><rect x="3" y="4.5" width="18" height="16" rx="2.5" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></>,
@@ -301,8 +302,8 @@ function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryI
         <div className="txn-note">{exp.note}{isRecurring(exp) ? <span className="txn-rep" title={recurringLabel(exp.recurring)}><Icon name="repeat" size={13} /></span> : null}</div>
         <div className="txn-cat">{cat.name} · {sub.name}{walletName ? <span className="txn-wallet"> · {walletName}</span> : null}</div>
       </div>
-      <div className={"txn-amt" + (exp.kind === "income" ? " income" : "")}>
-        {exp.kind === "income" ? "+" : ""}{fmtMoney(exp.amount, { currency })}
+      <div className={"txn-amt" + (exp.kind === "income" ? " income" : " expense")}>
+        {exp.kind === "income" ? "+" : "−"}{fmtMoney(exp.amount, { currency })}
       </div>
       <div className="txn-actions">
         <button onClick={() => onEdit(exp)} aria-label="Edit"><Icon name="edit" size={16} /></button>
@@ -484,107 +485,110 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
   };
 
   return (
-    <div className="modal-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" role="dialog" aria-modal="true">
+    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{editing ? "Edit transaction" : "Add transaction"}</h3>
-          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={20} /></button>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
 
-        <label className="fld-label">Type</label>
-        <Segmented
-          options={[{ v: "expense", label: "Expense" }, { v: "income", label: "Income" }]}
-          value={kind}
-          onChange={switchKind}
-        />
+        <div className="modal-body modal-scroll">
+          <label className="fld-label">Type</label>
+          <Segmented
+            options={[{ v: "expense", label: "Expense" }, { v: "income", label: "Income" }]}
+            value={kind}
+            onChange={switchKind}
+          />
 
-        {wallets.length > 1 ? (
-          <div className="txn-wallet-field">
-            <label className="fld-label">Wallet</label>
-            <WalletPicker
-              wallets={wallets}
-              value={walletId}
-              onChange={setWalletId}
-              className="wallet-switch--block"
+          {wallets.length > 1 ? (
+            <div className="txn-wallet-field">
+              <label className="fld-label">Wallet</label>
+              <WalletPicker
+                wallets={wallets}
+                value={walletId}
+                onChange={setWalletId}
+                className="wallet-switch--block"
+              />
+            </div>
+          ) : null}
+
+          <div className={"amount-field" + (kind === "income" ? " amount-field--income" : "")}>
+            <span className="amount-cur">{kind === "income" ? "+" : ""}{cur.symbol}</span>
+            <input
+              ref={amtRef}
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(stripNegativeInput(e.target.value))}
+              onKeyDown={(e) => {
+                preventNegativeKeys(e);
+                if (e.key === "Enter") submit();
+              }}
+              onWheel={preventWheelChange}
             />
           </div>
-        ) : null}
 
-        <div className={"amount-field" + (kind === "income" ? " amount-field--income" : "")}>
-          <span className="amount-cur">{kind === "income" ? "+" : ""}{cur.symbol}</span>
-          <input
-            ref={amtRef}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            placeholder="0.00"
-            value={amount}
-            onChange={(e) => setAmount(stripNegativeInput(e.target.value))}
-            onKeyDown={(e) => {
-              preventNegativeKeys(e);
-              if (e.key === "Enter") submit();
-            }}
-            onWheel={preventWheelChange}
-          />
-        </div>
-
-        <label className="fld-label">{kind === "income" ? "Source" : "Category"}</label>
-        <div className="cat-grid">
-          {visibleCategories.map((c) => (
-            <button key={c.id} className={"cat-chip" + (catId === c.id ? " active" : "")}
-              style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
-              onClick={() => chooseCat(c.id)}>
-              <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>{c.name}
-            </button>
-          ))}
-        </div>
-
-        <label className="fld-label">Subcategory</label>
-        <div className="sub-row">
-          {catById[catId]?.subs.map((s) => (
-            <button key={s.id} className={"sub-chip" + (sub === s.id ? " active" : "")} onClick={() => setSub(s.id)}>{s.name}</button>
-          ))}
-        </div>
-
-        <div className="fld-2col">
-          <div>
-            <label className="fld-label">Date</label>
-            <DatePicker value={date} onChange={setDate} />
+          <label className="fld-label">{kind === "income" ? "Source" : "Category"}</label>
+          <div className="cat-grid">
+            {visibleCategories.map((c) => (
+              <button key={c.id} type="button" className={"cat-chip" + (catId === c.id ? " active" : "")}
+                style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
+                onClick={() => chooseCat(c.id)}>
+                <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>
+                <span className="cc-label">{c.name}</span>
+              </button>
+            ))}
           </div>
-          <div>
-            <label className="fld-label">Note</label>
-            <input className="text-in" type="text" placeholder="Optional" value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
-        </div>
 
-        <label className="toggle-line tight">
-          <input
-            type="checkbox"
-            checked={recurringOn}
-            onChange={(e) => setRecurringOn(e.target.checked)}
-          />
-          <span className="toggle-ui" /> <span>Recurring</span>
-        </label>
-        {recurringOn ? (
-          <div className="wallet-seg">
-            <Segmented
-              options={[
-                { v: "monthly", label: "Monthly" },
-                { v: "quarterly", label: "Quarterly" },
-                { v: "yearly", label: "Yearly" },
-              ]}
-              value={recurringFreq}
-              onChange={setRecurringFreq}
+          <label className="fld-label">Subcategory</label>
+          <div className="sub-row">
+            {catById[catId]?.subs.map((s) => (
+              <button key={s.id} type="button" className={"sub-chip" + (sub === s.id ? " active" : "")} onClick={() => setSub(s.id)}>{s.name}</button>
+            ))}
+          </div>
+
+          <div className="fld-2col">
+            <div>
+              <label className="fld-label">Date</label>
+              <DatePicker value={date} onChange={setDate} />
+            </div>
+            <div>
+              <label className="fld-label">Note</label>
+              <input className="text-in" type="text" placeholder="Optional" value={note} onChange={(e) => setNote(e.target.value)} />
+            </div>
+          </div>
+
+          <label className="toggle-line tight">
+            <input
+              type="checkbox"
+              checked={recurringOn}
+              onChange={(e) => setRecurringOn(e.target.checked)}
             />
-          </div>
-        ) : null}
+            <span className="toggle-ui" /> <span>Recurring</span>
+          </label>
+          {recurringOn ? (
+            <div className="wallet-seg">
+              <Segmented
+                options={[
+                  { v: "monthly", label: "Monthly" },
+                  { v: "quarterly", label: "Quarterly" },
+                  { v: "yearly", label: "Yearly" },
+                ]}
+                value={recurringFreq}
+                onChange={setRecurringFreq}
+              />
+            </div>
+          ) : null}
+        </div>
 
         <div className="modal-foot">
-          {editing ? <button className="ghost-btn danger" onClick={() => onDelete(initial.id)}>Delete</button> : <span />}
+          {editing ? <button className="ghost-btn danger" type="button" onClick={() => onDelete(initial.id)}>Delete</button> : <span />}
           <div className="mf-right">
-            <button className="ghost-btn" onClick={onClose}>Cancel</button>
-            <button className="primary-btn" disabled={!valid} onClick={submit}>
+            <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
+            <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>
               {editing ? "Save changes" : kind === "income" ? "Add income" : "Add expense"}
             </button>
           </div>
@@ -609,3 +613,4 @@ export {
   AddExpenseModal,
 };
 export { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
+export { CurrencyPicker } from "@/frontend/components/CurrencyPicker";

@@ -14,12 +14,12 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
         <div className="modal-body modal-scroll">
-          <p className="dm-lead">Last updated July 8, 2026. By using Ledger Sched you agree to these terms.</p>
+          <p className="dm-lead">Last updated July 8, 2026. By using Sched Ledger you agree to these terms.</p>
 
           <div className="dm-sec">
             <span className="fld-label">Service</span>
             <p className="legal-p">
-              Ledger Sched is a private expense ledger and schedule app. You sign in with a Web3 wallet identity.
+              Sched Ledger is a private expense ledger and schedule app. You sign in with a Web3 wallet identity.
               We do not require an email or password. You are responsible for safeguarding your wallet keys and recovery phrase.
             </p>
           </div>
@@ -50,7 +50,7 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <div className="dm-sec">
             <span className="fld-label">Availability &amp; disclaimer</span>
             <p className="legal-p">
-              The service is provided as-is. We may change or discontinue features. Ledger Sched is not financial, tax, or legal advice.
+              The service is provided as-is. We may change or discontinue features. Sched Ledger is not financial, tax, or legal advice.
               Reminder emails may be delayed or skipped depending on your settings and scheduling infrastructure.
             </p>
           </div>
@@ -82,10 +82,10 @@ export function CopyrightModal({ onClose }: LegalModalProps) {
         <div className="modal-body modal-scroll">
           <div className="dm-sec">
             <p className="legal-p legal-p--lead">
-              © 2026 Ledger Sched. All rights reserved except where the project license grants otherwise.
+              © 2026 Sched Ledger. All rights reserved except where the project license grants otherwise.
             </p>
             <p className="legal-p">
-              Ledger Sched and its accompanying materials are free software licensed under the
+              Sched Ledger and its accompanying materials are free software licensed under the
               GNU General Public License version 3 (GPLv3), or (at your option) any later version.
             </p>
             <p className="legal-p">

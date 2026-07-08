@@ -58,6 +58,7 @@ export const EVENT_CATEGORY_IDS = [
   "renewal",
   "appointment",
   "personal",
+  "custom",
 ] as const;
 
 export const REPEAT_IDS = ["once", "daily", "weekly", "monthly", "yearly"] as const;

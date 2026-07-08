@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { CURRENCIES, getCurrency } from "@/frontend/lib/data";
+import { getCurrency } from "@/frontend/lib/data";
 import type { FinancialWallet } from "@/frontend/lib/types";
+import { CurrencyPicker } from "./CurrencyPicker";
 import { Icon, Segmented, WalletPicker } from "./ui";
 
 /*
@@ -177,17 +178,13 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
               />
 
               <label className="fld-label" htmlFor="wallet-currency">Currency</label>
-              <select
+              <CurrencyPicker
                 id="wallet-currency"
-                className="text-in wallet-field"
+                className="wallet-field"
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
+                onChange={setCurrency}
                 disabled={mode === "edit"}
-              >
-                {CURRENCIES.map((c) => (
-                  <option key={c.code} value={c.code}>{c.code} — {c.label}</option>
-                ))}
-              </select>
+              />
               {mode === "edit" ? (
                 <p className="dm-note dm-note--pull">Currency cannot be changed after creation.</p>
               ) : null}

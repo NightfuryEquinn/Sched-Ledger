@@ -32,6 +32,8 @@ export type LedgerEvent = {
   id: string;
   title: string;
   catId: string;
+  customLabel?: string;
+  customGlyph?: string;
   date: string;
   allDay: boolean;
   time: string | null;

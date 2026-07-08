@@ -246,4 +246,15 @@ export const api = {
       return request<{ ok: boolean }>(`/todo-lists/${id}`, { method: "DELETE" });
     },
   },
+
+  fx: {
+    latest(base: string) {
+      return request<{
+        base: string;
+        rates: Record<string, number>;
+        fetchedAt: number;
+        cached: boolean;
+      }>(`/fx/latest/${encodeURIComponent(base)}`);
+    },
+  },
 };

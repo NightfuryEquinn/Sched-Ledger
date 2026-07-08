@@ -1,0 +1,40 @@
+---
+description: Require PC, laptop, tablet, and mobile layouts for any UI change
+globs: src/frontend/**/*.{tsx,css},src/**/*.html
+alwaysApply: false
+---
+
+# Responsive UI
+
+Any UI change must work on **PC, laptop, tablet, and mobile**. Do not ship desktop-only layouts.
+
+## Required checks
+
+Before finishing UI work, verify (or adjust CSS for) roughly:
+
+| Class | Width | Expectations |
+| --- | --- | --- |
+| PC / large laptop | ≥981px | Full sidebar layout, multi-column grids |
+| Laptop / small desktop | ~861–980px | Overview may collapse; avoid overflow |
+| Tablet / large phone | ≤860px | Sidebar → bottom nav; stack panels; tap targets ≥44px |
+| Phone | ≤560px | Single column; readable type; no horizontal scroll |
+
+Match existing breakpoints in `src/frontend/styles/ledger.css` (`980px`, `860px`, `560px`) unless a new query is clearly needed.
+
+## Patterns
+
+```css
+/* ❌ BAD — fixed width that breaks on phone */
+.panel { width: 720px; }
+
+/* ✅ GOOD — fluid + existing breakpoints */
+.panel { width: 100%; max-width: 720px; }
+@media (max-width: 560px) {
+  .panel { padding: 12px; }
+}
+```
+
+- Prefer fluid widths (`%`, `minmax(0, 1fr)`, `min-width: 0`) over fixed pixel shells.
+- Stack grids/flex rows at tablet/mobile; don’t clip labels or force overflow.
+- Modals, pickers, and toolbars must remain usable on small screens and touch (`hover: none`).
+- When editing a component, update the matching `@media` rules in `ledger.css` in the same change.

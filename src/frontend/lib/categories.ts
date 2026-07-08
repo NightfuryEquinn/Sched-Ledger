@@ -29,19 +29,25 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
     };
   }
 
-  const catById = Object.fromEntries(categories.map((c) => [c.id, c]));
+  const byName = (a: { name: string }, b: { name: string }) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  const sorted = [...categories]
+    .map((c) => ({ ...c, subs: [...c.subs].sort(byName) }))
+    .sort(byName);
+
+  const catById = Object.fromEntries(sorted.map((c) => [c.id, c]));
   const subById: CategoryIndex["subById"] = {};
-  categories.forEach((c) =>
+  sorted.forEach((c) =>
     c.subs.forEach((s) => {
       subById[s.id] = { ...s, catId: c.id, color: c.color };
     }),
   );
   const incomeCategory =
-    categories.find((c) => c.type === "income") ??
-    categories.find((c) => c.id === "income") ??
-    categories[0];
-  const expenseCategories = categories.filter((c) => c.type !== "income");
-  return { categories, catById, subById, expenseCategories, incomeCategory };
+    sorted.find((c) => c.type === "income") ??
+    sorted.find((c) => c.id === "income") ??
+    sorted[0];
+  const expenseCategories = sorted.filter((c) => c.type !== "income");
+  return { categories: sorted, catById, subById, expenseCategories, incomeCategory };
 }
 
 export function slugId(prefix: string, name: string) {

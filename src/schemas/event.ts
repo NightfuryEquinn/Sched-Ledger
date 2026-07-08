@@ -13,10 +13,27 @@ export const eventCommentSchema = z.object({
   at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
 });
 
+const customLabelSchema = z.string().min(1).max(40);
+const customGlyphSchema = z.string().min(1).max(8);
+
+function withCustomFields<T extends z.ZodRawShape>(shape: T) {
+  return z.object(shape).superRefine((data, ctx) => {
+    if (data.catId !== "custom") return;
+    if (!data.customLabel?.trim()) {
+      ctx.addIssue({ code: "custom", message: "Custom type name is required", path: ["customLabel"] });
+    }
+    if (!data.customGlyph?.trim()) {
+      ctx.addIssue({ code: "custom", message: "Custom emoji is required", path: ["customGlyph"] });
+    }
+  });
+}
+
 export const eventSchema = z.object({
   userAddress: walletAddressSchema,
   title: z.string().min(1).max(200),
   catId: eventCategoryIdSchema,
+  customLabel: customLabelSchema.optional(),
+  customGlyph: customGlyphSchema.optional(),
   date: isoDateSchema,
   allDay: z.boolean().default(true),
   time: z
@@ -33,9 +50,11 @@ export const eventSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export const createEventSchema = z.object({
+export const createEventSchema = withCustomFields({
   title: z.string().min(1).max(200),
   catId: eventCategoryIdSchema,
+  customLabel: customLabelSchema.optional(),
+  customGlyph: customGlyphSchema.optional(),
   date: isoDateSchema,
   allDay: z.boolean().optional().default(true),
   time: z
@@ -55,6 +74,8 @@ export const updateEventSchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
     catId: eventCategoryIdSchema.optional(),
+    customLabel: customLabelSchema.optional(),
+    customGlyph: customGlyphSchema.optional(),
     date: isoDateSchema.optional(),
     allDay: z.boolean().optional(),
     time: z
@@ -70,6 +91,15 @@ export const updateEventSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
+  })
+  .superRefine((data, ctx) => {
+    if (data.catId !== "custom") return;
+    if (!data.customLabel?.trim()) {
+      ctx.addIssue({ code: "custom", message: "Custom type name is required", path: ["customLabel"] });
+    }
+    if (!data.customGlyph?.trim()) {
+      ctx.addIssue({ code: "custom", message: "Custom emoji is required", path: ["customGlyph"] });
+    }
   });
 
 export const addEventCommentSchema = z.object({

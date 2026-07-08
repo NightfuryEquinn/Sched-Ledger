@@ -216,7 +216,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
 
           {active ? (
             <section className="panel">
-              <div className="panel-head">
+              <div className="panel-head panel-head--todo">
                 <div className="todo-panel-title">
                   <span className="todo-panel-icon">{active.icon}</span>
                   <div>
@@ -227,16 +227,21 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                   </div>
                 </div>
                 <div className="todo-panel-actions">
-                  <button className="ghost-btn" type="button" onClick={() => openEditList(active)}>
-                    Edit
+                  <button
+                    type="button"
+                    onClick={() => openEditList(active)}
+                    aria-label="Edit list"
+                  >
+                    <Icon name="edit" size={16} />
                   </button>
                   <button
-                    className="ghost-btn danger"
                     type="button"
+                    className="danger"
                     disabled={busy}
                     onClick={() => removeList(active.id)}
+                    aria-label="Delete list"
                   >
-                    Delete
+                    <Icon name="trash" size={16} />
                   </button>
                 </div>
               </div>

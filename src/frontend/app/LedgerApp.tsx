@@ -9,7 +9,7 @@ import {
 } from "@/frontend/components/ui";
 import { WalletManageModal, WalletSwitcher } from "@/frontend/components/Wallets";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
-import { CURRENT_MONTH_KEY, MONTHS } from "@/frontend/lib/data";
+import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import type { Account, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
 import { EventModal, Schedule } from "@/frontend/views/Schedule";
@@ -53,7 +53,25 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   const [modal, setModal] = useState<Expense | { add: true } | null>(null);
   const [evModal, setEvModal] = useState<LedgerEvent | { add: true; date: string } | null>(null);
   const [walletModal, setWalletModal] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
   const monthInitialized = useRef(false);
+  const fabRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!fabOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFabOpen(false);
+    };
+    const onPointer = (e: MouseEvent) => {
+      if (fabRef.current && !fabRef.current.contains(e.target as Node)) setFabOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointer);
+    };
+  }, [fabOpen]);
 
   useEffect(() => {
     if (ledger.isLoading || ledger.error || monthInitialized.current || !ledger.profile) return;
@@ -183,14 +201,46 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         ))}
       </nav>
 
-      <button
-        className="fab"
-        type="button"
-        aria-label="Add expense"
-        onClick={() => setModal({ add: true })}
-      >
-        <Icon name="plus" size={26} />
-      </button>
+      <div ref={fabRef} className={"fab-wrap" + (fabOpen ? " open" : "")}>
+        <div className="fab-actions" aria-hidden={!fabOpen}>
+          <button
+            className="fab-action"
+            type="button"
+            aria-label="Add event"
+            tabIndex={fabOpen ? 0 : -1}
+            onClick={() => {
+              setFabOpen(false);
+              const date = month === CURRENT_MONTH_KEY ? TODAY_ISO : `${month}-01`;
+              setEvModal({ add: true, date });
+            }}
+          >
+            <Icon name="calendar" size={20} />
+            <span className="fab-action-label">Event</span>
+          </button>
+          <button
+            className="fab-action"
+            type="button"
+            aria-label="Add transaction"
+            tabIndex={fabOpen ? 0 : -1}
+            onClick={() => {
+              setFabOpen(false);
+              setModal({ add: true });
+            }}
+          >
+            <Icon name="list" size={20} />
+            <span className="fab-action-label">Transaction</span>
+          </button>
+        </div>
+        <button
+          className="fab"
+          type="button"
+          aria-label={fabOpen ? "Close add menu" : "Open add menu"}
+          aria-expanded={fabOpen}
+          onClick={() => setFabOpen((o) => !o)}
+        >
+          <Icon name="chevU" size={26} />
+        </button>
+      </div>
 
       {modal && activeWallet ? (
         <AddExpenseModal

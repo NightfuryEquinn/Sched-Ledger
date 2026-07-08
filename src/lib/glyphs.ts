@@ -15,6 +15,7 @@ export const BUILTIN_GLYPHS: Record<string, string> = {
   renewal: "🔄",
   appointment: "📅",
   personal: "📌",
+  custom: "✨",
 };
 
 export const DEFAULT_GLYPH = "📁";

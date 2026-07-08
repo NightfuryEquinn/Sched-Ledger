@@ -6,16 +6,35 @@ import type { Expense, LedgerEvent, MonthEntry } from "./types";
 export const CURRENCY = { code: "MYR", symbol: "RM" };
 
 export const CURRENCIES = [
-  { code: "MYR", symbol: "RM", label: "Malaysian Ringgit" },
-  { code: "USD", symbol: "$", label: "US Dollar" },
-  { code: "SGD", symbol: "S$", label: "Singapore Dollar" },
+  { code: "AED", symbol: "د.إ", label: "UAE Dirham" },
+  { code: "AUD", symbol: "A$", label: "Australian Dollar" },
+  { code: "BDT", symbol: "৳", label: "Bangladeshi Taka" },
+  { code: "BND", symbol: "B$", label: "Brunei Dollar" },
+  { code: "BRL", symbol: "R$", label: "Brazilian Real" },
+  { code: "CAD", symbol: "C$", label: "Canadian Dollar" },
+  { code: "CHF", symbol: "CHF", label: "Swiss Franc" },
+  { code: "CNY", symbol: "¥", label: "Chinese Yuan" },
   { code: "EUR", symbol: "€", label: "Euro" },
   { code: "GBP", symbol: "£", label: "British Pound" },
-  { code: "JPY", symbol: "¥", label: "Japanese Yen" },
-  { code: "AUD", symbol: "A$", label: "Australian Dollar" },
-  { code: "THB", symbol: "฿", label: "Thai Baht" },
+  { code: "HKD", symbol: "HK$", label: "Hong Kong Dollar" },
   { code: "IDR", symbol: "Rp", label: "Indonesian Rupiah" },
-  { code: "CNY", symbol: "¥", label: "Chinese Yuan" },
+  { code: "INR", symbol: "₹", label: "Indian Rupee" },
+  { code: "JPY", symbol: "¥", label: "Japanese Yen" },
+  { code: "KRW", symbol: "₩", label: "South Korean Won" },
+  { code: "MXN", symbol: "MX$", label: "Mexican Peso" },
+  { code: "MYR", symbol: "RM", label: "Malaysian Ringgit" },
+  { code: "NZD", symbol: "NZ$", label: "New Zealand Dollar" },
+  { code: "PHP", symbol: "₱", label: "Philippine Peso" },
+  { code: "PKR", symbol: "₨", label: "Pakistani Rupee" },
+  { code: "SAR", symbol: "﷼", label: "Saudi Riyal" },
+  { code: "SEK", symbol: "kr", label: "Swedish Krona" },
+  { code: "SGD", symbol: "S$", label: "Singapore Dollar" },
+  { code: "THB", symbol: "฿", label: "Thai Baht" },
+  { code: "TRY", symbol: "₺", label: "Turkish Lira" },
+  { code: "TWD", symbol: "NT$", label: "New Taiwan Dollar" },
+  { code: "USD", symbol: "$", label: "US Dollar" },
+  { code: "VND", symbol: "₫", label: "Vietnamese Dong" },
+  { code: "ZAR", symbol: "R", label: "South African Rand" },
 ] as const;
 
 export const CURRENCY_BY_CODE = Object.fromEntries(CURRENCIES.map((c) => [c.code, c]));
@@ -291,8 +310,22 @@ export const EVENT_CATS = [
   { id: "renewal",     name: "Renewal",        color: "#5b7a8a", glyph: "🔄" },
   { id: "appointment", name: "Appointment",    color: "#4a6fa5", glyph: "📅" },
   { id: "personal",    name: "Personal",       color: "#a06f95", glyph: "📌" },
+  { id: "custom",      name: "Custom",         color: "#8a7355", glyph: "✨" },
 ];
 export const EVENT_CAT_BY_ID = Object.fromEntries(EVENT_CATS.map((c) => [c.id, c]));
+
+/** Resolve display meta for an event type, including custom label/glyph. */
+export function eventCatMeta(ev: { catId: string; customLabel?: string; customGlyph?: string }) {
+  const base = EVENT_CAT_BY_ID[ev.catId] ?? EVENT_CAT_BY_ID.custom;
+  if (ev.catId === "custom") {
+    return {
+      ...base,
+      name: ev.customLabel?.trim() || base.name,
+      glyph: ev.customGlyph?.trim() || base.glyph,
+    };
+  }
+  return base;
+}
 
 export const REPEATS = [
   { id: "once",    label: "One-time", adj: "Once" },

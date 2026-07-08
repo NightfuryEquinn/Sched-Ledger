@@ -77,9 +77,18 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
   const body = c.req.valid("json");
   const { events } = getCollections(getDb());
 
+  const $set: Record<string, unknown> = { ...body, updatedAt: new Date() };
+  const $unset: Record<string, ""> = {};
+  if (body.catId && body.catId !== "custom") {
+    delete $set.customLabel;
+    delete $set.customGlyph;
+    $unset.customLabel = "";
+    $unset.customGlyph = "";
+  }
+
   const updated = await events.findOneAndUpdate(
     { _id: new ObjectId(id.data), userAddress: walletAddress },
-    { $set: { ...body, updatedAt: new Date() } },
+    Object.keys($unset).length ? { $set, $unset } : { $set },
     { returnDocument: "after" },
   );
 

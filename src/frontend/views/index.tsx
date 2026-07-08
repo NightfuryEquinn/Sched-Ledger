@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AreaTrend, Donut, MiniSpark, MoMBars } from "@/frontend/charts";
+import { CurrencyPicker } from "@/frontend/components/CurrencyPicker";
 import {
   BudgetBar,
   CatGlyph,
@@ -22,6 +23,7 @@ import {
   monthLabel,
   weekdayLabel,
 } from "@/frontend/lib/data";
+import { fetchFxRates, fxConvert, fxRateLabel } from "@/frontend/lib/fx";
 import { catOf, isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
   chartActiveKey,
   chartBudgetForPeriod,
@@ -172,8 +174,8 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
                     <span className="rr-note">{e.note}</span>
                     <span className="rr-sub">{categoryIndex.subById[e.sub]?.name ?? e.sub} · {dayLabel(e.date)}</span>
                   </span>
-                  <span className={"rr-amt" + (isIncome(e) ? " income" : "")}>
-                    {isIncome(e) ? "+" : ""}{fmtMoney(e.amount, { currency })}
+                  <span className={"rr-amt" + (isIncome(e) ? " income" : " expense")}>
+                    {isIncome(e) ? "+" : "−"}{fmtMoney(e.amount, { currency })}
                   </span>
                 </button>
               );
@@ -217,14 +219,16 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
       </div>
       <div className="filter-chips">
         <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => setFilter("all")}>All</button>
-        <button className={"fchip" + (filter === "income" ? " active" : "")} onClick={() => setFilter("income")}>
-          <CatGlyph glyph={categoryIndex.incomeCategory.glyph} id={categoryIndex.incomeCategory.id} /> Income
-        </button>
-        {categoryIndex.expenseCategories.map((c) => (
-          <button key={c.id} className={"fchip" + (filter === c.id ? " active" : "")} onClick={() => setFilter(c.id)}>
-            <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
-          </button>
-        ))}
+        {[...categoryIndex.categories]
+          .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+          .map((c) => {
+            const key = c.type === "income" ? "income" : c.id;
+            return (
+              <button key={c.id} className={"fchip" + (filter === key ? " active" : "")} onClick={() => setFilter(key)}>
+                <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
+              </button>
+            );
+          })}
       </div>
 
       <section key={filter + ":" + q} className="panel txn-panel txn-panel--filter">
@@ -276,12 +280,12 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
     <div className="view">
       <div className="summary-grid sg-3">
         <SummaryCard label="Total budget" value={fmtMoney(totalBudget, { cents: false, currency })} sub="across all categories" />
-        <SummaryCard label="Allocated so far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
+        <SummaryCard label="Spent so far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
         <SummaryCard label="Left to spend" tone={totalBudget - totalSpent < 0 ? "danger" : "ok"} value={fmtMoney(totalBudget - totalSpent, { cents: false, currency })} sub={monthLabel(month, true)} />
       </div>
 
       <section className="panel">
-        <div className="panel-head"><h2>Budget by category</h2><p className="panel-sub">Tap an amount to adjust</p></div>
+        <div className="panel-head"><h2>Budget by category</h2><p className="panel-sub">Tap an amount to allocate</p></div>
         <div className="budget-edit-list">
           {categoryIndex.expenseCategories.map((c) => {
             const spent = st.byCat[c.id] || 0;
@@ -337,16 +341,58 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 // ── Insights ────────────────────────────────────────────────────────
 export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, setMonth }) {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
+  const [viewCurrency, setViewCurrency] = useState(currency);
+  const [fxRates, setFxRates] = useState<Record<string, number> | null>(null);
+  const [fxStatus, setFxStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [fxError, setFxError] = useState("");
+
+  useEffect(() => {
+    setViewCurrency(currency);
+  }, [currency]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFxStatus("loading");
+    setFxRates(null);
+    setFxError("");
+    fetchFxRates(currency)
+      .then((fx) => {
+        if (cancelled) return;
+        setFxRates(fx.rates);
+        setFxStatus("ready");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setFxRates({ [currency]: 1 });
+        setFxStatus("error");
+        setFxError(err instanceof Error ? err.message : "Could not load rates");
+        setViewCurrency(currency);
+      });
+    return () => { cancelled = true; };
+  }, [currency]);
+
+  const canConvert =
+    viewCurrency === currency ||
+    (fxStatus === "ready" && typeof fxRates?.[viewCurrency] === "number");
+  const displayCurrency = canConvert ? viewCurrency : currency;
+  const money = (n: number) =>
+    fmtMoney(Math.round(fxConvert(n, currency, displayCurrency, fxRates)), {
+      cents: false,
+      currency: displayCurrency,
+    });
+
   const spendingBudgets = Object.fromEntries(Object.entries(budgets).filter(([id]) => id !== "income"));
   const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
   const chartMonths = monthsWindow(month);
-  const chartBars = useMemo(
-    () => spendingChartSeries(chartPeriod, expenses, month, categoryIndex),
-    [chartPeriod, expenses, month, categoryIndex],
-  );
+  const chartBars = useMemo(() => {
+    return spendingChartSeries(chartPeriod, expenses, month, categoryIndex).map((bar) => ({
+      ...bar,
+      spent: Math.round(fxConvert(bar.spent, currency, displayCurrency, fxRates)),
+    }));
+  }, [chartPeriod, expenses, month, categoryIndex, currency, displayCurrency, fxRates]);
   const chartBudget = useMemo(
-    () => chartBudgetForPeriod(chartPeriod, totalBudget, month),
-    [chartPeriod, totalBudget, month],
+    () => Math.round(fxConvert(chartBudgetForPeriod(chartPeriod, totalBudget, month), currency, displayCurrency, fxRates)),
+    [chartPeriod, totalBudget, month, currency, displayCurrency, fxRates],
   );
   const activeChartKey = chartActiveKey(chartPeriod, month);
   const perMonth = chartMonths.map((mo) => {
@@ -361,10 +407,19 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const catRows = categoryIndex.expenseCategories.map((c) => {
     const now = cur.byCat[c.id] || 0;
     const was = prev ? (prev.byCat[c.id] || 0) : 0;
-    const series = chartMonths.map((mo) => Math.round(
-      monthExpenses(expenses, mo.key).filter((e) => isOutgoing(e) && catOf(e.sub, categoryIndex) === c.id).reduce((s, e) => s + e.amount, 0),
-    ));
-    const delta = was ? (now - was) / was : (now > 0 ? 1 : 0);
+    const series = chartMonths.map((mo) =>
+      Math.round(
+        fxConvert(
+          monthExpenses(expenses, mo.key)
+            .filter((e) => isOutgoing(e) && catOf(e.sub, categoryIndex) === c.id)
+            .reduce((s, e) => s + e.amount, 0),
+          currency,
+          displayCurrency,
+          fxRates,
+        ),
+      ),
+    );
+    const delta = was ? (now - was) / was : now > 0 ? 1 : 0;
     return { c, now, was, delta, series };
   }).sort((a, b) => b.now - a.now);
 
@@ -375,6 +430,15 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const maxSub = topSubs.length ? topSubs[0].v : 1;
 
   const avgSpent = Math.round(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
+  const rateLine = fxRateLabel(currency, displayCurrency, fxRates);
+  const fxNote =
+    fxStatus === "loading"
+      ? "Fetching live rates…"
+      : fxStatus === "error"
+        ? fxError || "Rate unavailable — showing wallet currency"
+        : displayCurrency !== currency && rateLine
+          ? `View only · ${rateLine}`
+          : "Wallet currency";
 
   const chartSub =
     chartPeriod === "daily"
@@ -387,12 +451,26 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
   return (
     <div className="view">
+      <div className="insights-fx">
+        <div className="insights-fx-main">
+          <label className="fld-label" htmlFor="insights-currency">View in</label>
+          <CurrencyPicker
+            id="insights-currency"
+            className="insights-fx-select"
+            value={viewCurrency}
+            onChange={setViewCurrency}
+            badgeFor={(code) => (code === currency ? "wallet" : null)}
+          />
+        </div>
+        <p className={"insights-fx-note" + (fxStatus === "error" ? " is-error" : "")}>{fxNote}</p>
+      </div>
+
       <div className="summary-grid sg-3">
-        <SummaryCard label="This month" tone="spent" value={fmtMoney(cur.spent, { cents: false, currency })} sub={monthLabel(month)} />
+        <SummaryCard label="This month" tone="spent" value={money(cur.spent)} sub={monthLabel(month)} />
         <SummaryCard label="vs last month" tone={prev && cur.spent > prev.spent ? "danger" : "saved"}
-          value={prev ? (cur.spent >= prev.spent ? "+" : "−") + fmtMoney(Math.abs(cur.spent - prev.spent), { cents: false, currency }) : "—"}
+          value={prev ? (cur.spent >= prev.spent ? "+" : "−") + money(Math.abs(cur.spent - prev.spent)) : "—"}
           sub={prev ? `${Math.round(Math.abs(cur.spent - prev.spent) / (prev.spent || 1) * 100)}% ${cur.spent >= prev.spent ? "higher" : "lower"}` : "no prior data"} />
-        <SummaryCard label="6-month average" value={fmtMoney(avgSpent, { cents: false, currency })} sub="monthly spend" />
+        <SummaryCard label="6-month average" value={money(avgSpent)} sub="monthly spend" />
       </div>
 
       <section className="panel">
@@ -429,7 +507,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
               <div key={c.id} className="ctrow">
                 <div className="ct-name"><CatGlyph glyph={c.glyph} id={c.id} /> {c.name}</div>
                 <MiniSpark values={series} color={c.color} />
-                <div className="ct-amt">{fmtMoney(now, { cents: false, currency })}</div>
+                <div className="ct-amt">{money(now)}</div>
                 <div className={"ct-delta " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")}>
                   {delta > 0.001 ? "▲" : delta < -0.001 ? "▼" : "—"} {Math.abs(Math.round(delta * 100))}%
                 </div>
@@ -447,7 +525,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
               if (!s || !c) return null;
               return (
                 <div key={sub} className="ts-row">
-                  <div className="ts-head"><span>{s.name} <span className="ts-cat">· {c.name}</span></span><span className="ts-amt">{fmtMoney(v, { cents: false, currency })}</span></div>
+                  <div className="ts-head"><span>{s.name} <span className="ts-cat">· {c.name}</span></span><span className="ts-amt">{money(v)}</span></div>
                   <div className="ts-track"><div className="ts-fill" style={{ width: (v / maxSub) * 100 + "%", background: c.color }} /></div>
                 </div>
               );

@@ -60,8 +60,8 @@ function getCalendarLayout(year: number, month: number) {
 }
 
 function datePickerLabel(iso: string) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${y}/${m}/${d}`;
 }
 
 function parseTime24(t: string) {

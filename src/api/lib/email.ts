@@ -16,7 +16,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id: 
     return { ok: false, error: "RESEND_API_KEY not configured" };
   }
 
-  const from = process.env.EMAIL_FROM?.trim() || "Ledger Sched <onboarding@resend.dev>";
+  const from = process.env.EMAIL_FROM?.trim() || "Sched Ledger <onboarding@resend.dev>";
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -70,7 +70,7 @@ export function reminderEmailHtml(opts: {
     <tr><td style="padding:6px 0;color:#6b6560">Type</td><td style="padding:6px 0">${escapeHtml(opts.category)}</td></tr>
     ${opts.isConfirmation ? `<tr><td style="padding:6px 0;color:#6b6560">Notify</td><td style="padding:6px 0">${escapeHtml(opts.lead)}</td></tr>` : ""}
   </table>
-  <p style="margin:20px 0 0;font-size:13px;color:#8a8480">— Ledger Sched</p>
+  <p style="margin:20px 0 0;font-size:13px;color:#8a8480">— Sched Ledger</p>
 </body>
 </html>`;
 

@@ -7,6 +7,7 @@ import { cronRoutes } from "./cron";
 import { consentRoutes } from "./consent";
 import { eventsRoutes } from "./events";
 import { expensesRoutes } from "./expenses";
+import { fxRoutes } from "./fx";
 import { profileRoutes } from "./profile";
 import { usersRoutes } from "./users";
 import { categoriesRoutes } from "./categories";
@@ -45,6 +46,7 @@ export function createApiRoutes() {
   api.route("/events", eventsRoutes);
   api.route("/todo-lists", todoListsRoutes);
   api.route("/consent", consentRoutes);
+  api.route("/fx", fxRoutes);
   api.route("/cron", cronRoutes);
 
   return api;

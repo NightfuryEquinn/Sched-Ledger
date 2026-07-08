@@ -1,10 +1,10 @@
-# Ledger Sched
+# Sched Ledger
 
 Private expense ledger and schedule app. Track spending in MYR, plan events, and sign in with a Web3 wallet — no email or password required.
 
 Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
-![Ledger Sched](logo.png)
+![Sched Ledger](logo.png)
 
 ## Features
 

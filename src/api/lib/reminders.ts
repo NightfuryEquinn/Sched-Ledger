@@ -20,7 +20,13 @@ const EVENT_CAT_NAMES: Record<string, string> = {
   renewal: "Renewal",
   appointment: "Appointment",
   personal: "Personal",
+  custom: "Custom",
 };
+
+function eventCategoryLabel(doc: { catId: string; customLabel?: string }): string {
+  if (doc.catId === "custom" && doc.customLabel?.trim()) return doc.customLabel.trim();
+  return EVENT_CAT_NAMES[doc.catId] ?? doc.catId;
+}
 
 export type ReminderProcessResult = {
   scanned: number;
@@ -55,7 +61,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   if (!prefs.emailEnabled) return;
 
   const when = formatEventWhen(doc.date, doc.time, doc.allDay, prefs.timezone);
-  const category = EVENT_CAT_NAMES[doc.catId] ?? doc.catId;
+  const category = eventCategoryLabel(doc);
   const lead = leadDescription(doc.lead as LeadId);
   const { html, text, subject } = reminderEmailHtml({
     title: doc.title,
@@ -127,7 +133,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       }
 
       const when = formatEventWhen(iso, ev.time, ev.allDay, prefs.timezone);
-      const category = EVENT_CAT_NAMES[ev.catId] ?? ev.catId;
+      const category = eventCategoryLabel(ev);
       const lead = leadDescription(ev.lead as LeadId);
       const { html, text, subject } = reminderEmailHtml({
         title: ev.title,

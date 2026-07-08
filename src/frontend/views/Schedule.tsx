@@ -8,12 +8,12 @@ import {
 import { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 import {
   CURRENT_MONTH_KEY,
-  EVENT_CAT_BY_ID,
   EVENT_CATS,
   LEAD_TIMES,
   REPEATS,
   TODAY_ISO,
   dayLabel,
+  eventCatMeta,
   eventTimeLabel,
   fmtCommentTime,
   fmtTime,
@@ -24,7 +24,7 @@ import {
   scheduleForMonth,
   weekdayLabel,
 } from "@/frontend/lib/data";
-import { displayGlyph } from "@/lib/glyphs";
+import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
 import type { LedgerEvent } from "@/frontend/lib/types";
 
 /*
@@ -46,7 +46,7 @@ function shiftIso(iso: string, delta: number): string {
 }
 
 function AgendaEventRow({ ev, onEditEvent }: { ev: LedgerEvent; onEditEvent: (ev: LedgerEvent) => void }) {
-  const c = EVENT_CAT_BY_ID[ev.catId];
+  const c = eventCatMeta(ev);
   return (
     <button type="button" className="agenda-row" onClick={() => onEditEvent(ev)}>
       <span className="ag-glyph" style={glyphTint(c.color)}>{displayGlyph(c.glyph, c.id)}</span>
@@ -181,7 +181,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
                   <div className="cal-daynum">{d}</div>
                   <div className="cal-events">
                     {list.slice(0, 3).map((ev) => {
-                      const c = EVENT_CAT_BY_ID[ev.catId];
+                      const c = eventCatMeta(ev);
                       return (
                         <button key={ev.id} className="cal-chip" style={{ background: c.color + "1c", color: c.color }}
                           title={ev.title}
@@ -264,9 +264,12 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
 export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) {
   const editing = !!(initial && initial.id);
   const lastEmail = (() => { try { return localStorage.getItem("ledger:notifyEmail") || ""; } catch (e) { return ""; } })();
+  const customMeta = EVENT_CATS.find((c) => c.id === "custom")!;
 
   const [title, setTitle] = useState(initial ? initial.title : "");
   const [catId, setCatId] = useState(initial ? initial.catId : "bill");
+  const [customLabel, setCustomLabel] = useState(initial?.customLabel ?? "");
+  const [customGlyph, setCustomGlyph] = useState(initial?.customGlyph ?? customMeta.glyph);
   const [date, setDate] = useState(initial ? initial.date : (defaultDate || TODAY_ISO));
   const [allDay, setAllDay] = useState(initial ? !!initial.allDay : true);
   const [time, setTime] = useState(initial && initial.time ? initial.time : "09:00");
@@ -286,6 +289,11 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
 
+  const chooseCat = (id: string) => {
+    setCatId(id);
+    if (id === "custom" && !customGlyph) setCustomGlyph(customMeta.glyph);
+  };
+
   const addComment = () => {
     const t = draft.trim();
     if (!t) return;
@@ -293,112 +301,159 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
     setDraft("");
   };
 
-  const valid = title.trim() && date && (allDay || time);
+  const customOk = catId !== "custom" || (customLabel.trim() && customGlyph);
+  const valid = title.trim() && date && (allDay || time) && customOk;
   const submit = () => {
     if (!valid) return;
     if (notify && email.trim()) { try { localStorage.setItem("ledger:notifyEmail", email.trim()); } catch (e) {} }
     onSave({
-      id: initial && initial.id, title: title.trim(), catId, date,
+      id: initial && initial.id, title: title.trim(), catId,
+      customLabel: catId === "custom" ? customLabel.trim() : undefined,
+      customGlyph: catId === "custom" ? customGlyph : undefined,
+      date,
       allDay, time: allDay ? null : time, repeat,
       notify, lead, email: email.trim(), comments,
     });
   };
 
   return (
-    <div className="modal-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" role="dialog" aria-modal="true">
+    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{editing ? "Edit event" : "New event"}</h3>
-          <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={20} /></button>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
 
-        <input ref={titleRef} className="ev-title-in" type="text" placeholder="Event title"
-          value={title} onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+        <div className="modal-body modal-scroll">
+          <input ref={titleRef} className="ev-title-in" type="text" placeholder="Event title"
+            value={title} onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
 
-        <label className="fld-label">Type</label>
-        <div className="cat-grid">
-          {EVENT_CATS.map((c) => (
-            <button key={c.id} className={"cat-chip" + (catId === c.id ? " active" : "")}
-              style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
-              onClick={() => setCatId(c.id)}>
-              <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>{c.name}
+          <label className="fld-label">Type</label>
+          <div className="cat-grid">
+            {EVENT_CATS.filter((c) => c.id !== "custom").map((c) => (
+              <button key={c.id} type="button" className={"cat-chip" + (catId === c.id ? " active" : "")}
+                style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
+                onClick={() => chooseCat(c.id)}>
+                <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>
+                <span className="cc-label">{c.name}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              className={"cat-chip cat-chip--span2" + (catId === "custom" ? " active" : "")}
+              style={catId === "custom" ? { borderColor: customMeta.color, background: customMeta.color + "16" } : null}
+              onClick={() => chooseCat("custom")}
+            >
+              <span className="cc-glyph" style={{ color: customMeta.color }}>
+                {displayGlyph(customGlyph || customMeta.glyph, "custom")}
+              </span>
+              <span className="cc-label">{customLabel.trim() || "Custom type"}</span>
             </button>
-          ))}
-        </div>
-
-        <div className="fld-2col">
-          <div>
-            <label className="fld-label">Date</label>
-            <DatePicker value={date} onChange={setDate} />
           </div>
-          <div>
-            <label className="fld-label">Time</label>
-            {allDay
-              ? <div className="time-allday">All day</div>
-              : <TimePicker value={time} onChange={setTime} />}
+
+          {catId === "custom" ? (
+            <div className="ev-custom">
+              <label className="fld-label" htmlFor="ev-custom-name">Custom type name</label>
+              <input
+                id="ev-custom-name"
+                className="text-in"
+                type="text"
+                placeholder="e.g. Team sync, Vet visit"
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                maxLength={40}
+              />
+              <label className="fld-label">Emoji</label>
+              <div className="cat-glyph-row">
+                {CATEGORY_GLYPH_OPTIONS.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    className={"cat-glyph-btn" + (customGlyph === g ? " active" : "")}
+                    style={customGlyph === g ? { borderColor: customMeta.color, color: customMeta.color } : undefined}
+                    onClick={() => setCustomGlyph(g)}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="fld-2col">
+            <div>
+              <label className="fld-label">Date</label>
+              <DatePicker value={date} onChange={setDate} />
+            </div>
+            <div>
+              <label className="fld-label">Time</label>
+              {allDay
+                ? <div className="time-allday">All day</div>
+                : <TimePicker value={time} onChange={setTime} />}
+            </div>
           </div>
-        </div>
 
-        <label className="toggle-line tight">
-          <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-          <span className="toggle-ui" /> <span>All-day event</span>
-        </label>
-
-        <label className="fld-label">Repeats</label>
-        <div className="sub-row">
-          {REPEATS.map((r) => (
-            <button key={r.id} className={"sub-chip" + (repeat === r.id ? " active" : "")} onClick={() => setRepeat(r.id)}>{r.label}</button>
-          ))}
-        </div>
-
-        <div className="notify-head">
           <label className="toggle-line tight">
-            <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-            <span className="toggle-ui" /> <span><Icon name="bell" size={15} /> Email reminder</span>
+            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+            <span className="toggle-ui" /> <span>All-day event</span>
           </label>
-        </div>
-        {notify && (
-          <div className="notify-card">
-            <div className="fld-2col tight">
-              <div>
-                <label className="fld-label">Send</label>
-                <div className="select-wrap">
-                  <select className="text-in" value={lead} onChange={(e) => setLead(e.target.value)}>
-                    {LEAD_TIMES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
-                  </select>
-                  <span className="select-caret"><Icon name="chevD" size={16} /></span>
+
+          <label className="fld-label">Repeats</label>
+          <div className="sub-row">
+            {REPEATS.map((r) => (
+              <button key={r.id} type="button" className={"sub-chip" + (repeat === r.id ? " active" : "")} onClick={() => setRepeat(r.id)}>{r.label}</button>
+            ))}
+          </div>
+
+          <div className="notify-head">
+            <label className="toggle-line tight">
+              <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+              <span className="toggle-ui" /> <span><Icon name="bell" size={15} /> Email reminder</span>
+            </label>
+          </div>
+          {notify && (
+            <div className="notify-card">
+              <div className="fld-2col tight">
+                <div>
+                  <label className="fld-label">Send</label>
+                  <div className="select-wrap">
+                    <select className="text-in" value={lead} onChange={(e) => setLead(e.target.value)}>
+                      {LEAD_TIMES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                    </select>
+                    <span className="select-caret"><Icon name="chevD" size={16} /></span>
+                  </div>
+                </div>
+                <div>
+                  <label className="fld-label">Send to</label>
+                  <input className="text-in" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
               </div>
-              <div>
-                <label className="fld-label">Send to</label>
-                <input className="text-in" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <label className="fld-label">Comments</label>
-        <div className="cmt-thread">
-          {comments.length ? comments.map((c) => (
-            <div key={c.id} className="cmt">
-              <div className="cmt-bubble">{c.text}</div>
-              <div className="cmt-time">{fmtCommentTime(c.at)}</div>
+          <label className="fld-label">Comments</label>
+          <div className="cmt-thread">
+            {comments.length ? comments.map((c) => (
+              <div key={c.id} className="cmt">
+                <div className="cmt-bubble">{c.text}</div>
+                <div className="cmt-time">{fmtCommentTime(c.at)}</div>
+              </div>
+            )) : <div className="cmt-empty">No comments yet — add a note, context, or follow-up.</div>}
+            <div className="cmt-composer">
+              <input className="cmt-in" type="text" placeholder="Add a comment…" value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addComment(); } }} />
+              <button className="cmt-send" type="button" disabled={!draft.trim()} onClick={addComment} aria-label="Post comment"><Icon name="send" size={17} /></button>
             </div>
-          )) : <div className="cmt-empty">No comments yet — add a note, context, or follow-up.</div>}
-          <div className="cmt-composer">
-            <input className="cmt-in" type="text" placeholder="Add a comment…" value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addComment(); } }} />
-            <button className="cmt-send" disabled={!draft.trim()} onClick={addComment} aria-label="Post comment"><Icon name="send" size={17} /></button>
           </div>
         </div>
 
         <div className="modal-foot">
-          {editing ? <button className="ghost-btn danger" onClick={() => onDelete(initial.id)}>Delete</button> : <span />}
+          {editing ? <button className="ghost-btn danger" type="button" onClick={() => onDelete(initial.id)}>Delete</button> : <span />}
           <div className="mf-right">
-            <button className="ghost-btn" onClick={onClose}>Cancel</button>
-            <button className="primary-btn" disabled={!valid} onClick={submit}>{editing ? "Save changes" : "Add event"}</button>
+            <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
+            <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>{editing ? "Save changes" : "Add event"}</button>
           </div>
         </div>
       </div>
