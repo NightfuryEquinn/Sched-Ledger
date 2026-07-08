@@ -113,7 +113,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
       <main className="main">
         <header className="topbar">
           <div className="tb-row tb-row--main">
-            <h1 className="page-title">{VIEW_TITLES[view]}</h1>
+            <h1 key={view} className="page-title page-title--anim">{VIEW_TITLES[view]}</h1>
             <div className="tb-actions">
               <ThemeToggle />
               <AccountMenu account={account} onSignOut={onSignOut} expenses={allExpenses} wallets={wallets} categoryIndex={ledger.categoryIndex} />

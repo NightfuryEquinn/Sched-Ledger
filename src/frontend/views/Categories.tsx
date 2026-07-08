@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { EmptyState, glyphTint, Icon, Segmented } from "@/frontend/components/ui";
 import { nextCategoryColor, slugId } from "@/frontend/lib/categories";
 import { CATEGORY_GLYPH_OPTIONS, DEFAULT_GLYPH, displayGlyph } from "@/lib/glyphs";
@@ -41,10 +41,12 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
     setCategories(categoryIndex.categories);
   }, [categoryIndex.categories]);
 
-  const visible = useMemo(() => {
-    if (filter === "all") return categories;
-    return categories.filter((c) => (c.type ?? (c.id === "income" ? "income" : "expense")) === filter);
-  }, [categories, filter]);
+  const catMatches = (cat: Category) => {
+    if (filter === "all") return true;
+    const type = cat.type ?? (cat.id === "income" ? "income" : "expense");
+    return type === filter;
+  };
+  const visibleCount = categories.reduce((n, c) => n + (catMatches(c) ? 1 : 0), 0);
 
   const persist = async (next: Category[]) => {
     setBusy(true);
@@ -204,19 +206,29 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
         </div>
 
         <div className="cat-tree">
-          {visible.length ? visible.map((cat) => {
+          {categories.length ? categories.map((cat) => {
             const isIncome = (cat.type ?? (cat.id === "income" ? "income" : "expense")) === "income";
             const open = expanded[cat.id] ?? true;
+            const filteredOut = !catMatches(cat);
             return (
-              <div key={cat.id} className="cat-block">
+              <div
+                key={cat.id}
+                className={
+                  "cat-block"
+                  + (open ? "" : " is-collapsed")
+                  + (filteredOut ? " is-filtered-out" : "")
+                }
+                aria-hidden={filteredOut || undefined}
+              >
                 <div className="cat-block-head">
                   <button
                     type="button"
                     className="cat-expand"
                     onClick={() => setExpanded((e) => ({ ...e, [cat.id]: !open }))}
                     aria-expanded={open}
+                    tabIndex={filteredOut ? -1 : undefined}
                   >
-                    <Icon name={open ? "chevD" : "chevR"} size={16} />
+                    <Icon name="chevD" size={16} />
                   </button>
                   <span className="cat-block-glyph" style={glyphTint(cat.color)}>
                     {displayGlyph(cat.glyph, cat.id)}
@@ -232,21 +244,21 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                     <div className="cat-block-meta">{cat.subs.length} subcategories</div>
                   </div>
                   <div className="cat-block-actions">
-                    <button type="button" onClick={() => openEditCat(cat)} aria-label="Edit">
+                    <button type="button" onClick={() => openEditCat(cat)} aria-label="Edit" tabIndex={filteredOut ? -1 : undefined}>
                       <Icon name="edit" size={16} />
                     </button>
-                    <button type="button" onClick={() => openAddSub(cat.id)} aria-label="Add subcategory">
+                    <button type="button" onClick={() => openAddSub(cat.id)} aria-label="Add subcategory" tabIndex={filteredOut ? -1 : undefined}>
                       <Icon name="plus" size={16} />
                     </button>
                     {!cat.builtin ? (
-                      <button type="button" className="danger" disabled={busy} onClick={() => removeCategory(cat.id)} aria-label="Delete">
+                      <button type="button" className="danger" disabled={busy} onClick={() => removeCategory(cat.id)} aria-label="Delete" tabIndex={filteredOut ? -1 : undefined}>
                         <Icon name="trash" size={16} />
                       </button>
                     ) : null}
                   </div>
                 </div>
 
-                {open ? (
+                <div className="cat-sub-reveal">
                   <ul className="cat-sub-list">
                     {cat.subs.map((sub) => (
                       <li key={sub.id} className="cat-sub-row">
@@ -255,11 +267,11 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                           <span className="cat-sub-id num">{sub.id}</span>
                         </div>
                         <div className="cat-sub-actions">
-                          <button type="button" onClick={() => openEditSub(cat.id, sub)} aria-label="Rename">
+                          <button type="button" onClick={() => openEditSub(cat.id, sub)} aria-label="Rename" tabIndex={filteredOut || !open ? -1 : undefined}>
                             <Icon name="edit" size={16} />
                           </button>
                           {cat.subs.length > 1 ? (
-                            <button type="button" className="danger" disabled={busy} onClick={() => removeSub(cat.id, sub.id)} aria-label="Remove">
+                            <button type="button" className="danger" disabled={busy} onClick={() => removeSub(cat.id, sub.id)} aria-label="Remove" tabIndex={filteredOut || !open ? -1 : undefined}>
                               <Icon name="trash" size={16} />
                             </button>
                           ) : null}
@@ -267,12 +279,15 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                       </li>
                     ))}
                   </ul>
-                ) : null}
+                </div>
               </div>
             );
           }) : (
             <EmptyState title="No categories" sub="Add a category to start organizing transactions." />
           )}
+          {categories.length && !visibleCount ? (
+            <EmptyState title="Nothing matches" sub="Try a different filter." />
+          ) : null}
         </div>
       </section>
 

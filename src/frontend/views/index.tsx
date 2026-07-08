@@ -227,7 +227,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
         ))}
       </div>
 
-      <section className="panel txn-panel">
+      <section key={filter + ":" + q} className="panel txn-panel txn-panel--filter">
         {dates.length ? dates.map((d) => (
           <div key={d} className="txn-group">
             <div className="txn-group-head">

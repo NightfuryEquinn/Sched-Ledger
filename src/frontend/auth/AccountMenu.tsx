@@ -78,7 +78,13 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
 
   return (
     <div className="acct" ref={ref}>
-      <button className="acct-chip" type="button" onClick={() => setOpen((o) => !o)}>
+      <button
+        className="acct-chip"
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((o) => !o)}
+      >
         <Identicon address={account.address} size={28} radius={9} />
         <span className="acct-name">{account.codename}</span>
         <Icon name="chevD" size={15} />
