@@ -77,6 +77,8 @@ function Icon({ name, size = 20 }) {
     tags: <><path d="M5 7.5a2.5 2.5 0 0 1 5 0v1.8l6.2 6.2a2 2 0 0 1 0 2.8l-1.5 1.5a2 2 0 0 1-2.8 0L6.3 13.1V7.5z" /><circle cx="7.5" cy="7.5" r="1.1" /></>,
     moon: <><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 8.5 8.5 0 1 0 20.5 14.5z" /></>,
     sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
+    file: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></>,
+    info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
   };
   return <svg viewBox="0 0 24 24" style={s}>{paths[name]}</svg>;
 }

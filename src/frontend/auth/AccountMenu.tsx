@@ -5,6 +5,7 @@ import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/fronten
 import { formatTimezoneOption, timezoneOptions } from "@/lib/timezone";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { Identicon } from "./components/Identicon";
+import { CopyrightModal, TermsModal } from "./components/LegalModals";
 import { RecoveryReveal } from "./components/RecoveryReveal";
 import { copyText } from "./lib/clipboard";
 import { shortAddr } from "./lib/format";
@@ -30,6 +31,8 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
   const [open, setOpen] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [copyrightOpen, setCopyrightOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [timezone, setTimezone] = useState(() => browserTimezone());
   const [timezoneSaved, setTimezoneSaved] = useState(false);
@@ -143,6 +146,12 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
           <button className="am-item" type="button" onClick={() => { setDataOpen(true); setOpen(false); }}>
             <Icon name="database" size={16} /> Data &amp; privacy
           </button>
+          <button className="am-item" type="button" onClick={() => { setTermsOpen(true); setOpen(false); }}>
+            <Icon name="file" size={16} /> Terms &amp; conditions
+          </button>
+          <button className="am-item" type="button" onClick={() => { setCopyrightOpen(true); setOpen(false); }}>
+            <Icon name="info" size={16} /> Copyright
+          </button>
           <div className="am-div" />
           <button className="am-item danger" type="button" onClick={onSignOut}>
             <Icon name="logout" size={16} /> Sign out
@@ -162,6 +171,8 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
           onSignedOut={onSignOut}
         />
       ) : null}
+      {termsOpen ? <TermsModal onClose={() => setTermsOpen(false)} /> : null}
+      {copyrightOpen ? <CopyrightModal onClose={() => setCopyrightOpen(false)} /> : null}
     </div>
   );
 }

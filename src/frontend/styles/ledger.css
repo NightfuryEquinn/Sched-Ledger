@@ -14,7 +14,7 @@
      10. Views: schedule (calendar, agenda, event modal)
      11. Modals & empty states
      12. Auth screen
-     13. Data & privacy modal
+     13. Data & privacy / legal modals
      14. Utilities & loading states
      15. Responsive (980 / 860 / 560)
    ════════════════════════════════════════════════════════════════════ */
@@ -1026,13 +1026,16 @@ h1,h2,h3{margin:0;font-weight:600;}
 }
 .phrase-in:focus{border-color:var(--accent);}
 
-/* ── 13. Data & privacy modal ─────────────────────────────────────── */
+/* ── 13. Data & privacy / legal modals ────────────────────────────── */
 .dm-sec{margin-bottom:0;}
 .dm-lead{font-size:13.5px;color:var(--ink-soft);line-height:1.55;margin:0 0 16px;}
 .dm-note{font-size:12px;color:var(--ink-faint);line-height:1.5;margin:11px 0 0;}
 .dm-note--pull{margin-top:-6px;}
 .dm-note--gap{margin-bottom:14px;}
 .dm-div{height:1px;background:var(--hair);margin:20px 2px;}
+.legal-p{font-size:13.5px;color:var(--ink-soft);line-height:1.55;margin:0 0 12px;}
+.legal-p:last-child{margin-bottom:0;}
+.legal-p--lead{font-weight:600;color:var(--ink);}
 .consent-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;}
 .consent-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
 .consent-title{font-weight:600;font-size:14.5px;margin-bottom:6px;letter-spacing:-.1px;}
@@ -1179,7 +1182,6 @@ h1,h2,h3{margin:0;font-weight:600;}
     color:var(--accent);
     background:color-mix(in srgb,var(--accent) 12%,var(--surface-3));
     transform:translateY(-1px);
-    box-shadow:0 -2px 0 0 var(--accent) inset;
   }
   .bn-item.active svg{transform:scale(1.08);}
   .bn-label{
