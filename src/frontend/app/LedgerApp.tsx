@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLedgerTour } from "@/frontend/lib/tour";
 import { AccountMenu } from "@/frontend/auth";
 import {
   AddExpenseModal,
@@ -56,6 +57,8 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   const [fabOpen, setFabOpen] = useState(false);
   const monthInitialized = useRef(false);
   const fabRef = useRef<HTMLDivElement>(null);
+  const tourReady = !ledger.isLoading && !ledger.error && !!ledger.profile;
+  const { startViewTour } = useLedgerTour({ view, ready: tourReady });
 
   useEffect(() => {
     if (!fabOpen) return;
@@ -131,10 +134,27 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
       <main className="main">
         <header className="topbar">
           <div className="tb-row tb-row--main">
-            <h1 key={view} className="page-title page-title--anim">{VIEW_TITLES[view]}</h1>
+            <div className="page-title-row">
+              <h1 key={view} className="page-title page-title--anim">{VIEW_TITLES[view]}</h1>
+              <button
+                type="button"
+                className="tour-help-btn"
+                aria-label={`Tour ${VIEW_TITLES[view]}`}
+                onClick={() => startViewTour(view)}
+              >
+                <Icon name="info" size={17} />
+              </button>
+            </div>
             <div className="tb-actions">
               <ThemeToggle />
-              <AccountMenu account={account} onSignOut={onSignOut} expenses={allExpenses} wallets={wallets} categoryIndex={ledger.categoryIndex} />
+              <AccountMenu
+                account={account}
+                onSignOut={onSignOut}
+                expenses={allExpenses}
+                wallets={wallets}
+                categoryIndex={ledger.categoryIndex}
+                onTakeTour={() => startViewTour(view)}
+              />
             </div>
           </div>
           <div className="tb-row tb-row--tools">
@@ -191,6 +211,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           <button
             key={id}
             type="button"
+            data-tour={`tour-nav-${id}`}
             className={"bn-item" + (view === id ? " active" : "")}
             onClick={() => setView(id)}
             aria-label={label}
@@ -201,7 +222,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         ))}
       </nav>
 
-      <div ref={fabRef} className={"fab-wrap" + (fabOpen ? " open" : "")}>
+      <div ref={fabRef} data-tour="tour-fab" className={"fab-wrap" + (fabOpen ? " open" : "")}>
         <div className="fab-actions" aria-hidden={!fabOpen}>
           <button
             className="fab-action"

@@ -101,7 +101,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
 
   return (
     <div className="view">
-      <div className="summary-grid">
+      <div className="summary-grid" data-tour="tour-overview-summary">
         <SummaryCard label={poolLabel} value={fmtMoney(poolValue, { cents: false, currency })} sub={poolSub} />
         <SummaryCard label="Spent" tone="spent" value={fmtMoney(st.spent, { cents: false, currency })}
           sub={`${Math.round(spentPct * 100)}% of budget`} />
@@ -112,7 +112,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
       </div>
 
       <div className="ov-grid">
-        <section className="panel trend-panel">
+        <section className="panel trend-panel" data-tour="tour-overview-trend">
           <div className="panel-head">
             <div>
               <h2>Spending this month</h2>
@@ -123,7 +123,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
           <AreaTrend points={cum.length ? cum : [{ x: "1", v: 0 }]} accent={getAccent()} height={210} budgetLine={st.totalBudget} />
         </section>
 
-        <section className="panel donut-panel">
+        <section className="panel donut-panel" data-tour="tour-overview-donut">
           <div className="panel-head"><h2>By category</h2></div>
           <div className="donut-wrap">
             <div className="donut-stage">
@@ -147,7 +147,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
       </div>
 
       <div className="ov-grid">
-        <section className="panel">
+        <section className="panel" data-tour="tour-overview-budgets">
           <div className="panel-head">
             <h2>Budget tracker</h2>
             <button className="link-btn" onClick={() => setView("budgets")}>Manage</button>
@@ -159,7 +159,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel" data-tour="tour-overview-recent">
           <div className="panel-head">
             <h2>Recent</h2>
             <button className="link-btn" onClick={() => setView("transactions")}>See all</button>
@@ -210,14 +210,14 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
 
   return (
     <div className="view">
-      <div className="txn-toolbar">
+      <div className="txn-toolbar" data-tour="tour-txn-toolbar">
         <div className="search">
           <Icon name="search" size={17} />
           <input placeholder="Search notes & categories" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="txn-count">{list.length} entries · {netTotal >= 0 ? "+" : "−"}{fmtMoney(Math.abs(netTotal), { cents: false, currency })} net</div>
       </div>
-      <div className="filter-chips">
+      <div className="filter-chips" data-tour="tour-txn-filters">
         <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => setFilter("all")}>All</button>
         {[...categoryIndex.categories]
           .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
@@ -231,7 +231,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
           })}
       </div>
 
-      <section key={filter + ":" + q} className="panel txn-panel txn-panel--filter">
+      <section key={filter + ":" + q} className="panel txn-panel txn-panel--filter" data-tour="tour-txn-list">
         {dates.length ? dates.map((d) => (
           <div key={d} className="txn-group">
             <div className="txn-group-head">
@@ -278,7 +278,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 
   return (
     <div className="view">
-      <div className="summary-grid sg-3">
+      <div className="summary-grid sg-3" data-tour="tour-budgets-summary">
         <SummaryCard label="Total budget" value={fmtMoney(totalBudget, { cents: false, currency })} sub="across all categories" />
         <SummaryCard label="Spent so far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
         <SummaryCard label="Left to spend" tone={totalBudget - totalSpent < 0 ? "danger" : "ok"} value={fmtMoney(totalBudget - totalSpent, { cents: false, currency })} sub={monthLabel(month, true)} />
@@ -286,7 +286,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 
       <section className="panel">
         <div className="panel-head"><h2>Budget by category</h2><p className="panel-sub">Tap an amount to allocate</p></div>
-        <div className="budget-edit-list">
+        <div className="budget-edit-list" data-tour="tour-budgets-list">
           {categoryIndex.expenseCategories.map((c) => {
             const spent = st.byCat[c.id] || 0;
             const budget = budgets[c.id];
@@ -451,7 +451,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
   return (
     <div className="view">
-      <div className="insights-fx">
+      <div className="insights-fx" data-tour="tour-insights-fx">
         <div className="insights-fx-main">
           <label className="fld-label" htmlFor="insights-currency">View in</label>
           <CurrencyPicker
@@ -473,7 +473,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         <SummaryCard label="6-month average" value={money(avgSpent)} sub="monthly spend" />
       </div>
 
-      <section className="panel">
+      <section className="panel" data-tour="tour-insights-chart">
         <div className="panel-head insights-chart-head">
           <div>
             <h2>Month over month</h2>
@@ -499,7 +499,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         />
       </section>
 
-      <div className="ov-grid">
+      <div className="ov-grid" data-tour="tour-insights-trends">
         <section className="panel">
           <div className="panel-head"><h2>Category trends</h2><p className="panel-sub">vs previous month</p></div>
           <div className="cat-trend-list">
@@ -544,13 +544,13 @@ export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) 
   const monthlyEq = Math.round(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
   return (
     <div className="view">
-      <div className="summary-grid sg-2">
+      <div className="summary-grid sg-2" data-tour="tour-recurring-summary">
         <SummaryCard label="Recurring this month" value={fmtMoney(total, { cents: false, currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
         <SummaryCard label="Monthly equivalent" tone="spent" value={fmtMoney(monthlyEq, { cents: false, currency })} sub="normalized across intervals" />
       </div>
       <section className="panel">
         <div className="panel-head"><h2>Fixed & recurring</h2><p className="panel-sub">Auto-posted on due dates from your last amount</p></div>
-        <div className="rec-list">
+        <div className="rec-list" data-tour="tour-recurring-list">
           {list.length ? list.map((e) => {
             const s = categoryIndex.subById[e.sub];
             const c = s ? categoryIndex.catById[s.catId] : null;

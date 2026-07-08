@@ -21,6 +21,7 @@
     "mongodb": "6.12.0",
     "react": "^19",
     "react-dom": "^19",
+    "shepherd.js": "^15.2.2",
     "tailwindcss": "^4.1.11",
     "zod": "^4.4.3"
   },

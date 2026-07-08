@@ -175,7 +175,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
 
   return (
     <div className="view">
-      <div className="cat-toolbar">
+      <div className="cat-toolbar" data-tour="tour-categories-toolbar">
         <Segmented
           options={[
             { v: "all", label: "All" },
@@ -205,7 +205,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
           </div>
         </div>
 
-        <div className="cat-tree">
+        <div className="cat-tree" data-tour="tour-categories-tree">
           {categories.length ? categories.map((cat) => {
             const isIncome = (cat.type ?? (cat.id === "income" ? "income" : "expense")) === "income";
             const open = expanded[cat.id] ?? true;

@@ -137,7 +137,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
 
   return (
     <div className="view">
-      <div className="summary-grid sg-3">
+      <div className="summary-grid sg-3" data-tour="tour-schedule-summary">
         <SummaryCard label="Events this month" value={String(occ.length)} sub={monthLabel(month, true)} />
         <SummaryCard label="Next reminder" tone="ok"
           value={nextRem ? dayLabel(nextRem.iso) : "—"}
@@ -156,7 +156,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
           </button>
         </div>
 
-        <div className="cal">
+        <div className="cal" data-tour="tour-schedule-cal">
           <div className="cal-wd">
             {WD.map((d) => <div key={d} className="cal-wd-c">{d}</div>)}
           </div>
@@ -200,7 +200,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel" data-tour="tour-schedule-agenda">
         <div className="panel-head panel-head--agenda">
           <div className="agenda-head">
             <button

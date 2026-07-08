@@ -25,9 +25,10 @@ type AccountMenuProps = {
   expenses: Expense[];
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
+  onTakeTour?: () => void;
 };
 
-export function AccountMenu({ account, onSignOut, expenses, wallets = [], categoryIndex }: AccountMenuProps) {
+export function AccountMenu({ account, onSignOut, expenses, wallets = [], categoryIndex, onTakeTour }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
@@ -81,7 +82,7 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
   const stored = identityStorage.find(account.address);
 
   return (
-    <div className="acct" ref={ref}>
+    <div className="acct" data-tour="tour-account" ref={ref}>
       <button
         className="acct-chip"
         type="button"
@@ -144,6 +145,11 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
             <Icon name="info" size={16} /> Copyright
           </button>
           <div className="am-div" />
+          {onTakeTour ? (
+            <button className="am-item" type="button" onClick={() => { onTakeTour(); setOpen(false); }}>
+              <Icon name="info" size={16} /> Take a tour
+            </button>
+          ) : null}
           <button className="am-item danger" type="button" onClick={onSignOut}>
             <Icon name="logout" size={16} /> Sign out
           </button>

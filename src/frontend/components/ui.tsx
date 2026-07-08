@@ -113,7 +113,7 @@ function Sidebar({ view, setView }) {
       <Brand variant="sidebar" />
       <nav className="nav">
         {items.map(([id, label, icon]) => (
-          <button key={id} className={"nav-item" + (view === id ? " active" : "")} onClick={() => setView(id)}>
+          <button key={id} data-tour={`tour-nav-${id}`} className={"nav-item" + (view === id ? " active" : "")} onClick={() => setView(id)}>
             <Icon name={icon} size={20} />
             <span>{label}</span>
           </button>
@@ -228,7 +228,7 @@ function MonthSwitcher({ months, current, onChange }) {
   ) : null;
 
   return (
-    <div className="month-switch" ref={rootRef}>
+    <div className="month-switch" data-tour="tour-month" ref={rootRef}>
       <button className="msbtn" disabled={idx <= 0} onClick={() => go(-1)} aria-label="Previous month"><Icon name="chevL" size={18} /></button>
       <button
         ref={labelRef}
@@ -408,7 +408,7 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
   ) : null;
 
   return (
-    <div className={"wallet-switch" + (className ? ` ${className}` : "")} ref={rootRef}>
+    <div className={"wallet-switch" + (className ? ` ${className}` : "")} data-tour="tour-wallet" ref={rootRef}>
       <button
         ref={chipRef}
         className="wallet-chip"

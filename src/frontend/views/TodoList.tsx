@@ -170,7 +170,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
 
   return (
     <div className="view">
-      <div className="summary-grid sg-3">
+      <div className="summary-grid sg-3" data-tour="tour-todos-summary">
         <div className="summary-card">
           <div className="sc-label">Lists</div>
           <div className="sc-value">{stats.lists}</div>
@@ -185,7 +185,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
         </div>
       </div>
 
-      <div className="todo-toolbar">
+      <div className="todo-toolbar" data-tour="tour-todos-toolbar">
         <button className="primary-btn" type="button" onClick={openAddList}>
           <Icon name="plus" size={15} /> New list
         </button>
@@ -193,7 +193,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
 
       {lists.length ? (
         <>
-          <div className="todo-list-tabs">
+          <div className="todo-list-tabs" data-tour="tour-todos-tabs">
             {lists.map((list) => {
               const done = list.tasks.filter((t) => t.done).length;
               const selected = list.id === activeId;
@@ -215,7 +215,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
           </div>
 
           {active ? (
-            <section className="panel">
+            <section className="panel" data-tour="tour-todos-tasks">
               <div className="panel-head panel-head--todo">
                 <div className="todo-panel-title">
                   <span className="todo-panel-icon">{active.icon}</span>

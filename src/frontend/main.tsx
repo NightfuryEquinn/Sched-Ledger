@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import logoUrl from "@/frontend/assets/logo.png";
 import { Root } from "@/frontend/app/Root";
 import { applyTheme, getStoredTheme, resolveDark } from "@/frontend/lib/theme";
+import "shepherd.js/dist/css/shepherd.css";
 import "@/frontend/styles/ledger.css";
 
 applyTheme(resolveDark(getStoredTheme()));

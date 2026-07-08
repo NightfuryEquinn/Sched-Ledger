@@ -219,7 +219,7 @@ h1,h2,h3{margin:0;font-weight:600;}
 }
 .tb-row{display:flex;align-items:center;gap:var(--sp-3);width:100%;}
 .tb-row--main{justify-content:space-between;gap:var(--sp-4);}
-.tb-row--main .page-title{flex:1;min-width:0;}
+.tb-row--main .page-title-row{flex:1;min-width:0;}
 .tb-actions{display:flex;align-items:center;gap:var(--sp-3);flex-shrink:0;}
 .tb-row--tools{justify-content:space-between;flex-wrap:wrap;}
 .tb-row--tools > *{
@@ -228,6 +228,16 @@ h1,h2,h3{margin:0;font-weight:600;}
 .page-title{
   font-family:var(--font-display);font-size:27px;font-weight:600;letter-spacing:-.3px;
 }
+.page-title-row{
+  display:flex;align-items:center;gap:8px;flex:1;min-width:0;
+}
+.page-title-row .page-title{flex:initial;}
+.tour-help-btn{
+  display:grid;place-items:center;width:32px;height:32px;flex-shrink:0;
+  border-radius:var(--r-md);color:var(--ink-faint);
+  transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease);
+}
+.tour-help-btn:hover{background:var(--surface-2);color:var(--accent);}
 .page-title--anim{animation:page-title-in var(--dur) var(--ease);}
 @keyframes page-title-in{
   from{opacity:0;transform:translateY(4px);}
@@ -1416,4 +1426,71 @@ h1,h2,h3{margin:0;font-weight:600;}
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Shepherd.js guided tours */
+.shepherd-modal-overlay-container{pointer-events:none;}
+.shepherd-modal-overlay-container .shepherd-modal-overlay{
+  background:rgba(20,23,28,.42);
+  pointer-events:auto;
+}
+:root[data-theme="dark"] .shepherd-modal-overlay-container .shepherd-modal-overlay{
+  background:rgba(0,0,0,.55);
+}
+.shepherd-element.ledger-tour-step{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-xl);
+  box-shadow:var(--shadow-lg,0 12px 40px -8px rgba(30,40,60,.22));
+  color:var(--ink);
+  font-family:var(--font-body);
+  max-width:min(360px,calc(100vw - 32px));
+}
+.shepherd-element.ledger-tour-step .shepherd-header{
+  align-items:flex-start;
+  padding:16px 16px 0;
+}
+.shepherd-element.ledger-tour-step .shepherd-title{
+  color:var(--ink);
+  font-family:var(--font-display);
+  font-size:17px;
+  font-weight:600;
+  line-height:1.3;
+}
+.shepherd-element.ledger-tour-step .shepherd-cancel-icon{
+  color:var(--ink-faint);
+}
+.shepherd-element.ledger-tour-step .shepherd-cancel-icon:hover{
+  color:var(--ink);
+}
+.shepherd-element.ledger-tour-step .shepherd-text{
+  color:var(--ink-soft,var(--ink));
+  font-size:14px;
+  line-height:1.55;
+  padding:10px 16px 4px;
+}
+.shepherd-element.ledger-tour-step .shepherd-footer{
+  gap:8px;
+  padding:12px 16px 16px;
+}
+.shepherd-element.ledger-tour-step .shepherd-button{
+  border-radius:var(--r-md);
+  font-size:13px;
+  font-weight:600;
+  padding:8px 14px;
+}
+.shepherd-element.ledger-tour-step .shepherd-button-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.shepherd-element.ledger-tour-step .shepherd-button-primary:not(:disabled):hover{
+  filter:brightness(1.05);
+}
+.shepherd-element.ledger-tour-step .shepherd-button-secondary{
+  background:var(--surface-2);
+  color:var(--ink);
+}
+.shepherd-element.ledger-tour-step .shepherd-arrow::before{
+  background:var(--surface);
+  border:1px solid var(--border);
 }
