@@ -1,4 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import logoUrl from "@/frontend/assets/logo.png";
@@ -30,6 +32,8 @@ const tree = (
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <Root />
+      <Analytics />
+      <SpeedInsights />
     </QueryClientProvider>
   </StrictMode>
 );
