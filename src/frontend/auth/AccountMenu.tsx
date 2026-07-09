@@ -47,7 +47,18 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
         if (user.timezone) {
           setTimezone(user.timezone);
           setTimezoneSaved(true);
+          return;
         }
+        /* No timezone stored yet: persist the browser's zone so server-side
+           reminder times match what the UI shows instead of the app default. */
+        const tz = browserTimezone();
+        api.users
+          .updateMe({ timezone: tz })
+          .then(() => {
+            setTimezone(tz);
+            setTimezoneSaved(true);
+          })
+          .catch(() => {});
       })
       .catch(() => {});
   }, [account.address]);

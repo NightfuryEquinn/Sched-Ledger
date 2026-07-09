@@ -3,8 +3,10 @@ import { emailConfigured, reminderEmailHtml, sendEmail } from "@/api/lib/email";
 import { getCollections, getDb } from "@/db";
 import type { EventDocument } from "@/db/collections";
 import {
-  CRON_WINDOW_MS,
+  CRON_LOOKAHEAD_MS,
+  CRON_LOOKBACK_MS,
   candidateOccurrenceDates,
+  eventTimeMs,
   formatEventWhen,
   leadDescription,
   occursOn,
@@ -83,8 +85,13 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
   }
 
   const { events, reminderLogs } = getCollections(getDb());
-  const windowStart = now.getTime() - CRON_WINDOW_MS;
-  const windowEnd = now.getTime();
+  /*
+   * Forward-looking window: the daily cron sends everything due before the
+   * next run, so reminders always arrive BEFORE the event. The look-back
+   * half is a catch-up for sends that failed on a previous run.
+   */
+  const windowStart = now.getTime() - CRON_LOOKBACK_MS;
+  const windowEnd = now.getTime() + CRON_LOOKAHEAD_MS;
 
   const notifyEvents = await events
     .find({ notify: true, email: { $exists: true, $ne: "" } })
@@ -120,44 +127,109 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       const remindAt = remindAtMs(ev, iso, prefs.timezone);
       if (remindAt < windowStart || remindAt > windowEnd) continue;
 
-      const logKey = {
-        eventId: ev._id,
-        occurrenceIso: iso,
-        lead: ev.lead,
-      };
-
-      const existing = await reminderLogs.findOne(logKey);
-      if (existing) {
+      /* Never send a reminder for an occurrence that has already happened. */
+      if (eventTimeMs(iso, ev.time, ev.allDay, prefs.timezone) < now.getTime()) {
         result.skipped++;
         continue;
       }
 
-      const when = formatEventWhen(iso, ev.time, ev.allDay, prefs.timezone);
-      const category = eventCategoryLabel(ev);
-      const lead = leadDescription(ev.lead as LeadId);
-      const { html, text, subject } = reminderEmailHtml({
-        title: ev.title,
-        when,
-        category,
-        lead,
-      });
-
-      const sent = await sendEmail({ to: email, subject, html, text });
-      if (!sent.ok) {
-        result.errors.push(`${ev.title} (${iso}): ${sent.error}`);
-        continue;
-      }
-
-      await reminderLogs.insertOne({
-        ...logKey,
-        email,
-        sentAt: new Date(),
-      });
-      result.sent++;
+      const outcome = await sendReminderOnce(ev, iso, email, prefs.timezone);
+      if (outcome === "sent") result.sent++;
+      else if (outcome === "skipped") result.skipped++;
+      else result.errors.push(`${ev.title} (${iso}): ${outcome.error}`);
     }
   }
 
   return result;
+}
+
+/**
+ * Sends the reminder email for one occurrence, deduped via reminderLogs.
+ * Returns "skipped" when a log entry already exists for this occurrence.
+ */
+async function sendReminderOnce(
+  ev: EventDocument,
+  occurrenceIso: string,
+  email: string,
+  timezone: string,
+): Promise<"sent" | "skipped" | { error: string }> {
+  const { reminderLogs } = getCollections(getDb());
+  const logKey = {
+    eventId: ev._id,
+    occurrenceIso,
+    lead: ev.lead,
+  };
+
+  const existing = await reminderLogs.findOne(logKey);
+  if (existing) return "skipped";
+
+  const when = formatEventWhen(occurrenceIso, ev.time, ev.allDay, timezone);
+  const category = eventCategoryLabel(ev);
+  const lead = leadDescription(ev.lead as LeadId);
+  const { html, text, subject } = reminderEmailHtml({
+    title: ev.title,
+    when,
+    category,
+    lead,
+  });
+
+  const sent = await sendEmail({ to: email, subject, html, text });
+  if (!sent.ok) return { error: sent.error };
+
+  await reminderLogs.insertOne({
+    ...logKey,
+    email,
+    sentAt: new Date(),
+  });
+  return "sent";
+}
+
+/** Must match the cron schedule in vercel.json ("0 16 * * *"). */
+const CRON_HOUR_UTC = 16;
+
+/**
+ * When the next daily cron run will have completed, including the Hobby
+ * plan's ±59 min scheduling imprecision.
+ */
+export function nextCronRunEndMs(now = new Date()): number {
+  const next = new Date(now);
+  next.setUTCHours(CRON_HOUR_UTC, 59, 59, 999);
+  if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+  return next.getTime();
+}
+
+/**
+ * Called when an event is created or its notify flag turned on. If the next
+ * occurrence's remind-time falls before the next cron run (which would
+ * otherwise miss it or send it late), send the reminder right away.
+ */
+export async function sendImmediateReminderIfDue(
+  doc: EventDocument,
+  now = new Date(),
+): Promise<void> {
+  if (!doc.notify || !emailConfigured()) return;
+  const email = doc.email?.trim();
+  if (!email) return;
+
+  const prefs = await userReminderPrefs(doc.userAddress);
+  if (!prefs.emailEnabled) return;
+
+  const cronCoversFrom = nextCronRunEndMs(now);
+
+  for (const iso of candidateOccurrenceDates(doc.lead as LeadId, now)) {
+    if (!occursOn(doc, iso)) continue;
+
+    const eventAt = eventTimeMs(iso, doc.time, doc.allDay, prefs.timezone);
+    if (eventAt < now.getTime()) continue; // occurrence already happened
+
+    const remindAt = remindAtMs(doc, iso, prefs.timezone);
+    if (remindAt > cronCoversFrom) continue; // next cron run will handle it
+
+    const outcome = await sendReminderOnce(doc, iso, email, prefs.timezone);
+    if (typeof outcome !== "string") {
+      console.error(`[reminders] immediate send failed for "${doc.title}" (${iso}): ${outcome.error}`);
+    }
+  }
 }
 
 export async function clearReminderLogsForEvent(eventId: ObjectId): Promise<void> {

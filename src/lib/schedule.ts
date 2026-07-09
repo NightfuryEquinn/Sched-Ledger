@@ -25,8 +25,15 @@ const LEAD_LABELS: Record<LeadId, string> = {
   "1w": "1 week before",
 };
 
-/** Lookback for daily Vercel Cron (Hobby: once/day, ±59 min). */
-export const CRON_WINDOW_MS = 25 * 60 * 60 * 1000;
+/**
+ * Reminder scan window around the daily Vercel Cron run (Hobby: once/day, ±59 min).
+ * Look-ahead covers everything due before the next run so reminders arrive
+ * BEFORE the event instead of up to a day after it. Look-back is a catch-up for
+ * events created after the previous run whose creation-time send failed;
+ * reminderLogs dedupe prevents double sends.
+ */
+export const CRON_LOOKAHEAD_MS = 25 * 60 * 60 * 1000;
+export const CRON_LOOKBACK_MS = 25 * 60 * 60 * 1000;
 
 export function leadOffsetMs(lead: LeadId): number {
   return LEAD_MS[lead] ?? 0;
@@ -56,13 +63,13 @@ export function occursOn(ev: ScheduleEvent, iso: string): boolean {
   }
 }
 
-/** ISO dates to scan for due reminders (today −1 through today + lead horizon). */
+/** ISO dates to scan for due reminders (today −2 through today + lead horizon, padded for timezone offsets). */
 export function candidateOccurrenceDates(lead: LeadId, now = new Date()): string[] {
-  const horizon = Math.ceil(leadOffsetMs(lead) / (24 * 60 * 60 * 1000)) + 2;
+  const horizon = Math.ceil(leadOffsetMs(lead) / (24 * 60 * 60 * 1000)) + 3;
   const start = new Date(now);
-  start.setDate(start.getDate() - 1);
+  start.setDate(start.getDate() - 2);
   const out: string[] = [];
-  for (let i = 0; i < horizon + 2; i++) {
+  for (let i = 0; i < horizon + 3; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     out.push(formatIsoDate(d));

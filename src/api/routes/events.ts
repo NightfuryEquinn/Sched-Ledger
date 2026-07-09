@@ -1,7 +1,11 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { ObjectId } from "mongodb";
-import { clearReminderLogsForEvent, sendEventConfirmation } from "@/api/lib/reminders";
+import {
+  clearReminderLogsForEvent,
+  sendEventConfirmation,
+  sendImmediateReminderIfDue,
+} from "@/api/lib/reminders";
 import { notFound } from "@/api/lib/errors";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
@@ -65,6 +69,10 @@ eventsRoutes.post("/", zValidator("json", createEventSchema), async (c) => {
   void sendEventConfirmation(doc).catch((err) =>
     console.error("[reminders] confirmation email failed:", err),
   );
+  /* Reminders due before the next daily cron run must be sent now or they'd arrive late. */
+  void sendImmediateReminderIfDue(doc).catch((err) =>
+    console.error("[reminders] immediate reminder failed:", err),
+  );
 
   return c.json({ event: serializeDoc(doc) }, 201);
 });
@@ -96,6 +104,11 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
   if (body.notify === true) {
     void sendEventConfirmation(updated).catch((err) =>
       console.error("[reminders] confirmation email failed:", err),
+    );
+  }
+  if (updated.notify) {
+    void sendImmediateReminderIfDue(updated).catch((err) =>
+      console.error("[reminders] immediate reminder failed:", err),
     );
   }
   return c.json({ event: serializeDoc(updated) });
