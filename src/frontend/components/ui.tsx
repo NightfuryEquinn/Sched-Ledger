@@ -1,26 +1,23 @@
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Brand } from "@/frontend/components/Brand";
+import { DatePicker } from "@/frontend/components/DateTimePicker";
 import {
-  CURRENCIES,
-  clampMonthKey,
   CURRENT_MONTH_KEY,
-  fmtMoney,
-  getCurrency,
   MAX_MONTH_KEY,
   MIN_MONTH_KEY,
+  clampMonthKey,
+  fmtMoney,
+  getCurrency,
   monthLabel,
   monthRangeBounds,
   pad,
-  weekdayLabel,
+  weekdayLabel
 } from "@/frontend/lib/data";
-import type { Expense, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
-import type { MonthEntry } from "@/frontend/lib/types";
-import type { ViewId } from "@/frontend/lib/types";
-import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
 import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
+import type { FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
-import { Brand } from "@/frontend/components/Brand";
-import { DatePicker } from "@/frontend/components/DateTimePicker";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /*
  * Shared UI primitives
@@ -598,20 +595,9 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
   );
 }
 
-export {
-  Icon,
-  CatGlyph,
-  glyphTint,
-  Sidebar,
-  MonthSwitcher,
-  SummaryCard,
-  BudgetBar,
-  TransactionRow,
-  Segmented,
-  EmptyState,
-  WalletPicker,
-  AddExpenseModal,
-};
-export { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 export { CurrencyPicker } from "@/frontend/components/CurrencyPicker";
+export { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 export { TimezonePicker } from "@/frontend/components/TimezonePicker";
+export {
+  AddExpenseModal, BudgetBar, CatGlyph, EmptyState, Icon, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
+};

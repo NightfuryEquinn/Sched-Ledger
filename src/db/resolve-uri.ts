@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
 import { MongoClient } from "mongodb";
+import { spawnSync } from "node:child_process";
 
 type SrvRecord = { host: string; port: number };
 

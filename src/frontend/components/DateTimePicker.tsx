@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
-  MIN_MONTH_KEY,
   MAX_MONTH_KEY,
+  MIN_MONTH_KEY,
   TODAY_ISO,
   fmtTime,
   monthLabel,
   pad,
 } from "@/frontend/lib/data";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 function PickerIcon({ name, size = 16 }: { name: "calendar" | "clock" | "chevL" | "chevR" | "chevD"; size?: number }) {
   const s = { width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };

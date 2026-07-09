@@ -1,5 +1,5 @@
-import dns from "node:dns";
 import { MongoClient, type Db } from "mongodb";
+import dns from "node:dns";
 import { resolveMongoUri } from "./resolve-uri";
 
 // Bun's c-ares SRV resolution hangs for Atlas hosts on Vercel

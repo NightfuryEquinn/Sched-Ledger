@@ -1,6 +1,6 @@
-import { createMiddleware } from "hono/factory";
 import { getClientIp } from "@/api/lib/auth";
 import { tooManyRequests } from "@/api/lib/errors";
+import { createMiddleware } from "hono/factory";
 
 type Bucket = { count: number; resetAt: number };
 

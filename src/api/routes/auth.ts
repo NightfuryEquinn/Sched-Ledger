@@ -1,7 +1,3 @@
-import { zValidator } from "@hono/zod-validator";
-import { getAddress } from "ethers";
-import { Hono } from "hono";
-import { ObjectId } from "mongodb";
 import {
   SESSION_TTL_MS,
   buildAuthMessage,
@@ -24,6 +20,10 @@ import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { authChallengeSchema, authVerifySchema } from "@/schemas/auth";
 import { objectIdSchema } from "@/schemas/common";
+import { zValidator } from "@hono/zod-validator";
+import { getAddress } from "ethers";
+import { Hono } from "hono";
+import { ObjectId } from "mongodb";
 
 export const authRoutes = new Hono<{ Variables: SessionVariables }>();
 

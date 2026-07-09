@@ -1,6 +1,6 @@
+import { createApiRoutes } from "@/api/routes";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { createApiRoutes } from "@/api/routes";
 
 export function createApiApp() {
   const app = new Hono();

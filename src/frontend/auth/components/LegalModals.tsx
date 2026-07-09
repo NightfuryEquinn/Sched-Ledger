@@ -1,5 +1,5 @@
-import { createPortal } from "react-dom";
 import { Icon } from "@/frontend/components/ui";
+import { createPortal } from "react-dom";
 
 type LegalModalProps = {
   onClose: () => void;

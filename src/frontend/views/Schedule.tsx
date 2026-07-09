@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 import {
   EmptyState,
-  glyphTint,
   Icon,
   SummaryCard,
+  glyphTint,
 } from "@/frontend/components/ui";
-import { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 import {
   CURRENT_MONTH_KEY,
   EVENT_CATS,
@@ -24,8 +23,9 @@ import {
   scheduleForMonth,
   weekdayLabel,
 } from "@/frontend/lib/data";
-import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
 import type { LedgerEvent } from "@/frontend/lib/types";
+import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /*
  * Schedule view

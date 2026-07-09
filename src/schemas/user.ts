@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { timezoneSchema } from "@/lib/timezone";
+import { z } from "zod";
 import { walletAddressSchema } from "./common";
 
 export const userSchema = z.object({

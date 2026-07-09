@@ -1,9 +1,9 @@
-import { getAddress } from "ethers";
-import { useState } from "react";
 import { Brand } from "@/frontend/components/Brand";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, IdentityRecord } from "@/frontend/lib/types";
+import { getAddress } from "ethers";
+import { useState } from "react";
 import { Identicon } from "./components/Identicon";
 import { copyText } from "./lib/clipboard";
 import { codenameFor } from "./lib/codename";

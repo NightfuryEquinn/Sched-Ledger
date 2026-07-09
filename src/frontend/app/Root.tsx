@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { AuthScreen, getSavedAccount, logoutSession } from "@/frontend/auth";
 import { LedgerApp } from "@/frontend/app/LedgerApp";
+import { AuthScreen, getSavedAccount, logoutSession } from "@/frontend/auth";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { api } from "@/frontend/lib/api";
 import { ThemeProvider } from "@/frontend/lib/hooks/useTheme";
 import type { Account } from "@/frontend/lib/types";
+import { useEffect, useState } from "react";
 
 /**
  * App root: restores the server session on boot, then renders either

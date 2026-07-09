@@ -1,4 +1,4 @@
-import type { Expense, LedgerEvent, MonthEntry } from "./types";
+import type { MonthEntry } from "./types";
 
 // Exposes to window: CATEGORIES, CAT_BY_ID, SUB_BY_ID, MONTHS, buildSeedData,
 //   fmtMoney, fmtMoneyShort, monthLabel, todayISO, CURRENCY

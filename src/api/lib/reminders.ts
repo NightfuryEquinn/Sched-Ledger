@@ -1,4 +1,3 @@
-import { ObjectId } from "mongodb";
 import { emailConfigured, reminderEmailHtml, sendEmail } from "@/api/lib/email";
 import { getCollections, getDb } from "@/db";
 import type { EventDocument } from "@/db/collections";
@@ -14,6 +13,7 @@ import {
 } from "@/lib/schedule";
 import { DEFAULT_TIMEZONE } from "@/lib/timezone";
 import type { LeadId } from "@/schemas/common";
+import { ObjectId } from "mongodb";
 
 const EVENT_CAT_NAMES: Record<string, string> = {
   bill: "Bill / Payment",

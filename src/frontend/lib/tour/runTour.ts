@@ -1,6 +1,6 @@
-import Shepherd from "shepherd.js";
-import type { Tour } from "shepherd.js";
 import type { ViewId } from "@/frontend/lib/types";
+import type { Tour } from "shepherd.js";
+import Shepherd from "shepherd.js";
 import { getViewTourSteps, SHELL_TOUR_STEPS } from "./steps";
 import { markTourSeen } from "./storage";
 

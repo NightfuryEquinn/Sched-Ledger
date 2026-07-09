@@ -1,15 +1,7 @@
-export { connectDb, getDb, closeDb } from "./client";
+export { closeDb, connectDb, getDb } from "./client";
 export {
   COLLECTIONS,
-  getCollections,
-  type Collections,
-  type UserDocument,
-  type LedgerProfileDocument,
-  type FinancialWalletDocument,
-  type ExpenseDocument,
-  type EventDocument,
-  type ConsentDocument,
-  type AuthNonceDocument,
-  type SessionDocument,
+  getCollections, type AuthNonceDocument, type Collections, type ConsentDocument, type EventDocument, type ExpenseDocument, type FinancialWalletDocument, type LedgerProfileDocument, type SessionDocument, type UserDocument
 } from "./collections";
 export { ensureIndexes } from "./indexes";
+

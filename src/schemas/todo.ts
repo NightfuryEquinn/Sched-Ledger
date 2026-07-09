@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
+import { z } from "zod";
 import { walletAddressSchema } from "./address";
 
 export const TODO_ICONS = TODO_ICON_OPTIONS;

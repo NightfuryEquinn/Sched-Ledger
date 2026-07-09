@@ -1,19 +1,37 @@
 # Sched Ledger
 
-Private expense ledger and schedule app. Track spending in MYR, plan events, and sign in with a Web3 wallet — no email or password required.
+Private expense ledger, schedule, and to-do app. Track spending across multiple wallets and currencies, plan events with email reminders, and sign in with a Web3 wallet — no email or password required.
 
 Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
-![Sched Ledger](logo.png)
+![Sched Ledger](src/frontend/assets/logo.png)
 
 ## Features
 
-- **Overview, transactions, budgets, insights, recurring** — monthly expense tracking; recurring items auto-post on due dates via daily cron
-- **Schedule** — bills, appointments, and reminders with recurrence
-- **Web3 identity** — create or restore a wallet; sign in with a cryptographic challenge (SIWE-style)
+### Ledger
+
+- **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress
+- **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
+- **Custom categories** — editable category/subcategory taxonomy with glyphs and colors
+- **Recurring transactions** — weekly, monthly, quarterly, or yearly; auto-posted on due dates via daily cron
+- **FX insights** — view spending converted to another currency (optional live rates)
+
+### Schedule & tasks
+
+- **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence
+- **Email reminders** — optional Resend integration; per-event lead times and user timezone
+- **TO-DO lists** — multiple named lists with inline task management
+
+### Identity & privacy
+
+- **Web3 identity** — create or restore an in-browser wallet; sign in with a cryptographic challenge (SIWE-style)
 - **Dark mode** — system-aware theme toggle, persisted locally
 - **Sessions & privacy** — HttpOnly session cookies, revoke devices, export CSV, clear local data
-- **Security** — signature verification, rate limiting, security headers, in-memory profile cache
+- **Guided tour** — Shepherd.js walkthrough for each main view
+
+### Security
+
+- Signature verification, rate limiting, security headers, in-memory profile cache
 
 ## Tech stack
 
@@ -23,47 +41,62 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 | API | [Hono](https://hono.dev) + Zod validation |
 | Database | [MongoDB](https://www.mongodb.com) |
 | Frontend | React 19, TanStack Query, ethers v6 |
-| Styling | Custom CSS (warm cream / charcoal themes) |
+| Styling | Tailwind CSS 4 (`bun-plugin-tailwind`) + custom theme CSS |
+| Tours | [Shepherd.js](https://shepherdjs.dev) |
+| Deploy | [Vercel](https://vercel.com) (Analytics, Speed Insights, Cron) |
 
 ## Project structure
 
 ```
-src/vercel-api.ts         # API bundle source (built → api/index.js during deploy)
+api/index.ts              # Vercel serverless entry (re-exports bundled handler)
 src/
-├── index.ts              # Bun server (API + SPA)
+├── index.ts              # Bun dev/prod server (API + SPA)
 ├── index.html
+├── vercel-api.ts         # API bundle source (built → api/index.js)
 ├── api/
-│   ├── lib/              # auth, cache, errors, serialize
+│   ├── app.ts            # Hono app + error handler
+│   ├── lib/              # auth, cache, email, reminders, recurring-expenses
 │   ├── middleware/       # session, rate-limit, security, db
-│   └── routes/           # auth, profile, expenses, events, users, consent
-├── db/                   # MongoDB client, collections, indexes
+│   └── routes/           # auth, users, profile, wallets, categories,
+│                         # expenses, events, todo-lists, consent, fx, cron
+├── db/                   # MongoDB client, collections, indexes, URI resolver
 ├── schemas/              # Zod schemas (shared API validation)
+├── lib/                  # glyphs, recurring, schedule, timezone (shared)
 └── frontend/
     ├── app/              # Root, LedgerApp
     ├── auth/             # wallet sign-in, account menu, session UI
-    ├── components/       # Brand, ThemeToggle, shared UI
-    ├── hooks/            # useLedger, useTheme
-    ├── lib/              # api client, data, stats, theme, types
-    ├── views/            # Overview, Transactions, Budgets, Schedule, …
-    ├── charts/
-    ├── styles/
+    ├── assets/           # logo
+    ├── charts/           # SVG charts (donut, trend, MoM bars)
+    ├── components/       # Brand, ThemeToggle, Wallets, pickers, shared UI
+    ├── lib/
+    │   ├── hooks/        # useLedger, useTheme
+    │   └── tour/         # guided tour steps and runner
+    ├── styles/           # ledger.css (theme tokens + layout)
+    ├── views/            # Overview, Transactions, Budgets, Categories,
+    │                     # Recurring, Insights, Schedule, TodoList
     └── main.tsx
+scripts/                  # MongoDB test + collection maintenance
+build.ts                  # Production build (dist/ + api/index.js)
 ```
 
 ## Setup
 
 ```bash
 bun install
-cp .env.example .env
 ```
 
-Edit `.env`:
+Create a `.env` file in the project root:
 
-| Variable | Description |
-|----------|-------------|
-| `MONGODB_URI` | MongoDB connection string |
-| `MONGODB_DB` | Database name (default: `ledger`) |
-| `APP_ORIGIN` | Origin embedded in sign-in messages (default: request origin) |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `MONGODB_URI` | Yes | MongoDB connection string |
+| `MONGODB_DB` | No | Database name (default: `ledger`) |
+| `APP_ORIGIN` | No | Origin embedded in sign-in messages (default: request origin) |
+| `APP_TIMEZONE` | No | Server default IANA timezone for cron/reminders |
+| `CRON_SECRET` | For cron | Bearer token for `GET /api/cron/reminders` |
+| `RESEND_API_KEY` | For email | Resend API key for schedule reminder emails |
+| `EMAIL_FROM` | No | Sender address (default: `Sched Ledger <onboarding@resend.dev>`) |
+| `EXCHANGE_RATE_API_KEY` | For FX | [ExchangeRate-API](https://www.exchangerate-api.com) key for Insights currency conversion |
 
 ### MongoDB
 
@@ -72,6 +105,15 @@ Edit `.env`:
 
 On Windows, Bun may fail to resolve `mongodb+srv` DNS; the app auto-converts to a direct connection string at startup.
 
+### Database scripts
+
+```bash
+bun run db:test          # connectivity check
+bun run db:list          # list collections
+bun run db:drop expenses events --yes   # drop specific collection(s)
+bun run db:drop:all      # drop all app collections (requires --yes)
+```
+
 ## Development
 
 ```bash
@@ -79,6 +121,8 @@ bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
+
+When `CRON_SECRET` is set in development, the server also polls every 15 minutes for due reminders and recurring expense rows (emails require `RESEND_API_KEY`).
 
 ### Health check
 
@@ -101,25 +145,37 @@ Manage sessions under **Account → Data & privacy** (revoke devices, sign out e
 
 | Route | Description |
 |-------|-------------|
+| `GET /api/ping` | Runtime probe |
 | `GET /api/health` | Service and DB status |
 | `POST /api/auth/challenge` | Start sign-in |
 | `POST /api/auth/verify` | Complete sign-in |
 | `GET /api/auth/me` | Current session |
 | `GET /api/auth/sessions` | List active sessions |
 | `DELETE /api/auth/sessions/:id` | Revoke a session |
+| `DELETE /api/auth/sessions` | Revoke all other sessions |
 | `POST /api/auth/logout` | End current session |
-| `GET/PATCH /api/profile` | Budgets, income, current month |
-| `CRUD /api/expenses` | Transactions |
+| `POST /api/auth/clear` | Revoke all sessions and clear cookie |
+| `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder prefs |
+| `POST /api/users` | Create or upsert user profile on first sign-in |
+| `GET/PATCH /api/profile` | Legacy profile (current month); wallets hold budgets/income |
+| `PUT /api/profile/budgets` | Update legacy profile budgets |
+| `CRUD /api/wallets` | Financial wallets (currency, income, budgets) |
+| `PUT /api/wallets/:id/budgets` | Update wallet budgets |
+| `GET/PUT /api/categories` | Category taxonomy |
+| `CRUD /api/expenses` | Transactions (scoped by wallet) |
 | `CRUD /api/events` | Schedule events |
+| `POST /api/events/:id/comments` | Add event comment |
+| `CRUD /api/todo-lists` | TO-DO lists and tasks |
 | `GET/PATCH /api/consent` | Data-sharing consent |
-| `GET /api/cron/reminders` | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminder emails and materializes recurring expense/income rows |
+| `GET /api/fx/latest/:base` | Cached FX rates (requires `EXCHANGE_RATE_API_KEY`) |
+| `GET /api/cron/reminders` | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminder emails and materializes recurring expense rows |
 
 All mutating routes require a valid session cookie. Auth endpoints have stricter rate limits.
 
 ## Production (self-hosted)
 
 ```bash
-bun run build   # static frontend → dist/
+bun run build   # static frontend → dist/; API bundle → api/index.js
 bun start       # NODE_ENV=production
 ```
 
@@ -127,7 +183,7 @@ Set `NODE_ENV=production` so session cookies are marked `Secure` over HTTPS.
 
 ## Deploy on Vercel
 
-The API is bundled into `api/index.js` during `bun run build` so Vercel can resolve TypeScript path aliases at runtime.
+The API is bundled into `api/index.js` during `bun run build` so Vercel can resolve TypeScript path aliases at runtime. Vercel Cron calls `/api/cron/reminders` daily (see [`vercel.json`](vercel.json)).
 
 ### Environment variables
 
@@ -139,6 +195,10 @@ Set these in **Vercel → Project → Settings → Environment Variables** for P
 | `MONGODB_DB` | Database name (default: `ledger`) |
 | `APP_ORIGIN` | Public app URL, e.g. `https://your-project.vercel.app` (used in sign-in messages) |
 | `NODE_ENV` | `production` (Vercel usually sets this; enables `Secure` session cookies) |
+| `CRON_SECRET` | Secret for the daily cron handler |
+| `RESEND_API_KEY` | Optional — enable schedule reminder emails |
+| `EMAIL_FROM` | Optional — verified sender in Resend |
+| `EXCHANGE_RATE_API_KEY` | Optional — enable FX conversion in Insights |
 
 **Atlas network access:** allow `0.0.0.0/0` so Vercel's dynamic egress IPs can reach your cluster.
 
@@ -165,11 +225,12 @@ Optional: run `bunx vercel dev` locally to test Vercel routing before deploying.
 1. **Health check** — `GET https://<your-app>.vercel.app/api/health` should return `{ "ok": true, "service": "ledger-api", "db": "connected" }`.
 2. **Sign-in** — open the app, create or restore a wallet, complete the sign-in challenge, and confirm you land in the main UI.
 3. **CRUD** — add an expense and a schedule event; refresh the page and confirm data persists.
-4. **Sessions** — open **Account → Data & privacy**, confirm your device appears in the session list, and test revoke / sign out.
+4. **Wallets** — create a second wallet, switch between them, and confirm transactions stay scoped.
+5. **Sessions** — open **Account → Data & privacy**, confirm your device appears in the session list, and test revoke / sign out.
 
 ### Serverless notes
 
-- Rate limiting and profile cache are in-memory per function instance (acceptable for v1).
+- Rate limiting, profile cache, and FX cache are in-memory per function instance (acceptable for v1).
 - Cold starts may add latency on the first request while MongoDB connects; warm instances reuse the cached client.
 
 ## License

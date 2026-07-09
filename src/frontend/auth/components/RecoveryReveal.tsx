@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { createPortal } from "react-dom";
 import { Icon } from "@/frontend/components/ui";
 import type { IdentityRecord } from "@/frontend/lib/types";
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { copyText } from "../lib/clipboard";
 
 type RecoveryRevealProps = {

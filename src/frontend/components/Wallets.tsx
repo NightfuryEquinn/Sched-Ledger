@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { getCurrency } from "@/frontend/lib/data";
 import type { FinancialWallet } from "@/frontend/lib/types";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { CurrencyPicker } from "./CurrencyPicker";
 import { Icon, Segmented, WalletPicker } from "./ui";
 

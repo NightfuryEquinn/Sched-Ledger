@@ -1,8 +1,8 @@
-import { serve } from "bun";
 import { createApiApp } from "@/api";
 import { processDueRecurringExpenses } from "@/api/lib/recurring-expenses";
 import { processDueReminders } from "@/api/lib/reminders";
 import { connectDb } from "@/db/client";
+import { serve } from "bun";
 import index from "./index.html";
 
 const api = createApiApp();

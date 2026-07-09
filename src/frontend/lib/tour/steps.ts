@@ -1,5 +1,5 @@
-import type { StepOptions } from "shepherd.js";
 import type { ViewId } from "@/frontend/lib/types";
+import type { StepOptions } from "shepherd.js";
 
 type TourStep = StepOptions & { id: string };
 

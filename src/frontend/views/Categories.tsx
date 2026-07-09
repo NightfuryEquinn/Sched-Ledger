@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { EmptyState, glyphTint, Icon, Segmented } from "@/frontend/components/ui";
+import { EmptyState, Icon, Segmented, glyphTint } from "@/frontend/components/ui";
 import { nextCategoryColor, slugId } from "@/frontend/lib/categories";
-import { CATEGORY_GLYPH_OPTIONS, DEFAULT_GLYPH, displayGlyph } from "@/lib/glyphs";
 import type { Category, CategoryIndex } from "@/frontend/lib/types";
+import { CATEGORY_GLYPH_OPTIONS, DEFAULT_GLYPH, displayGlyph } from "@/lib/glyphs";
+import { useEffect, useState } from "react";
 
 /*
  * Categories view

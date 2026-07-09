@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { categoryIdSchema, subcategoryIdSchema } from "./category";
+import { categoryIdSchema } from "./category";
 
 export { walletAddressSchema } from "./address";
 

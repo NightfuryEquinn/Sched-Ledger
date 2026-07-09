@@ -1,5 +1,5 @@
-import { Wallet } from "ethers";
 import type { IdentityRecord } from "@/frontend/lib/types";
+import { Wallet } from "ethers";
 
 async function fakeSign(message: string): Promise<string> {
   const data = new TextEncoder().encode(`${message}:${Date.now()}`);

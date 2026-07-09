@@ -1,46 +1,46 @@
-import { useEffect, useMemo, useState } from "react";
 import { AreaTrend, Donut, MiniSpark, MoMBars } from "@/frontend/charts";
 import { CurrencyPicker } from "@/frontend/components/CurrencyPicker";
 import {
   BudgetBar,
   CatGlyph,
   EmptyState,
-  glyphTint,
   Icon,
-  SummaryCard,
   Segmented,
+  SummaryCard,
   TransactionRow,
+  glyphTint,
 } from "@/frontend/components/ui";
 import {
   CURRENT_DAY,
   CURRENT_MONTH_KEY,
   MONTHS,
-  monthsWindow,
   dayLabel,
   fmtMoney,
   fmtMoneyShort,
   getCurrency,
   monthLabel,
+  monthsWindow,
   weekdayLabel,
 } from "@/frontend/lib/data";
 import { fetchFxRates, fxConvert, fxRateLabel } from "@/frontend/lib/fx";
-import { catOf, isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
+import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import {
+  catOf,
   chartActiveKey,
   chartBudgetForPeriod,
   chartSelectionMonth,
-  spendingChartSeries,
-  type ChartPeriod,
-  isRecurring,
+  isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
   recurringDueDay,
   recurringLabel,
   recurringMonthlyEquivalent,
   recurringScheduleKey,
   recurringSchedulesForMonth,
+  spendingChartSeries,
+  type ChartPeriod
 } from "@/frontend/lib/stats";
-import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
-import { displayGlyph } from "@/lib/glyphs";
 import { getAccent } from "@/frontend/lib/theme";
-import type { Budgets, CategoryIndex, Expense } from "@/frontend/lib/types";
+import { displayGlyph } from "@/lib/glyphs";
+import { useEffect, useMemo, useState } from "react";
 
 export { Categories } from "./Categories";
 

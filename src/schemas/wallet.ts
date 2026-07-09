@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { DEFAULT_CATEGORIES, emptyBudgets } from "./category";
 import {
   budgetsSchema,
   walletAddressSchema,
 } from "./common";
-import { DEFAULT_CATEGORIES, emptyBudgets } from "./category";
 
 export const CURRENCY_CODES = [
   "AED",

@@ -1,6 +1,5 @@
-import type { Expense, FinancialWallet } from "@/frontend/lib/types";
-import type { CategoryIndex } from "@/frontend/lib/types";
 import { isRecurring, recurringLabel } from "@/frontend/lib/stats";
+import type { CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
 
 function escapeCsv(value: unknown): string {
   const s = String(value == null ? "" : value);

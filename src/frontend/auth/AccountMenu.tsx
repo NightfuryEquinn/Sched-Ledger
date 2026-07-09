@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
+import { useEffect, useRef, useState } from "react";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { Identicon } from "./components/Identicon";
 import { CopyrightModal, TermsModal } from "./components/LegalModals";

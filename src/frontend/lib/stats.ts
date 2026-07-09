@@ -8,20 +8,20 @@ import {
   type RecurringField,
   type RecurringInterval,
 } from "@/lib/recurring";
-import { CURRENT_MONTH_KEY, monthLabel, monthsWindow, SUB_BY_ID, TODAY_ISO } from "./data";
-import type { Budgets, Expense, FinancialWallet } from "./types";
 import type { CategoryIndex } from "./categories";
 import { catOfSub, isSavingsSub } from "./categories";
+import { CURRENT_MONTH_KEY, SUB_BY_ID, TODAY_ISO, monthLabel, monthsWindow } from "./data";
+import type { Budgets, Expense, FinancialWallet } from "./types";
 
-export type { RecurringField, RecurringInterval };
 export {
   normalizeRecurring,
   recurringDueDay,
   recurringLabel,
   recurringMonthlyEquivalent,
   recurringOccursInMonth,
-  recurringScheduleKey,
+  recurringScheduleKey
 };
+export type { RecurringField, RecurringInterval };
 
 export type ChartPeriod = "daily" | "monthly" | "quarterly" | "yearly";
 export type ChartBar = { key: string; label: string; spent: number };

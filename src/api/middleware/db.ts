@@ -1,5 +1,5 @@
-import { createMiddleware } from "hono/factory";
 import { connectDb } from "@/db/client";
+import { createMiddleware } from "hono/factory";
 
 const DB_MIDDLEWARE_TIMEOUT_MS = 15_000;
 

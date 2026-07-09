@@ -1,17 +1,17 @@
-import { Hono } from "hono";
 import { ensureDb } from "@/api/middleware/db";
 import { globalRateLimit } from "@/api/middleware/rate-limit";
 import { securityHeaders } from "@/api/middleware/security";
+import { Hono } from "hono";
 import { authRoutes } from "./auth";
-import { cronRoutes } from "./cron";
+import { categoriesRoutes } from "./categories";
 import { consentRoutes } from "./consent";
+import { cronRoutes } from "./cron";
 import { eventsRoutes } from "./events";
 import { expensesRoutes } from "./expenses";
 import { fxRoutes } from "./fx";
 import { profileRoutes } from "./profile";
-import { usersRoutes } from "./users";
-import { categoriesRoutes } from "./categories";
 import { todoListsRoutes } from "./todo-lists";
+import { usersRoutes } from "./users";
 import { walletsRoutes } from "./wallets";
 
 export function createApiRoutes() {

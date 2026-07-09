@@ -1,12 +1,12 @@
-import type { Collection, Db, ObjectId } from "mongodb";
-import type { Consent } from "@/schemas/consent";
-import type { Expense } from "@/schemas/expense";
-import type { Event } from "@/schemas/event";
-import type { LedgerProfile } from "@/schemas/profile";
-import type { User } from "@/schemas/user";
 import type { CategoryTaxonomy } from "@/schemas/category";
+import type { Consent } from "@/schemas/consent";
+import type { Event } from "@/schemas/event";
+import type { Expense } from "@/schemas/expense";
+import type { LedgerProfile } from "@/schemas/profile";
 import type { TodoList } from "@/schemas/todo";
+import type { User } from "@/schemas/user";
 import type { FinancialWallet } from "@/schemas/wallet";
+import type { Collection, Db, ObjectId } from "mongodb";
 
 export const COLLECTIONS = {
   users: "users",

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { useLedgerTour } from "@/frontend/lib/tour";
 import { AccountMenu } from "@/frontend/auth";
+import { ThemeToggle } from "@/frontend/components/ThemeToggle";
+import { WalletManageModal, WalletSwitcher } from "@/frontend/components/Wallets";
 import {
   AddExpenseModal,
   Icon,
@@ -8,13 +8,10 @@ import {
   NAV_ITEMS,
   Sidebar,
 } from "@/frontend/components/ui";
-import { WalletManageModal, WalletSwitcher } from "@/frontend/components/Wallets";
-import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
+import { useLedgerTour } from "@/frontend/lib/tour";
 import type { Account, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
-import { EventModal, Schedule } from "@/frontend/views/Schedule";
-import { TodoListView } from "@/frontend/views/TodoList";
 import {
   Budgets as BudgetsView,
   Categories as CategoriesView,
@@ -23,6 +20,9 @@ import {
   Recurring,
   Transactions,
 } from "@/frontend/views";
+import { EventModal, Schedule } from "@/frontend/views/Schedule";
+import { TodoListView } from "@/frontend/views/TodoList";
+import { useEffect, useRef, useState } from "react";
 
 /*
  * LedgerApp — authenticated app shell

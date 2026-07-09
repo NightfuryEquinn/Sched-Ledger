@@ -1,17 +1,17 @@
 import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import {
   applyTheme,
   getStoredTheme,
   getSystemDark,
   setStoredTheme,
   type ThemePreference,
 } from "@/frontend/lib/theme";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 type ThemeContextValue = {
   preference: ThemePreference;

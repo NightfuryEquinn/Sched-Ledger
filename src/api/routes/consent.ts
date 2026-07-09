@@ -1,10 +1,10 @@
-import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
 import { serializeDoc } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { updateConsentSchema } from "@/schemas/consent";
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
 
 export const consentRoutes = new Hono<{ Variables: SessionVariables }>();
 

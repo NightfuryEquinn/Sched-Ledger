@@ -1,13 +1,13 @@
+import { Root } from "@/frontend/app/Root";
+import logoUrl from "@/frontend/assets/logo.png";
+import { applyTheme, getStoredTheme, resolveDark } from "@/frontend/lib/theme";
+import "@/frontend/styles/ledger.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import logoUrl from "@/frontend/assets/logo.png";
-import { Root } from "@/frontend/app/Root";
-import { applyTheme, getStoredTheme, resolveDark } from "@/frontend/lib/theme";
 import "shepherd.js/dist/css/shepherd.css";
-import "@/frontend/styles/ledger.css";
 
 applyTheme(resolveDark(getStoredTheme()));
 

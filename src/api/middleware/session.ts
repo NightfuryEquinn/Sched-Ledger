@@ -1,7 +1,7 @@
-import { createMiddleware } from "hono/factory";
 import { hashToken, readSessionToken } from "@/api/lib/auth";
 import { unauthorized } from "@/api/lib/errors";
 import { getCollections, getDb } from "@/db";
+import { createMiddleware } from "hono/factory";
 
 export type SessionVariables = {
   walletAddress: string;

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from "react";
 import type { ViewId } from "@/frontend/lib/types";
+import { useCallback, useEffect, useRef } from "react";
 import { cancelActiveTour, runTour } from "./runTour";
 import { hasSeenTour } from "./storage";
 

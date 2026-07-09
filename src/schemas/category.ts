@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { DEFAULT_GLYPH } from "@/lib/glyphs";
+import { z } from "zod";
 import { walletAddressSchema } from "./address";
 
 export const categoryIdSchema = z

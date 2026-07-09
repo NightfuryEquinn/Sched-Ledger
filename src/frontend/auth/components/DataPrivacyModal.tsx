@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { Icon } from "@/frontend/components/ui";
 import { api, type ApiSession } from "@/frontend/lib/api";
 import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { getConsent, setConsent } from "../lib/consent";
 import { downloadExpenseCsv } from "../lib/export";
 import { clearAllLocalData } from "../lib/identity-storage";

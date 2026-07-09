@@ -1,12 +1,12 @@
-import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
 import { forbidden, notFound } from "@/api/lib/errors";
 import { serializeDoc } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
-import { createUserSchema, updateUserSchema } from "@/schemas/user";
 import { walletAddressSchema } from "@/schemas/common";
+import { createUserSchema, updateUserSchema } from "@/schemas/user";
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
 
 export const usersRoutes = new Hono<{ Variables: SessionVariables }>();
 

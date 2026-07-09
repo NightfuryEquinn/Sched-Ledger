@@ -1,15 +1,14 @@
-import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
 import { badRequest, notFound } from "@/api/lib/errors";
-import { serializeDoc } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import {
   DEFAULT_CATEGORIES,
-  type Category,
   updateCategoriesSchema,
+  type Category,
 } from "@/schemas/category";
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
 
 export const categoriesRoutes = new Hono<{ Variables: SessionVariables }>();
 

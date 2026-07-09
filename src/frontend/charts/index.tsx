@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 function Donut({ data, size = 220, thickness = 30, onHover, activeId }) {
   // data: [{id,label,value,color}]
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
@@ -146,4 +144,4 @@ function MiniSpark({ values, color, width = 90, height = 28 }) {
   );
 }
 
-export { Donut, AreaTrend, MoMBars, MiniSpark };
+export { AreaTrend, Donut, MiniSpark, MoMBars };

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
 import { EmptyState, Icon } from "@/frontend/components/ui";
 import { slugId } from "@/frontend/lib/categories";
-import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import type { TodoList, TodoTask } from "@/frontend/lib/types";
+import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
+import { useEffect, useMemo, useState } from "react";
 
 /*
  * TO-DO List view
