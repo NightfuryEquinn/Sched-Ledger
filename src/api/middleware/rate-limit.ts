@@ -6,8 +6,21 @@ type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
 
+/* Periodically evict expired buckets so the map cannot grow without bound. */
+const PRUNE_INTERVAL_MS = 60_000;
+let lastPruneAt = Date.now();
+
+function pruneExpired(now: number): void {
+  if (now - lastPruneAt < PRUNE_INTERVAL_MS) return;
+  lastPruneAt = now;
+  for (const [key, bucket] of buckets) {
+    if (now >= bucket.resetAt) buckets.delete(key);
+  }
+}
+
 function checkLimit(key: string, limit: number, windowMs: number): number | null {
   const now = Date.now();
+  pruneExpired(now);
   const bucket = buckets.get(key);
   if (!bucket || now >= bucket.resetAt) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });

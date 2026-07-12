@@ -30,8 +30,9 @@ export function createApiRoutes() {
       await connectDb();
       return c.json({ ok: true, service: "ledger-api", db: "connected" });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "disconnected";
-      return c.json({ ok: false, service: "ledger-api", db: "disconnected", error: message }, 503);
+      /* Log details server-side only; connection errors can leak DB topology. */
+      console.error("[health] database check failed:", err);
+      return c.json({ ok: false, service: "ledger-api", db: "disconnected" }, 503);
     }
   });
 

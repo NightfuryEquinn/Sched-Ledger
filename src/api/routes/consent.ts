@@ -1,3 +1,4 @@
+import { notFound } from "@/api/lib/errors";
 import { serializeDoc } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -47,5 +48,6 @@ consentRoutes.patch("/", zValidator("json", updateConsentSchema), async (c) => {
     { returnDocument: "after" },
   );
 
-  return c.json({ consent: serializeDoc(updated!) });
+  if (!updated) notFound("Consent record not found");
+  return c.json({ consent: serializeDoc(updated) });
 });

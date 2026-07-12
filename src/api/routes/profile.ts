@@ -1,4 +1,5 @@
 import { cacheDel, cacheGet, cacheSet } from "@/api/lib/cache";
+import { notFound } from "@/api/lib/errors";
 import { serializeDoc } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -78,5 +79,6 @@ profileRoutes.patch("/", zValidator("json", updateProfileSchema), async (c) => {
     { returnDocument: "after" },
   );
 
-  return c.json({ profile: serializeProfile(updated!) });
+  if (!updated) notFound("Profile not found");
+  return c.json({ profile: serializeProfile(updated) });
 });

@@ -1,4 +1,9 @@
-import { hashToken, readSessionToken } from "@/api/lib/auth";
+import {
+  SESSION_MAX_LIFETIME_MS,
+  SESSION_TTL_MS,
+  hashToken,
+  readSessionToken,
+} from "@/api/lib/auth";
 import { unauthorized } from "@/api/lib/errors";
 import { getCollections, getDb } from "@/db";
 import { createMiddleware } from "hono/factory";
@@ -23,6 +28,13 @@ export const sessionAuth = createMiddleware<{ Variables: SessionVariables }>(asy
 
   if (!session) unauthorized("Session expired or invalid. Sign in again.");
 
+  /* Sliding renewal must not extend a session forever: enforce an absolute cap. */
+  const absoluteExpiry = session.createdAt.getTime() + SESSION_MAX_LIFETIME_MS;
+  if (now.getTime() >= absoluteExpiry) {
+    void sessions.updateOne({ _id: session._id }, { $set: { revokedAt: now } });
+    unauthorized("Session expired or invalid. Sign in again.");
+  }
+
   c.set("walletAddress", session.address);
   c.set("sessionId", session._id.toHexString());
 
@@ -32,9 +44,10 @@ export const sessionAuth = createMiddleware<{ Variables: SessionVariables }>(asy
   }
 
   if (!session.lastSeenAt || now.getTime() - session.lastSeenAt.getTime() > 5 * 60_000) {
+    const renewedExpiry = Math.min(now.getTime() + SESSION_TTL_MS, absoluteExpiry);
     void sessions.updateOne(
       { _id: session._id },
-      { $set: { lastSeenAt: now, expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60_000) } },
+      { $set: { lastSeenAt: now, expiresAt: new Date(renewedExpiry) } },
     );
   }
 

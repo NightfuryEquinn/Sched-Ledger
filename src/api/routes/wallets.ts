@@ -4,10 +4,17 @@ import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { objectIdSchema } from "@/schemas/common";
+import { e2eeVersionSchema, encryptedPayloadSchema } from "@/schemas/encryption";
 import { createWalletSchema, updateWalletSchema } from "@/schemas/wallet";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { ObjectId } from "mongodb";
+import { z } from "zod";
+
+const encryptedBudgetsSchema = z.object({
+  enc: e2eeVersionSchema,
+  payload: encryptedPayloadSchema,
+});
 
 export const walletsRoutes = new Hono<{ Variables: SessionVariables }>();
 
@@ -173,15 +180,12 @@ walletsRoutes.patch("/:id", zValidator("json", updateWalletSchema), async (c) =>
   return c.json({ wallet: serializeDoc(updated) });
 });
 
-walletsRoutes.put("/:id/budgets", async (c) => {
+walletsRoutes.put("/:id/budgets", zValidator("json", encryptedBudgetsSchema), async (c) => {
   const walletAddress = c.get("walletAddress");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Wallet not found");
 
-  const body = await c.req.json();
-  if (body?.enc !== 1 || typeof body?.payload !== "string") {
-    badRequest("Encrypted budgets payload is required");
-  }
+  const body = c.req.valid("json");
 
   const { financialWallets } = getCollections(getDb());
   await migrateLegacyData(walletAddress);
