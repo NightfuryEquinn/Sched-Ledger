@@ -12,7 +12,10 @@ if (!process.env.MONGODB_URI) {
   process.exit(1);
 }
 process.env.MONGODB_DB = "ledger_test";
-process.env.NODE_ENV = "development";
+/* Mirror `bun dev`, which leaves NODE_ENV unset: cookies must not be Secure
+   there or browsers drop them on plain-HTTP localhost and sign-in breaks. */
+delete process.env.NODE_ENV;
+delete process.env.VERCEL;
 
 const { connectDb } = await import("@/db/client");
 await connectDb();
@@ -52,6 +55,11 @@ check("verify with valid signature returns 200", v1.status === 200, String(v1.st
 const setCookie = v1.headers.get("set-cookie") ?? "";
 const cookie = setCookie.split(";")[0]!;
 check("session cookie issued", cookie.startsWith("ledger_session="));
+check(
+  "cookie not Secure in local dev (unset NODE_ENV)",
+  !/;\s*secure/i.test(setCookie),
+  setCookie.replace(/^ledger_session=[^;]+/, "ledger_session=<redacted>"),
+);
 
 // nonce reuse must fail
 const v2 = await req("/auth/verify", {
