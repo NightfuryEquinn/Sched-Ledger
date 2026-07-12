@@ -86,8 +86,10 @@ export function readSessionToken(c: Context): string | undefined {
 export function setSessionCookie(c: Context, token: string): void {
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
-    /* Secure by default; only allow plain HTTP for explicit local development. */
-    secure: process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test",
+    /* Secure in production/Vercel. Local dev (`bun dev` leaves NODE_ENV unset)
+       runs over plain HTTP, where a Secure cookie would be dropped by the
+       browser and break sign-in. */
+    secure: process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL),
     sameSite: "Lax",
     path: "/",
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
