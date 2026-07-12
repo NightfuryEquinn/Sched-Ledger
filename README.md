@@ -13,7 +13,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable category/subcategory taxonomy with glyphs and colors
-- **Recurring transactions** — weekly, monthly, quarterly, or yearly; auto-posted on due dates via daily cron
+- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via daily cron
 - **FX insights** — view spending converted to another currency (optional live rates)
 
 ### Schedule & tasks
@@ -71,13 +71,14 @@ src/
     ├── charts/           # SVG charts (donut, trend, MoM bars)
     ├── components/       # Brand, ThemeToggle, Wallets, pickers, shared UI
     ├── lib/
-    │   ├── hooks/        # useLedger, useTheme
-    │   └── tour/         # guided tour steps and runner
+    │   ├── crypto/         # E2EE codec, key derivation, unlock flow
+    │   ├── hooks/          # useLedger, useTheme
+    │   └── tour/           # guided tour steps and runner
     ├── styles/           # ledger.css (theme tokens + layout)
     ├── views/            # Overview, Transactions, Budgets, Categories,
     │                     # Recurring, Insights, Schedule, TodoList
     └── main.tsx
-scripts/                  # MongoDB test + collection maintenance
+scripts/                  # MongoDB collection maintenance (drop/list)
 build.ts                  # Production build (dist/ + api/index.js)
 ```
 
@@ -110,11 +111,34 @@ On Windows, Bun may fail to resolve `mongodb+srv` DNS; the app auto-converts to 
 ### Database scripts
 
 ```bash
-bun run db:test          # connectivity check
 bun run db:list          # list collections
 bun run db:drop expenses events --yes   # drop specific collection(s)
-bun run db:drop:all      # drop all app collections (requires --yes)
+bun run db:drop:all --yes  # drop all app collections
 ```
+
+Connectivity check: `curl http://localhost:3000/api/health`
+
+## Database schema
+
+MongoDB database name defaults to `ledger` (`MONGODB_DB`). All user-owned documents are keyed by lowercase Ethereum `address` / `userAddress`. Every collection also has `_id` (`ObjectId`) and, where noted, `createdAt` / `updatedAt`.
+
+Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Indexes are created on connect via `src/db/indexes.ts`.
+
+### Collections
+
+| MongoDB collection | Code key | Purpose |
+|------------------|----------|---------|
+| `users` | `users` | Account profile (codename, notify email, timezone) |
+| `ledger_profiles` | `ledgerProfiles` | Per-user UI state (`currentMonth`) |
+| `financial_wallets` | `financialWallets` | Wallets (currency, funding mode; E2EE financials) |
+| `category_taxonomies` | `categoryTaxonomies` | One document per user — full category tree |
+| `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
+| `events` | `events` | Schedule events and reminders (plaintext) |
+| `todo_lists` | `todoLists` | Named to-do lists with embedded tasks (plaintext) |
+| `consent` | `consent` | Data-sharing opt-in flag |
+| `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
+| `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
+| `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminder emails |
 
 ## Development
 
@@ -147,7 +171,7 @@ Manage sessions under **Account → Data & privacy** (revoke devices, sign out e
 
 Ledger data (transaction amounts, subcategories, notes, and per-wallet budgets/income) is encrypted in your browser with **AES-256-GCM**. The encryption key is derived from a wallet signature over a fixed message — it never leaves your device and is held in memory for the session only.
 
-On each visit you may be prompted to **unlock** your ledger (one signature for browser wallets; silent for in-app wallets with a stored key). MongoDB stores only ciphertext plus non-sensitive metadata (`date`, `kind`, `recurring`) needed for scheduling.
+On each visit you may be prompted to **unlock** your ledger (one signature for browser wallets; silent for in-app wallets with a stored key). MongoDB stores ciphertext plus plaintext metadata needed for queries and cron (`date`, `kind`, `recurring`, `walletId`, `seriesKey` on expenses; wallet name/currency on wallets). See [Database schema](#database-schema) for full field lists.
 
 ## API overview
 
@@ -165,9 +189,9 @@ On each visit you may be prompted to **unlock** your ledger (one signature for b
 | `POST /api/auth/clear` | Revoke all sessions and clear cookie |
 | `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder prefs |
 | `POST /api/users` | Create or upsert user profile on first sign-in |
-| `GET/PATCH /api/profile` | Per-user UI state (`currentMonth` only); wallets hold encrypted budgets/income |
-| `CRUD /api/wallets` | Financial wallets (currency, income, budgets) |
-| `PUT /api/wallets/:id/budgets` | Update wallet budgets |
+| `GET/PATCH /api/profile` | Per-user UI state (`currentMonth` only) |
+| `CRUD /api/wallets` | Financial wallets (metadata + E2EE `enc`/`payload` via PATCH) |
+| `PUT /api/wallets/:id/budgets` | Update encrypted wallet financials (`enc`/`payload`) |
 | `GET/PUT /api/categories` | Category taxonomy |
 | `CRUD /api/expenses` | Transactions (scoped by wallet) |
 | `CRUD /api/events` | Schedule events |

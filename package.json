@@ -9,8 +9,7 @@
     "build": "bun run build.ts",
     "db:list": "bun scripts/drop-collections.ts --list",
     "db:drop": "bun scripts/drop-collections.ts",
-    "db:drop:all": "bun scripts/drop-collections.ts --all",
-    "db:test": "bun scripts/test-mongo.ts"
+    "db:drop:all": "bun scripts/drop-collections.ts --all"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.8.0",
