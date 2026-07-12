@@ -15,9 +15,11 @@ import {
   CURRENT_MONTH_KEY,
   MONTHS,
   dayLabel,
+  fmtBudgetLimit,
   fmtMoney,
   fmtMoneyShort,
   getCurrency,
+  isBudgetSet,
   monthLabel,
   monthsWindow,
   weekdayLabel,
@@ -269,7 +271,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
   const totalBudget = st.totalBudget;
   const totalSpent = Object.values(st.byCat).reduce((s, v) => s + v, 0);
 
-  const startEdit = (id) => { setEditId(id); setDraft(String(budgets[id])); };
+  const startEdit = (id) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
   const commit = () => {
     const v = Math.max(0, Math.round(parseFloat(draft) || 0));
     setBudgets({ ...budgets, [editId]: v });
@@ -290,7 +292,8 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
           {categoryIndex.expenseCategories.map((c) => {
             const spent = st.byCat[c.id] || 0;
             const budget = budgets[c.id];
-            const pct = budget ? spent / budget : 0;
+            const budgetSet = isBudgetSet(budget);
+            const pct = budgetSet ? spent / budget : 0;
             const over = pct > 1;
             return (
               <div key={c.id} className="bedit">
@@ -317,7 +320,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                     </div>
                   ) : (
                     <button className={"be-amt" + (over ? " over" : "")} onClick={() => startEdit(c.id)}>
-                      {fmtMoney(spent, { cents: false, currency })} <span className="br-of">/ {fmtMoney(budget, { cents: false, currency })}</span>
+                      {fmtMoney(spent, { cents: false, currency })} <span className="br-of">/ {fmtBudgetLimit(budget, { currency })}</span>
                     </button>
                   )}
                 </div>
@@ -325,7 +328,8 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                   <div className="br-fill" style={{ width: Math.min(pct, 1) * 100 + "%", background: over ? "var(--danger)" : c.color }} />
                 </div>
                 <div className="be-meta">
-                  {over ? <span className="br-over-txt">Over budget by {fmtMoney(spent - budget, { cents: false, currency })}</span>
+                  {!budgetSet ? <span>Unset</span>
+                    : over ? <span className="br-over-txt">Over budget by {fmtMoney(spent - budget, { cents: false, currency })}</span>
                         : <span>{fmtMoney(budget - spent, { cents: false, currency })} remaining · {Math.round(pct * 100)}% used</span>}
                   <span className="be-subs">{c.subs.map((s) => s.name).join(" · ")}</span>
                 </div>

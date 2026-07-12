@@ -231,8 +231,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
             tabIndex={fabOpen ? 0 : -1}
             onClick={() => {
               setFabOpen(false);
-              const date = month === CURRENT_MONTH_KEY ? TODAY_ISO : `${month}-01`;
-              setEvModal({ add: true, date });
+              setEvModal({ add: true, date: TODAY_ISO });
             }}
           >
             <Icon name="calendar" size={20} />

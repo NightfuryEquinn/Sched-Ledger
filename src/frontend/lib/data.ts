@@ -424,6 +424,12 @@ export function fmtMoney(n, opts: { cents?: boolean; currency?: string } = {}) {
   });
   return `${n < 0 ? "−" : ""}${cur.symbol}${s}`;
 }
+export function isBudgetSet(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n) && n > 0;
+}
+export function fmtBudgetLimit(n: unknown, opts: { currency?: string } = {}) {
+  return isBudgetSet(n) ? fmtMoney(n, { cents: false, ...opts }) : "Unset";
+}
 export function fmtMoneyShort(n, currency?: string) {
   const cur = getCurrency(currency);
   if (Math.abs(n) >= 1000) return `${cur.symbol}${(n / 1000).toFixed(1)}k`;

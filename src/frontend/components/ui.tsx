@@ -4,9 +4,12 @@ import {
   CURRENT_MONTH_KEY,
   MAX_MONTH_KEY,
   MIN_MONTH_KEY,
+  TODAY_ISO,
   clampMonthKey,
+  fmtBudgetLimit,
   fmtMoney,
   getCurrency,
+  isBudgetSet,
   monthLabel,
   monthRangeBounds,
   pad,
@@ -259,15 +262,16 @@ function SummaryCard({ label, value, sub, tone, foot }) {
 
 // ── BudgetBar: spent-vs-budget progress row ─────────────────────────
 function BudgetBar({ cat, spent, budget, onClick, currency }) {
-  const pct = budget > 0 ? spent / budget : 0;
-  const over = pct > 1;
+  const budgetSet = isBudgetSet(budget);
+  const pct = budgetSet ? spent / budget : 0;
+  const over = budgetSet && pct > 1;
   const w = Math.min(pct, 1) * 100;
   return (
     <button className="budget-row" onClick={onClick}>
       <div className="br-head">
         <div className="br-name"><CatGlyph glyph={cat.glyph} id={cat.id} /> {cat.name}</div>
         <div className={"br-amt" + (over ? " over" : "")}>
-          {fmtMoney(spent, { cents: false, currency })} <span className="br-of">/ {fmtMoney(budget, { cents: false, currency })}</span>
+          {fmtMoney(spent, { cents: false, currency })} <span className="br-of">/ {fmtBudgetLimit(budget, { currency })}</span>
         </div>
       </div>
       <div className="br-track">
@@ -275,9 +279,10 @@ function BudgetBar({ cat, spent, budget, onClick, currency }) {
         {over ? <div className="br-overmark" /> : null}
       </div>
       <div className="br-meta">
-        {over
-          ? <span className="br-over-txt">Over by {fmtMoney(spent - budget, { cents: false, currency })}</span>
-          : <span>{fmtMoney(budget - spent, { cents: false, currency })} left · {Math.round(pct * 100)}%</span>}
+        {!budgetSet ? <span>Unset</span>
+          : over
+            ? <span className="br-over-txt">Over by {fmtMoney(spent - budget, { cents: false, currency })}</span>
+            : <span>{fmtMoney(budget - spent, { cents: false, currency })} left · {Math.round(pct * 100)}%</span>}
       </div>
     </button>
   );
@@ -435,7 +440,7 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
   const [catId, setCatId] = useState(initKind === "income" ? "income" : initCat);
   const [sub, setSub] = useState(initial ? initial.sub : firstSub("food"));
   const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
-  const [date, setDate] = useState(initial ? initial.date : defaultMonth + "-08");
+  const [date, setDate] = useState(initial ? initial.date : TODAY_ISO);
   const [note, setNote] = useState(initial ? initial.note : "");
   const initRecurring = normalizeRecurring(initial?.recurring);
   const [recurringOn, setRecurringOn] = useState(initRecurring !== false);
