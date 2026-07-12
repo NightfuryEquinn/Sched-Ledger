@@ -11,7 +11,11 @@ import {
 } from "@/schemas/todo";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { ObjectId } from "mongodb";
+import { MongoServerError, ObjectId } from "mongodb";
+
+function isDuplicateKeyError(err: unknown): boolean {
+  return err instanceof MongoServerError && err.code === 11000;
+}
 
 export const todoListsRoutes = new Hono<{ Variables: SessionVariables }>();
 
@@ -57,17 +61,22 @@ todoListsRoutes.post("/", zValidator("json", createTodoListSchema), async (c) =>
   const { todoLists } = getCollections(getDb());
   const now = new Date();
 
-  const existing = await todoLists.findOne({ userAddress: walletAddress, name: body.name });
-  if (existing) badRequest("A list with this name already exists");
-
-  const result = await todoLists.insertOne({
-    userAddress: walletAddress,
-    name: body.name,
-    icon: body.icon,
-    tasks: [],
-    createdAt: now,
-    updatedAt: now,
-  });
+  /* The unique { userAddress, name } index is the source of truth; a pre-check
+     alone races with concurrent creates and would surface as a 500. */
+  let result;
+  try {
+    result = await todoLists.insertOne({
+      userAddress: walletAddress,
+      name: body.name,
+      icon: body.icon,
+      tasks: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch (err) {
+    if (isDuplicateKeyError(err)) badRequest("A list with this name already exists");
+    throw err;
+  }
 
   const doc = await todoLists.findOne({ _id: result.insertedId });
   if (!doc) notFound("List not found");
@@ -85,20 +94,17 @@ todoListsRoutes.patch("/:id", zValidator("json", updateTodoListSchema), async (c
 
   const { todoLists } = getCollections(getDb());
 
-  if (body.name) {
-    const duplicate = await todoLists.findOne({
-      userAddress: walletAddress,
-      name: body.name,
-      _id: { $ne: new ObjectId(id.data) },
-    });
-    if (duplicate) badRequest("A list with this name already exists");
+  let updated;
+  try {
+    updated = await todoLists.findOneAndUpdate(
+      { _id: new ObjectId(id.data), userAddress: walletAddress },
+      { $set: { ...body, updatedAt: new Date() } },
+      { returnDocument: "after" },
+    );
+  } catch (err) {
+    if (isDuplicateKeyError(err)) badRequest("A list with this name already exists");
+    throw err;
   }
-
-  const updated = await todoLists.findOneAndUpdate(
-    { _id: new ObjectId(id.data), userAddress: walletAddress },
-    { $set: { ...body, updatedAt: new Date() } },
-    { returnDocument: "after" },
-  );
 
   if (!updated) notFound("List not found");
   return c.json({ todoList: serializeDoc(updated) });

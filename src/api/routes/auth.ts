@@ -52,22 +52,24 @@ authRoutes.post("/verify", authVerifyRateLimit, zValidator("json", authVerifySch
   const { address, message, signature } = c.req.valid("json");
   const normalized = getAddress(address).toLowerCase();
 
-  const { authNonces, sessions, users } = getCollections(getDb());
-  const nonceDoc = await authNonces.findOne({
-    address: normalized,
-    message,
-    usedAt: { $exists: false },
-    expiresAt: { $gt: new Date() },
-  });
-
-  if (!nonceDoc) badRequest("Sign-in challenge expired or invalid. Request a new one.");
-
   if (!verifyAuthSignature(message, signature, normalized)) {
     badRequest("Signature verification failed. Make sure you signed with the correct wallet.");
   }
 
   const now = new Date();
-  await authNonces.updateOne({ _id: nonceDoc._id }, { $set: { usedAt: now } });
+  const { authNonces, sessions, users } = getCollections(getDb());
+  /* Atomically claim the nonce so concurrent verify requests cannot reuse it. */
+  const nonceDoc = await authNonces.findOneAndUpdate(
+    {
+      address: normalized,
+      message,
+      usedAt: { $exists: false },
+      expiresAt: { $gt: now },
+    },
+    { $set: { usedAt: now } },
+  );
+
+  if (!nonceDoc) badRequest("Sign-in challenge expired or invalid. Request a new one.");
 
   const token = generateToken();
   const tokenHash = hashToken(token);
@@ -84,17 +86,20 @@ authRoutes.post("/verify", authVerifyRateLimit, zValidator("json", authVerifySch
     expiresAt: new Date(now.getTime() + SESSION_TTL_MS),
   });
 
-  let user = await users.findOne({ address: normalized });
-  if (!user) {
-    const insert = await users.insertOne({
-      address: normalized,
-      codename: normalized.slice(0, 6),
-      notifyEmail: "",
-      createdAt: now,
-      updatedAt: now,
-    });
-    user = await users.findOne({ _id: insert.insertedId });
-  }
+  /* Upsert to avoid a duplicate-key race against the unique address index. */
+  const user = await users.findOneAndUpdate(
+    { address: normalized },
+    {
+      $setOnInsert: {
+        address: normalized,
+        codename: normalized.slice(0, 6),
+        notifyEmail: "",
+        createdAt: now,
+        updatedAt: now,
+      },
+    },
+    { upsert: true, returnDocument: "after" },
+  );
 
   setSessionCookie(c, token);
 

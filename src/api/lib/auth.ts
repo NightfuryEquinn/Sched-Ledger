@@ -5,6 +5,8 @@ import { createHash, randomBytes } from "node:crypto";
 
 export const SESSION_COOKIE = "ledger_session";
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** Absolute cap: no session may outlive this, regardless of sliding renewal. */
+export const SESSION_MAX_LIFETIME_MS = 90 * 24 * 60 * 60 * 1000;
 export const NONCE_TTL_MS = 5 * 60 * 1000;
 
 export function generateToken(): string {
@@ -48,17 +50,29 @@ export function verifyAuthSignature(
 }
 
 export function getRequestUri(c: Context): string {
+  /* Pin the signed-message URI to the configured origin when available so a
+     spoofed Host header cannot change what users are asked to sign. */
+  const pinned = process.env.APP_ORIGIN?.trim();
+  if (pinned) return pinned;
   try {
     return new URL(c.req.url).origin;
   } catch {
-    return process.env.APP_ORIGIN || "http://localhost:3000";
+    return "http://localhost:3000";
   }
 }
 
 export function getClientIp(c: Context): string {
+  /* Prefer headers set by the trusted proxy itself. For x-forwarded-for, use the
+     LAST entry (appended by the nearest proxy); leading entries are client-supplied
+     and trivially spoofable, which would allow rate-limit bypass. */
+  const trusted = c.req.header("x-real-ip") || c.req.header("cf-connecting-ip");
+  if (trusted) return trusted.trim();
   const forwarded = c.req.header("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return c.req.header("x-real-ip") || c.req.header("cf-connecting-ip") || "unknown";
+  if (forwarded) {
+    const parts = forwarded.split(",");
+    return parts[parts.length - 1]!.trim() || "unknown";
+  }
+  return "unknown";
 }
 
 export function getUserAgent(c: Context): string {
@@ -72,7 +86,8 @@ export function readSessionToken(c: Context): string | undefined {
 export function setSessionCookie(c: Context, token: string): void {
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    /* Secure by default; only allow plain HTTP for explicit local development. */
+    secure: process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test",
     sameSite: "Lax",
     path: "/",
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
