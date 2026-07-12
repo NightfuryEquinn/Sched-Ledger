@@ -63,26 +63,20 @@ export const createWalletSchema = z.object({
   fundingMode: fundingModeSchema.optional().default("monthly"),
 });
 
-const updateWalletMetaSchema = z.object({
-  name: z.string().trim().min(1).max(60).optional(),
-  currency: currencyCodeSchema.optional(),
-  fundingMode: fundingModeSchema.optional(),
-  isDefault: z.boolean().optional(),
-});
-
-const updateWalletFinancialSchema = z.object({
-  enc: e2eeVersionSchema,
-  payload: encryptedPayloadSchema,
-});
-
 export const updateWalletSchema = z
-  .union([
-    updateWalletMetaSchema,
-    updateWalletMetaSchema.merge(updateWalletFinancialSchema),
-    updateWalletFinancialSchema,
-  ])
+  .object({
+    name: z.string().trim().min(1).max(60).optional(),
+    currency: currencyCodeSchema.optional(),
+    fundingMode: fundingModeSchema.optional(),
+    isDefault: z.boolean().optional(),
+    enc: e2eeVersionSchema.optional(),
+    payload: encryptedPayloadSchema.optional(),
+  })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
+  })
+  .refine((data) => (data.enc == null) === (data.payload == null), {
+    message: "enc and payload must be provided together",
   });
 
 export type FinancialWallet = z.infer<typeof financialWalletSchema>;

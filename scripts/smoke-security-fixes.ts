@@ -112,6 +112,12 @@ const okBudget = await req(`/wallets/${walletId}/budgets`, {
 }, cookie);
 check("valid budgets payload accepted (200)", okBudget.status === 200, String(okBudget.status));
 
+const encOnly = await req(`/wallets/${walletId}`, {
+  method: "PATCH",
+  body: JSON.stringify({ enc: 1, payload: "dGVzdDI=" }),
+}, cookie);
+check("wallet PATCH with enc+payload only accepted (200)", encOnly.status === 200, String(encOnly.status));
+
 const badEnc = await req(`/wallets/${walletId}/budgets`, {
   method: "PUT",
   body: JSON.stringify({ enc: 2, payload: "dGVzdA==" }),
