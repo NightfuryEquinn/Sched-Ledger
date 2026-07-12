@@ -59,6 +59,10 @@ export async function connectDb(): Promise<Db> {
   return connecting;
 }
 
+export function isDbConnected(): boolean {
+  return db !== null;
+}
+
 export function getDb(): Db {
   if (!db) {
     throw new Error("Database not connected. Call connectDb() before handling requests.");

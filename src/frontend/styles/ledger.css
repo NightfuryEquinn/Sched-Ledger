@@ -1447,17 +1447,32 @@ h1,h2,h3{margin:0;font-weight:600;}
   max-width:min(360px,calc(100vw - 32px));
 }
 .shepherd-element.ledger-tour-step .shepherd-header{
-  align-items:flex-start;
-  padding:16px 16px 0;
+  align-items:center;
+  gap:8px;
+  line-height:1.3;
+  border-top-left-radius:var(--r-xl);
+  border-top-right-radius:var(--r-xl);
+  padding:16px;
 }
 .shepherd-element.ledger-tour-step .shepherd-title{
+  align-items:center;
   color:var(--ink);
   font-family:var(--font-display);
-  font-size:17px;
+  font-size:20px;
   font-weight:600;
   line-height:1.3;
 }
 .shepherd-element.ledger-tour-step .shepherd-cancel-icon{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  width:28px;
+  height:28px;
+  margin:0;
+  padding:0;
+  font-size:22px;
+  line-height:1;
   color:var(--ink-faint);
 }
 .shepherd-element.ledger-tour-step .shepherd-cancel-icon:hover{
@@ -1490,7 +1505,14 @@ h1,h2,h3{margin:0;font-weight:600;}
   background:var(--surface-2);
   color:var(--ink);
 }
+.shepherd-element.ledger-tour-step .shepherd-arrow,
+.shepherd-element.ledger-tour-step .shepherd-arrow::before{
+  z-index:1000;
+}
 .shepherd-element.ledger-tour-step .shepherd-arrow::before{
   background:var(--surface);
   border:1px solid var(--border);
+}
+.shepherd-element.ledger-tour-step.shepherd-has-title[data-popper-placement^=bottom] > .shepherd-arrow::before{
+  background-color:var(--surface);
 }

@@ -1,4 +1,4 @@
-export { closeDb, connectDb, getDb } from "./client";
+export { closeDb, connectDb, getDb, isDbConnected } from "./client";
 export {
   COLLECTIONS,
   getCollections, type AuthNonceDocument, type Collections, type ConsentDocument, type EventDocument, type ExpenseDocument, type FinancialWalletDocument, type LedgerProfileDocument, type SessionDocument, type UserDocument

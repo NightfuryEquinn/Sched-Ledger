@@ -14,7 +14,7 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db.collection(COLLECTIONS.expenses).createIndex({ userAddress: 1, walletId: 1, date: -1 }),
     db.collection(COLLECTIONS.expenses).createIndex({ userAddress: 1, date: -1 }),
     db.collection(COLLECTIONS.expenses).createIndex({ userAddress: 1, recurring: 1, date: -1 }),
-    /* Lookup for cron materialization dedupe (series × occurrence date). */
+    /* Lookup for cron materialization dedupe (legacy plaintext series). */
     db.collection(COLLECTIONS.expenses).createIndex(
       { userAddress: 1, walletId: 1, sub: 1, note: 1, recurring: 1, date: 1 },
       {
@@ -22,6 +22,19 @@ export async function ensureIndexes(db: Db): Promise<void> {
         partialFilterExpression: {
           recurring: { $in: [true, "monthly", "quarterly", "yearly"] },
           walletId: { $exists: true },
+        },
+      },
+    ),
+    /* Lookup for encrypted recurring series dedupe. */
+    db.collection(COLLECTIONS.expenses).createIndex(
+      { userAddress: 1, walletId: 1, seriesKey: 1, recurring: 1, date: 1 },
+      {
+        name: "recurring_encrypted_occurrence_lookup",
+        partialFilterExpression: {
+          enc: 1,
+          recurring: { $in: [true, "monthly", "quarterly", "yearly"] },
+          walletId: { $exists: true },
+          seriesKey: { $exists: true },
         },
       },
     ),

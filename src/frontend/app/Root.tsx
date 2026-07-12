@@ -1,7 +1,10 @@
 import { LedgerApp } from "@/frontend/app/LedgerApp";
-import { AuthScreen, getSavedAccount, logoutSession } from "@/frontend/auth";
+import { AuthScreen, getSavedAccount, logoutSession, UnlockScreen } from "@/frontend/auth";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { api } from "@/frontend/lib/api";
+import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
+import { unlockLedgerKey } from "@/frontend/lib/crypto/unlock";
+import { identityStorage } from "@/frontend/auth/lib/identity-storage";
 import { ThemeProvider } from "@/frontend/lib/hooks/useTheme";
 import type { Account } from "@/frontend/lib/types";
 import { useEffect, useState } from "react";
@@ -13,17 +16,27 @@ import { useEffect, useState } from "react";
 export function Root() {
   const [account, setAccount] = useState<Account | null>(null);
   const [booting, setBooting] = useState(true);
+  const [cryptoReady, setCryptoReady] = useState(false);
 
   // Restore session; prefer locally-stored codename when it matches.
   useEffect(() => {
     api.auth
       .me()
-      .then(({ account: remote }) => {
+      .then(async ({ account: remote }) => {
         const local = getSavedAccount();
-        if (local && local.address.toLowerCase() === remote.address.toLowerCase()) {
-          setAccount({ ...remote, codename: local.codename, injected: local.injected });
-        } else {
-          setAccount(remote);
+        const merged =
+          local && local.address.toLowerCase() === remote.address.toLowerCase()
+            ? { ...remote, codename: local.codename, injected: local.injected }
+            : remote;
+        setAccount(merged);
+        const idn = identityStorage.find(merged.address);
+        if (idn?.privateKey && !idn.injected) {
+          try {
+            await unlockLedgerKey(idn);
+            setCryptoReady(true);
+          } catch {
+            setCryptoReady(false);
+          }
         }
       })
       .catch(() => setAccount(null))
@@ -31,8 +44,10 @@ export function Root() {
   }, []);
 
   const signOut = async () => {
+    ledgerKeyStore.clear();
     await logoutSession();
     setAccount(null);
+    setCryptoReady(false);
   };
 
   if (booting) {
@@ -48,11 +63,24 @@ export function Root() {
   return (
     <ThemeProvider>
       {account ? (
-        <LedgerApp key={account.address} account={account} onSignOut={signOut} />
+        cryptoReady || ledgerKeyStore.isUnlocked(account.address) ? (
+          <LedgerApp key={account.address} account={account} onSignOut={signOut} />
+        ) : (
+          <UnlockScreen
+            account={account}
+            onUnlocked={() => setCryptoReady(true)}
+            onSignOut={signOut}
+          />
+        )
       ) : (
         <>
           <ThemeToggle className="auth-theme-toggle" />
-          <AuthScreen onAuth={setAccount} />
+          <AuthScreen
+            onAuth={(acc) => {
+              setAccount(acc);
+              setCryptoReady(true);
+            }}
+          />
         </>
       )}
     </ThemeProvider>

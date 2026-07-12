@@ -3,7 +3,7 @@ import { serializeDoc } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
-import { defaultProfile, updateBudgetsSchema, updateProfileSchema } from "@/schemas/profile";
+import { defaultProfile, updateProfileSchema } from "@/schemas/profile";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 
@@ -15,6 +15,15 @@ profileRoutes.use("*", sessionAuth);
 
 function profileCacheKey(address: string) {
   return `profile:${address}`;
+}
+
+function serializeProfile(doc: { _id: import("mongodb").ObjectId; userAddress: string; currentMonth: string }) {
+  const serialized = serializeDoc(doc);
+  return {
+    id: serialized.id,
+    userAddress: serialized.userAddress,
+    currentMonth: serialized.currentMonth,
+  };
 }
 
 async function getOrCreateProfile(walletAddress: string) {
@@ -52,7 +61,7 @@ profileRoutes.get("/", async (c) => {
   const walletAddress = c.get("walletAddress");
   const profile = await getOrCreateProfile(walletAddress);
   c.header("Cache-Control", "private, max-age=30");
-  return c.json({ profile: serializeDoc(profile) });
+  return c.json({ profile: serializeProfile(profile) });
 });
 
 profileRoutes.patch("/", zValidator("json", updateProfileSchema), async (c) => {
@@ -69,22 +78,5 @@ profileRoutes.patch("/", zValidator("json", updateProfileSchema), async (c) => {
     { returnDocument: "after" },
   );
 
-  return c.json({ profile: serializeDoc(updated!) });
-});
-
-profileRoutes.put("/budgets", zValidator("json", updateBudgetsSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
-  const { budgets } = c.req.valid("json");
-  const { ledgerProfiles } = getCollections(getDb());
-
-  await fetchProfile(walletAddress);
-  invalidateProfile(walletAddress);
-
-  const updated = await ledgerProfiles.findOneAndUpdate(
-    { userAddress: walletAddress },
-    { $set: { budgets, updatedAt: new Date() } },
-    { returnDocument: "after" },
-  );
-
-  return c.json({ profile: serializeDoc(updated!) });
+  return c.json({ profile: serializeProfile(updated!) });
 });

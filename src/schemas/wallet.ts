@@ -4,6 +4,7 @@ import {
   budgetsSchema,
   walletAddressSchema,
 } from "./common";
+import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
 export const CURRENCY_CODES = [
   "AED",
@@ -46,9 +47,11 @@ export const financialWalletSchema = z.object({
   name: z.string().trim().min(1).max(60),
   currency: currencyCodeSchema,
   fundingMode: fundingModeSchema.default("monthly"),
-  income: z.number().nonnegative(),
-  startingBalance: z.number().nonnegative(),
-  budgets: budgetsSchema,
+  enc: e2eeVersionSchema.optional(),
+  payload: encryptedPayloadSchema.optional(),
+  income: z.number().nonnegative().optional(),
+  startingBalance: z.number().nonnegative().optional(),
+  budgets: budgetsSchema.optional(),
   isDefault: z.boolean().default(false),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -58,20 +61,26 @@ export const createWalletSchema = z.object({
   name: z.string().trim().min(1).max(60),
   currency: currencyCodeSchema,
   fundingMode: fundingModeSchema.optional().default("monthly"),
-  income: z.number().nonnegative().optional().default(0),
-  startingBalance: z.number().nonnegative().optional().default(0),
+});
+
+const updateWalletMetaSchema = z.object({
+  name: z.string().trim().min(1).max(60).optional(),
+  currency: currencyCodeSchema.optional(),
+  fundingMode: fundingModeSchema.optional(),
+  isDefault: z.boolean().optional(),
+});
+
+const updateWalletFinancialSchema = z.object({
+  enc: e2eeVersionSchema,
+  payload: encryptedPayloadSchema,
 });
 
 export const updateWalletSchema = z
-  .object({
-    name: z.string().trim().min(1).max(60).optional(),
-    currency: currencyCodeSchema.optional(),
-    fundingMode: fundingModeSchema.optional(),
-    income: z.number().nonnegative().optional(),
-    startingBalance: z.number().nonnegative().optional(),
-    budgets: budgetsSchema.optional(),
-    isDefault: z.boolean().optional(),
-  })
+  .union([
+    updateWalletMetaSchema,
+    updateWalletMetaSchema.merge(updateWalletFinancialSchema),
+    updateWalletFinancialSchema,
+  ])
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
   });

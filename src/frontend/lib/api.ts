@@ -13,8 +13,6 @@ export class ApiError extends Error {
 export type ApiProfile = {
   id: string;
   userAddress: string;
-  income: number;
-  budgets: Budgets;
   currentMonth: string;
 };
 
@@ -146,14 +144,8 @@ export const api = {
     get() {
       return request<{ profile: ApiProfile }>("/profile");
     },
-    update(body: Partial<Pick<ApiProfile, "income" | "budgets" | "currentMonth">>) {
+    update(body: Partial<Pick<ApiProfile, "currentMonth">>) {
       return request<{ profile: ApiProfile }>("/profile", { method: "PATCH", body });
-    },
-    updateBudgets(budgets: Budgets) {
-      return request<{ profile: ApiProfile }>("/profile/budgets", {
-        method: "PUT",
-        body: { budgets },
-      });
     },
   },
 
@@ -161,16 +153,16 @@ export const api = {
     list() {
       return request<{ wallets: FinancialWallet[] }>("/wallets");
     },
-    create(body: { name: string; currency: string; fundingMode?: string; income?: number; startingBalance?: number }) {
+    create(body: { name: string; currency: string; fundingMode?: string }) {
       return request<{ wallet: FinancialWallet }>("/wallets", { method: "POST", body });
     },
-    update(id: string, body: Partial<Pick<FinancialWallet, "name" | "currency" | "fundingMode" | "income" | "startingBalance" | "budgets" | "isDefault">>) {
+    update(id: string, body: Partial<Pick<FinancialWallet, "name" | "currency" | "fundingMode" | "income" | "startingBalance" | "budgets" | "isDefault">> | Record<string, unknown>) {
       return request<{ wallet: FinancialWallet }>(`/wallets/${id}`, { method: "PATCH", body });
     },
-    updateBudgets(id: string, budgets: Budgets) {
+    updateBudgets(id: string, body: { enc: 1; payload: string }) {
       return request<{ wallet: FinancialWallet }>(`/wallets/${id}/budgets`, {
         method: "PUT",
-        body: { budgets },
+        body,
       });
     },
     remove(id: string) {
@@ -199,10 +191,10 @@ export const api = {
       const qs = params.toString();
       return request<{ expenses: Expense[] }>(`/expenses${qs ? `?${qs}` : ""}`);
     },
-    create(body: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring">) {
+    create(body: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring"> | Record<string, unknown>) {
       return request<{ expense: Expense }>("/expenses", { method: "POST", body });
     },
-    update(id: string, body: Partial<Omit<Expense, "id">>) {
+    update(id: string, body: Partial<Omit<Expense, "id">> | Record<string, unknown>) {
       return request<{ expense: Expense }>(`/expenses/${id}`, { method: "PATCH", body });
     },
     remove(id: string) {

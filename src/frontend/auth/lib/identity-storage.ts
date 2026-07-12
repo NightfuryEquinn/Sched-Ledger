@@ -1,4 +1,5 @@
 import type { IdentityRecord } from "@/frontend/lib/types";
+import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 
 export const identityStorage = {
   list(): IdentityRecord[] {
@@ -33,6 +34,7 @@ export const identityStorage = {
 };
 
 export function clearAllLocalData(): void {
+  ledgerKeyStore.clear();
   const keys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);

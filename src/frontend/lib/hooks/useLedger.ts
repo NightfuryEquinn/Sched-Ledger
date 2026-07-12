@@ -1,4 +1,14 @@
 import { api } from "@/frontend/lib/api";
+import {
+  decodeExpense,
+  decodeWallet,
+  encodeExpenseCreate,
+  encodeExpenseUpdate,
+  encodeWalletFinancials,
+  type ExpenseWire,
+  type WalletWire,
+} from "@/frontend/lib/crypto/codec";
+import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { buildCategoryIndex } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
 import { normalizeRecurring } from "@/frontend/lib/stats";
@@ -10,6 +20,12 @@ const ACTIVE_WALLET_KEY = "ledger:active-wallet";
 
 function activeWalletStorageKey(wallet: string) {
   return `${ACTIVE_WALLET_KEY}:${wallet.toLowerCase()}`;
+}
+
+function requireKey(address: string): CryptoKey {
+  const key = ledgerKeyStore.get(address);
+  if (!key) throw new Error("Encryption key is locked");
+  return key;
 }
 
 const keys = {
@@ -24,6 +40,7 @@ const keys = {
 export function useLedger(walletAddress: string) {
   const queryClient = useQueryClient();
   const wallet = walletAddress.toLowerCase();
+  const cryptoReady = ledgerKeyStore.isUnlocked(wallet);
 
   const [activeWalletId, setActiveWalletIdState] = useState<string | null>(() => {
     if (typeof localStorage === "undefined") return null;
@@ -36,14 +53,34 @@ export function useLedger(walletAddress: string) {
       const { profile } = await api.profile.get();
       return profile;
     },
+    enabled: cryptoReady,
   });
 
   const walletsQuery = useQuery({
     queryKey: keys.wallets(wallet),
     queryFn: async () => {
       const { wallets } = await api.wallets.list();
-      return wallets;
+      const cryptoKey = requireKey(wallet);
+      return Promise.all(
+        wallets.map(async (w) => {
+          const wire = w as WalletWire;
+          if (!wire.enc) {
+            const encrypted = await encodeWalletFinancials(
+              {
+                income: wire.income ?? 0,
+                startingBalance: wire.startingBalance ?? 0,
+                budgets: wire.budgets ?? {},
+              },
+              cryptoKey,
+            );
+            const { wallet: updated } = await api.wallets.update(wire.id, encrypted);
+            return decodeWallet(updated as WalletWire, cryptoKey);
+          }
+          return decodeWallet(wire, cryptoKey);
+        }),
+      );
     },
+    enabled: cryptoReady,
   });
 
   const categoriesQuery = useQuery({
@@ -52,6 +89,7 @@ export function useLedger(walletAddress: string) {
       const { categories } = await api.categories.list();
       return categories;
     },
+    enabled: cryptoReady,
   });
 
   const categoryIndex = useMemo(
@@ -94,9 +132,10 @@ export function useLedger(walletAddress: string) {
     queryKey: keys.expenses(wallet),
     queryFn: async () => {
       const { expenses } = await api.expenses.list();
-      return expenses;
+      const cryptoKey = requireKey(wallet);
+      return Promise.all(expenses.map((e) => decodeExpense(e as ExpenseWire, cryptoKey)));
     },
-    enabled: !!profileQuery.data && wallets.length > 0 && categoriesQuery.data !== undefined,
+    enabled: cryptoReady && !!profileQuery.data && wallets.length > 0 && categoriesQuery.data !== undefined,
   });
 
   const allExpenses = (expensesQuery.data ?? []).map((e) => ({
@@ -115,7 +154,7 @@ export function useLedger(walletAddress: string) {
       const { events } = await api.events.list();
       return events;
     },
-    enabled: !!profileQuery.data,
+    enabled: cryptoReady && !!profileQuery.data,
   });
 
   const todoListsQuery = useQuery({
@@ -124,7 +163,7 @@ export function useLedger(walletAddress: string) {
       const { todoLists } = await api.todoLists.list();
       return todoLists;
     },
-    enabled: !!profileQuery.data,
+    enabled: cryptoReady && !!profileQuery.data,
   });
 
   const setMonthMutation = useMutation({
@@ -135,11 +174,18 @@ export function useLedger(walletAddress: string) {
   });
 
   const setBudgetsMutation = useMutation({
-    mutationFn: (budgets: Budgets) => {
+    mutationFn: async (budgets: Budgets) => {
       if (!activeWallet) throw new Error("No active wallet");
-      return api.wallets.updateBudgets(activeWallet.id, budgets);
+      const cryptoKey = requireKey(wallet);
+      const encrypted = await encodeWalletFinancials(
+        { income: activeWallet.income, startingBalance: activeWallet.startingBalance, budgets },
+        cryptoKey,
+      );
+      return api.wallets.updateBudgets(activeWallet.id, encrypted);
     },
-    onSuccess: ({ wallet: updated }) => {
+    onSuccess: async ({ wallet: wire }) => {
+      const cryptoKey = requireKey(wallet);
+      const updated = await decodeWallet(wire as WalletWire, cryptoKey);
       queryClient.setQueryData<FinancialWallet[]>(keys.wallets(wallet), (prev = []) =>
         prev.map((w) => (w.id === updated.id ? updated : w)),
       );
@@ -148,18 +194,43 @@ export function useLedger(walletAddress: string) {
 
   const saveWalletMutation = useMutation({
     mutationFn: async (data: Partial<FinancialWallet> & { id?: string; name?: string; currency?: string }) => {
+      const cryptoKey = requireKey(wallet);
       if (data.id) {
-        const { wallet: updated } = await api.wallets.update(data.id, data);
-        return updated;
+        const financialPatch =
+          data.income !== undefined || data.startingBalance !== undefined || data.budgets !== undefined
+            ? await encodeWalletFinancials(
+                {
+                  income: data.income,
+                  startingBalance: data.startingBalance,
+                  budgets: data.budgets,
+                },
+                cryptoKey,
+              )
+            : {};
+        const { wallet: updated } = await api.wallets.update(data.id, {
+          name: data.name,
+          currency: data.currency,
+          fundingMode: data.fundingMode,
+          isDefault: data.isDefault,
+          ...financialPatch,
+        });
+        return decodeWallet(updated as WalletWire, cryptoKey);
       }
       const { wallet: created } = await api.wallets.create({
         name: data.name!,
         currency: data.currency!,
         fundingMode: data.fundingMode,
-        income: data.fundingMode === "monthly" ? data.income : 0,
-        startingBalance: data.fundingMode === "starting" ? data.startingBalance : 0,
       });
-      return created;
+      const encrypted = await encodeWalletFinancials(
+        {
+          income: data.fundingMode === "monthly" ? (data.income ?? 0) : 0,
+          startingBalance: data.fundingMode === "starting" ? (data.startingBalance ?? 0) : 0,
+          budgets: {},
+        },
+        cryptoKey,
+      );
+      const { wallet: updated } = await api.wallets.update(created.id, encrypted);
+      return decodeWallet(updated as WalletWire, cryptoKey);
     },
     onSuccess: (saved, variables) => {
       queryClient.setQueryData<FinancialWallet[]>(keys.wallets(wallet), (prev = []) => {
@@ -188,12 +259,15 @@ export function useLedger(walletAddress: string) {
 
   const saveExpenseMutation = useMutation({
     mutationFn: async (data: Expense & { id?: string }) => {
+      const cryptoKey = requireKey(wallet);
       if (data.id) {
-        const { expense } = await api.expenses.update(data.id, data);
-        return expense;
+        const body = await encodeExpenseUpdate(data, cryptoKey);
+        const { expense } = await api.expenses.update(data.id, body);
+        return decodeExpense(expense as ExpenseWire, cryptoKey);
       }
-      const { expense } = await api.expenses.create(data);
-      return expense;
+      const body = await encodeExpenseCreate(data, cryptoKey);
+      const { expense } = await api.expenses.create(body);
+      return decodeExpense(expense as ExpenseWire, cryptoKey);
     },
     onSuccess: (expense, variables) => {
       queryClient.setQueryData<Expense[]>(keys.expenses(wallet), (prev = []) => {
@@ -255,7 +329,13 @@ export function useLedger(walletAddress: string) {
         }
       }
       if (changed) {
-        const { wallet: updated } = await api.wallets.updateBudgets(activeWallet.id, merged);
+        const cryptoKey = requireKey(wallet);
+        const encrypted = await encodeWalletFinancials(
+          { income: activeWallet.income, startingBalance: activeWallet.startingBalance, budgets: merged },
+          cryptoKey,
+        );
+        const { wallet: wire } = await api.wallets.updateBudgets(activeWallet.id, encrypted);
+        const updated = await decodeWallet(wire as WalletWire, cryptoKey);
         queryClient.setQueryData<FinancialWallet[]>(keys.wallets(wallet), (prev = []) =>
           prev.map((w) => (w.id === updated.id ? updated : w)),
         );
@@ -304,6 +384,7 @@ export function useLedger(walletAddress: string) {
   });
 
   const isLoading =
+    !cryptoReady ||
     profileQuery.isLoading ||
     walletsQuery.isLoading ||
     categoriesQuery.isLoading ||
@@ -331,6 +412,7 @@ export function useLedger(walletAddress: string) {
     currency: activeWallet?.currency ?? "MYR",
     categoryIndex,
     month: clampMonthKey(profileQuery.data?.currentMonth ?? CURRENT_MONTH_KEY),
+    cryptoReady,
     isLoading,
     error,
     setActiveWalletId,

@@ -24,13 +24,18 @@ export type RecurringMaterializeResult = {
   errors: string[];
 };
 
-function seriesKey(doc: ExpenseDocument): string {
+function legacySeriesKey(doc: ExpenseDocument): string {
   return recurringScheduleKey({
     walletId: doc.walletId?.toString() ?? "",
-    sub: doc.sub,
-    note: doc.note,
+    sub: doc.sub ?? "",
+    note: doc.note ?? "",
     recurring: doc.recurring,
   });
+}
+
+function seriesKey(doc: ExpenseDocument): string {
+  if (doc.enc === 1 && doc.seriesKey) return doc.seriesKey;
+  return legacySeriesKey(doc);
 }
 
 function addDaysIso(iso: string, delta: number): string {
@@ -74,7 +79,7 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
 
   result.scanned = anchors.length;
 
-  /** Latest row supplies amount/note; earliest date supplies day-of-month (avoids clamp drift). */
+  /** Latest row supplies payload/amount; earliest date supplies day-of-month (avoids clamp drift). */
   type SeriesState = { latest: ExpenseDocument; anchorIso: string };
   const bySeries = new Map<string, SeriesState>();
   for (const doc of anchors) {
@@ -106,6 +111,7 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
       const minDue = addDaysIso(today, -LOOKBACK_DAYS);
       let cursor = template.date;
       let createdForSeries = 0;
+      const encrypted = template.enc === 1;
 
       while (createdForSeries < RECURRING_CATCHUP_LIMIT) {
         const due = nextRecurringDueDate(anchorIso, freq, cursor);
@@ -116,17 +122,28 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
           continue;
         }
 
-        const dedupe = {
-          userAddress: template.userAddress,
-          walletId: template.walletId as ObjectId,
-          sub: template.sub,
-          note: template.note,
-          date: due,
-          recurring:
-            freq === "monthly"
-              ? ({ $in: ["monthly", true] } as const)
-              : freq,
-        };
+        const dedupe = encrypted
+          ? {
+              userAddress: template.userAddress,
+              walletId: template.walletId as ObjectId,
+              seriesKey: template.seriesKey,
+              date: due,
+              recurring:
+                freq === "monthly"
+                  ? ({ $in: ["monthly", true] } as const)
+                  : freq,
+            }
+          : {
+              userAddress: template.userAddress,
+              walletId: template.walletId as ObjectId,
+              sub: template.sub,
+              note: template.note,
+              date: due,
+              recurring:
+                freq === "monthly"
+                  ? ({ $in: ["monthly", true] } as const)
+                  : freq,
+            };
 
         const existing = await expenses.findOne(dedupe as Record<string, unknown>);
         if (existing) {
@@ -141,10 +158,18 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
           walletId: template.walletId,
           kind: template.kind ?? "expense",
           date: due,
-          sub: template.sub,
-          amount: template.amount,
-          note: template.note,
           recurring: freq,
+          ...(encrypted
+            ? {
+                enc: 1 as const,
+                payload: template.payload!,
+                seriesKey: template.seriesKey,
+              }
+            : {
+                sub: template.sub!,
+                amount: template.amount!,
+                note: template.note ?? "",
+              }),
           createdAt: stamp,
           updatedAt: stamp,
         });
@@ -154,7 +179,11 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      result.errors.push(`${template.note || template.sub} (${anchorIso}): ${msg}`);
+      const label =
+        template.enc === 1
+          ? template.seriesKey?.slice(0, 8) ?? "encrypted"
+          : template.note || template.sub || "recurring";
+      result.errors.push(`${label} (${anchorIso}): ${msg}`);
     }
   }
 

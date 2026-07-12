@@ -9,6 +9,7 @@ import { copyText } from "./lib/clipboard";
 import { codenameFor } from "./lib/codename";
 import { shortAddr } from "./lib/format";
 import { identityStorage } from "./lib/identity-storage";
+import { unlockLedgerKey } from "@/frontend/lib/crypto/unlock";
 import { walletClient } from "./lib/wallet";
 
 type DraftWallet = {
@@ -79,6 +80,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         lastSeen: Date.now(),
       });
       identityStorage.setSession(idn.address);
+      await unlockLedgerKey(idn);
       onAuth({ address: idn.address, codename, injected: !!idn.injected });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not sign in.");

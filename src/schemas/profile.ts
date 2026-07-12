@@ -1,15 +1,9 @@
 import { z } from "zod";
-import {
-  budgetsSchema,
-  EMPTY_BUDGETS,
-  monthKeySchema,
-  walletAddressSchema,
-} from "./common";
+import { monthKeySchema, walletAddressSchema } from "./common";
 
+/** Per-user ledger UI state. Budgets/income live on financial_wallets (E2EE). */
 export const ledgerProfileSchema = z.object({
   userAddress: walletAddressSchema,
-  income: z.number().nonnegative(),
-  budgets: budgetsSchema,
   currentMonth: monthKeySchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -17,21 +11,14 @@ export const ledgerProfileSchema = z.object({
 
 export const updateProfileSchema = z
   .object({
-    income: z.number().nonnegative().optional(),
-    budgets: budgetsSchema.optional(),
     currentMonth: monthKeySchema.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
   });
 
-export const updateBudgetsSchema = z.object({
-  budgets: budgetsSchema,
-});
-
 export type LedgerProfile = z.infer<typeof ledgerProfileSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
-export type UpdateBudgetsInput = z.infer<typeof updateBudgetsSchema>;
 
 export function defaultProfile(
   userAddress: string,
@@ -44,8 +31,6 @@ export function defaultProfile(
 
   return {
     userAddress: walletAddressSchema.parse(userAddress),
-    income: 0,
-    budgets: { ...EMPTY_BUDGETS },
     currentMonth: monthKeySchema.parse(month),
   };
 }

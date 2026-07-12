@@ -3,12 +3,8 @@ import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
-import { budgetsSchema, objectIdSchema } from "@/schemas/common";
-import {
-  createWalletSchema,
-  defaultWallet,
-  updateWalletSchema,
-} from "@/schemas/wallet";
+import { objectIdSchema } from "@/schemas/common";
+import { createWalletSchema, updateWalletSchema } from "@/schemas/wallet";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { ObjectId } from "mongodb";
@@ -17,20 +13,24 @@ export const walletsRoutes = new Hono<{ Variables: SessionVariables }>();
 
 walletsRoutes.use("*", sessionAuth);
 
+function walletSeed(userAddress: string, name = "Main", currency = "MYR", isDefault = true) {
+  return {
+    userAddress,
+    name,
+    currency,
+    fundingMode: "monthly" as const,
+    isDefault,
+  };
+}
+
 async function migrateLegacyData(walletAddress: string) {
-  const { financialWallets, ledgerProfiles, expenses } = getCollections(getDb());
+  const { financialWallets, expenses } = getCollections(getDb());
   const existing = await financialWallets.find({ userAddress: walletAddress }).toArray();
   if (existing.length > 0) return existing;
 
-  const profile = await ledgerProfiles.findOne({ userAddress: walletAddress });
   const now = new Date();
-  const seed = defaultWallet(walletAddress, {
-    income: profile?.income ?? 0,
-    budgets: profile?.budgets,
-  });
-
   const result = await financialWallets.insertOne({
-    ...seed,
+    ...walletSeed(walletAddress),
     createdAt: now,
     updatedAt: now,
   });
@@ -42,7 +42,7 @@ async function migrateLegacyData(walletAddress: string) {
 
   await financialWallets.updateMany(
     { userAddress: walletAddress, fundingMode: { $exists: false } },
-    { $set: { fundingMode: "monthly", startingBalance: 0 } },
+    { $set: { fundingMode: "monthly" } },
   );
 
   await expenses.updateMany(
@@ -59,7 +59,7 @@ async function getUserWallets(walletAddress: string) {
   const { financialWallets, expenses } = getCollections(getDb());
   await financialWallets.updateMany(
     { userAddress: walletAddress, fundingMode: { $exists: false } },
-    { $set: { fundingMode: "monthly", startingBalance: 0 } },
+    { $set: { fundingMode: "monthly" } },
   );
   await expenses.updateMany(
     { userAddress: walletAddress, kind: { $exists: false } },
@@ -113,9 +113,6 @@ walletsRoutes.post("/", zValidator("json", createWalletSchema), async (c) => {
     name: body.name,
     currency: body.currency,
     fundingMode: body.fundingMode,
-    income: body.fundingMode === "monthly" ? body.income : 0,
-    startingBalance: body.fundingMode === "starting" ? body.startingBalance : 0,
-    budgets: defaultWallet(walletAddress).budgets,
     isDefault: count === 0,
     createdAt: now,
     updatedAt: now,
@@ -151,9 +148,24 @@ walletsRoutes.patch("/:id", zValidator("json", updateWalletSchema), async (c) =>
     );
   }
 
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  if (body.name !== undefined) patch.name = body.name;
+  if (body.currency !== undefined) patch.currency = body.currency;
+  if (body.fundingMode !== undefined) patch.fundingMode = body.fundingMode;
+  if (body.isDefault !== undefined) patch.isDefault = body.isDefault;
+  if ("enc" in body && body.enc === 1) {
+    patch.enc = body.enc;
+    patch.payload = body.payload;
+  }
+
+  const update =
+    "enc" in body && body.enc === 1
+      ? { $set: patch, $unset: { income: "", startingBalance: "", budgets: "" } }
+      : { $set: patch };
+
   const updated = await financialWallets.findOneAndUpdate(
     { _id: new ObjectId(id.data), userAddress: walletAddress },
-    { $set: { ...body, updatedAt: new Date() } },
+    update,
     { returnDocument: "after" },
   );
 
@@ -167,15 +179,19 @@ walletsRoutes.put("/:id/budgets", async (c) => {
   if (!id.success) notFound("Wallet not found");
 
   const body = await c.req.json();
-  const parsed = budgetsSchema.safeParse(body?.budgets);
-  if (!parsed.success) badRequest("budgets is required");
+  if (body?.enc !== 1 || typeof body?.payload !== "string") {
+    badRequest("Encrypted budgets payload is required");
+  }
 
   const { financialWallets } = getCollections(getDb());
   await migrateLegacyData(walletAddress);
 
   const updated = await financialWallets.findOneAndUpdate(
     { _id: new ObjectId(id.data), userAddress: walletAddress },
-    { $set: { budgets: parsed.data, updatedAt: new Date() } },
+    {
+      $set: { enc: 1, payload: body.payload, updatedAt: new Date() },
+      $unset: { income: "", startingBalance: "", budgets: "" },
+    },
     { returnDocument: "after" },
   );
 

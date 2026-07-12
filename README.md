@@ -27,10 +27,12 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Web3 identity** — create or restore an in-browser wallet; sign in with a cryptographic challenge (SIWE-style)
 - **Dark mode** — system-aware theme toggle, persisted locally
 - **Sessions & privacy** — HttpOnly session cookies, revoke devices, export CSV, clear local data
+- **Encrypted ledger** — amounts, categories, and notes encrypted client-side; unlock with your wallet key each session
 - **Guided tour** — Shepherd.js walkthrough for each main view
 
 ### Security
 
+- **End-to-end encryption** — transaction amounts, categories, notes, and wallet budgets are AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext
 - Signature verification, rate limiting, security headers, in-memory profile cache
 
 ## Tech stack
@@ -141,6 +143,12 @@ Sign-in is wallet-based and verified on the server:
 
 Manage sessions under **Account → Data & privacy** (revoke devices, sign out everywhere, clear cookies and local storage).
 
+### Encryption
+
+Ledger data (transaction amounts, subcategories, notes, and per-wallet budgets/income) is encrypted in your browser with **AES-256-GCM**. The encryption key is derived from a wallet signature over a fixed message — it never leaves your device and is held in memory for the session only.
+
+On each visit you may be prompted to **unlock** your ledger (one signature for browser wallets; silent for in-app wallets with a stored key). MongoDB stores only ciphertext plus non-sensitive metadata (`date`, `kind`, `recurring`) needed for scheduling.
+
 ## API overview
 
 | Route | Description |
@@ -157,8 +165,7 @@ Manage sessions under **Account → Data & privacy** (revoke devices, sign out e
 | `POST /api/auth/clear` | Revoke all sessions and clear cookie |
 | `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder prefs |
 | `POST /api/users` | Create or upsert user profile on first sign-in |
-| `GET/PATCH /api/profile` | Legacy profile (current month); wallets hold budgets/income |
-| `PUT /api/profile/budgets` | Update legacy profile budgets |
+| `GET/PATCH /api/profile` | Per-user UI state (`currentMonth` only); wallets hold encrypted budgets/income |
 | `CRUD /api/wallets` | Financial wallets (currency, income, budgets) |
 | `PUT /api/wallets/:id/budgets` | Update wallet budgets |
 | `GET/PUT /api/categories` | Category taxonomy |

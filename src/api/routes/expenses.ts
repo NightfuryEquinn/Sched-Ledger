@@ -12,7 +12,6 @@ import {
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { ObjectId } from "mongodb";
-import { findSubInTaxonomy } from "./categories";
 
 export const expensesRoutes = new Hono<{ Variables: SessionVariables }>();
 
@@ -64,14 +63,8 @@ expensesRoutes.post("/", zValidator("json", createExpenseSchema), async (c) => {
   });
   if (!wallet) notFound("Wallet not found");
 
-  const subRef = await findSubInTaxonomy(walletAddress, body.sub);
-  if (!subRef) badRequest("Unknown subcategory");
-  const kind = body.kind ?? "expense";
-  if (kind === "income" && subRef.category.type !== "income") {
-    badRequest("Subcategory must belong to an income category");
-  }
-  if (kind === "expense" && subRef.category.type === "income") {
-    badRequest("Subcategory must not belong to an income category for expenses");
+  if (body.recurring && body.recurring !== false && !body.seriesKey) {
+    badRequest("seriesKey is required for encrypted recurring expenses");
   }
 
   const result = await expenses.insertOne({
@@ -79,10 +72,10 @@ expensesRoutes.post("/", zValidator("json", createExpenseSchema), async (c) => {
     walletId: new ObjectId(body.walletId),
     kind: body.kind ?? "expense",
     date: body.date,
-    sub: body.sub,
-    amount: body.amount,
-    note: body.note,
     recurring: body.recurring,
+    enc: body.enc,
+    payload: body.payload,
+    seriesKey: body.seriesKey,
     createdAt: now,
     updatedAt: now,
   });
@@ -109,24 +102,23 @@ expensesRoutes.patch("/:id", zValidator("json", updateExpenseSchema), async (c) 
     if (!wallet) notFound("Wallet not found");
   }
 
-  if (body.sub) {
-    const subRef = await findSubInTaxonomy(walletAddress, body.sub);
-    if (!subRef) badRequest("Unknown subcategory");
-    const kind = body.kind ?? "expense";
-    if (kind === "income" && subRef.category.type !== "income") {
-      badRequest("Subcategory must belong to an income category");
-    }
-    if (kind === "expense" && subRef.category.type === "income") {
-      badRequest("Subcategory must not belong to an income category for expenses");
-    }
-  }
-
-  const patch: Record<string, unknown> = { ...body, updatedAt: new Date() };
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (body.walletId) patch.walletId = new ObjectId(body.walletId);
+  if (body.kind !== undefined) patch.kind = body.kind;
+  if (body.date !== undefined) patch.date = body.date;
+  if (body.recurring !== undefined) patch.recurring = body.recurring;
+  if (body.enc !== undefined) patch.enc = body.enc;
+  if (body.payload !== undefined) patch.payload = body.payload;
+  if ("seriesKey" in body) patch.seriesKey = body.seriesKey ?? undefined;
+
+  const update =
+    body.payload !== undefined
+      ? { $set: patch, $unset: { sub: "", amount: "", note: "" } }
+      : { $set: patch };
 
   const updated = await expenses.findOneAndUpdate(
     { _id: new ObjectId(id.data), userAddress: walletAddress },
-    { $set: patch },
+    update,
     { returnDocument: "after" },
   );
 
