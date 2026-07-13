@@ -1,10 +1,6 @@
+import { buildCsv, downloadCsv } from "@/frontend/auth/lib/csv";
 import { isRecurring, recurringLabel } from "@/frontend/lib/stats";
 import type { CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
-
-function escapeCsv(value: unknown): string {
-  const s = String(value == null ? "" : value);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 
 export function buildExpenseCsv(
   expenses: Expense[],
@@ -50,11 +46,9 @@ export function buildExpenseCsv(
         e.amount.toFixed(2),
         currency,
         isRecurring(e) ? recurringLabel(e.recurring) : "no",
-      ]
-        .map(escapeCsv)
-        .join(",");
+      ];
     });
-  return [header.join(","), ...rows].join("\r\n");
+  return buildCsv(header, rows);
 }
 
 export function downloadExpenseCsv(
@@ -62,15 +56,6 @@ export function downloadExpenseCsv(
   wallets: FinancialWallet[] = [],
   categoryIndex?: CategoryIndex,
 ): void {
-  const blob = new Blob([`\uFEFF${buildExpenseCsv(expenses, wallets, categoryIndex)}`], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `ledger-export-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const date = new Date().toISOString().slice(0, 10);
+  downloadCsv(`ledger-transactions-${date}.csv`, buildExpenseCsv(expenses, wallets, categoryIndex));
 }

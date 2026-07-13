@@ -12,6 +12,8 @@ import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour } from "@/frontend/lib/tour";
 import type { Account, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
+import type { EventImportRow } from "@/frontend/auth/lib/import-events";
+import type { TodoImportList } from "@/frontend/auth/lib/import-todos";
 import {
   Budgets as BudgetsView,
   Categories as CategoriesView,
@@ -144,6 +146,58 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     return { imported, failed, newCategories, newSubcategories };
   };
 
+  const importEvents = async (rows: EventImportRow[]) => {
+    let imported = 0;
+    let failed = 0;
+    for (const row of rows) {
+      try {
+        await ledger.saveEvent(row);
+        imported++;
+      } catch {
+        failed++;
+      }
+    }
+    return { imported, failed };
+  };
+
+  const importTodos = async (lists: TodoImportList[]) => {
+    let importedLists = 0;
+    let importedTasks = 0;
+    let failed = 0;
+
+    for (const listData of lists) {
+      try {
+        const existing =
+          (listData.listId && ledger.todoLists.find((l) => l.id === listData.listId)) ||
+          ledger.todoLists.find((l) => l.name.toLowerCase() === listData.name.toLowerCase());
+
+        if (existing) {
+          const existingIds = new Set(existing.tasks.map((t) => t.id));
+          const merged = [...existing.tasks];
+          for (const task of listData.tasks) {
+            if (existingIds.has(task.id)) continue;
+            merged.push(task);
+            importedTasks++;
+          }
+          if (merged.length > existing.tasks.length) {
+            await ledger.saveTodoList({ id: existing.id, tasks: merged });
+          }
+        } else {
+          const created = await ledger.saveTodoList({ name: listData.name, icon: listData.icon });
+          importedLists++;
+          if (listData.tasks.length) {
+            await ledger.saveTodoList({ id: created.id, tasks: listData.tasks });
+            importedTasks += listData.tasks.length;
+          }
+        }
+      } catch {
+        failed++;
+      }
+    }
+
+    return { importedLists, importedTasks, failed };
+  };
+
   const deleteExpense = async (id: string) => {
     await ledger.deleteExpense(id);
     setModal(null);
@@ -184,10 +238,14 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
                 account={account}
                 onSignOut={onSignOut}
                 expenses={allExpenses}
+                events={events}
+                todoLists={ledger.todoLists}
                 wallets={wallets}
                 categoryIndex={ledger.categoryIndex}
                 activeWalletId={activeWallet?.id}
                 onImportExpenses={importExpenses}
+                onImportEvents={importEvents}
+                onImportTodos={importTodos}
                 onTakeTour={() => startViewTour(view)}
               />
             </div>

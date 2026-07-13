@@ -1,8 +1,10 @@
 import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
-import type { Account, Category, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
+import type { Account, Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
+import type { EventImportRow } from "./lib/import-events";
 import type { ExpenseImportRow } from "./lib/import";
+import type { TodoImportList } from "./lib/import-todos";
 import { useEffect, useRef, useState } from "react";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { Identicon } from "./components/Identicon";
@@ -24,6 +26,8 @@ type AccountMenuProps = {
   account: Account;
   onSignOut: () => void;
   expenses: Expense[];
+  events?: LedgerEvent[];
+  todoLists?: TodoList[];
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
   activeWalletId?: string;
@@ -31,6 +35,8 @@ type AccountMenuProps = {
     rows: ExpenseImportRow[],
     categories?: Category[],
   ) => Promise<{ imported: number; failed: number; newCategories: number; newSubcategories: number }>;
+  onImportEvents?: (rows: EventImportRow[]) => Promise<{ imported: number; failed: number }>;
+  onImportTodos?: (lists: TodoImportList[]) => Promise<{ importedLists: number; importedTasks: number; failed: number }>;
   onTakeTour?: () => void;
 };
 
@@ -38,10 +44,14 @@ export function AccountMenu({
   account,
   onSignOut,
   expenses,
+  events = [],
+  todoLists = [],
   wallets = [],
   categoryIndex,
   activeWalletId,
   onImportExpenses,
+  onImportEvents,
+  onImportTodos,
   onTakeTour,
 }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
@@ -188,10 +198,14 @@ export function AccountMenu({
         <DataPrivacyModal
           account={account}
           expenses={expenses}
+          events={events}
+          todoLists={todoLists}
           wallets={wallets}
           categoryIndex={categoryIndex}
           activeWalletId={activeWalletId}
           onImportExpenses={onImportExpenses}
+          onImportEvents={onImportEvents}
+          onImportTodos={onImportTodos}
           onClose={() => setDataOpen(false)}
           onSignedOut={onSignOut}
         />
