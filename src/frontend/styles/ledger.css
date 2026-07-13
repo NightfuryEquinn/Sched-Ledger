@@ -1188,6 +1188,7 @@ h1,h2,h3{margin:0;font-weight:600;}
 .csv-dropzone-link{color:var(--accent);font-weight:600;text-decoration:underline;}
 .csv-import-preview{margin-top:14px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface-2);}
 .csv-import-count{font-size:13px;font-weight:600;margin:0 0 8px;}
+.csv-import-notices{font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;padding-left:18px;line-height:1.45;}
 .csv-import-errors{font-size:12.5px;color:var(--danger);margin:0 0 12px;padding-left:18px;line-height:1.45;}
 .csv-import-actions{display:flex;flex-wrap:wrap;gap:8px;}
 .csv-import-summary{font-size:12.5px;color:var(--ok);font-weight:600;margin:12px 0 0;line-height:1.45;}

@@ -9,13 +9,20 @@ export type ImportRowError = {
   message: string;
 };
 
+export type ImportRowNotice = {
+  row: number;
+  message: string;
+};
+
 export type ParseExpenseCsvResult = {
   rows: ExpenseImportRow[];
   errors: ImportRowError[];
+  notices: ImportRowNotice[];
   categories: Category[];
   stats: {
     newCategories: number;
     newSubcategories: number;
+    walletRemapped: number;
   };
 };
 
@@ -94,20 +101,33 @@ function parseRecurringFromCsv(value: string): RecurringInterval | false {
 }
 
 function resolveWallet(
+  walletId: string,
   name: string,
   wallets: FinancialWallet[],
   defaultWalletId?: string,
-): { walletId: string } | { error: string } {
+): { walletId: string; remapped?: boolean } | { error: string } {
+  const id = walletId.trim();
   const trimmed = name.trim();
-  if (trimmed) {
-    const match = wallets.find((w) => w.name.toLowerCase() === trimmed.toLowerCase());
-    if (match) return { walletId: match.id };
-    return { error: `Unknown wallet "${trimmed}"` };
+
+  if (id && OBJECT_ID.test(id)) {
+    const byId = wallets.find((w) => w.id.toLowerCase() === id.toLowerCase());
+    if (byId) return { walletId: byId.id };
   }
-  if (defaultWalletId) return { walletId: defaultWalletId };
-  const fallback = wallets.find((w) => w.isDefault) ?? wallets[0];
-  if (fallback) return { walletId: fallback.id };
-  return { error: "No wallet available" };
+
+  if (trimmed) {
+    const byName = wallets.find((w) => w.name.toLowerCase() === trimmed.toLowerCase());
+    if (byName) return { walletId: byName.id };
+  }
+
+  const fallbackId = defaultWalletId ?? wallets.find((w) => w.isDefault)?.id ?? wallets[0]?.id;
+  if (!fallbackId) return { error: "No wallet available" };
+
+  if (id || trimmed) {
+    const label = trimmed || id;
+    return { walletId: fallbackId, remapped: true };
+  }
+
+  return { walletId: fallbackId };
 }
 
 export function parseExpenseCsv(
@@ -119,19 +139,22 @@ export function parseExpenseCsv(
 ): ParseExpenseCsvResult {
   const rows: ExpenseImportRow[] = [];
   const errors: ImportRowError[] = [];
+  const notices: ImportRowNotice[] = [];
   const ledgerIds = new Set([...existingIds].map((id) => id.toLowerCase()));
   const seenInFile = new Set<string>();
   let workingCategories = categories.map((c) => ({ ...c, subs: [...c.subs] }));
   let newCategories = 0;
   let newSubcategories = 0;
+  let walletRemapped = 0;
 
   const parsed = parseCsv(stripBom(text));
   if (!parsed.length) {
     return {
       rows,
       errors: [{ row: 0, message: "The file is empty." }],
+      notices: [],
       categories: workingCategories,
-      stats: { newCategories: 0, newSubcategories: 0 },
+      stats: { newCategories: 0, newSubcategories: 0, walletRemapped: 0 },
     };
   }
 
@@ -144,12 +167,14 @@ export function parseExpenseCsv(
     return {
       rows,
       errors: [{ row: 0, message: "Missing required columns: Date and Amount." }],
+      notices: [],
       categories: workingCategories,
-      stats: { newCategories: 0, newSubcategories: 0 },
+      stats: { newCategories: 0, newSubcategories: 0, walletRemapped: 0 },
     };
   }
 
   const idIdx = colIndex(headerMap, "id");
+  const walletIdIdx = colIndex(headerMap, "walletid", "wallet id");
   const walletIdx = colIndex(headerMap, "wallet");
   const typeIdx = colIndex(headerMap, "type", "kind");
   const catIdIdx = colIndex(headerMap, "categoryid", "category id");
@@ -199,10 +224,19 @@ export function parseExpenseCsv(
     const kindRaw = get(typeIdx).toLowerCase();
     const kind: "expense" | "income" = kindRaw === "income" ? "income" : "expense";
 
-    const walletResult = resolveWallet(get(walletIdx), wallets, defaultWalletId);
+    const walletResult = resolveWallet(get(walletIdIdx), get(walletIdx), wallets, defaultWalletId);
     if ("error" in walletResult) {
       errors.push({ row: rowNum, message: walletResult.error });
       return;
+    }
+    if (walletResult.remapped) {
+      const label = get(walletIdx) || get(walletIdIdx) || "unknown";
+      const active = wallets.find((w) => w.id === walletResult.walletId);
+      notices.push({
+        row: rowNum,
+        message: `Wallet "${label}" not found — will import into "${active?.name ?? "active wallet"}".`,
+      });
+      walletRemapped++;
     }
 
     const subResolved = resolveImportSub(workingCategories, {
@@ -238,7 +272,8 @@ export function parseExpenseCsv(
   return {
     rows,
     errors,
+    notices,
     categories: workingCategories,
-    stats: { newCategories, newSubcategories },
+    stats: { newCategories, newSubcategories, walletRemapped },
   };
 }

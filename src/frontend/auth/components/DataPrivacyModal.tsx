@@ -165,8 +165,9 @@ export function DataPrivacyModal({
       setImportPreview({
         rows: [],
         errors: [{ row: 0, message: "Please choose a .csv file." }],
+        notices: [],
         categories: categoryIndex.categories,
-        stats: { newCategories: 0, newSubcategories: 0 },
+        stats: { newCategories: 0, newSubcategories: 0, walletRemapped: 0 },
       });
       setImportFileName(file.name);
       setImportResult(null);
@@ -329,10 +330,25 @@ export function DataPrivacyModal({
                       {importPreview.stats.newSubcategories > 0
                         ? ` · ${importPreview.stats.newSubcategories} new subcategor${importPreview.stats.newSubcategories === 1 ? "y" : "ies"}`
                         : ""}
+                      {importPreview.stats.walletRemapped > 0
+                        ? ` · ${importPreview.stats.walletRemapped} wallet remapped`
+                        : ""}
                       {importPreview.errors.length
                         ? ` · ${importPreview.errors.length} row${importPreview.errors.length === 1 ? "" : "s"} skipped`
                         : ""}
                     </p>
+                    {importPreview.notices.length ? (
+                      <ul className="csv-import-notices">
+                        {importPreview.notices.slice(0, 5).map((notice) => (
+                          <li key={`${notice.row}-${notice.message}`}>
+                            {notice.row > 0 ? `Row ${notice.row}: ` : ""}{notice.message}
+                          </li>
+                        ))}
+                        {importPreview.notices.length > 5 ? (
+                          <li>…and {importPreview.notices.length - 5} more</li>
+                        ) : null}
+                      </ul>
+                    ) : null}
                     {importPreview.errors.length ? (
                       <ul className="csv-import-errors">
                         {importPreview.errors.slice(0, 5).map((err) => (
@@ -375,7 +391,7 @@ export function DataPrivacyModal({
                   </p>
                 ) : null}
 
-                <p className="dm-note">Re-importing the same export skips rows whose ID is already in your ledger. Missing categories and subcategories are created automatically.</p>
+                <p className="dm-note">Re-importing the same export skips rows whose ID is already in your ledger. Missing categories and subcategories are created automatically. If a wallet name in the CSV does not match yours, rows import into your active wallet (matched by wallet ID when available).</p>
               </>
             ) : null}
           </div>

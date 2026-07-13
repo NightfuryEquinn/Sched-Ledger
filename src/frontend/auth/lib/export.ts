@@ -15,6 +15,7 @@ export function buildExpenseCsv(
   const header = [
     "ID",
     "Date",
+    "WalletId",
     "Wallet",
     "Type",
     "CategoryId",
@@ -38,6 +39,7 @@ export function buildExpenseCsv(
       return [
         e.id,
         e.date,
+        w?.id ?? e.walletId,
         w?.name ?? "",
         kind,
         cat?.id ?? "",
