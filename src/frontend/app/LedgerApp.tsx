@@ -111,6 +111,25 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     setModal(null);
   };
 
+  const importExpenses = async (rows: Omit<Expense, "id">[]) => {
+    let imported = 0;
+    let failed = 0;
+    for (const row of rows) {
+      try {
+        const walletId = row.walletId || activeWallet?.id;
+        if (!walletId) {
+          failed++;
+          continue;
+        }
+        await ledger.saveExpense({ ...row, walletId });
+        imported++;
+      } catch {
+        failed++;
+      }
+    }
+    return { imported, failed };
+  };
+
   const deleteExpense = async (id: string) => {
     await ledger.deleteExpense(id);
     setModal(null);
@@ -153,6 +172,8 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
                 expenses={allExpenses}
                 wallets={wallets}
                 categoryIndex={ledger.categoryIndex}
+                activeWalletId={activeWallet?.id}
+                onImportExpenses={importExpenses}
                 onTakeTour={() => startViewTour(view)}
               />
             </div>
