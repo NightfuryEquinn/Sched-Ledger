@@ -1,10 +1,11 @@
 import { Icon } from "@/frontend/components/ui";
 import { api, type ApiSession } from "@/frontend/lib/api";
 import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getConsent, setConsent } from "../lib/consent";
 import { downloadExpenseCsv } from "../lib/export";
+import { parseExpenseCsv, type ExpenseImportRow } from "../lib/import";
 import { clearAllLocalData } from "../lib/identity-storage";
 
 /*
@@ -13,7 +14,7 @@ import { clearAllLocalData } from "../lib/identity-storage";
  * Sections:
  *   1. Active sessions   — list & revoke server sessions
  *   2. Email reminders   — global opt-out for all reminder emails
- *   3. Export your data  — client-side CSV download
+ *   3. Your data         — CSV export & import
  *   4. Data sharing      — third-party consent (server-persisted opt-in/out)
  *   5. Local data        — clear sessions, cookies & browser storage
  */
@@ -23,11 +24,22 @@ type DataPrivacyModalProps = {
   expenses: Expense[];
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
+  activeWalletId?: string;
+  onImportExpenses?: (rows: ExpenseImportRow[]) => Promise<{ imported: number; failed: number }>;
   onClose: () => void;
   onSignedOut?: () => void;
 };
 
-export function DataPrivacyModal({ account, expenses, wallets = [], categoryIndex, onClose, onSignedOut }: DataPrivacyModalProps) {
+export function DataPrivacyModal({
+  account,
+  expenses,
+  wallets = [],
+  categoryIndex,
+  activeWalletId,
+  onImportExpenses,
+  onClose,
+  onSignedOut,
+}: DataPrivacyModalProps) {
   /* Consent: server is the source of truth; localStorage is a warm cache. */
   const [consent, setConsentState] = useState(() => getConsent(account.address));
   const [consentBusy, setConsentBusy] = useState(false);
@@ -37,6 +49,12 @@ export function DataPrivacyModal({ account, expenses, wallets = [], categoryInde
   const [remindersBusy, setRemindersBusy] = useState(false);
 
   const [exported, setExported] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [importFileName, setImportFileName] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<ReturnType<typeof parseExpenseCsv> | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; failed: number } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [sessions, setSessions] = useState<ApiSession[]>([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
@@ -125,6 +143,49 @@ export function DataPrivacyModal({ account, expenses, wallets = [], categoryInde
     setTimeout(() => setExported(false), 2200);
   };
 
+  const resetImport = () => {
+    setImportFileName(null);
+    setImportPreview(null);
+    setImportResult(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const readCsvFile = async (file: File) => {
+    if (!categoryIndex || !onImportExpenses) return;
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith(".csv") && file.type !== "text/csv") {
+      setImportPreview({ rows: [], errors: [{ row: 0, message: "Please choose a .csv file." }] });
+      setImportFileName(file.name);
+      setImportResult(null);
+      return;
+    }
+    const text = await file.text();
+    const existingIds = expenses.map((e) => e.id);
+    const parsed = parseExpenseCsv(text, wallets, categoryIndex, activeWalletId, existingIds);
+    setImportFileName(file.name);
+    setImportPreview(parsed);
+    setImportResult(null);
+  };
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files?.length) return;
+    void readCsvFile(files[0]);
+  };
+
+  const runImport = async () => {
+    if (!importPreview?.rows.length || !onImportExpenses || importBusy) return;
+    setImportBusy(true);
+    try {
+      const result = await onImportExpenses(importPreview.rows);
+      setImportResult(result);
+      setImportPreview(null);
+      setImportFileName(null);
+      if (fileRef.current) fileRef.current.value = "";
+    } finally {
+      setImportBusy(false);
+    }
+  };
+
   /* ── Render ───────────────────────────────────────────────────── */
 
   return createPortal(
@@ -185,15 +246,108 @@ export function DataPrivacyModal({ account, expenses, wallets = [], categoryInde
 
           <div className="dm-div" />
 
-          {/* 3. Export */}
+          {/* 3. Export & import */}
           <div className="dm-sec">
-            <span className="fld-label">Export your data</span>
+            <span className="fld-label">Your data</span>
             <p className="dm-lead">Download every transaction in your ledger as a CSV spreadsheet — open it in Excel, Numbers or Sheets. This is your own copy and is never shared.</p>
             <button className="primary-btn full" type="button" onClick={exportCsv}>
               <Icon name={exported ? "check" : "download"} size={17} />
               {exported ? "Downloaded" : "Export to CSV"}
             </button>
             <p className="dm-note">{count} transaction{count === 1 ? "" : "s"} across all months · saved to your device.</p>
+
+            {onImportExpenses && categoryIndex ? (
+              <>
+                <p className="dm-lead dm-lead--gap">Import a CSV you exported from Ledger to add those transactions back into your account. Drag and drop a file here, or click to browse.</p>
+                <div
+                  className={`csv-dropzone${dragging ? " csv-dropzone--drag" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Import CSV file"
+                  onClick={() => fileRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      fileRef.current?.click();
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragging(false);
+                    handleFiles(e.dataTransfer.files);
+                  }}
+                >
+                  <Icon name="file" size={22} />
+                  <p className="csv-dropzone-text">
+                    {importFileName ? (
+                      <>Selected: <strong>{importFileName}</strong></>
+                    ) : (
+                      <>Drop your CSV here or <span className="csv-dropzone-link">choose a file</span></>
+                    )}
+                  </p>
+                </div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  hidden
+                  onChange={(e) => handleFiles(e.target.files)}
+                />
+
+                {importPreview ? (
+                  <div className="csv-import-preview">
+                    <p className="csv-import-count">
+                      {importPreview.rows.length
+                        ? `${importPreview.rows.length} transaction${importPreview.rows.length === 1 ? "" : "s"} ready to import`
+                        : "No valid transactions found"}
+                      {importPreview.errors.length
+                        ? ` · ${importPreview.errors.length} row${importPreview.errors.length === 1 ? "" : "s"} skipped`
+                        : ""}
+                    </p>
+                    {importPreview.errors.length ? (
+                      <ul className="csv-import-errors">
+                        {importPreview.errors.slice(0, 5).map((err) => (
+                          <li key={`${err.row}-${err.message}`}>
+                            {err.row > 0 ? `Row ${err.row}: ` : ""}{err.message}
+                          </li>
+                        ))}
+                        {importPreview.errors.length > 5 ? (
+                          <li>…and {importPreview.errors.length - 5} more</li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                    <div className="csv-import-actions">
+                      <button
+                        className="primary-btn"
+                        type="button"
+                        disabled={!importPreview.rows.length || importBusy}
+                        onClick={() => void runImport()}
+                      >
+                        {importBusy ? "Importing…" : `Import ${importPreview.rows.length || ""} transaction${importPreview.rows.length === 1 ? "" : "s"}`}
+                      </button>
+                      <button className="ghost-btn" type="button" disabled={importBusy} onClick={resetImport}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {importResult ? (
+                  <p className={`csv-import-summary${importResult.failed ? " csv-import-summary--partial" : ""}`}>
+                    Imported {importResult.imported} transaction{importResult.imported === 1 ? "" : "s"}
+                    {importResult.failed ? ` · ${importResult.failed} failed` : ""}.
+                    {importResult.imported > 0 ? " Refresh your views to see them." : ""}
+                  </p>
+                ) : null}
+
+                <p className="dm-note">Re-importing the same export skips rows whose ID is already in your ledger. Category and wallet names must match your ledger.</p>
+              </>
+            ) : null}
           </div>
 
           <div className="dm-div" />

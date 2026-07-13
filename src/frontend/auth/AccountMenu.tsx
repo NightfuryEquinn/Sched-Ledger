@@ -2,6 +2,7 @@ import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
+import type { ExpenseImportRow } from "./lib/import";
 import { useEffect, useRef, useState } from "react";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { Identicon } from "./components/Identicon";
@@ -25,10 +26,21 @@ type AccountMenuProps = {
   expenses: Expense[];
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
+  activeWalletId?: string;
+  onImportExpenses?: (rows: ExpenseImportRow[]) => Promise<{ imported: number; failed: number }>;
   onTakeTour?: () => void;
 };
 
-export function AccountMenu({ account, onSignOut, expenses, wallets = [], categoryIndex, onTakeTour }: AccountMenuProps) {
+export function AccountMenu({
+  account,
+  onSignOut,
+  expenses,
+  wallets = [],
+  categoryIndex,
+  activeWalletId,
+  onImportExpenses,
+  onTakeTour,
+}: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
@@ -175,6 +187,8 @@ export function AccountMenu({ account, onSignOut, expenses, wallets = [], catego
           expenses={expenses}
           wallets={wallets}
           categoryIndex={categoryIndex}
+          activeWalletId={activeWalletId}
+          onImportExpenses={onImportExpenses}
           onClose={() => setDataOpen(false)}
           onSignedOut={onSignOut}
         />

@@ -1175,6 +1175,23 @@ h1,h2,h3{margin:0;font-weight:600;}
 }
 .session-device{font-size:14px;font-weight:600;}
 .session-meta{font-size:12px;color:var(--ink-faint);margin-top:2px;}
+.dm-lead--gap{margin-top:20px;}
+.csv-dropzone{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  padding:22px 16px;border:1.5px dashed var(--border);border-radius:var(--r-lg);
+  background:var(--surface-2);text-align:center;cursor:pointer;transition:border-color .15s,background .15s;
+  margin-top:4px;
+}
+.csv-dropzone:hover,.csv-dropzone:focus-visible{border-color:var(--accent);background:var(--surface);outline:none;}
+.csv-dropzone--drag{border-color:var(--accent);background:var(--surface);}
+.csv-dropzone-text{font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin:0;}
+.csv-dropzone-link{color:var(--accent);font-weight:600;text-decoration:underline;}
+.csv-import-preview{margin-top:14px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface-2);}
+.csv-import-count{font-size:13px;font-weight:600;margin:0 0 8px;}
+.csv-import-errors{font-size:12.5px;color:var(--danger);margin:0 0 12px;padding-left:18px;line-height:1.45;}
+.csv-import-actions{display:flex;flex-wrap:wrap;gap:8px;}
+.csv-import-summary{font-size:12.5px;color:var(--ok);font-weight:600;margin:12px 0 0;line-height:1.45;}
+.csv-import-summary--partial{color:var(--ink-soft);}
 
 /* ── 14. Utilities & loading states ───────────────────────────────── */
 .u-gap-top{margin-top:10px;}
