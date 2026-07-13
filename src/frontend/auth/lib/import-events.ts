@@ -1,0 +1,215 @@
+import {
+  colIndex,
+  isValidIsoDate,
+  OBJECT_ID,
+  parseCsv,
+  stripBom,
+  type ImportRowError,
+  type ImportRowNotice,
+} from "@/frontend/auth/lib/csv";
+import { EVENT_CATS } from "@/frontend/lib/data";
+import type { EventComment, LedgerEvent } from "@/frontend/lib/types";
+import { EVENT_CATEGORY_IDS, LEAD_IDS, REPEAT_IDS } from "@/schemas/common";
+
+export type EventImportRow = Omit<LedgerEvent, "id">;
+
+export type ParseEventsCsvResult = {
+  rows: EventImportRow[];
+  errors: ImportRowError[];
+  notices: ImportRowNotice[];
+  stats: { skipped: number };
+};
+
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const EVENT_CAT_IDS = new Set<string>(EVENT_CATEGORY_IDS);
+const REPEAT_SET = new Set<string>(REPEAT_IDS);
+const LEAD_SET = new Set<string>(LEAD_IDS);
+
+function parseYesNo(value: string, defaultValue = false): boolean {
+  const v = value.trim().toLowerCase();
+  if (!v) return defaultValue;
+  return v === "yes" || v === "true" || v === "1";
+}
+
+function parseComments(raw: string, rowNum: number, errors: ImportRowError[]): EventComment[] {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!Array.isArray(parsed)) throw new Error("not array");
+    return parsed as EventComment[];
+  } catch {
+    errors.push({ row: rowNum, message: "CommentsJson must be a valid JSON array." });
+    return [];
+  }
+}
+
+function resolveEventCategory(
+  catId: string,
+  catName: string,
+  customLabel: string,
+  customGlyph: string,
+): { catId: string; customLabel?: string; customGlyph?: string } | { error: string } {
+  const id = catId.trim();
+  const name = catName.trim().toLowerCase();
+  const label = customLabel.trim();
+  const glyph = customGlyph.trim();
+
+  if (id && EVENT_CAT_IDS.has(id as (typeof EVENT_CATEGORY_IDS)[number])) {
+    if (id === "custom") {
+      if (!label) return { error: "CustomLabel is required for custom event types." };
+      if (!glyph) return { error: "CustomGlyph is required for custom event types." };
+      return { catId: "custom", customLabel: label, customGlyph: glyph };
+    }
+    return { catId: id };
+  }
+
+  if (name) {
+    const byName = EVENT_CATS.find((c) => c.name.toLowerCase() === name);
+    if (byName) {
+      if (byName.id === "custom") {
+        if (!label) return { error: "CustomLabel is required for custom event types." };
+        if (!glyph) return { error: "CustomGlyph is required for custom event types." };
+        return { catId: "custom", customLabel: label, customGlyph: glyph };
+      }
+      return { catId: byName.id };
+    }
+  }
+
+  if (label || glyph) {
+    if (!label) return { error: "CustomLabel is required for custom event types." };
+    if (!glyph) return { error: "CustomGlyph is required for custom event types." };
+    return { catId: "custom", customLabel: label, customGlyph: glyph };
+  }
+
+  return { catId: "personal" };
+}
+
+export function parseEventsCsv(text: string, existingIds: Iterable<string> = []): ParseEventsCsvResult {
+  const rows: EventImportRow[] = [];
+  const errors: ImportRowError[] = [];
+  const notices: ImportRowNotice[] = [];
+  const ledgerIds = new Set([...existingIds].map((id) => id.toLowerCase()));
+  const seenInFile = new Set<string>();
+  let skipped = 0;
+
+  const parsed = parseCsv(stripBom(text));
+  if (!parsed.length) {
+    return { rows, errors: [{ row: 0, message: "The file is empty." }], notices, stats: { skipped: 0 } };
+  }
+
+  const headerMap = Object.fromEntries(parsed[0].map((h, i) => [h.trim().toLowerCase(), i]));
+  const idIdx = colIndex(headerMap, "id");
+  const titleIdx = colIndex(headerMap, "title");
+  const catIdIdx = colIndex(headerMap, "categoryid", "category id");
+  const catIdx = colIndex(headerMap, "category");
+  const customLabelIdx = colIndex(headerMap, "customlabel", "custom label");
+  const customGlyphIdx = colIndex(headerMap, "customglyph", "custom glyph");
+  const dateIdx = colIndex(headerMap, "date");
+  const allDayIdx = colIndex(headerMap, "allday", "all day");
+  const timeIdx = colIndex(headerMap, "time");
+  const repeatIdx = colIndex(headerMap, "repeat");
+  const notifyIdx = colIndex(headerMap, "notify");
+  const leadIdx = colIndex(headerMap, "lead");
+  const emailIdx = colIndex(headerMap, "email");
+  const commentsIdx = colIndex(headerMap, "commentsjson", "comments json", "comments");
+
+  if (titleIdx === undefined || dateIdx === undefined) {
+    return { rows, errors: [{ row: 0, message: "Missing required columns: Title and Date." }], notices, stats: { skipped: 0 } };
+  }
+
+  parsed.slice(1).forEach((cells, i) => {
+    const rowNum = i + 2;
+    const get = (idx: number | undefined) => (idx === undefined ? "" : (cells[idx] ?? "").trim());
+
+    const csvId = get(idIdx);
+    if (csvId) {
+      if (!OBJECT_ID.test(csvId)) {
+        errors.push({ row: rowNum, message: `Invalid ID "${csvId}".` });
+        return;
+      }
+      const normalizedId = csvId.toLowerCase();
+      if (ledgerIds.has(normalizedId)) {
+        errors.push({ row: rowNum, message: "Event already in your schedule (duplicate ID)." });
+        skipped++;
+        return;
+      }
+      if (seenInFile.has(normalizedId)) {
+        errors.push({ row: rowNum, message: "Duplicate ID in this file." });
+        skipped++;
+        return;
+      }
+      seenInFile.add(normalizedId);
+    }
+
+    const title = get(titleIdx);
+    if (!title) {
+      errors.push({ row: rowNum, message: "Title is required." });
+      return;
+    }
+
+    const date = get(dateIdx);
+    if (!isValidIsoDate(date)) {
+      errors.push({ row: rowNum, message: `Invalid date "${date || "(empty)"}" — use YYYY-MM-DD.` });
+      return;
+    }
+
+    const catResolved = resolveEventCategory(
+      get(catIdIdx),
+      get(catIdx),
+      get(customLabelIdx),
+      get(customGlyphIdx),
+    );
+    if ("error" in catResolved) {
+      errors.push({ row: rowNum, message: catResolved.error });
+      return;
+    }
+
+    const allDay = allDayIdx === undefined ? true : parseYesNo(get(allDayIdx), true);
+    const timeRaw = get(timeIdx);
+    let time: string | null = null;
+    if (!allDay) {
+      if (!timeRaw || !TIME_RE.test(timeRaw)) {
+        errors.push({ row: rowNum, message: `Invalid time "${timeRaw || "(empty)"}" — use HH:MM.` });
+        return;
+      }
+      time = timeRaw;
+    }
+
+    const repeatRaw = get(repeatIdx) || "once";
+    if (!REPEAT_SET.has(repeatRaw)) {
+      errors.push({ row: rowNum, message: `Invalid repeat "${repeatRaw}".` });
+      return;
+    }
+
+    const notify = parseYesNo(get(notifyIdx), false);
+    const leadRaw = get(leadIdx) || "at";
+    if (!LEAD_SET.has(leadRaw)) {
+      errors.push({ row: rowNum, message: `Invalid lead "${leadRaw}".` });
+      return;
+    }
+
+    const email = get(emailIdx);
+    const comments = commentsIdx === undefined ? [] : parseComments(get(commentsIdx), rowNum, errors);
+    if (commentsIdx !== undefined && get(commentsIdx) && comments.length === 0 && errors.some((e) => e.row === rowNum)) {
+      return;
+    }
+
+    rows.push({
+      title,
+      catId: catResolved.catId,
+      customLabel: catResolved.customLabel,
+      customGlyph: catResolved.customGlyph,
+      date,
+      allDay,
+      time,
+      repeat: repeatRaw,
+      notify,
+      lead: leadRaw,
+      email,
+      comments,
+    });
+  });
+
+  return { rows, errors, notices, stats: { skipped } };
+}

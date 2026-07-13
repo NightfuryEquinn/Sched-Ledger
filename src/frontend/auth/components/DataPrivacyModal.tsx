@@ -1,10 +1,15 @@
+import { CsvImportPanel, type CsvImportPreview } from "@/frontend/auth/components/CsvImportPanel";
 import { Icon } from "@/frontend/components/ui";
 import { api, type ApiSession } from "@/frontend/lib/api";
-import type { Account, Category, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
-import { useEffect, useRef, useState } from "react";
+import type { Account, Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { getConsent, setConsent } from "../lib/consent";
+import { downloadEventsCsv } from "../lib/export-events";
+import { downloadTodosCsv } from "../lib/export-todos";
 import { downloadExpenseCsv } from "../lib/export";
+import { parseEventsCsv } from "../lib/import-events";
+import { parseTodosCsv, type TodoImportList } from "../lib/import-todos";
 import { parseExpenseCsv, type ExpenseImportRow } from "../lib/import";
 import { clearAllLocalData } from "../lib/identity-storage";
 
@@ -14,7 +19,7 @@ import { clearAllLocalData } from "../lib/identity-storage";
  * Sections:
  *   1. Active sessions   — list & revoke server sessions
  *   2. Email reminders   — global opt-out for all reminder emails
- *   3. Your data         — CSV export & import
+ *   3. Your data         — CSV export & import (transactions, schedule, todos)
  *   4. Data sharing      — third-party consent (server-persisted opt-in/out)
  *   5. Local data        — clear sessions, cookies & browser storage
  */
@@ -22,6 +27,8 @@ import { clearAllLocalData } from "../lib/identity-storage";
 type DataPrivacyModalProps = {
   account: Account;
   expenses: Expense[];
+  events?: LedgerEvent[];
+  todoLists?: TodoList[];
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
   activeWalletId?: string;
@@ -29,6 +36,12 @@ type DataPrivacyModalProps = {
     rows: ExpenseImportRow[],
     categories?: Category[],
   ) => Promise<{ imported: number; failed: number; newCategories: number; newSubcategories: number }>;
+  onImportEvents?: (
+    rows: ReturnType<typeof parseEventsCsv>["rows"],
+  ) => Promise<{ imported: number; failed: number }>;
+  onImportTodos?: (
+    lists: TodoImportList[],
+  ) => Promise<{ importedLists: number; importedTasks: number; failed: number }>;
   onClose: () => void;
   onSignedOut?: () => void;
 };
@@ -36,10 +49,14 @@ type DataPrivacyModalProps = {
 export function DataPrivacyModal({
   account,
   expenses,
+  events = [],
+  todoLists = [],
   wallets = [],
   categoryIndex,
   activeWalletId,
   onImportExpenses,
+  onImportEvents,
+  onImportTodos,
   onClose,
   onSignedOut,
 }: DataPrivacyModalProps) {
@@ -51,22 +68,37 @@ export function DataPrivacyModal({
   const [remindersOn, setRemindersOn] = useState(true);
   const [remindersBusy, setRemindersBusy] = useState(false);
 
-  const [exported, setExported] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const [importFileName, setImportFileName] = useState<string | null>(null);
-  const [importPreview, setImportPreview] = useState<ReturnType<typeof parseExpenseCsv> | null>(null);
-  const [importBusy, setImportBusy] = useState(false);
-  const [importResult, setImportResult] = useState<{
+  const [txnExported, setTxnExported] = useState(false);
+  const [schedExported, setSchedExported] = useState(false);
+  const [todoExported, setTodoExported] = useState(false);
+
+  const [txnPreview, setTxnPreview] = useState<ReturnType<typeof parseExpenseCsv> | null>(null);
+  const [schedPreview, setSchedPreview] = useState<ReturnType<typeof parseEventsCsv> | null>(null);
+  const [todoPreview, setTodoPreview] = useState<ReturnType<typeof parseTodosCsv> | null>(null);
+
+  const [txnBusy, setTxnBusy] = useState(false);
+  const [schedBusy, setSchedBusy] = useState(false);
+  const [todoBusy, setTodoBusy] = useState(false);
+
+  const [txnResult, setTxnResult] = useState<{
     imported: number;
     failed: number;
     newCategories: number;
     newSubcategories: number;
   } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [schedResult, setSchedResult] = useState<{ imported: number; failed: number } | null>(null);
+  const [todoResult, setTodoResult] = useState<{
+    importedLists: number;
+    importedTasks: number;
+    failed: number;
+  } | null>(null);
+
   const [sessions, setSessions] = useState<ApiSession[]>([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
-  const count = expenses.length;
+  const txnCount = expenses.length;
+  const eventCount = events.length;
+  const todoTaskCount = todoLists.reduce((n, l) => n + l.tasks.length, 0);
 
   useEffect(() => {
     api.auth.sessions().then(({ sessions: list }) => setSessions(list)).catch(() => {});
@@ -145,65 +177,165 @@ export function DataPrivacyModal({
     }
   };
 
-  const exportCsv = () => {
-    downloadExpenseCsv(expenses, wallets, categoryIndex);
-    setExported(true);
-    setTimeout(() => setExported(false), 2200);
+  const flash = (setter: (v: boolean) => void) => {
+    setter(true);
+    setTimeout(() => setter(false), 2200);
   };
 
-  const resetImport = () => {
-    setImportFileName(null);
-    setImportPreview(null);
-    setImportResult(null);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  const readCsvFile = async (file: File) => {
-    if (!categoryIndex || !onImportExpenses) return;
+  const isCsvFile = (file: File) => {
     const lower = file.name.toLowerCase();
-    if (!lower.endsWith(".csv") && file.type !== "text/csv") {
-      setImportPreview({
+    return lower.endsWith(".csv") || file.type === "text/csv";
+  };
+
+  const exportTransactions = () => {
+    downloadExpenseCsv(expenses, wallets, categoryIndex);
+    flash(setTxnExported);
+  };
+
+  const exportSchedule = () => {
+    downloadEventsCsv(events);
+    flash(setSchedExported);
+  };
+
+  const exportTodos = () => {
+    downloadTodosCsv(todoLists);
+    flash(setTodoExported);
+  };
+
+  const readTxnFile = async (file: File) => {
+    if (!categoryIndex || !onImportExpenses) return;
+    if (!isCsvFile(file)) {
+      setTxnPreview({
         rows: [],
         errors: [{ row: 0, message: "Please choose a .csv file." }],
         notices: [],
         categories: categoryIndex.categories,
         stats: { newCategories: 0, newSubcategories: 0, walletRemapped: 0 },
       });
-      setImportFileName(file.name);
-      setImportResult(null);
+      setTxnResult(null);
       return;
     }
-    const text = await file.text();
-    const existingIds = expenses.map((e) => e.id);
-    const parsed = parseExpenseCsv(text, wallets, categoryIndex.categories, activeWalletId, existingIds);
-    setImportFileName(file.name);
-    setImportPreview(parsed);
-    setImportResult(null);
+    const parsed = parseExpenseCsv(
+      await file.text(),
+      wallets,
+      categoryIndex.categories,
+      activeWalletId,
+      expenses.map((e) => e.id),
+    );
+    setTxnPreview(parsed);
+    setTxnResult(null);
   };
 
-  const handleFiles = (files: FileList | null) => {
-    if (!files?.length) return;
-    void readCsvFile(files[0]);
+  const readSchedFile = async (file: File) => {
+    if (!onImportEvents) return;
+    if (!isCsvFile(file)) {
+      setSchedPreview({ rows: [], errors: [{ row: 0, message: "Please choose a .csv file." }], notices: [], stats: { skipped: 0 } });
+      setSchedResult(null);
+      return;
+    }
+    setSchedPreview(parseEventsCsv(await file.text(), events.map((e) => e.id)));
+    setSchedResult(null);
   };
 
-  const runImport = async () => {
-    if (!importPreview?.rows.length || !onImportExpenses || importBusy) return;
-    setImportBusy(true);
+  const readTodoFile = async (file: File) => {
+    if (!onImportTodos) return;
+    if (!isCsvFile(file)) {
+      setTodoPreview({ lists: [], errors: [{ row: 0, message: "Please choose a .csv file." }], notices: [], stats: { newLists: 0, newTasks: 0 } });
+      setTodoResult(null);
+      return;
+    }
+    setTodoPreview(parseTodosCsv(await file.text(), todoLists));
+    setTodoResult(null);
+  };
+
+  const runTxnImport = async () => {
+    if (!txnPreview?.rows.length || !onImportExpenses || txnBusy) return;
+    setTxnBusy(true);
     try {
-      const { stats, categories } = importPreview;
+      const { stats, categories } = txnPreview;
       const taxonomyChanged = stats.newCategories > 0 || stats.newSubcategories > 0;
-      const result = await onImportExpenses(
-        importPreview.rows,
-        taxonomyChanged ? categories : undefined,
-      );
-      setImportResult(result);
-      setImportPreview(null);
-      setImportFileName(null);
-      if (fileRef.current) fileRef.current.value = "";
+      setTxnResult(await onImportExpenses(txnPreview.rows, taxonomyChanged ? categories : undefined));
+      setTxnPreview(null);
     } finally {
-      setImportBusy(false);
+      setTxnBusy(false);
     }
   };
+
+  const runSchedImport = async () => {
+    if (!schedPreview?.rows.length || !onImportEvents || schedBusy) return;
+    setSchedBusy(true);
+    try {
+      setSchedResult(await onImportEvents(schedPreview.rows));
+      setSchedPreview(null);
+    } finally {
+      setSchedBusy(false);
+    }
+  };
+
+  const runTodoImport = async () => {
+    if (!todoPreview?.lists.length || !onImportTodos || todoBusy) return;
+    setTodoBusy(true);
+    try {
+      setTodoResult(await onImportTodos(todoPreview.lists));
+      setTodoPreview(null);
+    } finally {
+      setTodoBusy(false);
+    }
+  };
+
+  const txnExtraStats = txnPreview
+    ? [
+        txnPreview.stats.newCategories > 0 ? `${txnPreview.stats.newCategories} new categories` : "",
+        txnPreview.stats.newSubcategories > 0 ? `${txnPreview.stats.newSubcategories} new subcategories` : "",
+        txnPreview.stats.walletRemapped > 0 ? `${txnPreview.stats.walletRemapped} wallet remapped` : "",
+      ].filter(Boolean).join(" · ")
+    : "";
+
+  const txnPanelPreview: CsvImportPreview | null = txnPreview
+    ? {
+        countLabel: txnPreview.rows.length
+          ? `${txnPreview.rows.length} transaction${txnPreview.rows.length === 1 ? "" : "s"} ready to import`
+          : "No valid transactions found",
+        extraStats: txnExtraStats || undefined,
+        errors: txnPreview.errors,
+        notices: txnPreview.notices,
+        canImport: txnPreview.rows.length > 0,
+        importButtonLabel: `Import ${txnPreview.rows.length || ""} transaction${txnPreview.rows.length === 1 ? "" : "s"}`,
+      }
+    : null;
+
+  const schedPanelPreview: CsvImportPreview | null = schedPreview
+    ? {
+        countLabel: schedPreview.rows.length
+          ? `${schedPreview.rows.length} event${schedPreview.rows.length === 1 ? "" : "s"} ready to import`
+          : "No valid events found",
+        errors: schedPreview.errors,
+        notices: schedPreview.notices,
+        canImport: schedPreview.rows.length > 0,
+        importButtonLabel: `Import ${schedPreview.rows.length || ""} event${schedPreview.rows.length === 1 ? "" : "s"}`,
+      }
+    : null;
+
+  const todoTaskReady = todoPreview?.lists.reduce((n, l) => n + l.tasks.length, 0) ?? 0;
+  const todoExtraStats = todoPreview
+    ? [
+        todoPreview.stats.newLists > 0 ? `${todoPreview.stats.newLists} new list${todoPreview.stats.newLists === 1 ? "" : "s"}` : "",
+        todoPreview.stats.newTasks > 0 ? `${todoPreview.stats.newTasks} new task${todoPreview.stats.newTasks === 1 ? "" : "s"}` : "",
+      ].filter(Boolean).join(" · ")
+    : "";
+
+  const todoPanelPreview: CsvImportPreview | null = todoPreview
+    ? {
+        countLabel: todoTaskReady
+          ? `${todoTaskReady} task${todoTaskReady === 1 ? "" : "s"} across ${todoPreview.lists.length} list${todoPreview.lists.length === 1 ? "" : "s"}`
+          : "No valid tasks found",
+        extraStats: todoExtraStats || undefined,
+        errors: todoPreview.errors,
+        notices: todoPreview.notices,
+        canImport: todoPreview.lists.length > 0 && todoTaskReady > 0,
+        importButtonLabel: `Import ${todoTaskReady || ""} task${todoTaskReady === 1 ? "" : "s"}`,
+      }
+    : null;
 
   /* ── Render ───────────────────────────────────────────────────── */
 
@@ -268,132 +400,100 @@ export function DataPrivacyModal({
           {/* 3. Export & import */}
           <div className="dm-sec">
             <span className="fld-label">Your data</span>
-            <p className="dm-lead">Download every transaction in your ledger as a CSV spreadsheet — open it in Excel, Numbers or Sheets. This is your own copy and is never shared.</p>
-            <button className="primary-btn full" type="button" onClick={exportCsv}>
-              <Icon name={exported ? "check" : "download"} size={17} />
-              {exported ? "Downloaded" : "Export to CSV"}
-            </button>
-            <p className="dm-note">{count} transaction{count === 1 ? "" : "s"} across all months · saved to your device.</p>
+            <p className="dm-lead">Download or restore your ledger as CSV files — transactions, schedule events, and to-do lists each have their own export and import.</p>
 
+            <p className="dm-subhead">Transactions</p>
             {onImportExpenses && categoryIndex ? (
+              <CsvImportPanel
+                importLead="Import transactions from a CSV you exported from Ledger."
+                exported={txnExported}
+                exportLabel="Export transactions"
+                onExport={exportTransactions}
+                countNote={`${txnCount} transaction${txnCount === 1 ? "" : "s"} across all wallets.`}
+                onReadFile={readTxnFile}
+                preview={txnPanelPreview}
+                importBusy={txnBusy}
+                onImport={() => void runTxnImport()}
+                onClear={() => { setTxnPreview(null); setTxnResult(null); }}
+                resultSummary={
+                  txnResult
+                    ? `Imported ${txnResult.imported} transaction${txnResult.imported === 1 ? "" : "s"}${txnResult.newCategories > 0 ? ` · ${txnResult.newCategories} categories created` : ""}${txnResult.newSubcategories > 0 ? ` · ${txnResult.newSubcategories} subcategories created` : ""}${txnResult.failed ? ` · ${txnResult.failed} failed` : ""}.${txnResult.imported > 0 ? " Refresh your views to see them." : ""}`
+                    : null
+                }
+                resultPartial={!!txnResult?.failed}
+                footnote="Re-importing skips duplicate transaction IDs. Missing categories are created automatically. Unmatched wallets import into your active wallet."
+              />
+            ) : (
               <>
-                <p className="dm-lead dm-lead--gap">Import a CSV you exported from Ledger to add those transactions back into your account. Drag and drop a file here, or click to browse.</p>
-                <div
-                  className={`csv-dropzone${dragging ? " csv-dropzone--drag" : ""}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Import CSV file"
-                  onClick={() => fileRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      fileRef.current?.click();
-                    }
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragging(true);
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragging(false);
-                    handleFiles(e.dataTransfer.files);
-                  }}
-                >
-                  <Icon name="file" size={22} />
-                  <p className="csv-dropzone-text">
-                    {importFileName ? (
-                      <>Selected: <strong>{importFileName}</strong></>
-                    ) : (
-                      <>Drop your CSV here or <span className="csv-dropzone-link">choose a file</span></>
-                    )}
-                  </p>
-                </div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  hidden
-                  onChange={(e) => handleFiles(e.target.files)}
-                />
-
-                {importPreview ? (
-                  <div className="csv-import-preview">
-                    <p className="csv-import-count">
-                      {importPreview.rows.length
-                        ? `${importPreview.rows.length} transaction${importPreview.rows.length === 1 ? "" : "s"} ready to import`
-                        : "No valid transactions found"}
-                      {importPreview.stats.newCategories > 0
-                        ? ` · ${importPreview.stats.newCategories} new categor${importPreview.stats.newCategories === 1 ? "y" : "ies"}`
-                        : ""}
-                      {importPreview.stats.newSubcategories > 0
-                        ? ` · ${importPreview.stats.newSubcategories} new subcategor${importPreview.stats.newSubcategories === 1 ? "y" : "ies"}`
-                        : ""}
-                      {importPreview.stats.walletRemapped > 0
-                        ? ` · ${importPreview.stats.walletRemapped} wallet remapped`
-                        : ""}
-                      {importPreview.errors.length
-                        ? ` · ${importPreview.errors.length} row${importPreview.errors.length === 1 ? "" : "s"} skipped`
-                        : ""}
-                    </p>
-                    {importPreview.notices.length ? (
-                      <ul className="csv-import-notices">
-                        {importPreview.notices.slice(0, 5).map((notice) => (
-                          <li key={`${notice.row}-${notice.message}`}>
-                            {notice.row > 0 ? `Row ${notice.row}: ` : ""}{notice.message}
-                          </li>
-                        ))}
-                        {importPreview.notices.length > 5 ? (
-                          <li>…and {importPreview.notices.length - 5} more</li>
-                        ) : null}
-                      </ul>
-                    ) : null}
-                    {importPreview.errors.length ? (
-                      <ul className="csv-import-errors">
-                        {importPreview.errors.slice(0, 5).map((err) => (
-                          <li key={`${err.row}-${err.message}`}>
-                            {err.row > 0 ? `Row ${err.row}: ` : ""}{err.message}
-                          </li>
-                        ))}
-                        {importPreview.errors.length > 5 ? (
-                          <li>…and {importPreview.errors.length - 5} more</li>
-                        ) : null}
-                      </ul>
-                    ) : null}
-                    <div className="csv-import-actions">
-                      <button
-                        className="primary-btn"
-                        type="button"
-                        disabled={!importPreview.rows.length || importBusy}
-                        onClick={() => void runImport()}
-                      >
-                        {importBusy ? "Importing…" : `Import ${importPreview.rows.length || ""} transaction${importPreview.rows.length === 1 ? "" : "s"}`}
-                      </button>
-                      <button className="ghost-btn" type="button" disabled={importBusy} onClick={resetImport}>
-                        Clear
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {importResult ? (
-                  <p className={`csv-import-summary${importResult.failed ? " csv-import-summary--partial" : ""}`}>
-                    Imported {importResult.imported} transaction{importResult.imported === 1 ? "" : "s"}
-                    {importResult.newCategories > 0
-                      ? ` · ${importResult.newCategories} categor${importResult.newCategories === 1 ? "y" : "ies"} created`
-                      : ""}
-                    {importResult.newSubcategories > 0
-                      ? ` · ${importResult.newSubcategories} subcategor${importResult.newSubcategories === 1 ? "y" : "ies"} created`
-                      : ""}
-                    {importResult.failed ? ` · ${importResult.failed} failed` : ""}.
-                    {importResult.imported > 0 ? " Refresh your views to see them." : ""}
-                  </p>
-                ) : null}
-
-                <p className="dm-note">Re-importing the same export skips rows whose ID is already in your ledger. Missing categories and subcategories are created automatically. If a wallet name in the CSV does not match yours, rows import into your active wallet (matched by wallet ID when available).</p>
+                <button className="primary-btn full" type="button" onClick={exportTransactions}>
+                  <Icon name={txnExported ? "check" : "download"} size={17} />
+                  {txnExported ? "Downloaded" : "Export transactions"}
+                </button>
+                <p className="dm-note">{txnCount} transaction{txnCount === 1 ? "" : "s"} across all wallets.</p>
               </>
-            ) : null}
+            )}
+
+            <p className="dm-subhead">Schedule</p>
+            {onImportEvents ? (
+              <CsvImportPanel
+                importLead="Import schedule events from a schedule CSV export."
+                exported={schedExported}
+                exportLabel="Export schedule"
+                onExport={exportSchedule}
+                countNote={`${eventCount} event${eventCount === 1 ? "" : "s"} in your calendar.`}
+                onReadFile={readSchedFile}
+                preview={schedPanelPreview}
+                importBusy={schedBusy}
+                onImport={() => void runSchedImport()}
+                onClear={() => { setSchedPreview(null); setSchedResult(null); }}
+                resultSummary={
+                  schedResult
+                    ? `Imported ${schedResult.imported} event${schedResult.imported === 1 ? "" : "s"}${schedResult.failed ? ` · ${schedResult.failed} failed` : ""}.${schedResult.imported > 0 ? " Refresh Schedule to see them." : ""}`
+                    : null
+                }
+                resultPartial={!!schedResult?.failed}
+                footnote="Re-importing skips duplicate event IDs. Comments are restored from the CommentsJson column when present."
+              />
+            ) : (
+              <>
+                <button className="primary-btn full" type="button" onClick={exportSchedule}>
+                  <Icon name={schedExported ? "check" : "download"} size={17} />
+                  {schedExported ? "Downloaded" : "Export schedule"}
+                </button>
+                <p className="dm-note">{eventCount} event{eventCount === 1 ? "" : "s"} in your calendar.</p>
+              </>
+            )}
+
+            <p className="dm-subhead">TO-DO lists</p>
+            {onImportTodos ? (
+              <CsvImportPanel
+                importLead="Import to-do lists and tasks from a todos CSV export."
+                exported={todoExported}
+                exportLabel="Export to-do lists"
+                onExport={exportTodos}
+                countNote={`${todoLists.length} list${todoLists.length === 1 ? "" : "s"} · ${todoTaskCount} task${todoTaskCount === 1 ? "" : "s"}.`}
+                onReadFile={readTodoFile}
+                preview={todoPanelPreview}
+                importBusy={todoBusy}
+                onImport={() => void runTodoImport()}
+                onClear={() => { setTodoPreview(null); setTodoResult(null); }}
+                resultSummary={
+                  todoResult
+                    ? `Imported ${todoResult.importedTasks} task${todoResult.importedTasks === 1 ? "" : "s"}${todoResult.importedLists > 0 ? ` into ${todoResult.importedLists} new list${todoResult.importedLists === 1 ? "" : "s"}` : ""}${todoResult.failed ? ` · ${todoResult.failed} failed` : ""}.${todoResult.importedTasks > 0 ? " Refresh TO-DO List to see them." : ""}`
+                    : null
+                }
+                resultPartial={!!todoResult?.failed}
+                footnote="Re-importing skips duplicate task IDs. New lists are created when needed; matching list names merge into existing lists."
+              />
+            ) : (
+              <>
+                <button className="primary-btn full" type="button" onClick={exportTodos}>
+                  <Icon name={todoExported ? "check" : "download"} size={17} />
+                  {todoExported ? "Downloaded" : "Export to-do lists"}
+                </button>
+                <p className="dm-note">{todoLists.length} list{todoLists.length === 1 ? "" : "s"} · {todoTaskCount} task{todoTaskCount === 1 ? "" : "s"}.</p>
+              </>
+            )}
           </div>
 
           <div className="dm-div" />
