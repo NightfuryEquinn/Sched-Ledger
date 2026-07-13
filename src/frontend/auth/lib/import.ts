@@ -1,5 +1,6 @@
+import { resolveImportSub } from "@/frontend/auth/lib/category-import";
 import { normalizeRecurring } from "@/lib/recurring";
-import type { CategoryIndex, Expense, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
+import type { Category, Expense, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 
 export type ExpenseImportRow = Omit<Expense, "id">;
 
@@ -11,6 +12,11 @@ export type ImportRowError = {
 export type ParseExpenseCsvResult = {
   rows: ExpenseImportRow[];
   errors: ImportRowError[];
+  categories: Category[];
+  stats: {
+    newCategories: number;
+    newSubcategories: number;
+  };
 };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -87,37 +93,6 @@ function parseRecurringFromCsv(value: string): RecurringInterval | false {
   return normalized === false ? false : normalized;
 }
 
-function resolveSub(
-  catName: string,
-  subName: string,
-  kind: "expense" | "income",
-  categoryIndex: CategoryIndex,
-): string | null {
-  const subLower = subName.trim().toLowerCase();
-  if (!subLower) return null;
-
-  if (kind === "income") {
-    const sub = categoryIndex.incomeCategory.subs.find((s) => s.name.toLowerCase() === subLower);
-    return sub?.id ?? null;
-  }
-
-  const catLower = catName.trim().toLowerCase();
-  if (catLower) {
-    const cat = categoryIndex.expenseCategories.find((c) => c.name.toLowerCase() === catLower);
-    if (cat) {
-      const sub = cat.subs.find((s) => s.name.toLowerCase() === subLower);
-      if (sub) return sub.id;
-    }
-    return null;
-  }
-
-  for (const cat of categoryIndex.expenseCategories) {
-    const sub = cat.subs.find((s) => s.name.toLowerCase() === subLower);
-    if (sub) return sub.id;
-  }
-  return null;
-}
-
 function resolveWallet(
   name: string,
   wallets: FinancialWallet[],
@@ -138,7 +113,7 @@ function resolveWallet(
 export function parseExpenseCsv(
   text: string,
   wallets: FinancialWallet[],
-  categoryIndex: CategoryIndex,
+  categories: Category[],
   defaultWalletId?: string,
   existingIds: Iterable<string> = [],
 ): ParseExpenseCsvResult {
@@ -146,10 +121,18 @@ export function parseExpenseCsv(
   const errors: ImportRowError[] = [];
   const ledgerIds = new Set([...existingIds].map((id) => id.toLowerCase()));
   const seenInFile = new Set<string>();
+  let workingCategories = categories.map((c) => ({ ...c, subs: [...c.subs] }));
+  let newCategories = 0;
+  let newSubcategories = 0;
 
   const parsed = parseCsv(stripBom(text));
   if (!parsed.length) {
-    return { rows, errors: [{ row: 0, message: "The file is empty." }] };
+    return {
+      rows,
+      errors: [{ row: 0, message: "The file is empty." }],
+      categories: workingCategories,
+      stats: { newCategories: 0, newSubcategories: 0 },
+    };
   }
 
   const headerRow = parsed[0].map((h) => h.trim());
@@ -161,13 +144,17 @@ export function parseExpenseCsv(
     return {
       rows,
       errors: [{ row: 0, message: "Missing required columns: Date and Amount." }],
+      categories: workingCategories,
+      stats: { newCategories: 0, newSubcategories: 0 },
     };
   }
 
   const idIdx = colIndex(headerMap, "id");
   const walletIdx = colIndex(headerMap, "wallet");
   const typeIdx = colIndex(headerMap, "type", "kind");
+  const catIdIdx = colIndex(headerMap, "categoryid", "category id");
   const catIdx = colIndex(headerMap, "category");
+  const subIdIdx = colIndex(headerMap, "subcategoryid", "subcategory id");
   const subIdx = colIndex(headerMap, "subcategory", "sub");
   const noteIdx = colIndex(headerMap, "note");
   const recurringIdx = colIndex(headerMap, "recurring");
@@ -218,28 +205,40 @@ export function parseExpenseCsv(
       return;
     }
 
-    const subName = get(subIdx);
-    const sub = resolveSub(get(catIdx), subName, kind, categoryIndex);
-    if (!sub) {
-      const label = subName || get(catIdx) || "(empty)";
-      errors.push({ row: rowNum, message: `Unknown category or subcategory "${label}".` });
+    const subResolved = resolveImportSub(workingCategories, {
+      kind,
+      catName: get(catIdx),
+      catId: get(catIdIdx),
+      subName: get(subIdx),
+      subId: get(subIdIdx),
+    });
+    if ("error" in subResolved) {
+      errors.push({ row: rowNum, message: subResolved.error });
       return;
     }
+    workingCategories = subResolved.categories;
+    if (subResolved.newCategory) newCategories++;
+    if (subResolved.newSubcategory) newSubcategories++;
 
     const noteRaw = get(noteIdx);
-    const subDisplay = categoryIndex.subById[sub]?.name ?? subName;
+    const subDisplay = get(subIdx);
     const note = noteRaw || subDisplay || "Transaction";
 
     rows.push({
       walletId: walletResult.walletId,
       kind,
       date,
-      sub,
+      sub: subResolved.subId,
       amount,
       note,
       recurring: recurringIdx === undefined ? false : parseRecurringFromCsv(get(recurringIdx)),
     });
   });
 
-  return { rows, errors };
+  return {
+    rows,
+    errors,
+    categories: workingCategories,
+    stats: { newCategories, newSubcategories },
+  };
 }
