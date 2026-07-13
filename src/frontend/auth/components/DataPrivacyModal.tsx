@@ -160,7 +160,8 @@ export function DataPrivacyModal({
       return;
     }
     const text = await file.text();
-    const parsed = parseExpenseCsv(text, wallets, categoryIndex, activeWalletId);
+    const existingIds = expenses.map((e) => e.id);
+    const parsed = parseExpenseCsv(text, wallets, categoryIndex, activeWalletId, existingIds);
     setImportFileName(file.name);
     setImportPreview(parsed);
     setImportResult(null);
@@ -344,7 +345,7 @@ export function DataPrivacyModal({
                   </p>
                 ) : null}
 
-                <p className="dm-note">Re-importing the same file creates duplicate entries. Category and wallet names must match your ledger.</p>
+                <p className="dm-note">Re-importing the same export skips rows whose ID is already in your ledger. Category and wallet names must match your ledger.</p>
               </>
             ) : null}
           </div>

@@ -1,5 +1,5 @@
 import { normalizeRecurring } from "@/lib/recurring";
-import type { CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
+import type { CategoryIndex, Expense, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 
 export type ExpenseImportRow = Omit<Expense, "id">;
 
@@ -13,8 +13,8 @@ export type ParseExpenseCsvResult = {
   errors: ImportRowError[];
 };
 
-const MAX_IMPORT_ROWS = 500;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const OBJECT_ID = /^[a-f0-9]{24}$/i;
 
 function stripBom(text: string): string {
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
@@ -140,9 +140,12 @@ export function parseExpenseCsv(
   wallets: FinancialWallet[],
   categoryIndex: CategoryIndex,
   defaultWalletId?: string,
+  existingIds: Iterable<string> = [],
 ): ParseExpenseCsvResult {
   const rows: ExpenseImportRow[] = [];
   const errors: ImportRowError[] = [];
+  const ledgerIds = new Set([...existingIds].map((id) => id.toLowerCase()));
+  const seenInFile = new Set<string>();
 
   const parsed = parseCsv(stripBom(text));
   if (!parsed.length) {
@@ -161,6 +164,7 @@ export function parseExpenseCsv(
     };
   }
 
+  const idIdx = colIndex(headerMap, "id");
   const walletIdx = colIndex(headerMap, "wallet");
   const typeIdx = colIndex(headerMap, "type", "kind");
   const catIdx = colIndex(headerMap, "category");
@@ -169,16 +173,28 @@ export function parseExpenseCsv(
   const recurringIdx = colIndex(headerMap, "recurring");
 
   const dataRows = parsed.slice(1);
-  if (dataRows.length > MAX_IMPORT_ROWS) {
-    return {
-      rows,
-      errors: [{ row: 0, message: `Too many rows — import up to ${MAX_IMPORT_ROWS} at a time.` }],
-    };
-  }
 
   dataRows.forEach((cells, i) => {
     const rowNum = i + 2;
     const get = (idx: number | undefined) => (idx === undefined ? "" : (cells[idx] ?? "").trim());
+
+    const csvId = get(idIdx);
+    if (csvId) {
+      if (!OBJECT_ID.test(csvId)) {
+        errors.push({ row: rowNum, message: `Invalid ID "${csvId}".` });
+        return;
+      }
+      const normalizedId = csvId.toLowerCase();
+      if (ledgerIds.has(normalizedId)) {
+        errors.push({ row: rowNum, message: "Transaction already in your ledger (duplicate ID)." });
+        return;
+      }
+      if (seenInFile.has(normalizedId)) {
+        errors.push({ row: rowNum, message: "Duplicate ID in this file." });
+        return;
+      }
+      seenInFile.add(normalizedId);
+    }
 
     const date = get(dateIdx);
     if (!isValidIsoDate(date)) {
