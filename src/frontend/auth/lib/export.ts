@@ -12,7 +12,21 @@ export function buildExpenseCsv(
   categoryIndex?: { subById: Record<string, { name: string; catId: string }>; catById: Record<string, { name: string }> },
 ) {
   const walletById = Object.fromEntries(wallets.map((w) => [w.id, w]));
-  const header = ["ID", "Date", "Wallet", "Type", "Category", "Subcategory", "Note", "Amount", "Currency", "Recurring"];
+  const header = [
+    "ID",
+    "Date",
+    "WalletId",
+    "Wallet",
+    "Type",
+    "CategoryId",
+    "Category",
+    "SubcategoryId",
+    "Subcategory",
+    "Note",
+    "Amount",
+    "Currency",
+    "Recurring",
+  ];
   const rows = expenses
     .slice()
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
@@ -25,9 +39,12 @@ export function buildExpenseCsv(
       return [
         e.id,
         e.date,
+        w?.id ?? e.walletId,
         w?.name ?? "",
         kind,
+        cat?.id ?? "",
         cat?.name ?? "",
+        sub?.id ?? e.sub,
         sub?.name ?? "",
         e.note,
         e.amount.toFixed(2),

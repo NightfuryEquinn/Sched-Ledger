@@ -1,7 +1,7 @@
 import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
-import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
+import type { Account, Category, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
 import type { ExpenseImportRow } from "./lib/import";
 import { useEffect, useRef, useState } from "react";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
@@ -27,7 +27,10 @@ type AccountMenuProps = {
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
   activeWalletId?: string;
-  onImportExpenses?: (rows: ExpenseImportRow[]) => Promise<{ imported: number; failed: number }>;
+  onImportExpenses?: (
+    rows: ExpenseImportRow[],
+    categories?: Category[],
+  ) => Promise<{ imported: number; failed: number; newCategories: number; newSubcategories: number }>;
   onTakeTour?: () => void;
 };
 

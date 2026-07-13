@@ -11,7 +11,7 @@ import {
 import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour } from "@/frontend/lib/tour";
-import type { Account, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
+import type { Account, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
 import {
   Budgets as BudgetsView,
   Categories as CategoriesView,
@@ -111,7 +111,21 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     setModal(null);
   };
 
-  const importExpenses = async (rows: Omit<Expense, "id">[]) => {
+  const importExpenses = async (rows: Omit<Expense, "id">[], categories?: Category[]) => {
+    let newCategories = 0;
+    let newSubcategories = 0;
+    if (categories) {
+      const before = new Set(ledger.categoryIndex.categories.map((c) => c.id));
+      const beforeSubs = new Set(
+        ledger.categoryIndex.categories.flatMap((c) => c.subs.map((s) => s.id)),
+      );
+      await ledger.saveCategories(categories);
+      newCategories = categories.filter((c) => !before.has(c.id)).length;
+      newSubcategories = categories
+        .flatMap((c) => c.subs)
+        .filter((s) => !beforeSubs.has(s.id)).length;
+    }
+
     let imported = 0;
     let failed = 0;
     for (const row of rows) {
@@ -127,7 +141,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         failed++;
       }
     }
-    return { imported, failed };
+    return { imported, failed, newCategories, newSubcategories };
   };
 
   const deleteExpense = async (id: string) => {

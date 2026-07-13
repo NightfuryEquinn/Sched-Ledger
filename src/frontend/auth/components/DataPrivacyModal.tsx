@@ -1,6 +1,6 @@
 import { Icon } from "@/frontend/components/ui";
 import { api, type ApiSession } from "@/frontend/lib/api";
-import type { Account, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
+import type { Account, Category, CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/types";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getConsent, setConsent } from "../lib/consent";
@@ -25,7 +25,10 @@ type DataPrivacyModalProps = {
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
   activeWalletId?: string;
-  onImportExpenses?: (rows: ExpenseImportRow[]) => Promise<{ imported: number; failed: number }>;
+  onImportExpenses?: (
+    rows: ExpenseImportRow[],
+    categories?: Category[],
+  ) => Promise<{ imported: number; failed: number; newCategories: number; newSubcategories: number }>;
   onClose: () => void;
   onSignedOut?: () => void;
 };
@@ -53,7 +56,12 @@ export function DataPrivacyModal({
   const [importFileName, setImportFileName] = useState<string | null>(null);
   const [importPreview, setImportPreview] = useState<ReturnType<typeof parseExpenseCsv> | null>(null);
   const [importBusy, setImportBusy] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; failed: number } | null>(null);
+  const [importResult, setImportResult] = useState<{
+    imported: number;
+    failed: number;
+    newCategories: number;
+    newSubcategories: number;
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [sessions, setSessions] = useState<ApiSession[]>([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
@@ -154,14 +162,20 @@ export function DataPrivacyModal({
     if (!categoryIndex || !onImportExpenses) return;
     const lower = file.name.toLowerCase();
     if (!lower.endsWith(".csv") && file.type !== "text/csv") {
-      setImportPreview({ rows: [], errors: [{ row: 0, message: "Please choose a .csv file." }] });
+      setImportPreview({
+        rows: [],
+        errors: [{ row: 0, message: "Please choose a .csv file." }],
+        notices: [],
+        categories: categoryIndex.categories,
+        stats: { newCategories: 0, newSubcategories: 0, walletRemapped: 0 },
+      });
       setImportFileName(file.name);
       setImportResult(null);
       return;
     }
     const text = await file.text();
     const existingIds = expenses.map((e) => e.id);
-    const parsed = parseExpenseCsv(text, wallets, categoryIndex, activeWalletId, existingIds);
+    const parsed = parseExpenseCsv(text, wallets, categoryIndex.categories, activeWalletId, existingIds);
     setImportFileName(file.name);
     setImportPreview(parsed);
     setImportResult(null);
@@ -176,7 +190,12 @@ export function DataPrivacyModal({
     if (!importPreview?.rows.length || !onImportExpenses || importBusy) return;
     setImportBusy(true);
     try {
-      const result = await onImportExpenses(importPreview.rows);
+      const { stats, categories } = importPreview;
+      const taxonomyChanged = stats.newCategories > 0 || stats.newSubcategories > 0;
+      const result = await onImportExpenses(
+        importPreview.rows,
+        taxonomyChanged ? categories : undefined,
+      );
       setImportResult(result);
       setImportPreview(null);
       setImportFileName(null);
@@ -305,10 +324,31 @@ export function DataPrivacyModal({
                       {importPreview.rows.length
                         ? `${importPreview.rows.length} transaction${importPreview.rows.length === 1 ? "" : "s"} ready to import`
                         : "No valid transactions found"}
+                      {importPreview.stats.newCategories > 0
+                        ? ` · ${importPreview.stats.newCategories} new categor${importPreview.stats.newCategories === 1 ? "y" : "ies"}`
+                        : ""}
+                      {importPreview.stats.newSubcategories > 0
+                        ? ` · ${importPreview.stats.newSubcategories} new subcategor${importPreview.stats.newSubcategories === 1 ? "y" : "ies"}`
+                        : ""}
+                      {importPreview.stats.walletRemapped > 0
+                        ? ` · ${importPreview.stats.walletRemapped} wallet remapped`
+                        : ""}
                       {importPreview.errors.length
                         ? ` · ${importPreview.errors.length} row${importPreview.errors.length === 1 ? "" : "s"} skipped`
                         : ""}
                     </p>
+                    {importPreview.notices.length ? (
+                      <ul className="csv-import-notices">
+                        {importPreview.notices.slice(0, 5).map((notice) => (
+                          <li key={`${notice.row}-${notice.message}`}>
+                            {notice.row > 0 ? `Row ${notice.row}: ` : ""}{notice.message}
+                          </li>
+                        ))}
+                        {importPreview.notices.length > 5 ? (
+                          <li>…and {importPreview.notices.length - 5} more</li>
+                        ) : null}
+                      </ul>
+                    ) : null}
                     {importPreview.errors.length ? (
                       <ul className="csv-import-errors">
                         {importPreview.errors.slice(0, 5).map((err) => (
@@ -340,12 +380,18 @@ export function DataPrivacyModal({
                 {importResult ? (
                   <p className={`csv-import-summary${importResult.failed ? " csv-import-summary--partial" : ""}`}>
                     Imported {importResult.imported} transaction{importResult.imported === 1 ? "" : "s"}
+                    {importResult.newCategories > 0
+                      ? ` · ${importResult.newCategories} categor${importResult.newCategories === 1 ? "y" : "ies"} created`
+                      : ""}
+                    {importResult.newSubcategories > 0
+                      ? ` · ${importResult.newSubcategories} subcategor${importResult.newSubcategories === 1 ? "y" : "ies"} created`
+                      : ""}
                     {importResult.failed ? ` · ${importResult.failed} failed` : ""}.
                     {importResult.imported > 0 ? " Refresh your views to see them." : ""}
                   </p>
                 ) : null}
 
-                <p className="dm-note">Re-importing the same export skips rows whose ID is already in your ledger. Category and wallet names must match your ledger.</p>
+                <p className="dm-note">Re-importing the same export skips rows whose ID is already in your ledger. Missing categories and subcategories are created automatically. If a wallet name in the CSV does not match yours, rows import into your active wallet (matched by wallet ID when available).</p>
               </>
             ) : null}
           </div>
