@@ -26,14 +26,26 @@ const LEAD_LABELS: Record<LeadId, string> = {
 };
 
 /**
- * Reminder scan window around the daily cron-job.org run (once/day, with slack for late triggers).
- * Look-ahead covers everything due before the next run so reminders arrive
- * BEFORE the event instead of up to a day after it. Look-back is a catch-up for
- * events created after the previous run whose creation-time send failed;
- * reminderLogs dedupe prevents double sends.
+ * External cron poll cadence (cron-job.org should run at this interval).
+ * Each run scans the database for reminders whose target time falls in the due window.
  */
-export const CRON_LOOKAHEAD_MS = 25 * 60 * 60 * 1000;
-export const CRON_LOOKBACK_MS = 25 * 60 * 60 * 1000;
+export const REMINDER_POLL_INTERVAL_MS = 10 * 60 * 1000;
+
+/** Fire up to this many ms before the configured remind-at time. */
+export const REMINDER_EARLY_BUFFER_MS = 5 * 60 * 1000;
+
+/**
+ * True when `now` is inside the send window for a reminder:
+ * remindAt − earlyBuffer ≤ now ≤ remindAt + pollInterval.
+ */
+export function isReminderDueNow(
+  remindAtMs: number,
+  nowMs: number = Date.now(),
+  pollIntervalMs = REMINDER_POLL_INTERVAL_MS,
+  earlyBufferMs = REMINDER_EARLY_BUFFER_MS,
+): boolean {
+  return nowMs >= remindAtMs - earlyBufferMs && nowMs <= remindAtMs + pollIntervalMs;
+}
 
 export function leadOffsetMs(lead: LeadId): number {
   return LEAD_MS[lead] ?? 0;

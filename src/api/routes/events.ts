@@ -69,7 +69,7 @@ eventsRoutes.post("/", zValidator("json", createEventSchema), async (c) => {
   void sendEventConfirmation(doc).catch((err) =>
     console.error("[reminders] confirmation email failed:", err),
   );
-  /* Reminders due before the next daily cron run must be sent now or they'd arrive late. */
+  /* If the remind-at time is in the current poll window, send now instead of waiting for cron. */
   void sendImmediateReminderIfDue(doc).catch((err) =>
     console.error("[reminders] immediate reminder failed:", err),
   );
