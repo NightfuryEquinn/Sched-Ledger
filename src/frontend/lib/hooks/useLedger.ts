@@ -1,4 +1,5 @@
 import { api } from "@/frontend/lib/api";
+import { maybeNotifyBudgetAlerts } from "@/frontend/lib/budget/notify";
 import {
   decodeExpense,
   decodeWallet,
@@ -270,16 +271,32 @@ export function useLedger(walletAddress: string) {
       return decodeExpense(expense as ExpenseWire, cryptoKey);
     },
     onSuccess: (expense, variables) => {
-      queryClient.setQueryData<Expense[]>(keys.expenses(wallet), (prev = []) => {
+      const nextExpenses = (() => {
+        const prev = queryClient.getQueryData<Expense[]>(keys.expenses(wallet)) ?? [];
         if (variables.id) {
           return prev.map((e) => (e.id === expense.id ? expense : e));
         }
         return [expense, ...prev].sort((a, b) =>
           a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
         );
-      });
+      })();
+      queryClient.setQueryData<Expense[]>(keys.expenses(wallet), nextExpenses);
       if (!variables.id) {
         setMonthMutation.mutate(expense.date.slice(0, 7));
+      }
+
+      const walletDoc = activeWallet;
+      if (walletDoc && expense.kind !== "income") {
+        const monthKey = expense.date.slice(0, 7);
+        const scoped = nextExpenses.filter((e) => e.walletId === walletDoc.id);
+        void maybeNotifyBudgetAlerts({
+          expenses: scoped,
+          budgets: walletDoc.budgets,
+          wallet: walletDoc,
+          month: monthKey,
+          currency: walletDoc.currency,
+          categoryIndex,
+        });
       }
     },
   });

@@ -1,0 +1,48 @@
+import { sendBudgetAlerts } from "@/api/lib/budget-alerts";
+import { badRequest, notFound } from "@/api/lib/errors";
+import type { SessionVariables } from "@/api/middleware/session";
+import { sessionAuth } from "@/api/middleware/session";
+import { getCollections, getDb } from "@/db";
+import { createBudgetAlertsSchema } from "@/schemas/budget-alert";
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
+import { ObjectId } from "mongodb";
+
+export const budgetAlertsRoutes = new Hono<{ Variables: SessionVariables }>();
+
+/**
+ * Client-evaluated budget alerts (amounts stay E2EE). The server only delivers
+ * email using the user's notifyEmail and dedupes per category/month/level.
+ */
+budgetAlertsRoutes.post("/", sessionAuth, zValidator("json", createBudgetAlertsSchema), async (c) => {
+  const walletAddress = c.get("walletAddress");
+  const body = c.req.valid("json");
+  const { financialWallets } = getCollections(getDb());
+
+  const wallet = await financialWallets.findOne({
+    _id: new ObjectId(body.walletId),
+    userAddress: walletAddress,
+  });
+  if (!wallet) notFound("Wallet not found");
+
+  /* Reject obviously inconsistent ratios so a buggy client cannot spam emails. */
+  for (const alert of body.alerts) {
+    const ratio = alert.spent / alert.budget;
+    if (alert.level === "warning" && (ratio < 0.5 || ratio >= 1.0001)) {
+      badRequest("Warning alert ratio out of range");
+    }
+    if (alert.level === "exceeded" && ratio < 0.99) {
+      badRequest("Exceeded alert ratio out of range");
+    }
+  }
+
+  const result = await sendBudgetAlerts({
+    userAddress: walletAddress,
+    walletId: body.walletId,
+    walletName: wallet.name,
+    month: body.month,
+    alerts: body.alerts,
+  });
+
+  return c.json({ ok: true, ...result });
+});

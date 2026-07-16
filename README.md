@@ -28,12 +28,14 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Dark mode** — system-aware theme toggle, persisted locally
 - **Sessions & privacy** — HttpOnly session cookies, revoke devices, export CSV, clear local data
 - **Encrypted ledger** — amounts, categories, and notes encrypted client-side; unlock with your wallet key each session
+- **Budget alerts** — browser + email notifications when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates, server only delivers)
 - **Guided tour** — Shepherd.js walkthrough for each main view
 
 ### Security
 
 - **End-to-end encryption** — transaction amounts, categories, notes, and wallet budgets are AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext
 - Signature verification, rate limiting, security headers, in-memory profile cache
+- Automated tests for crypto unlock, session auth, and budget-alert evaluation (`bun test`)
 
 ## Tech stack
 
@@ -97,7 +99,7 @@ Create a `.env` file in the project root:
 | `APP_ORIGIN` | No | Origin embedded in sign-in messages (default: request origin) |
 | `APP_TIMEZONE` | No | Server default IANA timezone for cron/reminders |
 | `CRON_SECRET` | For cron | Bearer token for `GET /api/cron/reminders` |
-| `RESEND_API_KEY` | For email | Resend API key for schedule reminder emails |
+| `RESEND_API_KEY` | For email | Resend API key for schedule reminders and budget alerts |
 | `EMAIL_FROM` | No | Sender address (default: `Sched Ledger <onboarding@resend.dev>`) |
 | `EXCHANGE_RATE_API_KEY` | For FX | [ExchangeRate-API](https://www.exchangerate-api.com) key for Insights currency conversion |
 
@@ -139,11 +141,13 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
 | `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminder emails |
+| `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit emails |
 
 ## Development
 
 ```bash
 bun dev
+bun test   # crypto unlock, session auth, budget-alert evaluation
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
