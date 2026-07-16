@@ -9,7 +9,7 @@ import {
 } from "@/frontend/auth/lib/csv";
 import { EVENT_CATS } from "@/frontend/lib/data";
 import type { EventComment, LedgerEvent } from "@/frontend/lib/types";
-import { EVENT_CATEGORY_IDS, LEAD_IDS, REPEAT_IDS } from "@/schemas/common";
+import { EVENT_CATEGORY_IDS, LEAD_IDS, REPEAT_IDS, isLeadAllowedForEvent, type LeadId } from "@/schemas/common";
 
 export type EventImportRow = Omit<LedgerEvent, "id">;
 
@@ -24,6 +24,17 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const EVENT_CAT_IDS = new Set<string>(EVENT_CATEGORY_IDS);
 const REPEAT_SET = new Set<string>(REPEAT_IDS);
 const LEAD_SET = new Set<string>(LEAD_IDS);
+
+/** Map removed lead ids from older exports to the nearest current option. */
+const LEGACY_LEAD_MAP: Record<string, LeadId> = {
+  "10m": "15m",
+  "1w": "2d",
+};
+
+function resolveLead(raw: string): string {
+  if (LEAD_SET.has(raw)) return raw;
+  return LEGACY_LEAD_MAP[raw] ?? raw;
+}
 
 function parseYesNo(value: string, defaultValue = false): boolean {
   const v = value.trim().toLowerCase();
@@ -183,9 +194,19 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
     }
 
     const notify = parseYesNo(get(notifyIdx), false);
-    const leadRaw = get(leadIdx) || "at";
-    if (!LEAD_SET.has(leadRaw)) {
-      errors.push({ row: rowNum, message: `Invalid lead "${leadRaw}".` });
+    const leadResolved = resolveLead(get(leadIdx) || "1d");
+    if (!LEAD_SET.has(leadResolved)) {
+      errors.push({ row: rowNum, message: `Invalid lead "${get(leadIdx)}".` });
+      return;
+    }
+    const lead = leadResolved as LeadId;
+    if (!isLeadAllowedForEvent(lead, allDay)) {
+      errors.push({
+        row: rowNum,
+        message: allDay
+          ? `All-day events only support "1d" or "2d" lead (got "${lead}").`
+          : `Invalid lead "${lead}" for timed events.`,
+      });
       return;
     }
 
@@ -205,7 +226,7 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
       time,
       repeat: repeatRaw,
       notify,
-      lead: leadRaw,
+      lead,
       email,
       comments,
     });

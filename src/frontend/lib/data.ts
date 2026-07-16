@@ -337,13 +337,23 @@ export const REPEATS = [
 export const REPEAT_BY_ID = Object.fromEntries(REPEATS.map((r) => [r.id, r]));
 
 export const LEAD_TIMES = [
-  { id: "at",  label: "At time of event", short: "on time" },
-  { id: "10m", label: "10 minutes before", short: "10 min before" },
+  { id: "at",  label: "At time of event",  short: "on time" },
+  { id: "15m", label: "15 minutes before", short: "15 min before" },
+  { id: "30m", label: "30 minutes before", short: "30 min before" },
   { id: "1h",  label: "1 hour before",     short: "1 hr before" },
+  { id: "6h",  label: "6 hours before",    short: "6 hr before" },
+  { id: "12h", label: "12 hours before",   short: "12 hr before" },
   { id: "1d",  label: "1 day before",      short: "1 day before" },
-  { id: "1w",  label: "1 week before",     short: "1 wk before" },
-];
+  { id: "2d",  label: "2 days before",     short: "2 days before" },
+] as const;
 export const LEAD_BY_ID = Object.fromEntries(LEAD_TIMES.map((l) => [l.id, l]));
+
+const ALL_DAY_LEAD_SET = new Set(["1d", "2d"]);
+
+/** Reminder dropdown options for the event modal. */
+export function leadTimesForEvent(allDay: boolean) {
+  return allDay ? LEAD_TIMES.filter((l) => ALL_DAY_LEAD_SET.has(l.id)) : LEAD_TIMES;
+}
 
 // Seed schedule — a believable mix of money + life events around "today".
 export const SEED_EVENTS = [
@@ -355,10 +365,10 @@ export const SEED_EVENTS = [
   { title: "TNB electricity bill", catId: "bill", date: "2026-06-12", allDay: true, time: null, repeat: "monthly", notify: true, lead: "1d",
     comments: [{ text: "Usually ~RM200. Check the AC usage this month.", at: "2026-06-02T20:41:00" }] },
   { title: "Dentist appointment", catId: "appointment", date: "2026-06-16", allDay: false, time: "10:00", repeat: "once", notify: true, lead: "1d", comments: [] },
-  { title: "Credit card payment", catId: "bill", date: "2026-06-18", allDay: true, time: null, repeat: "monthly", notify: true, lead: "1w", comments: [] },
-  { title: "Car insurance renewal", catId: "renewal", date: "2026-06-22", allDay: true, time: null, repeat: "yearly", notify: true, lead: "1w",
+  { title: "Credit card payment", catId: "bill", date: "2026-06-18", allDay: true, time: null, repeat: "monthly", notify: true, lead: "2d", comments: [] },
+  { title: "Car insurance renewal", catId: "renewal", date: "2026-06-22", allDay: true, time: null, repeat: "yearly", notify: true, lead: "2d",
     comments: [{ text: "Compare quotes with Etiqa & Allianz before renewing.", at: "2026-06-01T15:22:00" }] },
-  { title: "Salary deposit", catId: "income", date: "2026-06-25", allDay: true, time: null, repeat: "monthly", notify: true, lead: "at", comments: [] },
+  { title: "Salary deposit", catId: "income", date: "2026-06-25", allDay: true, time: null, repeat: "monthly", notify: true, lead: "1d", comments: [] },
 ];
 
 let _eidc = 1;

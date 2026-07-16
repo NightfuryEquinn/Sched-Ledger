@@ -64,8 +64,20 @@ export const EVENT_CATEGORY_IDS = [
 export const REPEAT_IDS = ["once", "daily", "weekly", "monthly", "yearly"] as const;
 export type RepeatId = (typeof REPEAT_IDS)[number];
 
-export const LEAD_IDS = ["at", "10m", "1h", "1d", "1w"] as const;
+export const LEAD_IDS = ["at", "15m", "30m", "1h", "6h", "12h", "1d", "2d"] as const;
 export type LeadId = (typeof LEAD_IDS)[number];
+
+/** Reminder leads allowed for all-day events (days only). */
+export const ALL_DAY_LEAD_IDS = ["1d", "2d"] as const satisfies readonly LeadId[];
+
+/** Reminder leads allowed for timed events. */
+export const TIMED_LEAD_IDS = LEAD_IDS;
+
+export function isLeadAllowedForEvent(lead: LeadId, allDay: boolean): boolean {
+  return allDay
+    ? (ALL_DAY_LEAD_IDS as readonly string[]).includes(lead)
+    : (TIMED_LEAD_IDS as readonly string[]).includes(lead);
+}
 
 export const eventCategoryIdSchema = z.enum(EVENT_CATEGORY_IDS);
 export const repeatIdSchema = z.enum(REPEAT_IDS);

@@ -11,18 +11,24 @@ export type ScheduleEvent = {
 
 const LEAD_MS: Record<LeadId, number> = {
   at: 0,
-  "10m": 10 * 60 * 1000,
+  "15m": 15 * 60 * 1000,
+  "30m": 30 * 60 * 1000,
   "1h": 60 * 60 * 1000,
+  "6h": 6 * 60 * 60 * 1000,
+  "12h": 12 * 60 * 60 * 1000,
   "1d": 24 * 60 * 60 * 1000,
-  "1w": 7 * 24 * 60 * 60 * 1000,
+  "2d": 2 * 24 * 60 * 60 * 1000,
 };
 
 const LEAD_LABELS: Record<LeadId, string> = {
   at: "at the time of the event",
-  "10m": "10 minutes before",
+  "15m": "15 minutes before",
+  "30m": "30 minutes before",
   "1h": "1 hour before",
+  "6h": "6 hours before",
+  "12h": "12 hours before",
   "1d": "1 day before",
-  "1w": "1 week before",
+  "2d": "2 days before",
 };
 
 /**
