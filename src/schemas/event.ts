@@ -2,9 +2,11 @@ import { z } from "zod";
 import {
   eventCategoryIdSchema,
   isoDateSchema,
+  isLeadAllowedForEvent,
   leadIdSchema,
   repeatIdSchema,
   walletAddressSchema,
+  type LeadId,
 } from "./common";
 
 export const eventCommentSchema = z.object({
@@ -16,15 +18,31 @@ export const eventCommentSchema = z.object({
 const customLabelSchema = z.string().min(1).max(40);
 const customGlyphSchema = z.string().min(1).max(8);
 
+function refineLeadForAllDay(data: { allDay?: boolean; lead?: LeadId }, ctx: z.RefinementCtx) {
+  if (data.lead === undefined) return;
+  const allDay = data.allDay ?? true;
+  if (!isLeadAllowedForEvent(data.lead, allDay)) {
+    ctx.addIssue({
+      code: "custom",
+      message: allDay
+        ? "All-day events only support day-based reminders"
+        : "Invalid reminder lead for timed events",
+      path: ["lead"],
+    });
+  }
+}
+
 function withCustomFields<T extends z.ZodRawShape>(shape: T) {
   return z.object(shape).superRefine((data, ctx) => {
-    if (data.catId !== "custom") return;
-    if (!data.customLabel?.trim()) {
-      ctx.addIssue({ code: "custom", message: "Custom type name is required", path: ["customLabel"] });
+    if (data.catId === "custom") {
+      if (!data.customLabel?.trim()) {
+        ctx.addIssue({ code: "custom", message: "Custom type name is required", path: ["customLabel"] });
+      }
+      if (!data.customGlyph?.trim()) {
+        ctx.addIssue({ code: "custom", message: "Custom emoji is required", path: ["customGlyph"] });
+      }
     }
-    if (!data.customGlyph?.trim()) {
-      ctx.addIssue({ code: "custom", message: "Custom emoji is required", path: ["customGlyph"] });
-    }
+    refineLeadForAllDay(data, ctx);
   });
 }
 
@@ -43,7 +61,7 @@ export const eventSchema = z.object({
     .default(null),
   repeat: repeatIdSchema.default("once"),
   notify: z.boolean().default(false),
-  lead: leadIdSchema.default("at"),
+  lead: leadIdSchema.default("1d"),
   email: z.string().email().optional().or(z.literal("")),
   comments: z.array(eventCommentSchema).default([]),
   createdAt: z.coerce.date(),
@@ -65,7 +83,7 @@ export const createEventSchema = withCustomFields({
     .default(null),
   repeat: repeatIdSchema.optional().default("once"),
   notify: z.boolean().optional().default(false),
-  lead: leadIdSchema.optional().default("at"),
+  lead: leadIdSchema.optional().default("1d"),
   email: z.string().email().optional().or(z.literal("")),
   comments: z.array(eventCommentSchema).optional().default([]),
 });
@@ -93,13 +111,15 @@ export const updateEventSchema = z
     message: "At least one field is required",
   })
   .superRefine((data, ctx) => {
-    if (data.catId !== "custom") return;
-    if (!data.customLabel?.trim()) {
-      ctx.addIssue({ code: "custom", message: "Custom type name is required", path: ["customLabel"] });
+    if (data.catId === "custom") {
+      if (!data.customLabel?.trim()) {
+        ctx.addIssue({ code: "custom", message: "Custom type name is required", path: ["customLabel"] });
+      }
+      if (!data.customGlyph?.trim()) {
+        ctx.addIssue({ code: "custom", message: "Custom emoji is required", path: ["customGlyph"] });
+      }
     }
-    if (!data.customGlyph?.trim()) {
-      ctx.addIssue({ code: "custom", message: "Custom emoji is required", path: ["customGlyph"] });
-    }
+    refineLeadForAllDay(data, ctx);
   });
 
 export const addEventCommentSchema = z.object({

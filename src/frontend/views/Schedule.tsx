@@ -8,7 +8,6 @@ import {
 import {
   CURRENT_MONTH_KEY,
   EVENT_CATS,
-  LEAD_TIMES,
   REPEATS,
   TODAY_ISO,
   dayLabel,
@@ -19,6 +18,7 @@ import {
   fmtCommentTime,
   fmtTime,
   leadLabel,
+  leadTimesForEvent,
   monthLabel,
   repeatLabel,
   scheduleForMonth,
@@ -36,6 +36,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
  */
 
 const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function normalizeLead(lead: string, allDay: boolean): string {
+  const allowed = leadTimesForEvent(allDay);
+  return allowed.some((l) => l.id === lead) ? lead : allDay ? "1d" : "at";
+}
 
 function shiftIso(iso: string, delta: number): string {
   const d = new Date(iso + "T12:00:00");
@@ -308,10 +313,14 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
   // Email reminders are opt-in: new events start with notifications off,
   // matching the API schema default.
   const [notify, setNotify] = useState(initial ? !!initial.notify : false);
-  const [lead, setLead] = useState(initial ? initial.lead : "1d");
+  const [lead, setLead] = useState(() =>
+    normalizeLead(initial ? initial.lead : "1d", initial ? !!initial.allDay : true),
+  );
   const [email, setEmail] = useState(initial && initial.email ? initial.email : lastEmail);
   const [comments, setComments] = useState(initial && initial.comments ? initial.comments : []);
   const [draft, setDraft] = useState("");
+
+  const leadOptions = useMemo(() => leadTimesForEvent(allDay), [allDay]);
 
   const titleRef = useRef(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
@@ -319,6 +328,13 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
     const h = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
+
+  const handleAllDayChange = (checked: boolean) => {
+    setAllDay(checked);
+    if (!leadTimesForEvent(checked).some((l) => l.id === lead)) {
+      setLead(checked ? "1d" : "at");
+    }
+  };
 
   const chooseCat = (id: string) => {
     setCatId(id);
@@ -426,7 +442,7 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
           </div>
 
           <label className="toggle-line tight">
-            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+            <input type="checkbox" checked={allDay} onChange={(e) => handleAllDayChange(e.target.checked)} />
             <span className="toggle-ui" /> <span>All-day event</span>
           </label>
 
@@ -450,7 +466,7 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
                   <label className="fld-label">Send</label>
                   <div className="select-wrap">
                     <select className="text-in" value={lead} onChange={(e) => setLead(e.target.value)}>
-                      {LEAD_TIMES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                      {leadOptions.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                     </select>
                     <span className="select-caret"><Icon name="chevD" size={16} /></span>
                   </div>

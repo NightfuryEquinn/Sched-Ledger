@@ -8,7 +8,7 @@ import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
-import { objectIdSchema } from "@/schemas/common";
+import { objectIdSchema, isLeadAllowedForEvent, type LeadId } from "@/schemas/common";
 import {
   addEventCommentSchema,
   createEventSchema,
@@ -17,6 +17,7 @@ import {
 } from "@/schemas/event";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { ObjectId } from "mongodb";
 
 export const eventsRoutes = new Hono<{ Variables: SessionVariables }>();
@@ -84,6 +85,22 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
 
   const body = c.req.valid("json");
   const { events } = getCollections(getDb());
+
+  const existing = await events.findOne({
+    _id: new ObjectId(id.data),
+    userAddress: walletAddress,
+  });
+  if (!existing) notFound("Event not found");
+
+  const mergedAllDay = body.allDay ?? existing.allDay;
+  const mergedLead = (body.lead ?? existing.lead) as LeadId;
+  if (!isLeadAllowedForEvent(mergedLead, mergedAllDay)) {
+    throw new HTTPException(400, {
+      message: mergedAllDay
+        ? "All-day events only support 1 day or 2 days before reminders"
+        : "Invalid reminder lead for timed events",
+    });
+  }
 
   const $set: Record<string, unknown> = { ...body, updatedAt: new Date() };
   const $unset: Record<string, ""> = {};
