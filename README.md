@@ -45,7 +45,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 | Frontend | React 19, TanStack Query, ethers v6 |
 | Styling | Tailwind CSS 4 (`bun-plugin-tailwind`) + custom theme CSS |
 | Tours | [Shepherd.js](https://shepherdjs.dev) |
-| Deploy | [Vercel](https://vercel.com) (Analytics, Speed Insights, Cron) |
+| Deploy | [Vercel](https://vercel.com) (Analytics, Speed Insights); scheduled jobs via [cron-job.org](https://cron-job.org) |
 
 ## Project structure
 
@@ -214,7 +214,7 @@ Set `NODE_ENV=production` so session cookies are marked `Secure` over HTTPS.
 
 ## Deploy on Vercel
 
-The API is bundled into `api/index.js` during `bun run build` so Vercel can resolve TypeScript path aliases at runtime. Vercel Cron calls `/api/cron/reminders` daily (see [`vercel.json`](vercel.json)).
+The API is bundled into `api/index.js` during `bun run build` so Vercel can resolve TypeScript path aliases at runtime. Scheduled tasks (reminder emails and recurring expenses) are triggered by an external cron job — see [Scheduled tasks (cron-job.org)](#scheduled-tasks-cron-joborg) below.
 
 ### Environment variables
 
@@ -226,7 +226,7 @@ Set these in **Vercel → Project → Settings → Environment Variables** for P
 | `MONGODB_DB` | Database name (default: `ledger`) |
 | `APP_ORIGIN` | Public app URL, e.g. `https://your-project.vercel.app` (used in sign-in messages) |
 | `NODE_ENV` | `production` (Vercel usually sets this; enables `Secure` session cookies) |
-| `CRON_SECRET` | Secret for the daily cron handler |
+| `CRON_SECRET` | Secret for the daily cron handler (used by cron-job.org) |
 | `RESEND_API_KEY` | Optional — enable schedule reminder emails |
 | `EMAIL_FROM` | Optional — verified sender in Resend |
 | `EXCHANGE_RATE_API_KEY` | Optional — enable FX conversion in Insights |
@@ -250,6 +250,28 @@ bunx vercel --prod   # production
 ```
 
 Optional: run `bunx vercel dev` locally to test Vercel routing before deploying.
+
+### Scheduled tasks (cron-job.org)
+
+Vercel Hobby allows only one built-in cron job, so reminders and recurring expenses are triggered by [cron-job.org](https://cron-job.org) instead.
+
+1. Create a free account at [cron-job.org](https://console.cron-job.org/signup).
+2. **Create cronjob** with:
+   - **Title:** e.g. `Sched Ledger reminders`
+   - **URL:** `https://<your-app>.vercel.app/api/cron/reminders`
+   - **Schedule:** daily at **16:00 UTC** (cron expression `0 16 * * *`)
+   - **Request method:** `GET`
+   - **Request headers:** add `Authorization` with value `Bearer <CRON_SECRET>` (same secret as in Vercel env vars)
+3. Save and enable the job.
+
+Manual test:
+
+```bash
+curl -sS -H "Authorization: Bearer $CRON_SECRET" \
+  "https://<your-app>.vercel.app/api/cron/reminders"
+```
+
+Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 
 ### Verify after deploy
 

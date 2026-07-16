@@ -26,7 +26,7 @@ const LEAD_LABELS: Record<LeadId, string> = {
 };
 
 /**
- * Reminder scan window around the daily Vercel Cron run (Hobby: once/day, ±59 min).
+ * Reminder scan window around the daily cron-job.org run (once/day, with slack for late triggers).
  * Look-ahead covers everything due before the next run so reminders arrive
  * BEFORE the event instead of up to a day after it. Look-back is a catch-up for
  * events created after the previous run whose creation-time send failed;

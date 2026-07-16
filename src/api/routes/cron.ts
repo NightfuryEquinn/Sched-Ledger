@@ -20,8 +20,7 @@ function assertCronAuth(authHeader: string | undefined): void {
 }
 
 /**
- * Vercel Cron (or manual curl) — due event reminder emails + recurring expense rows.
- * Hobby plan allows one cron; both run in this handler.
+ * External cron (cron-job.org or manual curl) — due event reminder emails + recurring expense rows.
  */
 cronRoutes.get("/reminders", async (c) => {
   assertCronAuth(c.req.header("Authorization"));

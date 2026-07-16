@@ -144,7 +144,7 @@ export function AccountMenu({
               Default timezone
             </label>
             <p className="am-tz-hint">
-              Event times and email reminders follow this zone. Vercel cron runs in UTC (Hobby: ±1 hour window).
+              Event times and email reminders follow this zone. The daily cron runs at 16:00 UTC.
             </p>
             <TimezonePicker
               id="acct-tz"
