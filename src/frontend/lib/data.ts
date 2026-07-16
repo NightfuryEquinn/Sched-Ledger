@@ -382,16 +382,36 @@ export function occursOn(ev, iso) {
   }
 }
 
-// All occurrences within a month, sorted by date then time. → [{iso, ev}]
+/** Sort events on the same day: all-day first, then earliest time, then title. */
+export function compareEventsByEarliest(
+  a: { allDay?: boolean; time?: string | null; title?: string },
+  b: { allDay?: boolean; time?: string | null; title?: string },
+): number {
+  const dayRank = (ev: typeof a) => (ev.allDay ? 0 : 1);
+  const ra = dayRank(a);
+  const rb = dayRank(b);
+  if (ra !== rb) return ra - rb;
+  const ta = a.time || "00:00";
+  const tb = b.time || "00:00";
+  if (ta < tb) return -1;
+  if (ta > tb) return 1;
+  return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
+}
+
+/** Events occurring on `iso`, sorted earliest-first within the day. */
+export function eventsForDay(events, iso) {
+  return events.filter((ev) => occursOn(ev, iso)).sort(compareEventsByEarliest);
+}
+
+// All occurrences within a month, sorted by date then earliest time. → [{iso, ev}]
 export function scheduleForMonth(events, monthKey) {
   const [y, m] = monthKey.split("-").map(Number);
   const days = new Date(y, m, 0).getDate();
   const out = [];
   for (let d = 1; d <= days; d++) {
     const iso = `${monthKey}-${pad(d)}`;
-    events.forEach((ev) => { if (occursOn(ev, iso)) out.push({ iso, ev }); });
+    eventsForDay(events, iso).forEach((ev) => out.push({ iso, ev }));
   }
-  out.sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : ((a.ev.time || "00:00") < (b.ev.time || "00:00") ? -1 : 1)));
   return out;
 }
 

@@ -12,13 +12,14 @@ import {
   REPEATS,
   TODAY_ISO,
   dayLabel,
+  compareEventsByEarliest,
   eventCatMeta,
   eventTimeLabel,
+  eventsForDay,
   fmtCommentTime,
   fmtTime,
   leadLabel,
   monthLabel,
-  occursOn,
   repeatLabel,
   scheduleForMonth,
   weekdayLabel,
@@ -101,15 +102,23 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
   const occ = useMemo(() => scheduleForMonth(events, month), [events, month]);
   const agenda = isCurrent ? occ.filter((o) => o.iso >= TODAY_ISO) : occ;
 
+  const upcomingByDay = useMemo(() => {
+    if (!isCurrent) return [];
+    const byDay = new Map<string, LedgerEvent[]>();
+    for (const { iso, ev } of agenda) {
+      const list = byDay.get(iso);
+      if (list) list.push(ev);
+      else byDay.set(iso, [ev]);
+    }
+    return [...byDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([iso, dayEvents]) => ({ iso, events: [...dayEvents].sort(compareEventsByEarliest) }));
+  }, [agenda, isCurrent]);
+
   const nextRem = agenda.find((o) => o.ev.notify);
   const alertsCount = occ.filter((o) => o.ev.notify).length;
 
-  const eventsOn = (d: number) => {
-    const iso = `${month}-${String(d).padStart(2, "0")}`;
-    return events.filter((ev) => occursOn(ev, iso));
-  };
-
-  const eventsOnIso = (iso: string) => events.filter((ev) => occursOn(ev, iso));
+  const eventsOn = (d: number) => eventsForDay(events, `${month}-${String(d).padStart(2, "0")}`);
 
   const defaultFocusDay =
     isCurrent && TODAY_ISO >= monthStart && TODAY_ISO <= monthEnd ? TODAY_ISO : monthStart;
@@ -121,6 +130,10 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
       onAddEvent(iso);
       return;
     }
+    if (selectedDay === iso) {
+      setSelectedDay(null);
+      return;
+    }
     setSelectedDay(iso);
   };
 
@@ -130,9 +143,10 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
     setSelectedDay(next);
   };
 
-  const focusedEvents = eventsOnIso(viewDay);
-  const canPrevDay = navAnchor > monthStart;
-  const canNextDay = navAnchor < monthEnd;
+  const showFullUpcoming = isCurrent && !selectedDay;
+  const focusedEvents = showFullUpcoming ? [] : eventsForDay(events, viewDay);
+  const canPrevDay = !showFullUpcoming && navAnchor > monthStart;
+  const canNextDay = !showFullUpcoming && navAnchor < monthEnd;
   const upcomingTitle = isCurrent ? "Upcoming" : "Agenda";
 
   return (
@@ -215,9 +229,9 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
             <div className="agenda-head-main">
               <h2>{upcomingTitle}</h2>
               <p className="panel-sub">
-                {dayLabel(viewDay)} · {weekdayLabel(viewDay)}
-                {" · "}
-                {focusedEvents.length} {focusedEvents.length === 1 ? "event" : "events"}
+                {showFullUpcoming
+                  ? `${agenda.length} ${agenda.length === 1 ? "event" : "events"} from ${dayLabel(TODAY_ISO)} · earliest first`
+                  : `${dayLabel(viewDay)} · ${weekdayLabel(viewDay)} · ${focusedEvents.length} ${focusedEvents.length === 1 ? "event" : "events"}`}
               </p>
             </div>
             <button
@@ -232,7 +246,28 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
           </div>
         </div>
         <div className="agenda">
-          {focusedEvents.length ? (
+          {showFullUpcoming ? (
+            upcomingByDay.length ? (
+              upcomingByDay.map(({ iso, events: dayEvents }) => (
+                <div key={iso} className="agenda-group">
+                  <div className="agenda-date">
+                    <span className="agenda-dnum">{new Date(iso + "T00:00:00").getDate()}</span>
+                    <span className="agenda-dwd">{weekdayLabel(iso)}</span>
+                  </div>
+                  <div className="agenda-items">
+                    {dayEvents.map((ev) => (
+                      <AgendaEventRow key={`${iso}-${ev.id}`} ev={ev} onEditEvent={onEditEvent} />
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <EmptyState
+                title="No upcoming events"
+                sub="Nothing scheduled from today onward — add an event or pick another day on the calendar."
+              />
+            )
+          ) : focusedEvents.length ? (
             <div className="agenda-group">
               <div className="agenda-date">
                 <span className="agenda-dnum">{new Date(viewDay + "T00:00:00").getDate()}</span>
@@ -247,11 +282,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
           ) : (
             <EmptyState
               title="No events this day"
-              sub={
-                viewDay === defaultFocusDay && !selectedDay
-                  ? "Nothing on today — add an event or browse other days with the arrows."
-                  : "Add something to this date or use the arrows to browse the month."
-              }
+              sub="Add something to this date, click the day again to show all upcoming, or use the arrows to browse."
             />
           )}
         </div>
