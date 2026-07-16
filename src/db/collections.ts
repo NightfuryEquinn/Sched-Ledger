@@ -19,6 +19,7 @@ export const COLLECTIONS = {
   authNonces: "auth_nonces",
   sessions: "sessions",
   reminderLogs: "reminder_logs",
+  budgetAlertLogs: "budget_alert_logs",
   todoLists: "todo_lists",
 } as const;
 
@@ -97,6 +98,18 @@ export type ReminderLogDocument = {
   sentAt: Date;
 };
 
+/** Dedupes budget-near-limit emails (one per user/wallet/category/month/level). */
+export type BudgetAlertLogDocument = {
+  _id: ObjectId;
+  userAddress: string;
+  walletId: string;
+  categoryId: string;
+  month: string;
+  level: "warning" | "exceeded";
+  email: string;
+  sentAt: Date;
+};
+
 export type TodoListDocument = Omit<TodoList, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
@@ -114,6 +127,7 @@ export type Collections = {
   authNonces: Collection<AuthNonceDocument>;
   sessions: Collection<SessionDocument>;
   reminderLogs: Collection<ReminderLogDocument>;
+  budgetAlertLogs: Collection<BudgetAlertLogDocument>;
   todoLists: Collection<TodoListDocument>;
 };
 
@@ -129,6 +143,7 @@ export function getCollections(db: Db): Collections {
     authNonces: db.collection<AuthNonceDocument>(COLLECTIONS.authNonces),
     sessions: db.collection<SessionDocument>(COLLECTIONS.sessions),
     reminderLogs: db.collection<ReminderLogDocument>(COLLECTIONS.reminderLogs),
+    budgetAlertLogs: db.collection<BudgetAlertLogDocument>(COLLECTIONS.budgetAlertLogs),
     todoLists: db.collection<TodoListDocument>(COLLECTIONS.todoLists),
   };
 }

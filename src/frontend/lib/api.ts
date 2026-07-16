@@ -32,6 +32,7 @@ export type ApiUser = {
   notifyEmail?: string;
   timezone?: string;
   emailRemindersEnabled?: boolean;
+  budgetAlertsEnabled?: boolean;
 };
 
 export type ApiConsent = {
@@ -123,6 +124,7 @@ export const api = {
       notifyEmail?: string;
       timezone?: string;
       emailRemindersEnabled?: boolean;
+      budgetAlertsEnabled?: boolean;
     }) {
       return request<{ user: ApiUser }>("/users/me", { method: "PATCH", body });
     },
@@ -247,6 +249,26 @@ export const api = {
         fetchedAt: number;
         cached: boolean;
       }>(`/fx/latest/${encodeURIComponent(base)}`);
+    },
+  },
+
+  budgetAlerts: {
+    notify(body: {
+      walletId: string;
+      month: string;
+      alerts: Array<{
+        categoryId: string;
+        categoryName: string;
+        spent: number;
+        budget: number;
+        level: "warning" | "exceeded";
+        currency?: string;
+      }>;
+    }) {
+      return request<{ ok: boolean; sent: number; skipped: number; errors: string[] }>(
+        "/budget-alerts",
+        { method: "POST", body },
+      );
     },
   },
 };

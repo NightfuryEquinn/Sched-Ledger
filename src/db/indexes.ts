@@ -48,6 +48,10 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db
       .collection(COLLECTIONS.reminderLogs)
       .createIndex({ eventId: 1, occurrenceIso: 1, lead: 1 }, { unique: true }),
+    db.collection(COLLECTIONS.budgetAlertLogs).createIndex(
+      { userAddress: 1, walletId: 1, categoryId: 1, month: 1, level: 1 },
+      { unique: true },
+    ),
     db.collection(COLLECTIONS.todoLists).createIndex({ userAddress: 1, createdAt: 1 }),
     db
       .collection(COLLECTIONS.todoLists)

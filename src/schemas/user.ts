@@ -10,6 +10,8 @@ export const userSchema = z.object({
   timezone: timezoneSchema.optional(),
   /* Global kill-switch for all reminder emails (default: enabled). */
   emailRemindersEnabled: z.boolean().optional(),
+  /* Budget-near-limit emails (default: enabled when notifyEmail is set). */
+  budgetAlertsEnabled: z.boolean().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -26,6 +28,7 @@ export const updateUserSchema = z
     notifyEmail: z.string().email().optional().or(z.literal("")),
     timezone: timezoneSchema.optional(),
     emailRemindersEnabled: z.boolean().optional(),
+    budgetAlertsEnabled: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",

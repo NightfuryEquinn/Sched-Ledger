@@ -81,6 +81,47 @@ export function reminderEmailHtml(opts: {
   return { html, text, subject };
 }
 
+export function budgetAlertEmailHtml(opts: {
+  categoryName: string;
+  level: "warning" | "exceeded";
+  spentLabel: string;
+  budgetLabel: string;
+  percent: number;
+  monthLabel: string;
+  walletName?: string;
+}): { html: string; text: string; subject: string } {
+  const near = opts.level === "warning";
+  const subject = near
+    ? `Budget alert: ${opts.categoryName} is ${opts.percent}% used`
+    : `Budget exceeded: ${opts.categoryName}`;
+
+  const intro = near
+    ? `Your <strong>${escapeHtml(opts.categoryName)}</strong> budget is nearing its limit for ${escapeHtml(opts.monthLabel)}.`
+    : `Your <strong>${escapeHtml(opts.categoryName)}</strong> budget has been exceeded for ${escapeHtml(opts.monthLabel)}.`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<body style="font-family:system-ui,sans-serif;line-height:1.5;color:#2a2520;max-width:480px;margin:0 auto;padding:24px">
+  <h2 style="margin:0 0 12px;font-size:20px">${near ? "Nearing budget limit" : "Budget exceeded"}</h2>
+  <p style="margin:0 0 16px">${intro}</p>
+  <table style="width:100%;border-collapse:collapse;font-size:15px">
+    <tr><td style="padding:6px 0;color:#6b6560">Category</td><td style="padding:6px 0"><strong>${escapeHtml(opts.categoryName)}</strong></td></tr>
+    <tr><td style="padding:6px 0;color:#6b6560">Spent</td><td style="padding:6px 0">${escapeHtml(opts.spentLabel)}</td></tr>
+    <tr><td style="padding:6px 0;color:#6b6560">Budget</td><td style="padding:6px 0">${escapeHtml(opts.budgetLabel)}</td></tr>
+    <tr><td style="padding:6px 0;color:#6b6560">Used</td><td style="padding:6px 0">${opts.percent}%</td></tr>
+    ${opts.walletName ? `<tr><td style="padding:6px 0;color:#6b6560">Wallet</td><td style="padding:6px 0">${escapeHtml(opts.walletName)}</td></tr>` : ""}
+  </table>
+  <p style="margin:20px 0 0;font-size:13px;color:#8a8480">— Sched Ledger</p>
+</body>
+</html>`;
+
+  const text = near
+    ? `Budget alert: ${opts.categoryName} is ${opts.percent}% used (${opts.spentLabel} of ${opts.budgetLabel}) for ${opts.monthLabel}.`
+    : `Budget exceeded: ${opts.categoryName} — ${opts.spentLabel} of ${opts.budgetLabel} for ${opts.monthLabel}.`;
+
+  return { html, text, subject };
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

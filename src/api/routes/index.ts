@@ -3,6 +3,7 @@ import { globalRateLimit } from "@/api/middleware/rate-limit";
 import { securityHeaders } from "@/api/middleware/security";
 import { Hono } from "hono";
 import { authRoutes } from "./auth";
+import { budgetAlertsRoutes } from "./budget-alerts";
 import { categoriesRoutes } from "./categories";
 import { consentRoutes } from "./consent";
 import { cronRoutes } from "./cron";
@@ -47,6 +48,7 @@ export function createApiRoutes() {
   api.route("/events", eventsRoutes);
   api.route("/todo-lists", todoListsRoutes);
   api.route("/consent", consentRoutes);
+  api.route("/budget-alerts", budgetAlertsRoutes);
   api.route("/fx", fxRoutes);
   api.route("/cron", cronRoutes);
 

@@ -1,6 +1,11 @@
 import { CsvImportPanel, type CsvImportPreview } from "@/frontend/auth/components/CsvImportPanel";
 import { Icon } from "@/frontend/components/ui";
 import { api, type ApiSession } from "@/frontend/lib/api";
+import {
+  getBudgetAlertPushEnabled,
+  requestBudgetAlertPermission,
+  setBudgetAlertPushEnabled,
+} from "@/frontend/lib/budget/notify";
 import type { Account, Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -19,9 +24,10 @@ import { clearAllLocalData } from "../lib/identity-storage";
  * Sections:
  *   1. Active sessions   — list & revoke server sessions
  *   2. Email reminders   — global opt-out for all reminder emails
- *   3. Your data         — CSV export & import (transactions, schedule, todos)
- *   4. Data sharing      — third-party consent (server-persisted opt-in/out)
- *   5. Local data        — clear sessions, cookies & browser storage
+ *   3. Budget alerts     — email + browser notifications near category limits
+ *   4. Your data         — CSV export & import (transactions, schedule, todos)
+ *   5. Data sharing      — third-party consent (server-persisted opt-in/out)
+ *   6. Local data        — clear sessions, cookies & browser storage
  */
 
 type DataPrivacyModalProps = {
@@ -68,6 +74,17 @@ export function DataPrivacyModal({
   const [remindersOn, setRemindersOn] = useState(true);
   const [remindersBusy, setRemindersBusy] = useState(false);
 
+  /* Budget alerts: email (server) + browser push (local). */
+  const [budgetAlertsOn, setBudgetAlertsOn] = useState(true);
+  const [budgetAlertsBusy, setBudgetAlertsBusy] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [notifyEmailDraft, setNotifyEmailDraft] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [pushOn, setPushOn] = useState(() => getBudgetAlertPushEnabled());
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | "unsupported">(() =>
+    typeof Notification === "undefined" ? "unsupported" : Notification.permission,
+  );
+
   const [txnExported, setTxnExported] = useState(false);
   const [schedExported, setSchedExported] = useState(false);
   const [todoExported, setTodoExported] = useState(false);
@@ -111,7 +128,13 @@ export function DataPrivacyModal({
       .catch(() => {});
     api.users
       .me()
-      .then(({ user }) => setRemindersOn(user.emailRemindersEnabled !== false))
+      .then(({ user }) => {
+        setRemindersOn(user.emailRemindersEnabled !== false);
+        setBudgetAlertsOn(user.budgetAlertsEnabled !== false);
+        const email = user.notifyEmail?.trim() || "";
+        setNotifyEmail(email);
+        setNotifyEmailDraft(email);
+      })
       .catch(() => {});
   }, [account.address]);
 
@@ -143,6 +166,57 @@ export function DataPrivacyModal({
     } finally {
       setRemindersBusy(false);
     }
+  };
+
+  const toggleBudgetAlerts = async () => {
+    const next = !budgetAlertsOn;
+    setBudgetAlertsOn(next);
+    setBudgetAlertsBusy(true);
+    try {
+      await api.users.updateMe({ budgetAlertsEnabled: next });
+    } catch {
+      setBudgetAlertsOn(!next);
+    } finally {
+      setBudgetAlertsBusy(false);
+    }
+  };
+
+  const saveNotifyEmail = async () => {
+    const next = notifyEmailDraft.trim();
+    if (next === notifyEmail) return;
+    setEmailBusy(true);
+    try {
+      const { user } = await api.users.updateMe({ notifyEmail: next });
+      const saved = user.notifyEmail?.trim() || "";
+      setNotifyEmail(saved);
+      setNotifyEmailDraft(saved);
+      try {
+        if (saved) localStorage.setItem("ledger:notifyEmail", saved);
+      } catch {
+        /* ignore */
+      }
+    } catch {
+      setNotifyEmailDraft(notifyEmail);
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  const togglePush = async () => {
+    if (!pushOn) {
+      const perm = await requestBudgetAlertPermission();
+      setPushPermission(perm);
+      if (perm !== "granted" && perm !== "unsupported") {
+        setPushOn(false);
+        setBudgetAlertPushEnabled(false);
+        return;
+      }
+      setPushOn(true);
+      setBudgetAlertPushEnabled(true);
+      return;
+    }
+    setPushOn(false);
+    setBudgetAlertPushEnabled(false);
   };
 
   const revokeSession = async (id: string) => {
@@ -391,6 +465,83 @@ export function DataPrivacyModal({
               <div className={`consent-status ${remindersOn ? "cs-on" : "cs-off"}`}>
                 <span className="cs-dot" />
                 {remindersOn ? "Enabled — events you opt into will email you" : "Disabled — no reminder emails will be sent"}
+              </div>
+            </div>
+          </div>
+
+          <div className="dm-div" />
+
+          {/* 3. Budget alerts */}
+          <div className="dm-sec">
+            <span className="fld-label">Budget alerts</span>
+            <p className="dm-lead">When a category reaches 80% of its monthly budget (or goes over), Sched Ledger can notify you. Spend amounts stay encrypted — only the alert summary is sent.</p>
+            <div className="consent-card">
+              <div className="consent-top">
+                <div>
+                  <div className="consent-title">Email when nearing a limit</div>
+                  <p className="consent-desc">Uses the notification email below. One email per category per month at the warning and exceeded levels.</p>
+                </div>
+                <label className="switch">
+                  <input type="checkbox" checked={budgetAlertsOn} disabled={budgetAlertsBusy} onChange={toggleBudgetAlerts} />
+                  <span className="toggle-ui" />
+                </label>
+              </div>
+              <div className={`consent-status ${budgetAlertsOn ? "cs-on" : "cs-off"}`}>
+                <span className="cs-dot" />
+                {budgetAlertsOn
+                  ? notifyEmail
+                    ? `Enabled — alerts go to ${notifyEmail}`
+                    : "Enabled — add an email below to receive alerts"
+                  : "Disabled — no budget alert emails"}
+              </div>
+            </div>
+            <label className="fld u-gap-top">
+              <span className="fld-label">Notification email</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  className="text-in"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={notifyEmailDraft}
+                  onChange={(e) => setNotifyEmailDraft(e.target.value)}
+                  disabled={emailBusy}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  className="ghost-btn"
+                  type="button"
+                  disabled={emailBusy || notifyEmailDraft.trim() === notifyEmail}
+                  onClick={saveNotifyEmail}
+                >
+                  Save
+                </button>
+              </div>
+            </label>
+            <div className="consent-card u-gap-top">
+              <div className="consent-top">
+                <div>
+                  <div className="consent-title">Browser notifications</div>
+                  <p className="consent-desc">Show a desktop/mobile notification when you log a spend that crosses a budget threshold (while this app is open).</p>
+                </div>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={pushOn && pushPermission !== "denied"}
+                    disabled={pushPermission === "unsupported" || pushPermission === "denied"}
+                    onChange={togglePush}
+                  />
+                  <span className="toggle-ui" />
+                </label>
+              </div>
+              <div className={`consent-status ${pushOn && pushPermission === "granted" ? "cs-on" : "cs-off"}`}>
+                <span className="cs-dot" />
+                {pushPermission === "unsupported"
+                  ? "Not supported in this browser"
+                  : pushPermission === "denied"
+                    ? "Blocked by the browser — enable notifications in site settings"
+                    : pushOn && pushPermission === "granted"
+                      ? "Enabled — you'll get a notification when a limit is near"
+                      : "Off — enable to get on-device alerts"}
               </div>
             </div>
           </div>
