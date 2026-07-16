@@ -62,7 +62,8 @@ export type ViewId =
   | "schedule"
   | "insights"
   | "recurring"
-  | "todos";
+  | "todos"
+  | "transparency";
 
 export type MonthEntry = {
   key: string;

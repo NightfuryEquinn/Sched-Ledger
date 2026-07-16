@@ -103,6 +103,7 @@ export const NAV_ITEMS = [
   ["categories", "Categories", "tags"],
   ["recurring", "Recurring", "recurring"],
   ["insights", "Insights", "insights"],
+  ["transparency", "Transparency", "database"],
 ] as const;
 
 // ── Sidebar (desktop navigation) ────────────────────────────────────

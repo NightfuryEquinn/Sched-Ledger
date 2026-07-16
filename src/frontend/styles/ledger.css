@@ -11,6 +11,7 @@
      7.  Views: overview (donut, budgets, recent)
      8.  Views: transactions, budgets edit, insights, recurring
      9.  Views: categories, to-do list
+     9b. Views: transparency (data map)
      10. Views: schedule (calendar, agenda, event modal)
      11. Modals & empty states
      12. Auth screen
@@ -882,6 +883,57 @@ h1,h2,h3{margin:0;font-weight:600;}
 .todo-add-row .primary-btn{flex:none;}
 .todo-empty-action{display:flex;justify-content:center;margin-top:16px;}
 
+/* ── 9b. Views: transparency ──────────────────────────────────────── */
+.panel-head--stack{flex-direction:column;align-items:stretch;}
+.panel-head--stack h2{white-space:normal;}
+.transparency-diagram{
+  overflow-x:auto;padding:8px 4px 4px;border-radius:var(--r-lg);
+  background:var(--surface-2);border:1px solid var(--border);
+}
+.transparency-mermaid{min-width:min(100%,640px);display:flex;justify-content:center;}
+.transparency-mermaid svg{max-width:100%;height:auto;}
+.transparency-error{margin:0 0 10px;padding:10px 12px;border-radius:var(--r-md);background:color-mix(in srgb,var(--danger) 12%,var(--surface));color:var(--danger);font-size:13px;}
+.transparency-loading{margin:0 0 10px;font-size:13px;color:var(--ink-faint);}
+.fab-wrap--hidden{display:none !important;}
+.transparency-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap);
+}
+.transparency-card{
+  padding:16px 16px 14px;border-radius:var(--r-lg);
+  border:1px solid var(--border);background:var(--surface-2);
+  display:flex;flex-direction:column;gap:10px;min-width:0;
+}
+.transparency-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.transparency-card-head h3{margin:0;font-size:14px;font-weight:600;}
+.transparency-card-head code{
+  font-family:var(--font-mono);font-size:13px;font-weight:600;
+  color:var(--accent);letter-spacing:-.01em;
+}
+.transparency-badge{
+  flex:none;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  padding:3px 8px;border-radius:var(--r-sm);
+  color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface));
+}
+.transparency-card-purpose{margin:0;font-size:12.5px;color:var(--ink-faint);line-height:1.45;}
+.transparency-kv{margin:0;display:flex;flex-direction:column;gap:6px;}
+.transparency-kv-row{
+  display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.35fr);
+  gap:8px 12px;align-items:start;padding:7px 0;
+  border-top:1px solid var(--hair);
+}
+.transparency-kv-row:first-child{border-top:none;padding-top:2px;}
+.transparency-kv dt,.transparency-kv dd{margin:0;min-width:0;}
+.transparency-kv code{
+  font-family:var(--font-mono);font-size:11.5px;line-height:1.4;
+  word-break:break-word;
+}
+.transparency-kv dt code{color:var(--ink);font-weight:600;}
+.transparency-kv dd code{color:var(--ink-soft);}
+.transparency-note{
+  display:block;margin-top:3px;font-family:var(--font-body);
+  font-size:11px;color:var(--ink-faint);line-height:1.35;
+}
+
 /* ── 10. Views: schedule ──────────────────────────────────────────── */
 /* Calendar */
 .cal{--emoji-size:18px;display:flex;flex-direction:column;gap:var(--sp-2);}
@@ -1237,6 +1289,8 @@ h1,h2,h3{margin:0;font-weight:600;}
   .insights-fx-main{min-width:0;width:100%;}
   .insights-fx-select{max-width:none;}
   .insights-fx-note{text-align:left;}
+  .transparency-grid{grid-template-columns:1fr;}
+  .transparency-kv-row{grid-template-columns:1fr;gap:4px;}
 
   /* Schedule — upcoming */
   .panel-head--agenda{margin-bottom:12px;}

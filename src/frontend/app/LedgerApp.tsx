@@ -24,6 +24,7 @@ import {
 } from "@/frontend/views";
 import { EventModal, Schedule } from "@/frontend/views/Schedule";
 import { TodoListView } from "@/frontend/views/TodoList";
+import { Transparency } from "@/frontend/views/Transparency";
 import { useEffect, useRef, useState } from "react";
 
 /*
@@ -48,6 +49,7 @@ const VIEW_TITLES: Record<ViewId, string> = {
   categories: "Categories",
   recurring: "Recurring",
   insights: "Insights",
+  transparency: "Transparency",
 };
 
 export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
@@ -250,17 +252,19 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
               />
             </div>
           </div>
-          <div className="tb-row tb-row--tools">
-            {activeWallet && wallets.length ? (
-              <WalletSwitcher
-                wallets={wallets}
-                activeId={activeWallet.id}
-                onChange={setActiveWalletId}
-                onManage={() => setWalletModal(true)}
-              />
-            ) : null}
-            <MonthSwitcher months={MONTHS} current={month} onChange={setMonth} />
-          </div>
+          {view !== "transparency" ? (
+            <div className="tb-row tb-row--tools">
+              {activeWallet && wallets.length ? (
+                <WalletSwitcher
+                  wallets={wallets}
+                  activeId={activeWallet.id}
+                  onChange={setActiveWalletId}
+                  onManage={() => setWalletModal(true)}
+                />
+              ) : null}
+              <MonthSwitcher months={MONTHS} current={month} onChange={setMonth} />
+            </div>
+          ) : null}
         </header>
 
         <div className="scroll">
@@ -294,6 +298,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           )}
           {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}
           {view === "insights" && <Insights {...viewProps} setMonth={setMonth} />}
+          {view === "transparency" && <Transparency />}
           <div className="scroll-pad" />
         </div>
       </main>
@@ -315,7 +320,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         ))}
       </nav>
 
-      <div ref={fabRef} data-tour="tour-fab" className={"fab-wrap" + (fabOpen ? " open" : "")}>
+      <div ref={fabRef} data-tour="tour-fab" className={"fab-wrap" + (fabOpen ? " open" : "") + (view === "transparency" ? " fab-wrap--hidden" : "")}>
         <div className="fab-actions" aria-hidden={!fabOpen}>
           <button
             className="fab-action"

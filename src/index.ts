@@ -2,6 +2,7 @@ import { createApiApp } from "@/api";
 import { processDueRecurringExpenses } from "@/api/lib/recurring-expenses";
 import { processDueReminders } from "@/api/lib/reminders";
 import { connectDb, isDbConnected } from "@/db/client";
+import { REMINDER_POLL_INTERVAL_MS } from "@/lib/schedule";
 import { serve } from "bun";
 import index from "./index.html";
 
@@ -30,7 +31,6 @@ const server = serve({
 console.log(`Server running at ${server.url}`);
 
 if (process.env.NODE_ENV !== "production" && process.env.CRON_SECRET?.trim()) {
-  const pollMs = 10 * 60 * 1000;
   const poll = async () => {
     try {
       if (!isDbConnected()) await connectDb();
@@ -51,9 +51,9 @@ if (process.env.NODE_ENV !== "production" && process.env.CRON_SECRET?.trim()) {
     }
   };
   if (isDbConnected()) {
-    setInterval(poll, pollMs);
+    setInterval(poll, REMINDER_POLL_INTERVAL_MS);
     void poll();
-    console.log("[cron] dev poller active (every 10 min) — reminders + recurring expenses");
+    console.log("[cron] dev poller active (every 5 min) — reminders + recurring expenses");
   } else {
     console.log("[cron] dev poller skipped — MongoDB not connected at startup");
   }

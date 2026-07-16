@@ -73,7 +73,7 @@ export const SHELL_TOUR_STEPS: TourStep[] = [
   lastStep(
     "shell-account",
     "Account",
-    "Theme, export, privacy, and sign out live here. You can also restart any tab tour from Take a tour.",
+    "Theme, exports & imports, privacy settings, and sign out live here. You can also restart any tab tour from Take a tour.",
     '[data-tour="tour-account"]',
     "bottom",
   ),
@@ -127,6 +127,12 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("insights-fx", "Currency view", "Preview amounts in another currency using live exchange rates.", '[data-tour="tour-insights-fx"]'),
     step("insights-chart", "Month over month", "Switch between daily, monthly, quarterly, and yearly bars. Tap a bar to jump to that period.", '[data-tour="tour-insights-chart"]', "top"),
     lastStep("insights-trends", "Breakdowns", "Category trends vs last month and your top subcategories this month.", '[data-tour="tour-insights-trends"]'),
+  ],
+  transparency: [
+    step("transparency-nav", "Transparency", "A read-only map of how Sched Ledger stores your data in MongoDB.", navTarget("transparency"), "right"),
+    step("transparency-flow", "Relationships", "See how your wallet address links users, wallets, expenses, events, and more.", '[data-tour="tour-transparency-flow"]'),
+    step("transparency-e2ee", "Encryption path", "Sensitive fields are AES-GCM encrypted in the browser before they hit the database.", '[data-tour="tour-transparency-e2ee"]'),
+    lastStep("transparency-collections", "Keys & values", "Browse every collection and the document fields it saves.", '[data-tour="tour-transparency-collections"]'),
   ],
 };
 

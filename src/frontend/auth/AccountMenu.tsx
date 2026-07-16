@@ -2,17 +2,18 @@ import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
-import type { EventImportRow } from "./lib/import-events";
-import type { ExpenseImportRow } from "./lib/import";
-import type { TodoImportList } from "./lib/import-todos";
 import { useEffect, useRef, useState } from "react";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
+import { ImportExportModal } from "./components/ImportExportModal";
 import { Identicon } from "./components/Identicon";
 import { CopyrightModal, TermsModal } from "./components/LegalModals";
 import { RecoveryReveal } from "./components/RecoveryReveal";
 import { copyText } from "./lib/clipboard";
 import { shortAddr } from "./lib/format";
 import { identityStorage } from "./lib/identity-storage";
+import type { EventImportRow } from "./lib/import-events";
+import type { ExpenseImportRow } from "./lib/import";
+import type { TodoImportList } from "./lib/import-todos";
 
 function browserTimezone(): string {
   try {
@@ -57,6 +58,7 @@ export function AccountMenu({
   const [open, setOpen] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [copyrightOpen, setCopyrightOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -144,7 +146,7 @@ export function AccountMenu({
               Default timezone
             </label>
             <p className="am-tz-hint">
-              Event times and email reminders follow this zone. Reminders are checked every 10 minutes.
+              Event times and email reminders follow this zone. Reminders are checked every 5 minutes.
             </p>
             <TimezonePicker
               id="acct-tz"
@@ -174,6 +176,14 @@ export function AccountMenu({
           <button className="am-item" type="button" onClick={() => { setDataOpen(true); setOpen(false); }}>
             <Icon name="database" size={16} /> Data &amp; privacy
           </button>
+          <button
+            className="am-item"
+            type="button"
+            data-tour="tour-csv"
+            onClick={() => { setCsvOpen(true); setOpen(false); }}
+          >
+            <Icon name="download" size={16} /> Exports &amp; imports
+          </button>
           <button className="am-item" type="button" onClick={() => { setTermsOpen(true); setOpen(false); }}>
             <Icon name="file" size={16} /> Terms &amp; conditions
           </button>
@@ -197,6 +207,12 @@ export function AccountMenu({
       {dataOpen ? (
         <DataPrivacyModal
           account={account}
+          onClose={() => setDataOpen(false)}
+          onSignedOut={onSignOut}
+        />
+      ) : null}
+      {csvOpen ? (
+        <ImportExportModal
           expenses={expenses}
           events={events}
           todoLists={todoLists}
@@ -206,8 +222,7 @@ export function AccountMenu({
           onImportExpenses={onImportExpenses}
           onImportEvents={onImportEvents}
           onImportTodos={onImportTodos}
-          onClose={() => setDataOpen(false)}
-          onSignedOut={onSignOut}
+          onClose={() => setCsvOpen(false)}
         />
       ) : null}
       {termsOpen ? <TermsModal onClose={() => setTermsOpen(false)} /> : null}

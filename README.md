@@ -13,7 +13,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable category/subcategory taxonomy with glyphs and colors
-- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via daily cron
+- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron
 - **FX insights** — view spending converted to another currency (optional live rates)
 
 ### Schedule & tasks
@@ -24,9 +24,10 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ### Identity & privacy
 
-- **Web3 identity** — create or restore an in-browser wallet; sign in with a cryptographic challenge (SIWE-style)
+- **Web3 identity** — create or restore an in-browser wallet (12-word recovery phrase); sign in with a cryptographic challenge (SIWE-style)
 - **Dark mode** — system-aware theme toggle, persisted locally
-- **Sessions & privacy** — HttpOnly session cookies, revoke devices, export CSV, clear local data
+- **Sessions & privacy** — HttpOnly session cookies, revoke devices, clear local data
+- **CSV export & import** — transactions (with categories), schedule events, and to-do lists via **Account → Exports & imports**
 - **Encrypted ledger** — amounts, categories, and notes encrypted client-side; unlock with your wallet key each session
 - **Budget alerts** — browser + email notifications when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates, server only delivers)
 - **Guided tour** — Shepherd.js walkthrough for each main view
@@ -35,7 +36,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 - **End-to-end encryption** — transaction amounts, categories, notes, and wallet budgets are AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext
 - Signature verification, rate limiting, security headers, in-memory profile cache
-- Automated tests for crypto unlock, session auth, and budget-alert evaluation (`bun test`)
+- Automated tests for crypto unlock/codec, session auth, and budget-alert evaluation (`bun test`)
 
 ## Tech stack
 
@@ -59,20 +60,22 @@ src/
 ├── vercel-api.ts         # API bundle source (built → api/index.js)
 ├── api/
 │   ├── app.ts            # Hono app + error handler
-│   ├── lib/              # auth, cache, email, reminders, recurring-expenses
+│   ├── lib/              # auth, cache, email, reminders, recurring-expenses, budget-alerts
 │   ├── middleware/       # session, rate-limit, security, db
 │   └── routes/           # auth, users, profile, wallets, categories,
-│                         # expenses, events, todo-lists, consent, fx, cron
+│                         # expenses, events, todo-lists, consent,
+│                         # budget-alerts, fx, cron
 ├── db/                   # MongoDB client, collections, indexes, URI resolver
 ├── schemas/              # Zod schemas (shared API validation)
-├── lib/                  # glyphs, recurring, schedule, timezone (shared)
+├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts (shared)
 └── frontend/
     ├── app/              # Root, LedgerApp
-    ├── auth/             # wallet sign-in, account menu, session UI
+    ├── auth/             # wallet sign-in, account menu (CSV import/export), session UI
     ├── assets/           # logo
     ├── charts/           # SVG charts (donut, trend, MoM bars)
     ├── components/       # Brand, ThemeToggle, Wallets, pickers, shared UI
     ├── lib/
+    │   ├── budget/         # browser budget-alert notifications
     │   ├── crypto/         # E2EE codec, key derivation, unlock flow
     │   ├── hooks/          # useLedger, useTheme
     │   └── tour/           # guided tour steps and runner
@@ -81,6 +84,7 @@ src/
     │                     # Recurring, Insights, Schedule, TodoList
     └── main.tsx
 scripts/                  # MongoDB collection maintenance (drop/list)
+tests/                    # auth, crypto, budget-alert unit/integration tests
 build.ts                  # Production build (dist/ + api/index.js)
 ```
 
@@ -130,7 +134,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 
 | MongoDB collection | Code key | Purpose |
 |------------------|----------|---------|
-| `users` | `users` | Account profile (codename, notify email, timezone) |
+| `users` | `users` | Account profile (codename, notify email, timezone, reminder/alert prefs) |
 | `ledger_profiles` | `ledgerProfiles` | Per-user UI state (`currentMonth`) |
 | `financial_wallets` | `financialWallets` | Wallets (currency, funding mode; E2EE financials) |
 | `category_taxonomies` | `categoryTaxonomies` | One document per user — full category tree |
@@ -143,16 +147,24 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminder emails |
 | `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit emails |
 
+### Encryption vs plaintext
+
+| Collection | Encrypted (client-side) | Plaintext (needed for queries / cron) |
+|------------|-------------------------|----------------------------------------|
+| `expenses` | `payload` (amount, subcategory, note) via `enc` | `date`, `kind`, `recurring`, `walletId`, `seriesKey` |
+| `financial_wallets` | `payload` (income, starting balance, budgets) via `enc` | `name`, `currency`, `fundingMode`, `isDefault` |
+| `events`, `todo_lists`, `users`, … | — | Stored in plaintext |
+
 ## Development
 
 ```bash
 bun dev
-bun test   # crypto unlock, session auth, budget-alert evaluation
+bun test   # crypto unlock/codec, session auth, budget-alert evaluation
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
 
-When `CRON_SECRET` is set in development, the server also polls every 10 minutes for due reminders and recurring expense rows (emails require `RESEND_API_KEY`).
+When `CRON_SECRET` is set in development, the server also polls every 5 minutes for due reminders and recurring expense rows (emails require `RESEND_API_KEY`).
 
 ### Health check
 
@@ -169,13 +181,13 @@ Sign-in is wallet-based and verified on the server:
 3. `POST /api/auth/verify` — server verifies the signature and sets an **HttpOnly** `ledger_session` cookie
 4. Authenticated requests use `credentials: include` (no spoofable address header)
 
-Manage sessions under **Account → Data & privacy** (revoke devices, sign out everywhere, clear cookies and local storage).
+Manage sessions under **Account → Data & privacy** (revoke devices, sign out everywhere, clear cookies and local storage). Restore access on a new device with your **12-word recovery phrase**.
 
 ### Encryption
 
 Ledger data (transaction amounts, subcategories, notes, and per-wallet budgets/income) is encrypted in your browser with **AES-256-GCM**. The encryption key is derived from a wallet signature over a fixed message — it never leaves your device and is held in memory for the session only.
 
-On each visit you may be prompted to **unlock** your ledger (one signature for browser wallets; silent for in-app wallets with a stored key). MongoDB stores ciphertext plus plaintext metadata needed for queries and cron (`date`, `kind`, `recurring`, `walletId`, `seriesKey` on expenses; wallet name/currency on wallets). See [Database schema](#database-schema) for full field lists.
+On each visit you may be prompted to **unlock** your ledger (one signature for browser wallets; silent for in-app wallets with a stored key). MongoDB stores ciphertext plus plaintext metadata needed for queries and cron — see [Encryption vs plaintext](#encryption-vs-plaintext).
 
 ## API overview
 
@@ -202,6 +214,7 @@ On each visit you may be prompted to **unlock** your ledger (one signature for b
 | `POST /api/events/:id/comments` | Add event comment |
 | `CRUD /api/todo-lists` | TO-DO lists and tasks |
 | `GET/PATCH /api/consent` | Data-sharing consent |
+| `POST /api/budget-alerts` | Deliver client-evaluated budget alerts (email; deduped) |
 | `GET /api/fx/latest/:base` | Cached FX rates (requires `EXCHANGE_RATE_API_KEY`) |
 | `GET /api/cron/reminders` | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminder emails and materializes recurring expense rows |
 
@@ -231,7 +244,7 @@ Set these in **Vercel → Project → Settings → Environment Variables** for P
 | `APP_ORIGIN` | Public app URL, e.g. `https://your-project.vercel.app` (used in sign-in messages) |
 | `NODE_ENV` | `production` (Vercel usually sets this; enables `Secure` session cookies) |
 | `CRON_SECRET` | Secret for the daily cron handler (used by cron-job.org) |
-| `RESEND_API_KEY` | Optional — enable schedule reminder emails |
+| `RESEND_API_KEY` | Optional — enable schedule reminder emails and budget-alert emails |
 | `EMAIL_FROM` | Optional — verified sender in Resend |
 | `EXCHANGE_RATE_API_KEY` | Optional — enable FX conversion in Insights |
 
@@ -259,13 +272,13 @@ Optional: run `bunx vercel dev` locally to test Vercel routing before deploying.
 
 Vercel Hobby allows only one built-in cron job, so reminders and recurring expenses are triggered by [cron-job.org](https://cron-job.org) instead.
 
-The reminder handler does not use a fixed daily schedule. It polls the database on each run and sends email when the current time falls in each event's window: **remind-at − 5 min ≤ now ≤ remind-at + 10 min** (so a "10 minutes before" reminder can fire slightly early). Set the external job to run **every 10 minutes**.
+The reminder handler does not use a fixed daily schedule. It polls the database on each run and sends email when the current time falls in each event's window: **remind-at − 5 min ≤ now ≤ remind-at + 5 min** (so a reminder can fire slightly early). Set the external job to run **every 5 minutes**.
 
 1. Create a free account at [cron-job.org](https://console.cron-job.org/signup).
 2. **Create cronjob** with:
    - **Title:** e.g. `Sched Ledger reminders`
    - **URL:** `https://<your-app>.vercel.app/api/cron/reminders`
-   - **Schedule:** every **10 minutes** (cron expression `*/10 * * * *`)
+   - **Schedule:** every **5 minutes** (cron expression `*/5 * * * *`)
    - **Request method:** `GET`
    - **Request headers:** add `Authorization` with value `Bearer <CRON_SECRET>` (same secret as in Vercel env vars)
 3. Save and enable the job.
@@ -286,6 +299,7 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 3. **CRUD** — add an expense and a schedule event; refresh the page and confirm data persists.
 4. **Wallets** — create a second wallet, switch between them, and confirm transactions stay scoped.
 5. **Sessions** — open **Account → Data & privacy**, confirm your device appears in the session list, and test revoke / sign out.
+6. **CSV** — open **Account → Exports & imports** to export transactions, then re-import a row.
 
 ### Serverless notes
 
@@ -294,4 +308,4 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 
 ## License
 
-See [LICENSE](LICENSE).
+[GNU General Public License v3.0](LICENSE).

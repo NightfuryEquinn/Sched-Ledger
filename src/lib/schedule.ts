@@ -35,7 +35,7 @@ const LEAD_LABELS: Record<LeadId, string> = {
  * External cron poll cadence (cron-job.org should run at this interval).
  * Each run scans the database for reminders whose target time falls in the due window.
  */
-export const REMINDER_POLL_INTERVAL_MS = 10 * 60 * 1000;
+export const REMINDER_POLL_INTERVAL_MS = 5 * 60 * 1000;
 
 /** Fire up to this many ms before the configured remind-at time. */
 export const REMINDER_EARLY_BUFFER_MS = 5 * 60 * 1000;
