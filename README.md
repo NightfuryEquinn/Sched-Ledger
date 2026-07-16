@@ -99,7 +99,7 @@ Create a `.env` file in the project root:
 | `APP_ORIGIN` | No | Origin embedded in sign-in messages (default: request origin) |
 | `APP_TIMEZONE` | No | Server default IANA timezone for cron/reminders |
 | `CRON_SECRET` | For cron | Bearer token for `GET /api/cron/reminders` |
-| `RESEND_API_KEY` | For email | Resend API key for schedule reminder emails |
+| `RESEND_API_KEY` | For email | Resend API key for schedule reminders and budget alerts |
 | `EMAIL_FROM` | No | Sender address (default: `Sched Ledger <onboarding@resend.dev>`) |
 | `EXCHANGE_RATE_API_KEY` | For FX | [ExchangeRate-API](https://www.exchangerate-api.com) key for Insights currency conversion |
 
