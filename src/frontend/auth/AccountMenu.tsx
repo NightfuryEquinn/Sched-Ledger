@@ -144,7 +144,7 @@ export function AccountMenu({
               Default timezone
             </label>
             <p className="am-tz-hint">
-              Event times and email reminders follow this zone. The daily cron runs at 16:00 UTC.
+              Event times and email reminders follow this zone. Reminders are checked every 10 minutes.
             </p>
             <TimezonePicker
               id="acct-tz"

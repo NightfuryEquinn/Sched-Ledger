@@ -148,7 +148,7 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
 
-When `CRON_SECRET` is set in development, the server also polls every 15 minutes for due reminders and recurring expense rows (emails require `RESEND_API_KEY`).
+When `CRON_SECRET` is set in development, the server also polls every 10 minutes for due reminders and recurring expense rows (emails require `RESEND_API_KEY`).
 
 ### Health check
 
@@ -255,11 +255,13 @@ Optional: run `bunx vercel dev` locally to test Vercel routing before deploying.
 
 Vercel Hobby allows only one built-in cron job, so reminders and recurring expenses are triggered by [cron-job.org](https://cron-job.org) instead.
 
+The reminder handler does not use a fixed daily schedule. It polls the database on each run and sends email when the current time falls in each event's window: **remind-at − 5 min ≤ now ≤ remind-at + 10 min** (so a "10 minutes before" reminder can fire slightly early). Set the external job to run **every 10 minutes**.
+
 1. Create a free account at [cron-job.org](https://console.cron-job.org/signup).
 2. **Create cronjob** with:
    - **Title:** e.g. `Sched Ledger reminders`
    - **URL:** `https://<your-app>.vercel.app/api/cron/reminders`
-   - **Schedule:** daily at **16:00 UTC** (cron expression `0 16 * * *`)
+   - **Schedule:** every **10 minutes** (cron expression `*/10 * * * *`)
    - **Request method:** `GET`
    - **Request headers:** add `Authorization` with value `Bearer <CRON_SECRET>` (same secret as in Vercel env vars)
 3. Save and enable the job.

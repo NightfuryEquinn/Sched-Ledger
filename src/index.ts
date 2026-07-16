@@ -30,7 +30,7 @@ const server = serve({
 console.log(`Server running at ${server.url}`);
 
 if (process.env.NODE_ENV !== "production" && process.env.CRON_SECRET?.trim()) {
-  const pollMs = 15 * 60 * 1000;
+  const pollMs = 10 * 60 * 1000;
   const poll = async () => {
     try {
       if (!isDbConnected()) await connectDb();
@@ -53,7 +53,7 @@ if (process.env.NODE_ENV !== "production" && process.env.CRON_SECRET?.trim()) {
   if (isDbConnected()) {
     setInterval(poll, pollMs);
     void poll();
-    console.log("[cron] dev poller active (every 15 min) — reminders + recurring expenses");
+    console.log("[cron] dev poller active (every 10 min) — reminders + recurring expenses");
   } else {
     console.log("[cron] dev poller skipped — MongoDB not connected at startup");
   }

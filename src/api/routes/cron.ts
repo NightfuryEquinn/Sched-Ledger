@@ -20,7 +20,8 @@ function assertCronAuth(authHeader: string | undefined): void {
 }
 
 /**
- * External cron (cron-job.org or manual curl) — due event reminder emails + recurring expense rows.
+ * External cron (cron-job.org every ~10 min, or manual curl) — scans the database
+ * for due event reminder emails and materializes recurring expense rows.
  */
 cronRoutes.get("/reminders", async (c) => {
   assertCronAuth(c.req.header("Authorization"));

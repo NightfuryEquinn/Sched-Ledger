@@ -2,11 +2,10 @@ import { emailConfigured, reminderEmailHtml, sendEmail } from "@/api/lib/email";
 import { getCollections, getDb } from "@/db";
 import type { EventDocument } from "@/db/collections";
 import {
-  CRON_LOOKAHEAD_MS,
-  CRON_LOOKBACK_MS,
   candidateOccurrenceDates,
   eventTimeMs,
   formatEventWhen,
+  isReminderDueNow,
   leadDescription,
   occursOn,
   remindAtMs,
@@ -85,13 +84,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
   }
 
   const { events, reminderLogs } = getCollections(getDb());
-  /*
-   * Forward-looking window: the daily cron sends everything due before the
-   * next run, so reminders always arrive BEFORE the event. The look-back
-   * half is a catch-up for sends that failed on a previous run.
-   */
-  const windowStart = now.getTime() - CRON_LOOKBACK_MS;
-  const windowEnd = now.getTime() + CRON_LOOKAHEAD_MS;
+  const nowMs = now.getTime();
 
   const notifyEvents = await events
     .find({ notify: true, email: { $exists: true, $ne: "" } })
@@ -125,10 +118,10 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       if (!occursOn(ev, iso)) continue;
 
       const remindAt = remindAtMs(ev, iso, prefs.timezone);
-      if (remindAt < windowStart || remindAt > windowEnd) continue;
+      if (!isReminderDueNow(remindAt, nowMs)) continue;
 
       /* Never send a reminder for an occurrence that has already happened. */
-      if (eventTimeMs(iso, ev.time, ev.allDay, prefs.timezone) < now.getTime()) {
+      if (eventTimeMs(iso, ev.time, ev.allDay, prefs.timezone) < nowMs) {
         result.skipped++;
         continue;
       }
@@ -184,24 +177,9 @@ async function sendReminderOnce(
   return "sent";
 }
 
-/** Must match the cron-job.org schedule (daily at 16:00 UTC). */
-const CRON_HOUR_UTC = 16;
-
 /**
- * When the next daily cron run will have completed, including slack for
- * late or early triggers from the external scheduler.
- */
-export function nextCronRunEndMs(now = new Date()): number {
-  const next = new Date(now);
-  next.setUTCHours(CRON_HOUR_UTC, 59, 59, 999);
-  if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
-  return next.getTime();
-}
-
-/**
- * Called when an event is created or its notify flag turned on. If the next
- * occurrence's remind-time falls before the next cron run (which would
- * otherwise miss it or send it late), send the reminder right away.
+ * Called when an event is created or updated. If the remind-at time is inside
+ * the current poll window, send immediately instead of waiting for cron-job.org.
  */
 export async function sendImmediateReminderIfDue(
   doc: EventDocument,
@@ -214,16 +192,16 @@ export async function sendImmediateReminderIfDue(
   const prefs = await userReminderPrefs(doc.userAddress);
   if (!prefs.emailEnabled) return;
 
-  const cronCoversFrom = nextCronRunEndMs(now);
+  const nowMs = now.getTime();
 
   for (const iso of candidateOccurrenceDates(doc.lead as LeadId, now)) {
     if (!occursOn(doc, iso)) continue;
 
     const eventAt = eventTimeMs(iso, doc.time, doc.allDay, prefs.timezone);
-    if (eventAt < now.getTime()) continue; // occurrence already happened
+    if (eventAt < nowMs) continue; // occurrence already happened
 
     const remindAt = remindAtMs(doc, iso, prefs.timezone);
-    if (remindAt > cronCoversFrom) continue; // next cron run will handle it
+    if (!isReminderDueNow(remindAt, nowMs)) continue;
 
     const outcome = await sendReminderOnce(doc, iso, email, prefs.timezone);
     if (typeof outcome !== "string") {
