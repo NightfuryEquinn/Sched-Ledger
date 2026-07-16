@@ -103,8 +103,9 @@ export async function requestBudgetAlertPermission(): Promise<NotificationPermis
 }
 
 /**
- * After an expense mutation, evaluate category budgets and deliver push/email.
+ * After an expense mutation, evaluate category budgets and deliver email alerts.
  * Amounts never leave the client except as already-computed alert summaries.
+ * In-tab Notification is a fallback while the app is open.
  */
 export async function maybeNotifyBudgetAlerts(opts: {
   expenses: Expense[];
@@ -153,7 +154,7 @@ export async function maybeNotifyBudgetAlerts(opts: {
       })),
     });
   } catch {
-    /* Email may be unset or Resend unconfigured — push still fired above. */
+    /* Email may be unset or Resend unconfigured — in-tab notification still fired above. */
   }
 
   markSent(

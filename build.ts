@@ -34,6 +34,11 @@ await mkdir(apiDir, { recursive: true });
 await rm(path.join(apiDir, "index.js"), { force: true });
 await rm(path.join(apiDir, "vercel-api.js"), { force: true });
 
+/* Drop prior hashed email assets (e.g. logo-*.png) so rebuilds stay tidy. */
+for await (const entry of new Bun.Glob("logo-*.png").scan({ cwd: apiDir })) {
+  await rm(path.join(apiDir, entry), { force: true });
+}
+
 const api = await Bun.build({
   entrypoints: ["./src/vercel-api.ts"],
   outdir: "./api",
@@ -51,3 +56,9 @@ await rename(path.join(apiDir, "vercel-api.js"), path.join(apiDir, "index.js"));
 const apiBundle = path.join(apiDir, "index.js");
 const { size } = await Bun.file(apiBundle).stat();
 console.log(` ${path.relative(root, apiBundle)}  ${(size / 1024).toFixed(1)} KB`);
+
+for await (const entry of new Bun.Glob("logo-*.png").scan({ cwd: apiDir })) {
+  const asset = path.join(apiDir, entry);
+  const { size: assetSize } = await Bun.file(asset).stat();
+  console.log(` ${path.relative(root, asset)}  ${(assetSize / 1024).toFixed(1)} KB`);
+}

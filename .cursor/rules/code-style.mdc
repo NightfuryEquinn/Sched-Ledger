@@ -1,0 +1,68 @@
+---
+description: 2-space indent, readable spacing, and a comment on every function
+alwaysApply: true
+---
+
+# Code Style
+
+## Indentation
+
+Use **2-space** indentation everywhere. Never use tabs or 4-space indent.
+
+```typescript
+// ❌ BAD
+function save() {
+    return db.write();
+}
+
+// ✅ GOOD
+function save() {
+  return db.write();
+}
+```
+
+## Spacing
+
+Prefer breathing room over dense blocks:
+
+- Blank line between logical sections and between top-level declarations
+- Blank line before `return` when the function body has multiple steps
+- Space after commas and around operators (`a + b`, `x, y`)
+- Avoid cramming multiple statements on one line
+
+```typescript
+// ❌ BAD
+function loadUser(id: string) {
+  const user = await db.find(id); if (!user) throw new Error("missing"); return user;
+}
+
+// ✅ GOOD
+function loadUser(id: string) {
+  const user = await db.find(id);
+
+  if (!user) {
+    throw new Error("missing");
+  }
+
+  return user;
+}
+```
+
+## Function comments
+
+Every function (including arrow functions assigned to names, methods, and exported helpers) gets a short comment describing **what it does**. Prefer a one-line `/** ... */` above the declaration.
+
+```typescript
+// ❌ BAD
+export function formatCents(cents: number) {
+  return (cents / 100).toFixed(2);
+}
+
+// ✅ GOOD
+/** Format integer cents as a two-decimal dollar string. */
+export function formatCents(cents: number) {
+  return (cents / 100).toFixed(2);
+}
+```
+
+Skip only trivial one-liner callbacks passed inline (e.g. `.map(x => x.id)`).

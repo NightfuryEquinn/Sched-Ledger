@@ -1,10 +1,5 @@
 import { Icon } from "@/frontend/components/ui";
 import { api, type ApiSession } from "@/frontend/lib/api";
-import {
-  getBudgetAlertPushEnabled,
-  requestBudgetAlertPermission,
-  setBudgetAlertPushEnabled,
-} from "@/frontend/lib/budget/notify";
 import type { Account } from "@/frontend/lib/types";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,7 +12,7 @@ import { clearAllLocalData } from "../lib/identity-storage";
  * Sections:
  *   1. Active sessions   — list & revoke server sessions
  *   2. Email reminders   — global opt-out for all reminder emails
- *   3. Budget alerts     — email + browser notifications near category limits
+ *   3. Budget alerts     — email notifications near category limits
  *   4. Data sharing      — third-party consent (server-persisted opt-in/out)
  *   5. Local data        — clear sessions, cookies & browser storage
  */
@@ -41,16 +36,12 @@ export function DataPrivacyModal({
   const [remindersOn, setRemindersOn] = useState(true);
   const [remindersBusy, setRemindersBusy] = useState(false);
 
-  /* Budget alerts: email (server) + browser push (local). */
+  /* Budget alerts: email preference + notification address. */
   const [budgetAlertsOn, setBudgetAlertsOn] = useState(true);
   const [budgetAlertsBusy, setBudgetAlertsBusy] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifyEmailDraft, setNotifyEmailDraft] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
-  const [pushOn, setPushOn] = useState(() => getBudgetAlertPushEnabled());
-  const [pushPermission, setPushPermission] = useState<NotificationPermission | "unsupported">(() =>
-    typeof Notification === "undefined" ? "unsupported" : Notification.permission,
-  );
 
   const [sessions, setSessions] = useState<ApiSession[]>([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
@@ -141,23 +132,6 @@ export function DataPrivacyModal({
     }
   };
 
-  const togglePush = async () => {
-    if (!pushOn) {
-      const perm = await requestBudgetAlertPermission();
-      setPushPermission(perm);
-      if (perm !== "granted" && perm !== "unsupported") {
-        setPushOn(false);
-        setBudgetAlertPushEnabled(false);
-        return;
-      }
-      setPushOn(true);
-      setBudgetAlertPushEnabled(true);
-      return;
-    }
-    setPushOn(false);
-    setBudgetAlertPushEnabled(false);
-  };
-
   const revokeSession = async (id: string) => {
     setSessionsBusy(true);
     try {
@@ -234,7 +208,7 @@ export function DataPrivacyModal({
               <div className="consent-top">
                 <div>
                   <div className="consent-title">Allow reminder emails</div>
-                  <p className="consent-desc">Events can send you email reminders when you turn them on per event. Switching this off stops all reminder emails at once, without editing each event.</p>
+                  <p className="consent-desc">Events can send you email reminders when you turn them on per event. Switching this off stops all reminder delivery at once, without editing each event.</p>
                 </div>
                 <label className="switch">
                   <input type="checkbox" checked={remindersOn} disabled={remindersBusy} onChange={toggleReminders} />
@@ -297,36 +271,6 @@ export function DataPrivacyModal({
                 </button>
               </div>
             </label>
-
-            <div className="dm-div" />
-
-            <div className="consent-card u-gap-top">
-              <div className="consent-top">
-                <div>
-                  <div className="consent-title">Browser notifications</div>
-                  <p className="consent-desc">Show a desktop/mobile notification when you log a spend that crosses a budget threshold (while this app is open).</p>
-                </div>
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={pushOn && pushPermission !== "denied"}
-                    disabled={pushPermission === "unsupported" || pushPermission === "denied"}
-                    onChange={togglePush}
-                  />
-                  <span className="toggle-ui" />
-                </label>
-              </div>
-              <div className={`consent-status ${pushOn && pushPermission === "granted" ? "cs-on" : "cs-off"}`}>
-                <span className="cs-dot" />
-                {pushPermission === "unsupported"
-                  ? "Not supported in this browser"
-                  : pushPermission === "denied"
-                    ? "Blocked by the browser — enable notifications in site settings"
-                    : pushOn && pushPermission === "granted"
-                      ? "Enabled — you'll get a notification when a limit is near"
-                      : "Off — enable to get on-device alerts"}
-              </div>
-            </div>
           </div>
 
           <div className="dm-div" />

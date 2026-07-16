@@ -91,6 +91,7 @@ typings/
 .nuxt
 dist
 api/index.js
+api/logo-*.png
 
 # Gatsby files
 .cache/

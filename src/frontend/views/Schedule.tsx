@@ -164,61 +164,6 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
         <SummaryCard label="Email reminders" value={String(alertsCount)} sub="occurrences will notify you" />
       </div>
 
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>{monthLabel(month, true)}</h2>
-            <p className="panel-sub">Click a day to view or add · click an event to edit</p>
-          </div>
-          <button className="add-btn add-btn--top" onClick={() => onAddEvent(TODAY_ISO)}>
-            <Icon name="plus" size={17} /> <span className="abt-txt">New event</span>
-          </button>
-        </div>
-
-        <div className="cal" data-tour="tour-schedule-cal">
-          <div className="cal-wd">
-            {WD.map((d) => <div key={d} className="cal-wd-c">{d}</div>)}
-          </div>
-          <div className="cal-grid">
-            {cells.map((d, i) => {
-              if (d === null) return <div key={i} className="cal-cell empty" />;
-              const iso = `${month}-${String(d).padStart(2, "0")}`;
-              const list = eventsOn(d);
-              const today = iso === TODAY_ISO;
-              const past = isCurrent && iso < TODAY_ISO;
-              return (
-                <div
-                  key={i}
-                  className={
-                    "cal-cell"
-                    + (today ? " today" : "")
-                    + (past ? " past" : "")
-                    + (viewDay === iso ? " selected" : "")
-                  }
-                  onClick={() => handleDayClick(iso, list)}
-                >
-                  <div className="cal-daynum">{d}</div>
-                  <div className="cal-events">
-                    {list.slice(0, 3).map((ev) => {
-                      const c = eventCatMeta(ev);
-                      return (
-                        <button key={ev.id} className="cal-chip" style={{ background: c.color + "1c", color: c.color }}
-                          title={ev.title}
-                          onClick={(e) => { e.stopPropagation(); onEditEvent(ev); }}>
-                          <span className="cal-chip-glyph">{displayGlyph(c.glyph, c.id)}</span>
-                          <span className="cal-chip-txt">{ev.allDay ? ev.title : `${fmtTime(ev.time)} ${ev.title}`}</span>
-                        </button>
-                      );
-                    })}
-                    {list.length > 3 && <div className="cal-more">+{list.length - 3} more</div>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       <section className="panel" data-tour="tour-schedule-agenda">
         <div className="panel-head panel-head--agenda">
           <div className="agenda-head">
@@ -290,6 +235,61 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
               sub="Add something to this date, click the day again to show all upcoming, or use the arrows to browse."
             />
           )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>{monthLabel(month, true)}</h2>
+            <p className="panel-sub">Click a day to view or add · click an event to edit</p>
+          </div>
+          <button className="add-btn add-btn--top" onClick={() => onAddEvent(TODAY_ISO)}>
+            <Icon name="plus" size={17} /> <span className="abt-txt">New event</span>
+          </button>
+        </div>
+
+        <div className="cal" data-tour="tour-schedule-cal">
+          <div className="cal-wd">
+            {WD.map((d) => <div key={d} className="cal-wd-c">{d}</div>)}
+          </div>
+          <div className="cal-grid">
+            {cells.map((d, i) => {
+              if (d === null) return <div key={i} className="cal-cell empty" />;
+              const iso = `${month}-${String(d).padStart(2, "0")}`;
+              const list = eventsOn(d);
+              const today = iso === TODAY_ISO;
+              const past = isCurrent && iso < TODAY_ISO;
+              return (
+                <div
+                  key={i}
+                  className={
+                    "cal-cell"
+                    + (today ? " today" : "")
+                    + (past ? " past" : "")
+                    + (viewDay === iso ? " selected" : "")
+                  }
+                  onClick={() => handleDayClick(iso, list)}
+                >
+                  <div className="cal-daynum">{d}</div>
+                  <div className="cal-events">
+                    {list.slice(0, 3).map((ev) => {
+                      const c = eventCatMeta(ev);
+                      return (
+                        <button key={ev.id} className="cal-chip" style={{ background: c.color + "1c", color: c.color }}
+                          title={ev.title}
+                          onClick={(e) => { e.stopPropagation(); onEditEvent(ev); }}>
+                          <span className="cal-chip-glyph">{displayGlyph(c.glyph, c.id)}</span>
+                          <span className="cal-chip-txt">{ev.allDay ? ev.title : `${fmtTime(ev.time)} ${ev.title}`}</span>
+                        </button>
+                      );
+                    })}
+                    {list.length > 3 && <div className="cal-more">+{list.length - 3} more</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
     </div>

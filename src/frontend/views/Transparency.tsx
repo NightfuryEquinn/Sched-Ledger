@@ -147,18 +147,19 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "occurrenceIso", value: "ISO datetime" },
       { key: "lead", value: '"1d"' },
       { key: "email", value: '"you@mail.com"' },
+      { key: "channels?", value: '["email"]' },
       { key: "sentAt", value: "Date" },
     ],
   },
   {
     name: "budget_alert_logs",
-    purpose: "Dedupes budget-near-limit emails",
+    purpose: "Dedupes budget-near-limit email delivery",
     fields: [
       { key: "userAddress", value: '"0xabc…"' },
       { key: "walletId / categoryId", value: "ids" },
       { key: "month", value: '"2026-07"' },
       { key: "level", value: '"warning" | "exceeded"' },
-      { key: "email / sentAt", value: "delivery record" },
+      { key: "email / channels? / sentAt", value: "delivery record" },
     ],
   },
 ];

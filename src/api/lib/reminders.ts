@@ -24,8 +24,10 @@ const EVENT_CAT_NAMES: Record<string, string> = {
   custom: "Custom",
 };
 
+/** Human-readable label for an event's schedule category. */
 function eventCategoryLabel(doc: { catId: string; customLabel?: string }): string {
   if (doc.catId === "custom" && doc.customLabel?.trim()) return doc.customLabel.trim();
+
   return EVENT_CAT_NAMES[doc.catId] ?? doc.catId;
 }
 
@@ -37,29 +39,32 @@ export type ReminderProcessResult = {
 };
 
 /**
- * Global email opt-out: users can disable all reminder emails from the
- * Data & privacy modal. Absent field means enabled (default opt-in per event).
+ * Global reminder opt-out: users can disable all reminder emails from
+ * the Data & privacy modal. Absent field means enabled (default opt-in per event).
  */
 type UserReminderPrefs = {
-  emailEnabled: boolean;
+  remindersEnabled: boolean;
   timezone: string;
 };
 
+/** Load reminder kill-switch and timezone for a user. */
 async function userReminderPrefs(userAddress: string): Promise<UserReminderPrefs> {
   const { users } = getCollections(getDb());
   const user = await users.findOne({ address: userAddress });
+
   return {
-    emailEnabled: user?.emailRemindersEnabled !== false,
+    remindersEnabled: user?.emailRemindersEnabled !== false,
     timezone: user?.timezone ?? DEFAULT_TIMEZONE,
   };
 }
 
+/** Send the "reminder enabled" confirmation email when an event turns notify on. */
 export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   if (!doc.notify || !doc.email?.trim()) return;
   if (!emailConfigured()) return;
 
   const prefs = await userReminderPrefs(doc.userAddress);
-  if (!prefs.emailEnabled) return;
+  if (!prefs.remindersEnabled) return;
 
   const when = formatEventWhen(doc.date, doc.time, doc.allDay, prefs.timezone);
   const category = eventCategoryLabel(doc);
@@ -75,6 +80,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   await sendEmail({ to: doc.email.trim(), subject, html, text });
 }
 
+/** Cron entry: scan notify events and deliver due reminder emails. */
 export async function processDueReminders(now = new Date()): Promise<ReminderProcessResult> {
   const result: ReminderProcessResult = { scanned: 0, sent: 0, skipped: 0, errors: [] };
 
@@ -83,31 +89,28 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
     return result;
   }
 
-  const { events, reminderLogs } = getCollections(getDb());
+  const { events } = getCollections(getDb());
   const nowMs = now.getTime();
 
-  const notifyEvents = await events
-    .find({ notify: true, email: { $exists: true, $ne: "" } })
-    .toArray();
-
+  const notifyEvents = await events.find({ notify: true }).toArray();
   result.scanned = notifyEvents.length;
 
   /* Cache per-user reminder prefs across events in this run. */
   const prefsCache = new Map<string, UserReminderPrefs>();
 
   for (const ev of notifyEvents) {
-    const email = ev.email?.trim();
-    if (!email) {
-      result.skipped++;
-      continue;
-    }
-
     let prefs = prefsCache.get(ev.userAddress);
     if (!prefs) {
       prefs = await userReminderPrefs(ev.userAddress);
       prefsCache.set(ev.userAddress, prefs);
     }
-    if (!prefs.emailEnabled) {
+    if (!prefs.remindersEnabled) {
+      result.skipped++;
+      continue;
+    }
+
+    const email = ev.email?.trim() || "";
+    if (!email) {
       result.skipped++;
       continue;
     }
@@ -137,7 +140,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
 }
 
 /**
- * Sends the reminder email for one occurrence, deduped via reminderLogs.
+ * Sends a reminder email for one occurrence, deduped via reminderLogs.
  * Returns "skipped" when a log entry already exists for this occurrence.
  */
 async function sendReminderOnce(
@@ -159,21 +162,32 @@ async function sendReminderOnce(
   const when = formatEventWhen(occurrenceIso, ev.time, ev.allDay, timezone);
   const category = eventCategoryLabel(ev);
   const lead = leadDescription(ev.lead as LeadId);
+
   const { html, text, subject } = reminderEmailHtml({
     title: ev.title,
     when,
     category,
     lead,
   });
-
   const sent = await sendEmail({ to: email, subject, html, text });
-  if (!sent.ok) return { error: sent.error };
 
-  await reminderLogs.insertOne({
-    ...logKey,
-    email,
-    sentAt: new Date(),
-  });
+  if (!sent.ok) {
+    return { error: sent.error || "email delivery failed" };
+  }
+
+  try {
+    await reminderLogs.insertOne({
+      ...logKey,
+      email,
+      channels: ["email"],
+      sentAt: new Date(),
+    });
+  } catch (err) {
+    const code = (err as { code?: number }).code;
+    if (code === 11000) return "skipped";
+    return { error: "failed to log reminder send" };
+  }
+
   return "sent";
 }
 
@@ -185,12 +199,14 @@ export async function sendImmediateReminderIfDue(
   doc: EventDocument,
   now = new Date(),
 ): Promise<void> {
-  if (!doc.notify || !emailConfigured()) return;
-  const email = doc.email?.trim();
-  if (!email) return;
+  if (!doc.notify) return;
+  if (!emailConfigured()) return;
 
   const prefs = await userReminderPrefs(doc.userAddress);
-  if (!prefs.emailEnabled) return;
+  if (!prefs.remindersEnabled) return;
+
+  const email = doc.email?.trim() || "";
+  if (!email) return;
 
   const nowMs = now.getTime();
 
@@ -210,6 +226,7 @@ export async function sendImmediateReminderIfDue(
   }
 }
 
+/** Delete reminder send logs for an event (e.g. after delete or major edit). */
 export async function clearReminderLogsForEvent(eventId: ObjectId): Promise<void> {
   const { reminderLogs } = getCollections(getDb());
   await reminderLogs.deleteMany({ eventId });

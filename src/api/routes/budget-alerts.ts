@@ -12,7 +12,7 @@ export const budgetAlertsRoutes = new Hono<{ Variables: SessionVariables }>();
 
 /**
  * Client-evaluated budget alerts (amounts stay E2EE). The server only delivers
- * email using the user's notifyEmail and dedupes per category/month/level.
+ * email using the posted alert summaries and dedupes per category/month/level.
  */
 budgetAlertsRoutes.post("/", sessionAuth, zValidator("json", createBudgetAlertsSchema), async (c) => {
   const walletAddress = c.get("walletAddress");

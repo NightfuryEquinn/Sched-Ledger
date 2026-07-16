@@ -1,3 +1,7 @@
+import logoPath from "@/frontend/assets/logo.png" with { type: "file" };
+
+const LOGO_CONTENT_ID = "sched-ledger-logo";
+
 type SendEmailInput = {
   to: string;
   subject: string;
@@ -5,18 +9,52 @@ type SendEmailInput = {
   text?: string;
 };
 
+type LogoAttachment = {
+  content: string;
+  filename: string;
+  content_type: string;
+  content_id: string;
+};
+
+let logoBase64: string | undefined;
+
+/** Whether Resend is configured via RESEND_API_KEY. */
 export function emailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
+/** Load the brand logo as base64 for Resend inline (CID) attachments. */
+async function getLogoAttachment(): Promise<LogoAttachment> {
+  if (!logoBase64) {
+    const bytes = await Bun.file(logoPath).arrayBuffer();
+    logoBase64 = Buffer.from(bytes).toString("base64");
+  }
+
+  return {
+    content: logoBase64,
+    filename: "logo.png",
+    content_type: "image/png",
+    content_id: LOGO_CONTENT_ID,
+  };
+}
+
+/** Brand mark markup shared by all transactional email templates. */
+function emailLogoHtml(): string {
+  return `<img src="cid:${LOGO_CONTENT_ID}" alt="Sched Ledger" width="96" height="96" style="display:block;width:96px;height:96px;margin:0 0 20px;border:0" />`;
+}
+
+/** Send a transactional email via Resend, embedding the Sched Ledger logo. */
 export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
+
   if (!apiKey) {
     console.warn("[email] RESEND_API_KEY not set — skipping send");
+
     return { ok: false, error: "RESEND_API_KEY not configured" };
   }
 
   const from = process.env.EMAIL_FROM?.trim() || "Sched Ledger <onboarding@resend.dev>";
+  const logo = await getLogoAttachment();
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -30,6 +68,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id: 
       subject: input.subject,
       html: input.html,
       text: input.text,
+      attachments: [logo],
     }),
   });
 
@@ -38,12 +77,14 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id: 
   if (!res.ok) {
     const error = payload.message ?? `Resend HTTP ${res.status}`;
     console.error("[email] send failed:", error);
+
     return { ok: false, error };
   }
 
   return { ok: true, id: payload.id ?? "unknown" };
 }
 
+/** Build reminder / confirmation email subject, HTML, and plain text. */
 export function reminderEmailHtml(opts: {
   title: string;
   when: string;
@@ -62,6 +103,7 @@ export function reminderEmailHtml(opts: {
   const html = `<!DOCTYPE html>
 <html>
 <body style="font-family:system-ui,sans-serif;line-height:1.5;color:#2a2520;max-width:480px;margin:0 auto;padding:24px">
+  ${emailLogoHtml()}
   <h2 style="margin:0 0 12px;font-size:20px">${opts.isConfirmation ? "Reminder scheduled" : opts.title}</h2>
   <p style="margin:0 0 16px">${intro}</p>
   <table style="width:100%;border-collapse:collapse;font-size:15px">
@@ -81,6 +123,7 @@ export function reminderEmailHtml(opts: {
   return { html, text, subject };
 }
 
+/** Build budget warning / exceeded email subject, HTML, and plain text. */
 export function budgetAlertEmailHtml(opts: {
   categoryName: string;
   level: "warning" | "exceeded";
@@ -102,6 +145,7 @@ export function budgetAlertEmailHtml(opts: {
   const html = `<!DOCTYPE html>
 <html>
 <body style="font-family:system-ui,sans-serif;line-height:1.5;color:#2a2520;max-width:480px;margin:0 auto;padding:24px">
+  ${emailLogoHtml()}
   <h2 style="margin:0 0 12px;font-size:20px">${near ? "Nearing budget limit" : "Budget exceeded"}</h2>
   <p style="margin:0 0 16px">${intro}</p>
   <table style="width:100%;border-collapse:collapse;font-size:15px">
@@ -122,6 +166,7 @@ export function budgetAlertEmailHtml(opts: {
   return { html, text, subject };
 }
 
+/** Escape text for safe inclusion in HTML email bodies. */
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

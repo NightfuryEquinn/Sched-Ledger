@@ -34,14 +34,13 @@ if (process.env.NODE_ENV !== "production" && process.env.CRON_SECRET?.trim()) {
   const poll = async () => {
     try {
       if (!isDbConnected()) await connectDb();
+      const canRemind = Boolean(process.env.RESEND_API_KEY?.trim());
       const [reminders, recurring] = await Promise.all([
-        process.env.RESEND_API_KEY?.trim()
-          ? processDueReminders()
-          : Promise.resolve(null),
+        canRemind ? processDueReminders() : Promise.resolve(null),
         processDueRecurringExpenses(),
       ]);
       if (reminders && reminders.sent > 0) {
-        console.log(`[reminders] sent ${reminders.sent} email(s)`);
+        console.log(`[reminders] sent ${reminders.sent} reminder(s)`);
       }
       if (recurring.created > 0) {
         console.log(`[recurring] created ${recurring.created} expense row(s)`);

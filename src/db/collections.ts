@@ -95,10 +95,12 @@ export type ReminderLogDocument = {
   occurrenceIso: string;
   lead: string;
   email: string;
+  /** Channels that succeeded for this occurrence. */
+  channels?: Array<"email">;
   sentAt: Date;
 };
 
-/** Dedupes budget-near-limit emails (one per user/wallet/category/month/level). */
+/** Dedupes budget-near-limit delivery (one per user/wallet/category/month/level). */
 export type BudgetAlertLogDocument = {
   _id: ObjectId;
   userAddress: string;
@@ -107,6 +109,7 @@ export type BudgetAlertLogDocument = {
   month: string;
   level: "warning" | "exceeded";
   email: string;
+  channels?: Array<"email">;
   sentAt: Date;
 };
 

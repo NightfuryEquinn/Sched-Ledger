@@ -154,10 +154,25 @@ function createCollection() {
       };
       return api;
     },
-    async deleteMany() {
-      const n = docs.length;
-      docs.length = 0;
-      return { deletedCount: n };
+    async deleteOne(filter: Record<string, unknown> = {}) {
+      const idx = docs.findIndex((d) => matches(d, filter));
+      if (idx < 0) return { deletedCount: 0, acknowledged: true };
+      docs.splice(idx, 1);
+      return { deletedCount: 1, acknowledged: true };
+    },
+    async deleteMany(filter: Record<string, unknown> = {}) {
+      if (!filter || Object.keys(filter).length === 0) {
+        const n = docs.length;
+        docs.length = 0;
+        return { deletedCount: n, acknowledged: true };
+      }
+      let deleted = 0;
+      for (let i = docs.length - 1; i >= 0; i--) {
+        if (!matches(docs[i]!, filter)) continue;
+        docs.splice(i, 1);
+        deleted++;
+      }
+      return { deletedCount: deleted, acknowledged: true };
     },
     _docs: docs,
   };

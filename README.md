@@ -19,17 +19,18 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 ### Schedule & tasks
 
 - **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence
-- **Email reminders** — optional Resend integration; per-event lead times and user timezone
+- **Email reminders** — optional Resend emails; per-event lead times and user timezone
 - **TO-DO lists** — multiple named lists with inline task management
 
 ### Identity & privacy
 
 - **Web3 identity** — create or restore an in-browser wallet (12-word recovery phrase); sign in with a cryptographic challenge (SIWE-style)
 - **Dark mode** — system-aware theme toggle, persisted locally
-- **Sessions & privacy** — HttpOnly session cookies, revoke devices, clear local data
+- **Sessions & privacy** — HttpOnly session cookies, revoke devices, clear local data under **Account → Data & privacy**
 - **CSV export & import** — transactions (with categories), schedule events, and to-do lists via **Account → Exports & imports**
 - **Encrypted ledger** — amounts, categories, and notes encrypted client-side; unlock with your wallet key each session
-- **Budget alerts** — browser + email notifications when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates, server only delivers)
+- **Budget alerts** — email when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates, server only delivers)
+- **Transparency** — read-only in-app map of MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagram)
 - **Guided tour** — Shepherd.js walkthrough for each main view
 
 ### Security
@@ -48,6 +49,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 | Frontend | React 19, TanStack Query, ethers v6 |
 | Styling | Tailwind CSS 4 (`bun-plugin-tailwind`) + custom theme CSS |
 | Tours | [Shepherd.js](https://shepherdjs.dev) |
+| Diagrams | [Mermaid](https://mermaid.js.org) (Transparency view) |
 | Deploy | [Vercel](https://vercel.com) (Analytics, Speed Insights); scheduled jobs via [cron-job.org](https://cron-job.org) |
 
 ## Project structure
@@ -60,7 +62,8 @@ src/
 ├── vercel-api.ts         # API bundle source (built → api/index.js)
 ├── api/
 │   ├── app.ts            # Hono app + error handler
-│   ├── lib/              # auth, cache, email, reminders, recurring-expenses, budget-alerts
+│   ├── lib/              # auth, cache, email, reminders, recurring-expenses,
+│   │                     # budget-alerts
 │   ├── middleware/       # session, rate-limit, security, db
 │   └── routes/           # auth, users, profile, wallets, categories,
 │                         # expenses, events, todo-lists, consent,
@@ -70,18 +73,18 @@ src/
 ├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts (shared)
 └── frontend/
     ├── app/              # Root, LedgerApp
-    ├── auth/             # wallet sign-in, account menu (CSV import/export), session UI
+    ├── auth/             # wallet sign-in, account menu (CSV + data privacy), session UI
     ├── assets/           # logo
     ├── charts/           # SVG charts (donut, trend, MoM bars)
     ├── components/       # Brand, ThemeToggle, Wallets, pickers, shared UI
     ├── lib/
-    │   ├── budget/         # browser budget-alert notifications
+    │   ├── budget/         # in-tab budget-alert notifications
     │   ├── crypto/         # E2EE codec, key derivation, unlock flow
     │   ├── hooks/          # useLedger, useTheme
     │   └── tour/           # guided tour steps and runner
     ├── styles/           # ledger.css (theme tokens + layout)
     ├── views/            # Overview, Transactions, Budgets, Categories,
-    │                     # Recurring, Insights, Schedule, TodoList
+    │                     # Recurring, Insights, Schedule, TodoList, Transparency
     └── main.tsx
 scripts/                  # MongoDB collection maintenance (drop/list)
 tests/                    # auth, crypto, budget-alert unit/integration tests
@@ -94,14 +97,14 @@ build.ts                  # Production build (dist/ + api/index.js)
 bun install
 ```
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root (see `.env.example`):
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `MONGODB_DB` | No | Database name (default: `ledger`) |
 | `APP_ORIGIN` | No | Origin embedded in sign-in messages (default: request origin) |
-| `APP_TIMEZONE` | No | Server default IANA timezone for cron/reminders |
+| `APP_TIMEZONE` | No | Server default IANA timezone for cron/reminders (fallback: `Asia/Kuala_Lumpur`) |
 | `CRON_SECRET` | For cron | Bearer token for `GET /api/cron/reminders` |
 | `RESEND_API_KEY` | For email | Resend API key for schedule reminders and budget alerts |
 | `EMAIL_FROM` | No | Sender address (default: `Sched Ledger <onboarding@resend.dev>`) |
@@ -145,7 +148,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
 | `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminder emails |
-| `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit emails |
+| `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit email delivery |
 
 ### Encryption vs plaintext
 
@@ -154,6 +157,8 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `expenses` | `payload` (amount, subcategory, note) via `enc` | `date`, `kind`, `recurring`, `walletId`, `seriesKey` |
 | `financial_wallets` | `payload` (income, starting balance, budgets) via `enc` | `name`, `currency`, `fundingMode`, `isDefault` |
 | `events`, `todo_lists`, `users`, … | — | Stored in plaintext |
+
+The in-app **Transparency** view documents the same collections with example field shapes.
 
 ## Development
 
@@ -164,7 +169,7 @@ bun test   # crypto unlock/codec, session auth, budget-alert evaluation
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
 
-When `CRON_SECRET` is set in development, the server also polls every 5 minutes for due reminders and recurring expense rows (emails require `RESEND_API_KEY`).
+When `CRON_SECRET` is set in development, the server also polls every 5 minutes for due reminders and recurring expense rows. Reminder delivery needs `RESEND_API_KEY`; recurring expense materialization runs regardless.
 
 ### Health check
 
@@ -203,7 +208,7 @@ On each visit you may be prompted to **unlock** your ledger (one signature for b
 | `DELETE /api/auth/sessions` | Revoke all other sessions |
 | `POST /api/auth/logout` | End current session |
 | `POST /api/auth/clear` | Revoke all sessions and clear cookie |
-| `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder prefs |
+| `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder/alert prefs |
 | `POST /api/users` | Create or upsert user profile on first sign-in |
 | `GET/PATCH /api/profile` | Per-user UI state (`currentMonth` only) |
 | `CRUD /api/wallets` | Financial wallets (metadata + E2EE `enc`/`payload` via PATCH) |
@@ -243,7 +248,7 @@ Set these in **Vercel → Project → Settings → Environment Variables** for P
 | `MONGODB_DB` | Database name (default: `ledger`) |
 | `APP_ORIGIN` | Public app URL, e.g. `https://your-project.vercel.app` (used in sign-in messages) |
 | `NODE_ENV` | `production` (Vercel usually sets this; enables `Secure` session cookies) |
-| `CRON_SECRET` | Secret for the daily cron handler (used by cron-job.org) |
+| `CRON_SECRET` | Secret for the cron handler (used by cron-job.org) |
 | `RESEND_API_KEY` | Optional — enable schedule reminder emails and budget-alert emails |
 | `EMAIL_FROM` | Optional — verified sender in Resend |
 | `EXCHANGE_RATE_API_KEY` | Optional — enable FX conversion in Insights |
@@ -272,7 +277,7 @@ Optional: run `bunx vercel dev` locally to test Vercel routing before deploying.
 
 Vercel Hobby allows only one built-in cron job, so reminders and recurring expenses are triggered by [cron-job.org](https://cron-job.org) instead.
 
-The reminder handler does not use a fixed daily schedule. It polls the database on each run and sends email when the current time falls in each event's window: **remind-at − 5 min ≤ now ≤ remind-at + 5 min** (so a reminder can fire slightly early). Set the external job to run **every 5 minutes**.
+The reminder handler does not use a fixed daily schedule. It polls the database on each run and delivers email when the current time falls in each event's window: **remind-at − 5 min ≤ now ≤ remind-at + 5 min** (so a reminder can fire slightly early). Set the external job to run **every 5 minutes**.
 
 1. Create a free account at [cron-job.org](https://console.cron-job.org/signup).
 2. **Create cronjob** with:
@@ -300,6 +305,7 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 4. **Wallets** — create a second wallet, switch between them, and confirm transactions stay scoped.
 5. **Sessions** — open **Account → Data & privacy**, confirm your device appears in the session list, and test revoke / sign out.
 6. **CSV** — open **Account → Exports & imports** to export transactions, then re-import a row.
+7. **Transparency** — open the Transparency view and confirm the collection map renders.
 
 ### Serverless notes
 

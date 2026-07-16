@@ -9,6 +9,7 @@ export type BudgetAlertSendResult = {
   errors: string[];
 };
 
+/** Format a money amount for alert copy. */
 function formatAmount(amount: number, currency?: string): string {
   const code = (currency || "MYR").toUpperCase();
   try {
@@ -22,15 +23,18 @@ function formatAmount(amount: number, currency?: string): string {
   }
 }
 
+/** Turn YYYY-MM into a long month label. */
 function monthLabel(month: string): string {
   const [y, m] = month.split("-").map(Number);
   if (!y || !m) return month;
+
   return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
 }
 
 /**
- * Sends budget-near-limit emails for alerts the client evaluated after decrypting
- * ledger data. Dedupes via budget_alert_logs so each category/level/month emails once.
+ * Delivers budget-near-limit emails for alerts the client evaluated after
+ * decrypting ledger data. Dedupes via budget_alert_logs so each
+ * category/level/month notifies once.
  */
 export async function sendBudgetAlerts(opts: {
   userAddress: string;
@@ -53,14 +57,11 @@ export async function sendBudgetAlerts(opts: {
     return result;
   }
 
-  if (user.budgetAlertsEnabled === false) {
-    result.skipped += opts.alerts.length;
-    return result;
-  }
+  const emailOn = user.budgetAlertsEnabled !== false;
+  const email = user.notifyEmail?.trim() || "";
 
-  const email = user.notifyEmail?.trim();
-  if (!email) {
-    result.errors.push("No notify email on file");
+  if (!emailOn || !email) {
+    result.skipped += opts.alerts.length;
     return result;
   }
 
@@ -95,17 +96,20 @@ export async function sendBudgetAlerts(opts: {
     }
 
     const percent = Math.round((alert.spent / alert.budget) * 100);
+    const spentLabel = formatAmount(alert.spent, alert.currency);
+    const budgetLabel = formatAmount(alert.budget, alert.currency);
+
     const { html, text, subject } = budgetAlertEmailHtml({
       categoryName: alert.categoryName,
       level: alert.level,
-      spentLabel: formatAmount(alert.spent, alert.currency),
-      budgetLabel: formatAmount(alert.budget, alert.currency),
+      spentLabel,
+      budgetLabel,
       percent,
       monthLabel: label,
       walletName,
     });
-
     const sent = await sendEmail({ to: email, subject, html, text });
+
     if (!sent.ok) {
       result.errors.push(`${alert.categoryId}: ${sent.error}`);
       continue;
@@ -115,6 +119,7 @@ export async function sendBudgetAlerts(opts: {
       await budgetAlertLogs.insertOne({
         ...logKey,
         email,
+        channels: ["email"],
         sentAt: new Date(),
       });
       result.sent++;
