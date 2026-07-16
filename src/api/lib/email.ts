@@ -1,6 +1,7 @@
-import logoPath from "@/frontend/assets/logo.png" with { type: "file" };
-
 const LOGO_CONTENT_ID = "sched-ledger-logo";
+
+/** Injected by build.ts into the Vercel API bundle; unset in local/dev. */
+declare const __EMAIL_LOGO_BASE64__: string | undefined;
 
 type SendEmailInput = {
   to: string;
@@ -23,11 +24,28 @@ export function emailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
+/**
+ * Resolve logo base64 for CID attachments.
+ * Production embeds bytes via Bun.build define (no sidecar file on Vercel).
+ * Local/dev reads the source PNG from disk.
+ */
+async function loadLogoBase64(): Promise<string> {
+  const embedded = typeof __EMAIL_LOGO_BASE64__ === "string" ? __EMAIL_LOGO_BASE64__ : "";
+
+  if (embedded) {
+    return embedded;
+  }
+
+  const file = Bun.file(new URL("../../frontend/assets/logo.png", import.meta.url));
+  const bytes = await file.arrayBuffer();
+
+  return Buffer.from(bytes).toString("base64");
+}
+
 /** Load the brand logo as base64 for Resend inline (CID) attachments. */
 async function getLogoAttachment(): Promise<LogoAttachment> {
   if (!logoBase64) {
-    const bytes = await Bun.file(logoPath).arrayBuffer();
-    logoBase64 = Buffer.from(bytes).toString("base64");
+    logoBase64 = await loadLogoBase64();
   }
 
   return {
