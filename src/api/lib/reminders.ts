@@ -184,12 +184,12 @@ async function sendReminderOnce(
   return "sent";
 }
 
-/** Must match the cron schedule in vercel.json ("0 16 * * *"). */
+/** Must match the cron-job.org schedule (daily at 16:00 UTC). */
 const CRON_HOUR_UTC = 16;
 
 /**
- * When the next daily cron run will have completed, including the Hobby
- * plan's ±59 min scheduling imprecision.
+ * When the next daily cron run will have completed, including slack for
+ * late or early triggers from the external scheduler.
  */
 export function nextCronRunEndMs(now = new Date()): number {
   const next = new Date(now);
