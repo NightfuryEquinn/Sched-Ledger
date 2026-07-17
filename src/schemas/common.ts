@@ -15,38 +15,6 @@ export const objectIdSchema = z
   .string()
   .regex(/^[a-f0-9]{24}$/i, "Invalid document id");
 
-export const CATEGORY_IDS = [
-  "food",
-  "transport",
-  "utilities",
-  "sport",
-  "fun",
-  "savings",
-  "income",
-] as const;
-
-/** @deprecated Use subcategoryIdSchema from category.ts */
-export const SUBCATEGORY_IDS = [
-  "groceries",
-  "meal",
-  "snacks",
-  "petrol",
-  "transportation",
-  "electricity",
-  "water",
-  "internet",
-  "gym",
-  "streaming",
-  "outings",
-  "games",
-  "saving",
-  "salary",
-  "wages",
-  "bonus",
-  "funds",
-  "other_income",
-] as const;
-
 export { categoryIdSchema, subcategoryIdSchema } from "./category";
 
 export const budgetsSchema = z.record(categoryIdSchema, z.number().nonnegative());
@@ -73,6 +41,7 @@ export const ALL_DAY_LEAD_IDS = ["1d", "2d"] as const satisfies readonly LeadId[
 /** Reminder leads allowed for timed events. */
 export const TIMED_LEAD_IDS = LEAD_IDS;
 
+/** Whether a reminder lead is valid for an all-day or timed event. */
 export function isLeadAllowedForEvent(lead: LeadId, allDay: boolean): boolean {
   return allDay
     ? (ALL_DAY_LEAD_IDS as readonly string[]).includes(lead)
@@ -82,9 +51,3 @@ export function isLeadAllowedForEvent(lead: LeadId, allDay: boolean): boolean {
 export const eventCategoryIdSchema = z.enum(EVENT_CATEGORY_IDS);
 export const repeatIdSchema = z.enum(REPEAT_IDS);
 export const leadIdSchema = z.enum(LEAD_IDS);
-
-export const EMPTY_BUDGETS: Record<string, number> = Object.fromEntries(
-  CATEGORY_IDS.map((id) => [id, 0]),
-);
-
-export const DEFAULT_INCOME = 5600;

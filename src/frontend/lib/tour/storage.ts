@@ -24,7 +24,3 @@ export function hasSeenTour(id: ViewId | "shell"): boolean {
 export function markTourSeen(id: ViewId | "shell") {
   write({ ...read(), [id]: true });
 }
-
-export function resetAllTours() {
-  localStorage.removeItem(STORAGE_KEY);
-}

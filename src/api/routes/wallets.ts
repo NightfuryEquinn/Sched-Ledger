@@ -239,14 +239,3 @@ walletsRoutes.delete("/:id", async (c) => {
 
   return c.json({ ok: true });
 });
-
-export async function getDefaultWalletId(walletAddress: string): Promise<ObjectId> {
-  const wallets = await migrateLegacyData(walletAddress);
-  const def = wallets.find((w) => w.isDefault) ?? wallets[0];
-  if (def) return def._id;
-
-  const { financialWallets } = getCollections(getDb());
-  const fallback = await financialWallets.findOne({ userAddress: walletAddress });
-  if (!fallback) throw new Error("No wallet found for user");
-  return fallback._id;
-}

@@ -47,7 +47,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 | API | [Hono](https://hono.dev) + Zod validation |
 | Database | [MongoDB](https://www.mongodb.com) |
 | Frontend | React 19, TanStack Query, ethers v6 |
-| Styling | Tailwind CSS 4 (`bun-plugin-tailwind`) + custom theme CSS |
+| Styling | Custom theme CSS (`ledger.css`) |
 | Tours | [Shepherd.js](https://shepherdjs.dev) |
 | Diagrams | [Mermaid](https://mermaid.js.org) (Transparency view) |
 | Deploy | [Vercel](https://vercel.com) (Analytics, Speed Insights); scheduled jobs via [cron-job.org](https://cron-job.org) |

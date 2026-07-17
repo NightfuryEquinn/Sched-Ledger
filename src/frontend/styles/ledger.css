@@ -1291,6 +1291,9 @@ h1,h2,h3{margin:0;font-weight:600;}
   .insights-fx-note{text-align:left;}
   .transparency-grid{grid-template-columns:1fr;}
   .transparency-kv-row{grid-template-columns:1fr;gap:4px;}
+  .transparency-diagram{overflow-x:hidden;}
+  .transparency-mermaid{min-width:0;width:100%;}
+  .transparency-mermaid svg{width:100%;max-width:100%;height:auto;}
 
   /* Schedule — upcoming */
   .panel-head--agenda{margin-bottom:12px;}

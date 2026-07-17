@@ -77,12 +77,6 @@ export const listExpensesQuerySchema = z.object({
   sub: subcategoryIdSchema.optional(),
 });
 
-export function isEncryptedExpenseInput(
-  body: z.infer<typeof createExpenseSchema>,
-): body is z.infer<typeof createExpenseSchema> {
-  return body.enc === 1;
-}
-
 export type TxnKind = z.infer<typeof txnKindSchema>;
 export type Expense = z.infer<typeof expenseSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;

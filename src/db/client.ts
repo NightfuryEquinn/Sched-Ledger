@@ -70,14 +70,6 @@ export function getDb(): Db {
   return db;
 }
 
-export async function closeDb(): Promise<void> {
-  if (client) {
-    await client.close();
-    client = null;
-    db = null;
-  }
-}
-
 /**
  * Test helper: point the module singleton at an in-memory (or other) Db.
  * Pass `null` to clear. Production code should use connectDb() instead.

@@ -30,10 +30,6 @@ export function formatIsoDateParts(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-export function monthKeyFromIso(iso: string): string {
-  return iso.slice(0, 7);
-}
-
 export function daysInMonth(y: number, m: number): number {
   return new Date(y, m, 0).getDate();
 }

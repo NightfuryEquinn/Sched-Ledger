@@ -83,12 +83,3 @@ categoriesRoutes.put("/", zValidator("json", updateCategoriesSchema), async (c) 
   if (!updated) notFound("Category taxonomy not found");
   return c.json({ categories: updated.categories });
 });
-
-export async function findSubInTaxonomy(userAddress: string, subId: string) {
-  const taxonomy = await getOrCreateTaxonomy(userAddress);
-  for (const cat of taxonomy.categories) {
-    const sub = cat.subs.find((s) => s.id === subId);
-    if (sub) return { category: cat, sub };
-  }
-  return null;
-}

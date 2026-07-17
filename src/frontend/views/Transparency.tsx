@@ -201,6 +201,46 @@ const RELATIONSHIP_CHART = `flowchart TB
   Wallets --> Logs
 `;
 
+/** Mobile: stack client above API with TB-only subgraphs (avoids side-by-side). */
+const RELATIONSHIP_CHART_MOBILE = `flowchart TB
+  subgraph Client["Browser client"]
+    direction TB
+    UI["React UI"]
+    Key["In-memory ledger key<br/>from wallet signature"]
+    LS["localStorage<br/>identities · session · theme · tour"]
+    UI --> Key
+    UI --> LS
+  end
+
+  subgraph API["API / MongoDB"]
+    direction TB
+    Users["users"]
+    Profile["ledger_profiles"]
+    Wallets["financial_wallets<br/>enc + payload"]
+    Cats["category_taxonomies"]
+    Exp["expenses<br/>enc + payload"]
+    Ev["events"]
+    Todos["todo_lists"]
+    Consent["consent"]
+    Auth["auth_nonces · sessions"]
+    Logs["reminder_logs · budget_alert_logs"]
+    Users --> Profile
+    Users --> Wallets
+    Users --> Cats
+    Users --> Exp
+    Users --> Ev
+    Users --> Todos
+    Users --> Consent
+    Users --> Auth
+    Ev --> Logs
+    Wallets --> Logs
+  end
+
+  Client -->|"signed requests"| API
+  Key -.->|"AES-GCM"| Wallets
+  Key -.->|"AES-GCM"| Exp
+`;
+
 const E2EE_CHART = `flowchart LR
   Plain["Plain fields<br/>sub · amount · note<br/>income · budgets"]
   Enc["AES-GCM encrypt<br/>with ledger key"]
@@ -214,13 +254,60 @@ const E2EE_CHART = `flowchart LR
   DB --> DbOut --> Decr --> Ready
 `;
 
+/** Mobile: same write path stacked top-to-bottom. */
+const E2EE_CHART_MOBILE = `flowchart TB
+  Plain["Plain fields<br/>sub · amount · note<br/>income · budgets"]
+  Enc["AES-GCM encrypt<br/>with ledger key"]
+  Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
+  DB[("MongoDB")]
+  DbOut["Fetch document"]
+  Decr["AES-GCM decrypt<br/>in browser"]
+  Ready["UI sees plaintext<br/>server never does"]
+
+  Plain --> Enc --> Doc --> DB
+  DB --> DbOut --> Decr --> Ready
+`;
+
+const MOBILE_MQ = "(max-width: 860px)";
+
+/** Read the current color theme for Mermaid. */
 function readTheme(): "dark" | "neutral" {
   return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "neutral";
 }
 
-function MermaidDiagram({ chart, label }: { chart: string; label: string }) {
+/** Track whether the viewport matches the tablet/mobile breakpoint. */
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(MOBILE_MQ).matches : false,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MQ);
+    /** Sync React state when the media query flips. */
+    const onChange = () => setMobile(mq.matches);
+
+    onChange();
+    mq.addEventListener("change", onChange);
+
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return mobile;
+}
+
+function MermaidDiagram({
+  chart,
+  mobileChart,
+  label,
+}: {
+  chart: string;
+  mobileChart?: string;
+  label: string;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const reactId = useId().replace(/:/g, "");
+  const isMobile = useIsMobile();
+  const activeChart = isMobile && mobileChart ? mobileChart : chart;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -229,6 +316,7 @@ function MermaidDiagram({ chart, label }: { chart: string; label: string }) {
     const host = hostRef.current;
     if (!host) return;
 
+    /** Render (or re-render) the Mermaid SVG into the host. */
     const render = async () => {
       try {
         setLoading(true);
@@ -241,7 +329,7 @@ function MermaidDiagram({ chart, label }: { chart: string; label: string }) {
           flowchart: { curve: "basis", htmlLabels: true, padding: 12 },
         });
         const id = `mmd-${reactId}-${Math.random().toString(36).slice(2, 8)}`;
-        const { svg } = await mermaid.render(id, chart);
+        const { svg } = await mermaid.render(id, activeChart);
         if (cancelled || !hostRef.current) return;
         hostRef.current.innerHTML = svg;
         setError(null);
@@ -264,7 +352,7 @@ function MermaidDiagram({ chart, label }: { chart: string; label: string }) {
       cancelled = true;
       obs.disconnect();
     };
-  }, [chart, reactId]);
+  }, [activeChart, reactId]);
 
   return (
     <div className="transparency-diagram" role="img" aria-label={label}>
@@ -324,7 +412,11 @@ export function Transparency() {
             <p className="panel-sub">Your wallet address anchors every user-owned collection</p>
           </div>
         </div>
-        <MermaidDiagram chart={RELATIONSHIP_CHART} label="Collection relationship flowchart" />
+        <MermaidDiagram
+          chart={RELATIONSHIP_CHART}
+          mobileChart={RELATIONSHIP_CHART_MOBILE}
+          label="Collection relationship flowchart"
+        />
       </section>
 
       <section className="panel" data-tour="tour-transparency-e2ee">
@@ -336,7 +428,11 @@ export function Transparency() {
             </p>
           </div>
         </div>
-        <MermaidDiagram chart={E2EE_CHART} label="E2EE save flowchart" />
+        <MermaidDiagram
+          chart={E2EE_CHART}
+          mobileChart={E2EE_CHART_MOBILE}
+          label="E2EE save flowchart"
+        />
       </section>
 
       <section className="panel" data-tour="tour-transparency-collections">

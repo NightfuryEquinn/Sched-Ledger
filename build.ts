@@ -1,4 +1,3 @@
-import tailwind from "bun-plugin-tailwind";
 import { mkdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
@@ -11,7 +10,6 @@ const entrypoints = [...new Bun.Glob("src/**/*.html").scanSync()];
 const frontend = await Bun.build({
   entrypoints,
   outdir,
-  plugins: [tailwind],
   minify: true,
   target: "browser",
   sourcemap: "linked",

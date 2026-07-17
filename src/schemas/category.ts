@@ -100,25 +100,3 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
   },
 ];
-
-export const DEFAULT_BUDGETS: Record<string, number> = {
-  food: 1200,
-  transport: 500,
-  utilities: 450,
-  sport: 180,
-  fun: 350,
-  savings: 1000,
-  income: 0,
-};
-
-export function emptyBudgets(categories: Category[]): Record<string, number> {
-  return Object.fromEntries(categories.map((c) => [c.id, 0]));
-}
-
-export function defaultBudgets(categories: Category[]): Record<string, number> {
-  const base = emptyBudgets(categories);
-  for (const [id, amount] of Object.entries(DEFAULT_BUDGETS)) {
-    if (id in base) base[id] = amount;
-  }
-  return base;
-}

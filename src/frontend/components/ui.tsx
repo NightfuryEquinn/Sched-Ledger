@@ -71,7 +71,6 @@ function Icon({ name, size = 20 }) {
     calendar: <><rect x="3" y="4.5" width="18" height="16" rx="2.5" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></>,
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></>,
     bell: <><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" /><path d="M10.5 19a1.6 1.6 0 0 0 3 0" /></>,
-    bellOff: <><path d="M9 5.4A6 6 0 0 1 18 9c0 3 .8 4.6 1.4 5.4M6 9c0 5-2 6-2 6h11" /><path d="M10.5 19a1.6 1.6 0 0 0 3 0" /><path d="M3 3l18 18" /></>,
     comment: <><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V16.5H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5z" /></>,
     send: <><path d="M4 12l16-7-7 16-2.5-6.5L4 12z" /></>,
     checklist: <><path d="M9 6h11M9 12h11M9 18h6" /><path d="M5 6l1.5 1.5L8 5M5 12l1.5 1.5L8 11M5 18l1.5 1.5L8 17" /></>,
@@ -601,9 +600,6 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
   );
 }
 
-export { CurrencyPicker } from "@/frontend/components/CurrencyPicker";
-export { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
-export { TimezonePicker } from "@/frontend/components/TimezonePicker";
 export {
   AddExpenseModal, BudgetBar, CatGlyph, EmptyState, Icon, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
 };

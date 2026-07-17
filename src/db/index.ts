@@ -1,4 +1,4 @@
-export { closeDb, connectDb, getDb, isDbConnected, setDbForTests } from "./client";
+export { connectDb, getDb, isDbConnected, setDbForTests } from "./client";
 export {
   COLLECTIONS,
   getCollections,

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { DEFAULT_CATEGORIES, emptyBudgets } from "./category";
 import {
   budgetsSchema,
   walletAddressSchema,
@@ -83,21 +82,3 @@ export type FinancialWallet = z.infer<typeof financialWalletSchema>;
 export type CreateWalletInput = z.infer<typeof createWalletSchema>;
 export type UpdateWalletInput = z.infer<typeof updateWalletSchema>;
 export type FundingMode = z.infer<typeof fundingModeSchema>;
-
-export function defaultWallet(
-  userAddress: string,
-  overrides?: Partial<
-    Pick<FinancialWallet, "name" | "currency" | "fundingMode" | "income" | "startingBalance" | "budgets">
-  >,
-): Omit<FinancialWallet, "createdAt" | "updatedAt"> {
-  return {
-    userAddress: walletAddressSchema.parse(userAddress),
-    name: overrides?.name ?? "Main",
-    currency: overrides?.currency ?? "MYR",
-    fundingMode: overrides?.fundingMode ?? "monthly",
-    income: overrides?.income ?? 0,
-    startingBalance: overrides?.startingBalance ?? 0,
-    budgets: overrides?.budgets ?? emptyBudgets(DEFAULT_CATEGORIES),
-    isDefault: true,
-  };
-}

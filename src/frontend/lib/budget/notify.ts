@@ -12,7 +12,8 @@ import { monthStats } from "@/frontend/lib/stats";
 const LOCAL_PUSH_KEY = "ledger:budget-alert-push";
 const LOCAL_SENT_KEY = "ledger:budget-alerts-sent";
 
-export function getBudgetAlertPushEnabled(): boolean {
+/** Whether in-tab budget alert notifications are enabled (default on). */
+function getBudgetAlertPushEnabled(): boolean {
   try {
     return localStorage.getItem(LOCAL_PUSH_KEY) !== "0";
   } catch {
@@ -20,14 +21,7 @@ export function getBudgetAlertPushEnabled(): boolean {
   }
 }
 
-export function setBudgetAlertPushEnabled(on: boolean): void {
-  try {
-    localStorage.setItem(LOCAL_PUSH_KEY, on ? "1" : "0");
-  } catch {
-    /* ignore */
-  }
-}
-
+/** Read previously sent alert dedupe keys from localStorage. */
 function readSentKeys(): Set<string> {
   try {
     const raw = localStorage.getItem(LOCAL_SENT_KEY);
@@ -39,6 +33,7 @@ function readSentKeys(): Set<string> {
   }
 }
 
+/** Persist newly sent alert dedupe keys, capping growth. */
 function markSent(keys: string[]): void {
   try {
     const next = readSentKeys();
@@ -51,6 +46,7 @@ function markSent(keys: string[]): void {
   }
 }
 
+/** Build the notification body for a budget alert. */
 function notificationBody(alert: BudgetAlert, currency: string): string {
   const pct = Math.round(alert.ratio * 100);
   const spent = fmtMoney(alert.spent, { cents: false, currency });
@@ -61,7 +57,8 @@ function notificationBody(alert: BudgetAlert, currency: string): string {
   return `${spent} of ${budget} (${pct}% used) for ${monthLabel(alert.month, true)}`;
 }
 
-export async function showBudgetAlertNotification(
+/** Show an in-tab Notification for a budget alert when permission is granted. */
+async function showBudgetAlertNotification(
   alert: BudgetAlert,
   currency: string,
 ): Promise<boolean> {
@@ -87,18 +84,6 @@ export async function showBudgetAlertNotification(
     return true;
   } catch {
     return false;
-  }
-}
-
-export async function requestBudgetAlertPermission(): Promise<NotificationPermission | "unsupported"> {
-  if (typeof Notification === "undefined") return "unsupported";
-  if (Notification.permission === "granted" || Notification.permission === "denied") {
-    return Notification.permission;
-  }
-  try {
-    return await Notification.requestPermission();
-  } catch {
-    return Notification.permission;
   }
 }
 

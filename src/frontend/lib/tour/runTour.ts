@@ -94,7 +94,3 @@ export function cancelActiveTour() {
   if (activeTour?.isActive()) activeTour.cancel();
   activeTour = null;
 }
-
-export function isTourActive() {
-  return !!activeTour?.isActive();
-}
