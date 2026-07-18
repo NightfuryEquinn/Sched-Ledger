@@ -1,7 +1,6 @@
 import { AreaTrend, Donut, MiniSpark, MoMBars } from "@/frontend/charts";
 import { CurrencyPicker } from "@/frontend/components/CurrencyPicker";
 import {
-  BudgetBar,
   CatGlyph,
   EmptyState,
   Icon,
@@ -15,6 +14,9 @@ import {
   CURRENT_MONTH_KEY,
   MONTHS,
   dayLabel,
+  eventCatMeta,
+  eventTimeLabel,
+  eventsForDay,
   fmtBudgetLimit,
   fmtMoney,
   fmtMoneyShort,
@@ -22,10 +24,15 @@ import {
   isBudgetSet,
   monthLabel,
   monthsWindow,
+  pad,
   weekdayLabel,
 } from "@/frontend/lib/data";
 import { fetchFxRates, fxConvert, fxRateLabel } from "@/frontend/lib/fx";
 import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import {
+  assessSpendingHabit,
+  type HabitPeriod,
+} from "@/frontend/lib/spendingHabits";
 import {
   catOf,
   chartActiveKey,
@@ -41,6 +48,7 @@ import {
   type ChartPeriod
 } from "@/frontend/lib/stats";
 import { getAccent } from "@/frontend/lib/theme";
+import type { LedgerEvent, TodoList } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import { useEffect, useMemo, useState } from "react";
 
@@ -49,20 +57,67 @@ export { Categories } from "./Categories";
 /*
  * Ledger views
  * ────────────
- *   Overview     — summary cards, spend trend, donut, budgets, recent
+ *   Overview     — summary cards, to-do & schedule, spend trend, donut,
+ *                  recent transactions
  *   Transactions — searchable / filterable list grouped by date
  *   Budgets      — per-category budget editing
  *   Insights     — month-over-month and category trends
  *   Recurring    — fixed monthly commitments
  */
 
+/** Up to `limit` lists in API order (oldest first). */
+function oldestTodoLists(todoLists: TodoList[], limit = 3) {
+  return todoLists.slice(0, limit);
+}
+
+/** ISO date YYYY-MM-DD for a Date. */
+function isoDateOf(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** HH:MM clock string for a Date. */
+function clockHm(d: Date) {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Today's events that have not yet passed at `now`, earliest first, capped at `limit`.
+ * Timed events before the current clock are omitted; all-day events stay for the whole day.
+ */
+function remainingTodayEvents(events: LedgerEvent[], now: Date, limit = 3) {
+  const todayIso = isoDateOf(now);
+  const nowHm = clockHm(now);
+
+  return eventsForDay(events, todayIso)
+    .filter((ev) => ev.allDay || (ev.time || "00:00") >= nowHm)
+    .slice(0, limit);
+}
+
 // ── Overview ────────────────────────────────────────────────────────
-export function Overview({ expenses, budgets, wallet, month, currency, categoryIndex, setView, onEdit }) {
+export function Overview({
+  expenses,
+  budgets,
+  wallet,
+  month,
+  currency,
+  categoryIndex,
+  todoLists = [],
+  events = [],
+  setView,
+  onEdit,
+  onEditEvent,
+}) {
+  const [loadedAt] = useState(() => new Date());
   const st = useMemo(
     () => monthStats(expenses, budgets, wallet, month, categoryIndex),
     [expenses, budgets, wallet, month, categoryIndex],
   );
   const [hoverCat, setHoverCat] = useState(null);
+  const recentTodos = useMemo(() => oldestTodoLists(todoLists, 3), [todoLists]);
+  const todayEvents = useMemo(
+    () => remainingTodayEvents(events, loadedAt, 3),
+    [events, loadedAt],
+  );
 
   const donutData = categoryIndex.expenseCategories
     .map((c) => ({
@@ -89,7 +144,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
     cum.push({ x: String(d), v: Math.round(run) });
   }
 
-  const recent = st.list.slice(0, 6);
+  const recent = st.list.slice(0, 3);
   const spentPct = st.totalBudget ? st.spent / st.totalBudget : 0;
   const activeCat = hoverCat;
   const isStarting = wallet?.fundingMode === "starting";
@@ -114,17 +169,86 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
       </div>
 
       <div className="ov-grid">
-        <section className="panel trend-panel" data-tour="tour-overview-trend">
+        <section className="panel" data-tour="tour-overview-oldest-todo">
           <div className="panel-head">
-            <div>
-              <h2>Spending this month</h2>
-              <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}</p>
-            </div>
-            <div className="trend-now">{fmtMoney(st.spent, { cents: false, currency })}</div>
+            <h2>Recent To-Do</h2>
+            <button className="link-btn" onClick={() => setView("todos")}>See all</button>
           </div>
-          <AreaTrend points={cum.length ? cum : [{ x: "1", v: 0 }]} accent={getAccent()} height={210} budgetLine={st.totalBudget} />
+          <div className="recent-list">
+            {recentTodos.length ? recentTodos.map((list) => {
+              const done = list.tasks.filter((t) => t.done).length;
+              const total = list.tasks.length;
+
+              return (
+                <button
+                  key={list.id}
+                  type="button"
+                  className="recent-row"
+                  onClick={() => setView("todos")}
+                >
+                  <span className="rr-glyph" style={{ background: "var(--surface-3)" }}>
+                    {list.icon}
+                  </span>
+                  <span className="rr-main">
+                    <span className="rr-note">{list.name}</span>
+                    <span className="rr-sub">
+                      {total ? `${done}/${total} done` : "No tasks yet"}
+                    </span>
+                  </span>
+                </button>
+              );
+            }) : (
+              <EmptyState title="No lists yet" sub="Create a to-do list to get started." />
+            )}
+          </div>
         </section>
 
+        <section className="panel" data-tour="tour-overview-today-schedule">
+          <div className="panel-head">
+            <h2>Recent Schedule</h2>
+            <button className="link-btn" onClick={() => setView("schedule")}>See all</button>
+          </div>
+          <div className="recent-list">
+            {todayEvents.length ? todayEvents.map((ev) => {
+              const cat = eventCatMeta(ev);
+
+              return (
+                <button
+                  key={ev.id}
+                  type="button"
+                  className="recent-row"
+                  onClick={() => (onEditEvent ? onEditEvent(ev) : setView("schedule"))}
+                >
+                  <span className="rr-glyph" style={glyphTint(cat.color)}>
+                    {displayGlyph(cat.glyph, cat.id)}
+                  </span>
+                  <span className="rr-main">
+                    <span className="rr-note">{ev.title}</span>
+                    <span className="rr-sub">
+                      {cat.name} · {eventTimeLabel(ev)}
+                    </span>
+                  </span>
+                </button>
+              );
+            }) : (
+              <EmptyState title="Nothing left today" sub="No upcoming events for the rest of today." />
+            )}
+          </div>
+        </section>
+      </div>
+
+      <section className="panel trend-panel" data-tour="tour-overview-trend">
+        <div className="panel-head">
+          <div>
+            <h2>Spending this month</h2>
+            <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}</p>
+          </div>
+          <div className="trend-now">{fmtMoney(st.spent, { cents: false, currency })}</div>
+        </div>
+        <AreaTrend points={cum.length ? cum : [{ x: "1", v: 0 }]} accent={getAccent()} height={210} budgetLine={st.totalBudget} />
+      </section>
+
+      <div className="ov-grid ov-grid--charts">
         <section className="panel donut-panel" data-tour="tour-overview-donut">
           <div className="panel-head"><h2>By category</h2></div>
           <div className="donut-wrap">
@@ -146,24 +270,10 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
             </ul>
           </div>
         </section>
-      </div>
-
-      <div className="ov-grid">
-        <section className="panel" data-tour="tour-overview-budgets">
-          <div className="panel-head">
-            <h2>Budget tracker</h2>
-            <button className="link-btn" onClick={() => setView("budgets")}>Manage</button>
-          </div>
-          <div className="budget-list">
-            {categoryIndex.expenseCategories.map((c) => (
-              <BudgetBar key={c.id} cat={c} spent={st.byCat[c.id] || 0} budget={budgets[c.id]} onClick={() => setView("budgets")} currency={currency} />
-            ))}
-          </div>
-        </section>
 
         <section className="panel" data-tour="tour-overview-recent">
           <div className="panel-head">
-            <h2>Recent</h2>
+            <h2>Recent Transaction</h2>
             <button className="link-btn" onClick={() => setView("transactions")}>See all</button>
           </div>
           <div className="recent-list">
@@ -181,7 +291,7 @@ export function Overview({ expenses, budgets, wallet, month, currency, categoryI
                   </span>
                 </button>
               );
-            }) : <EmptyState title="No expenses yet" sub="Add your first one for this month." />}
+            }) : <EmptyState title="No transactions yet" sub="Add your first one for this month." />}
           </div>
         </section>
       </div>
@@ -345,6 +455,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 // ── Insights ────────────────────────────────────────────────────────
 export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, setMonth }) {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
+  const [habitPeriod, setHabitPeriod] = useState<HabitPeriod>("month");
   const [viewCurrency, setViewCurrency] = useState(currency);
   const [fxRates, setFxRates] = useState<Record<string, number> | null>(null);
   const [fxStatus, setFxStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -453,6 +564,15 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           ? "Total spend by year · dashed line is yearly budget · tap a bar to view"
           : "Total spend · dashed line is budget · tap a bar to view";
 
+  const habit = useMemo(
+    () => assessSpendingHabit(expenses, habitPeriod, month, categoryIndex),
+    [expenses, habitPeriod, month, categoryIndex],
+  );
+  const habitSub =
+    habitPeriod === "month"
+      ? `Based on outgoing spend in ${habit.periodLabel} · updates with the selected month`
+      : `Based on outgoing spend in ${habit.periodLabel} · updates with the selected year`;
+
   return (
     <div className="view">
       <div className="insights-fx" data-tour="tour-insights-fx">
@@ -468,6 +588,70 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         </div>
         <p className={"insights-fx-note" + (fxStatus === "error" ? " is-error" : "")}>{fxNote}</p>
       </div>
+
+      <section className="panel insights-habits" data-tour="tour-insights-habits">
+        <div className="panel-head insights-habits-head">
+          <div>
+            <h2>Spending habit</h2>
+            <p className="panel-sub">{habitSub}</p>
+          </div>
+          <Segmented
+            options={[
+              { v: "month", label: "Per month" },
+              { v: "year", label: "Per year" },
+            ]}
+            value={habitPeriod}
+            onChange={setHabitPeriod}
+          />
+        </div>
+
+        {habit.status === "insufficient" ? (
+          <div className="insights-habits-locked">
+            <div className="insights-habits-locked-mark" aria-hidden="true">◌</div>
+            <div className="insights-habits-locked-copy">
+              <p className="insights-habits-locked-title">Style unlocks after 5 days of transactions</p>
+              <p className="insights-habits-locked-sub">
+                {habit.daysHave === 0
+                  ? `No outgoing spend days yet in ${habit.periodLabel}.`
+                  : `${habit.daysHave} of ${habit.daysNeeded} active days in ${habit.periodLabel}.`}
+              </p>
+            </div>
+            <div
+              className="insights-habits-progress"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={habit.daysNeeded}
+              aria-valuenow={habit.daysHave}
+              aria-label="Transaction days toward habit unlock"
+            >
+              <div
+                className="insights-habits-progress-fill"
+                style={{ width: `${(habit.daysHave / habit.daysNeeded) * 100}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className={"insights-habits-result style-" + habit.style.id}>
+            <div className="insights-habits-identity">
+              <p className="insights-habits-temperament">{habit.style.temperament}</p>
+              <h3 className="insights-habits-title">{habit.style.title}</h3>
+              <p className="insights-habits-meta">
+                {habit.activeDays} active days · {habit.txCount} transactions in {habit.periodLabel}
+              </p>
+            </div>
+            <div className="insights-habits-copy">
+              <div className="insights-habits-block">
+                <p className="insights-habits-kicker">Data pattern</p>
+                <p>{habit.style.pattern}</p>
+              </div>
+              <div className="insights-habits-block">
+                <p className="insights-habits-kicker">Behavior</p>
+                <p>{habit.style.behavior}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className="summary-grid sg-3">
         <SummaryCard label="This month" tone="spent" value={money(cur.spent)} sub={monthLabel(month)} />

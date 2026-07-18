@@ -83,10 +83,11 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
   overview: [
     step("overview-nav", "Overview", "Your monthly snapshot — income, spend, savings, and what's left.", navTarget("overview"), "right"),
     step("overview-summary", "Summary cards", "These four cards show your pool, spending, savings, and remaining balance for the month.", '[data-tour="tour-overview-summary"]'),
+    step("overview-oldest-todo", "Recent To-Do", "Up to three of your oldest to-do lists — tap to open TO-DO List.", '[data-tour="tour-overview-oldest-todo"]'),
+    step("overview-today-schedule", "Recent Schedule", "Up to three remaining events for today, based on the current time when Overview loads.", '[data-tour="tour-overview-today-schedule"]'),
     step("overview-trend", "Spending trend", "Track cumulative spending against your total budget as the month progresses.", '[data-tour="tour-overview-trend"]', "top"),
     step("overview-donut", "By category", "Hover slices to see how spending breaks down across categories.", '[data-tour="tour-overview-donut"]', "left"),
-    step("overview-budgets", "Budget tracker", "See progress per category. Tap Manage to edit allocations on the Budgets tab.", '[data-tour="tour-overview-budgets"]'),
-    lastStep("overview-recent", "Recent activity", "Your latest transactions appear here. Tap one to edit, or See all for the full list.", '[data-tour="tour-overview-recent"]'),
+    lastStep("overview-recent", "Recent Transaction", "Up to three of your latest transactions. Tap one to edit, or See all for the full list.", '[data-tour="tour-overview-recent"]'),
   ],
   todos: [
     step("todos-nav", "TO-DO List", "Organize tasks into separate lists — groceries, work, travel, and more.", navTarget("todos"), "right"),
@@ -125,6 +126,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
   insights: [
     step("insights-nav", "Insights", "Longer-range trends, comparisons, and currency views.", navTarget("insights"), "right"),
     step("insights-fx", "Currency view", "Preview amounts in another currency using live exchange rates.", '[data-tour="tour-insights-fx"]'),
+    step("insights-habits", "Spending habit", "After five transaction days, see your month or year spending style — clockwork, burst, dripper, and more.", '[data-tour="tour-insights-habits"]'),
     step("insights-chart", "Month over month", "Switch between daily, monthly, quarterly, and yearly bars. Tap a bar to jump to that period.", '[data-tour="tour-insights-chart"]', "top"),
     lastStep("insights-trends", "Breakdowns", "Category trends vs last month and your top subcategories this month.", '[data-tour="tour-insights-trends"]'),
   ],

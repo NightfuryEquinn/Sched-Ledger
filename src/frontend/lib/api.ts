@@ -197,10 +197,21 @@ export const api = {
       return request<{ expense: Expense }>("/expenses", { method: "POST", body });
     },
     update(id: string, body: Partial<Omit<Expense, "id">> | Record<string, unknown>) {
-      return request<{ expense: Expense }>(`/expenses/${id}`, { method: "PATCH", body });
+      return request<{
+        expense: Expense;
+        deletedIds?: string[];
+        endedIds?: string[];
+      }>(`/expenses/${id}`, { method: "PATCH", body });
     },
-    remove(id: string) {
-      return request<{ ok: boolean }>(`/expenses/${id}`, { method: "DELETE" });
+    remove(id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) {
+      const params = new URLSearchParams();
+      if (opts?.scope) params.set("scope", opts.scope);
+      if (opts?.fromDate) params.set("fromDate", opts.fromDate);
+      const qs = params.toString();
+      return request<{ ok: boolean; deletedIds?: string[]; skippedId?: string }>(
+        `/expenses/${id}${qs ? `?${qs}` : ""}`,
+        { method: "DELETE" },
+      );
     },
   },
 
@@ -215,8 +226,15 @@ export const api = {
     update(id: string, body: Partial<Omit<LedgerEvent, "id">>) {
       return request<{ event: LedgerEvent }>(`/events/${id}`, { method: "PATCH", body });
     },
-    remove(id: string) {
-      return request<{ ok: boolean }>(`/events/${id}`, { method: "DELETE" });
+    remove(id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) {
+      const params = new URLSearchParams();
+      if (opts?.scope) params.set("scope", opts.scope);
+      if (opts?.fromDate) params.set("fromDate", opts.fromDate);
+      const qs = params.toString();
+      return request<{ ok: boolean; deleted?: boolean; event?: LedgerEvent }>(
+        `/events/${id}${qs ? `?${qs}` : ""}`,
+        { method: "DELETE" },
+      );
     },
     addComment(id: string, text: string) {
       return request<{ event: LedgerEvent }>(`/events/${id}/comments`, {

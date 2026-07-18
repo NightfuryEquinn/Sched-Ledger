@@ -12,12 +12,15 @@ import {
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { buildCategoryIndex } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
-import { normalizeRecurring } from "@/frontend/lib/stats";
+import { normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
 import type { Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
+import type { DeleteScope } from "@/lib/delete-scope";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const ACTIVE_WALLET_KEY = "ledger:active-wallet";
+
+export type DeleteScopeOpts = { scope?: DeleteScope; fromDate?: string };
 
 function activeWalletStorageKey(wallet: string) {
   return `${ACTIVE_WALLET_KEY}:${wallet.toLowerCase()}`;
@@ -263,22 +266,41 @@ export function useLedger(walletAddress: string) {
       const cryptoKey = requireKey(wallet);
       if (data.id) {
         const body = await encodeExpenseUpdate(data, cryptoKey);
-        const { expense } = await api.expenses.update(data.id, body);
-        return decodeExpense(expense as ExpenseWire, cryptoKey);
+        const res = await api.expenses.update(data.id, body);
+        const expense = await decodeExpense(res.expense as ExpenseWire, cryptoKey);
+        return {
+          expense,
+          deletedIds: res.deletedIds ?? [],
+          endedIds: res.endedIds ?? [],
+        };
       }
       const body = await encodeExpenseCreate(data, cryptoKey);
       const { expense } = await api.expenses.create(body);
-      return decodeExpense(expense as ExpenseWire, cryptoKey);
+      return {
+        expense: await decodeExpense(expense as ExpenseWire, cryptoKey),
+        deletedIds: [] as string[],
+        endedIds: [] as string[],
+      };
     },
-    onSuccess: (expense, variables) => {
+    onSuccess: ({ expense, deletedIds, endedIds }, variables) => {
+      const gone = new Set(deletedIds);
+      const ended = new Set(endedIds);
       const nextExpenses = (() => {
         const prev = queryClient.getQueryData<Expense[]>(keys.expenses(wallet)) ?? [];
-        if (variables.id) {
-          return prev.map((e) => (e.id === expense.id ? expense : e));
+        let next = prev.filter((e) => !gone.has(e.id));
+        next = next.map((e) => {
+          if (ended.has(e.id)) return { ...e, recurring: false as const };
+          if (variables.id && e.id === expense.id) return expense;
+          return e;
+        });
+        if (!variables.id) {
+          next = [expense, ...next].sort((a, b) =>
+            a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
+          );
+        } else if (!next.some((e) => e.id === expense.id)) {
+          next = [expense, ...next];
         }
-        return [expense, ...prev].sort((a, b) =>
-          a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
-        );
+        return next;
       })();
       queryClient.setQueryData<Expense[]>(keys.expenses(wallet), nextExpenses);
       if (!variables.id) {
@@ -302,11 +324,39 @@ export function useLedger(walletAddress: string) {
   });
 
   const deleteExpenseMutation = useMutation({
-    mutationFn: (id: string) => api.expenses.remove(id),
-    onSuccess: (_res, id) => {
-      queryClient.setQueryData<Expense[]>(keys.expenses(wallet), (prev = []) =>
-        prev.filter((e) => e.id !== id),
-      );
+    mutationFn: ({ id, opts }: { id: string; opts?: DeleteScopeOpts }) =>
+      api.expenses.remove(id, opts),
+    onSuccess: (res, { id, opts }) => {
+      queryClient.setQueryData<Expense[]>(keys.expenses(wallet), (prev = []) => {
+        if (res.skippedId) {
+          return prev.filter((e) => e.id !== res.skippedId);
+        }
+        if (res.deletedIds?.length) {
+          const gone = new Set(res.deletedIds);
+          let next = prev.filter((e) => !gone.has(e.id));
+
+          // Futures scope also ends recurrence on remaining past rows.
+          if (opts?.scope === "future" && opts.fromDate) {
+            const target = prev.find((e) => e.id === id);
+            if (target && normalizeRecurring(target.recurring) !== false) {
+              const series = recurringScheduleKey(target);
+              next = next.map((e) => {
+                if (
+                  normalizeRecurring(e.recurring) === false ||
+                  recurringScheduleKey(e) !== series ||
+                  e.date >= opts.fromDate!
+                ) {
+                  return e;
+                }
+                return { ...e, recurring: false as const };
+              });
+            }
+          }
+
+          return next;
+        }
+        return prev.filter((e) => e.id !== id);
+      });
     },
   });
 
@@ -361,11 +411,15 @@ export function useLedger(walletAddress: string) {
   });
 
   const deleteEventMutation = useMutation({
-    mutationFn: (id: string) => api.events.remove(id),
-    onSuccess: (_res, id) => {
-      queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet), (prev = []) =>
-        prev.filter((e) => e.id !== id),
-      );
+    mutationFn: ({ id, opts }: { id: string; opts?: DeleteScopeOpts }) =>
+      api.events.remove(id, opts),
+    onSuccess: (res, { id }) => {
+      queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet), (prev = []) => {
+        if (res.deleted || !res.event) {
+          return prev.filter((e) => e.id !== id);
+        }
+        return prev.map((e) => (e.id === res.event!.id ? res.event! : e));
+      });
     },
   });
 
@@ -439,9 +493,11 @@ export function useLedger(walletAddress: string) {
     saveWallet: saveWalletMutation.mutateAsync,
     deleteWallet: deleteWalletMutation.mutateAsync,
     saveExpense: saveExpenseMutation.mutateAsync,
-    deleteExpense: deleteExpenseMutation.mutateAsync,
+    deleteExpense: (id: string, opts?: DeleteScopeOpts) =>
+      deleteExpenseMutation.mutateAsync({ id, opts }),
     saveEvent: saveEventMutation.mutateAsync,
-    deleteEvent: deleteEventMutation.mutateAsync,
+    deleteEvent: (id: string, opts?: DeleteScopeOpts) =>
+      deleteEventMutation.mutateAsync({ id, opts }),
     saveTodoList: saveTodoListMutation.mutateAsync,
     deleteTodoList: deleteTodoListMutation.mutateAsync,
     isSaving:

@@ -1,5 +1,6 @@
 import { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 import {
+  DeleteScopeDialog,
   EmptyState,
   Icon,
   SummaryCard,
@@ -25,6 +26,7 @@ import {
   weekdayLabel,
 } from "@/frontend/lib/data";
 import type { LedgerEvent } from "@/frontend/lib/types";
+import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -51,10 +53,18 @@ function shiftIso(iso: string, delta: number): string {
   return `${y}-${mo}-${day}`;
 }
 
-function AgendaEventRow({ ev, onEditEvent }: { ev: LedgerEvent; onEditEvent: (ev: LedgerEvent) => void }) {
+function AgendaEventRow({
+  ev,
+  iso,
+  onEditEvent,
+}: {
+  ev: LedgerEvent;
+  iso: string;
+  onEditEvent: (ev: LedgerEvent, occurrenceIso: string) => void;
+}) {
   const c = eventCatMeta(ev);
   return (
-    <button type="button" className="agenda-row" onClick={() => onEditEvent(ev)}>
+    <button type="button" className="agenda-row" onClick={() => onEditEvent(ev, iso)}>
       <span className="ag-glyph" style={glyphTint(c.color)}>{displayGlyph(c.glyph, c.id)}</span>
       <span className="ag-main">
         <span className="ag-title">
@@ -206,7 +216,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
                   </div>
                   <div className="agenda-items">
                     {dayEvents.map((ev) => (
-                      <AgendaEventRow key={`${iso}-${ev.id}`} ev={ev} onEditEvent={onEditEvent} />
+                      <AgendaEventRow key={`${iso}-${ev.id}`} ev={ev} iso={iso} onEditEvent={onEditEvent} />
                     ))}
                   </div>
                 </div>
@@ -225,7 +235,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
               </div>
               <div className="agenda-items">
                 {focusedEvents.map((ev) => (
-                  <AgendaEventRow key={ev.id} ev={ev} onEditEvent={onEditEvent} />
+                  <AgendaEventRow key={ev.id} ev={ev} iso={viewDay} onEditEvent={onEditEvent} />
                 ))}
               </div>
             </div>
@@ -278,7 +288,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
                       return (
                         <button key={ev.id} className="cal-chip" style={{ background: c.color + "1c", color: c.color }}
                           title={ev.title}
-                          onClick={(e) => { e.stopPropagation(); onEditEvent(ev); }}>
+                          onClick={(e) => { e.stopPropagation(); onEditEvent(ev, iso); }}>
                           <span className="cal-chip-glyph">{displayGlyph(c.glyph, c.id)}</span>
                           <span className="cal-chip-txt">{ev.allDay ? ev.title : `${fmtTime(ev.time)} ${ev.title}`}</span>
                         </button>
@@ -297,7 +307,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
 }
 
 // ── EventModal (add / edit event) ───────────────────────────────────
-export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) {
+export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClose, onDelete }) {
   const editing = !!(initial && initial.id);
   const lastEmail = (() => { try { return localStorage.getItem("ledger:notifyEmail") || ""; } catch (e) { return ""; } })();
   const customMeta = EVENT_CATS.find((c) => c.id === "custom")!;
@@ -319,15 +329,17 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
   const [email, setEmail] = useState(initial && initial.email ? initial.email : lastEmail);
   const [comments, setComments] = useState(initial && initial.comments ? initial.comments : []);
   const [draft, setDraft] = useState("");
+  const [scopeOpen, setScopeOpen] = useState(false);
 
   const leadOptions = useMemo(() => leadTimesForEvent(allDay), [allDay]);
+  const deleteFromDate = occurrenceIso || initial?.date || date;
 
   const titleRef = useRef(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose(); };
+    const h = (e) => { if (e.key === "Escape" && !scopeOpen) onClose(); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, []);
+  }, [scopeOpen]);
 
   const handleAllDayChange = (checked: boolean) => {
     setAllDay(checked);
@@ -363,8 +375,24 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
     });
   };
 
+  /** Start delete — ask for scope when the event repeats. */
+  const requestDelete = () => {
+    if (!initial?.id) return;
+    if (initial.repeat && initial.repeat !== "once") {
+      setScopeOpen(true);
+      return;
+    }
+    onDelete(initial.id);
+  };
+
+  /** Confirm a scoped recurring event delete. */
+  const confirmScopedDelete = async (scope: DeleteScope) => {
+    await onDelete(initial.id, { scope, fromDate: deleteFromDate });
+    setScopeOpen(false);
+  };
+
   return (
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{editing ? "Edit event" : "New event"}</h3>
@@ -497,13 +525,20 @@ export function EventModal({ initial, defaultDate, onSave, onClose, onDelete }) 
         </div>
 
         <div className="modal-foot">
-          {editing ? <button className="ghost-btn danger" type="button" onClick={() => onDelete(initial.id)}>Delete</button> : <span />}
+          {editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />}
           <div className="mf-right">
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>{editing ? "Save changes" : "Add event"}</button>
           </div>
         </div>
       </div>
+      {scopeOpen && initial?.id ? (
+        <DeleteScopeDialog
+          title="Delete recurring event"
+          onCancel={() => setScopeOpen(false)}
+          onConfirm={confirmScopedDelete}
+        />
+      ) : null}
     </div>
   );
 }

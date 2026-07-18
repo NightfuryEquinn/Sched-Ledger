@@ -73,6 +73,7 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
     .find({
       recurring: { $in: [true, "monthly", "quarterly", "yearly"] },
       walletId: { $exists: true, $ne: null },
+      skipped: { $ne: true },
     })
     .sort({ date: -1 })
     .toArray();

@@ -55,6 +55,8 @@ export const expenseSchema = z.object({
   enc: e2eeVersionSchema.optional(),
   payload: encryptedPayloadSchema.optional(),
   seriesKey: seriesKeySchema.optional(),
+  /** Soft-deleted occurrence kept so cron does not rematerialize it. */
+  skipped: z.boolean().optional().default(false),
   /** Legacy plaintext fields. */
   sub: subcategoryIdSchema.optional(),
   amount: z.number().positive().optional(),

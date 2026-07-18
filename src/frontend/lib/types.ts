@@ -40,6 +40,8 @@ export type LedgerEvent = {
   allDay: boolean;
   time: string | null;
   repeat: string;
+  exceptDates?: string[];
+  until?: string | null;
   notify: boolean;
   lead: string;
   email: string;

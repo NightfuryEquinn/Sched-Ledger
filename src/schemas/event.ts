@@ -60,6 +60,10 @@ export const eventSchema = z.object({
     .nullable()
     .default(null),
   repeat: repeatIdSchema.default("once"),
+  /** Occurrence dates removed with "This Only". */
+  exceptDates: z.array(isoDateSchema).optional().default([]),
+  /** Inclusive last occurrence; null/undefined means unbounded. */
+  until: isoDateSchema.nullable().optional(),
   notify: z.boolean().default(false),
   lead: leadIdSchema.default("1d"),
   email: z.string().email().optional().or(z.literal("")),
@@ -102,6 +106,8 @@ export const updateEventSchema = z
       .nullable()
       .optional(),
     repeat: repeatIdSchema.optional(),
+    exceptDates: z.array(isoDateSchema).optional(),
+    until: isoDateSchema.nullable().optional(),
     notify: z.boolean().optional(),
     lead: leadIdSchema.optional(),
     email: z.string().email().optional().or(z.literal("")),

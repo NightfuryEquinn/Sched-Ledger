@@ -180,6 +180,8 @@ export function leadTimesForEvent(allDay: boolean) {
 /** Whether a recurring event occurs on a given ISO date. */
 export function occursOn(ev, iso) {
   if (iso < ev.date) return false;
+  if (ev.until && iso > ev.until) return false;
+  if (ev.exceptDates?.includes(iso)) return false;
 
   const a = new Date(ev.date + "T00:00:00");
   const b = new Date(iso + "T00:00:00");

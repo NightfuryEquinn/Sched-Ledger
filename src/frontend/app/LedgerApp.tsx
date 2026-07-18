@@ -57,6 +57,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   const [view, setView] = useState<ViewId>("overview");
   const [modal, setModal] = useState<Expense | { add: true } | null>(null);
   const [evModal, setEvModal] = useState<LedgerEvent | { add: true; date: string } | null>(null);
+  const [evOccurrenceIso, setEvOccurrenceIso] = useState<string | undefined>(undefined);
   const [walletModal, setWalletModal] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
   const monthInitialized = useRef(false);
@@ -200,19 +201,27 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     return { importedLists, importedTasks, failed };
   };
 
-  const deleteExpense = async (id: string) => {
-    await ledger.deleteExpense(id);
+  const deleteExpense = async (id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) => {
+    await ledger.deleteExpense(id, opts);
     setModal(null);
   };
 
   const saveEvent = async (data: LedgerEvent & { id?: string }) => {
     await ledger.saveEvent(data);
     setEvModal(null);
+    setEvOccurrenceIso(undefined);
   };
 
-  const deleteEvent = async (id: string) => {
-    await ledger.deleteEvent(id);
+  const deleteEvent = async (id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) => {
+    await ledger.deleteEvent(id, opts);
     setEvModal(null);
+    setEvOccurrenceIso(undefined);
+  };
+
+  /** Open an event for edit with the calendar occurrence under the cursor. */
+  const openEvent = (ev: LedgerEvent, occurrenceIso?: string) => {
+    setEvOccurrenceIso(occurrenceIso ?? ev.date);
+    setEvModal(ev);
   };
 
   const viewProps = { expenses, budgets, wallet, month, currency, categoryIndex: ledger.categoryIndex };
@@ -269,14 +278,24 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
 
         <div className="scroll">
           {view === "overview" && (
-            <Overview {...viewProps} setView={setView} onEdit={setModal} />
+            <Overview
+              {...viewProps}
+              todoLists={ledger.todoLists}
+              events={events}
+              setView={setView}
+              onEdit={setModal}
+              onEditEvent={(ev: LedgerEvent) => openEvent(ev, TODAY_ISO)}
+            />
           )}
           {view === "schedule" && (
             <Schedule
               events={events}
               month={month}
-              onAddEvent={(iso: string) => setEvModal({ add: true, date: iso })}
-              onEditEvent={(ev: LedgerEvent) => setEvModal(ev)}
+              onAddEvent={(iso: string) => {
+                setEvOccurrenceIso(undefined);
+                setEvModal({ add: true, date: iso });
+              }}
+              onEditEvent={openEvent}
             />
           )}
           {view === "todos" && (
@@ -385,8 +404,12 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         <EventModal
           initial={"add" in evModal ? null : evModal}
           defaultDate={"add" in evModal ? evModal.date : undefined}
+          occurrenceIso={"add" in evModal ? undefined : evOccurrenceIso}
           onSave={saveEvent}
-          onClose={() => setEvModal(null)}
+          onClose={() => {
+            setEvModal(null);
+            setEvOccurrenceIso(undefined);
+          }}
           onDelete={deleteEvent}
         />
       )}

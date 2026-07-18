@@ -7,6 +7,8 @@ export type ScheduleEvent = {
   time: string | null;
   repeat: string;
   lead: LeadId;
+  exceptDates?: string[];
+  until?: string | null;
 };
 
 const LEAD_MS: Record<LeadId, number> = {
@@ -63,6 +65,9 @@ export function leadDescription(lead: LeadId): string {
 
 export function occursOn(ev: ScheduleEvent, iso: string): boolean {
   if (iso < ev.date) return false;
+  if (ev.until && iso > ev.until) return false;
+  if (ev.exceptDates?.includes(iso)) return false;
+
   const a = new Date(`${ev.date}T00:00:00`);
   const b = new Date(`${iso}T00:00:00`);
   switch (ev.repeat) {

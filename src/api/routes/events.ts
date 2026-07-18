@@ -8,6 +8,7 @@ import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
+import { deleteScopeQuerySchema, resolveEventDeleteAction } from "@/lib/delete-scope";
 import { objectIdSchema, isLeadAllowedForEvent, type LeadId } from "@/schemas/common";
 import {
   addEventCommentSchema,
@@ -157,18 +158,65 @@ eventsRoutes.post("/:id/comments", zValidator("json", addEventCommentSchema), as
   return c.json({ event: serializeDoc(updated) }, 201);
 });
 
-eventsRoutes.delete("/:id", async (c) => {
+eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (c) => {
   const walletAddress = c.get("walletAddress");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Event not found");
 
+  const { scope, fromDate } = c.req.valid("query");
   const { events } = getCollections(getDb());
-  const result = await events.deleteOne({
+  const doc = await events.findOne({
     _id: new ObjectId(id.data),
     userAddress: walletAddress,
   });
+  if (!doc) notFound("Event not found");
 
-  if (result.deletedCount === 0) notFound("Event not found");
-  await clearReminderLogsForEvent(new ObjectId(id.data));
-  return c.json({ ok: true });
+  const repeating = doc.repeat && doc.repeat !== "once";
+  const effectiveScope = repeating ? scope ?? "all" : "all";
+  const effectiveFrom = fromDate ?? doc.date;
+
+  if (!repeating || effectiveScope === "all") {
+    const result = await events.deleteOne({
+      _id: doc._id,
+      userAddress: walletAddress,
+    });
+    if (result.deletedCount === 0) notFound("Event not found");
+    await clearReminderLogsForEvent(doc._id);
+    return c.json({ ok: true, deleted: true });
+  }
+
+  const action = resolveEventDeleteAction(effectiveScope, doc.date, effectiveFrom);
+
+  if (action.type === "delete") {
+    const result = await events.deleteOne({
+      _id: doc._id,
+      userAddress: walletAddress,
+    });
+    if (result.deletedCount === 0) notFound("Event not found");
+    await clearReminderLogsForEvent(doc._id);
+    return c.json({ ok: true, deleted: true });
+  }
+
+  if (action.type === "except") {
+    const updated = await events.findOneAndUpdate(
+      { _id: doc._id, userAddress: walletAddress },
+      {
+        $addToSet: { exceptDates: action.date },
+        $set: { updatedAt: new Date() },
+      },
+      { returnDocument: "after" },
+    );
+    if (!updated) notFound("Event not found");
+    return c.json({ ok: true, deleted: false, event: serializeDoc(updated) });
+  }
+
+  const updated = await events.findOneAndUpdate(
+    { _id: doc._id, userAddress: walletAddress },
+    {
+      $set: { until: action.until, updatedAt: new Date() },
+    },
+    { returnDocument: "after" },
+  );
+  if (!updated) notFound("Event not found");
+  return c.json({ ok: true, deleted: false, event: serializeDoc(updated) });
 });

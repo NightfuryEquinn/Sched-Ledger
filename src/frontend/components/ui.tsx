@@ -19,6 +19,7 @@ import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/f
 import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
 import type { FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
+import type { DeleteScope } from "@/lib/delete-scope";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -30,7 +31,96 @@ import { createPortal } from "react-dom";
  *   SummaryCard, BudgetBar, TransactionRow — data display
  *   Segmented, EmptyState    — controls & placeholders
  *   AddExpenseModal          — add / edit transaction
+ *   DeleteScopeDialog        — recurring delete scope chooser
  */
+
+export type DeleteExpenseOpts = { scope?: DeleteScope; fromDate?: string };
+
+const DELETE_SCOPE_OPTIONS: { v: DeleteScope; label: string; note: string }[] = [
+  { v: "this", label: "This Only", note: "Remove just this occurrence." },
+  { v: "future", label: "All Futures Only", note: "Remove this and every later occurrence." },
+  { v: "all", label: "Both Past and Future", note: "Remove the entire series." },
+];
+
+/** Confirm which recurring occurrences to delete. */
+function DeleteScopeDialog({
+  title = "Delete recurring",
+  onConfirm,
+  onCancel,
+}: {
+  title?: string;
+  onConfirm: (scope: DeleteScope) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const [scope, setScope] = useState<DeleteScope>("this");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) onCancel();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [busy, onCancel]);
+
+  /** Confirm the selected delete scope. */
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onConfirm(scope);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return createPortal(
+    <div
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !busy) onCancel();
+      }}
+    >
+      <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby="delete-scope-title">
+        <div className="modal-head">
+          <h3 id="delete-scope-title">{title}</h3>
+          <button className="icon-btn" type="button" onClick={onCancel} aria-label="Close" disabled={busy}>
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <p className="dm-lead">Choose how much of this series to remove. This cannot be undone.</p>
+          <div className="delete-scope-list" role="radiogroup" aria-label="Delete scope">
+            {DELETE_SCOPE_OPTIONS.map((o) => (
+              <label key={o.v} className={"delete-scope-option" + (scope === o.v ? " active" : "")}>
+                <input
+                  type="radio"
+                  name="delete-scope"
+                  value={o.v}
+                  checked={scope === o.v}
+                  onChange={() => setScope(o.v)}
+                />
+                <span className="delete-scope-copy">
+                  <span className="delete-scope-label">{o.label}</span>
+                  <span className="delete-scope-note">{o.note}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="modal-foot">
+          <button className="ghost-btn" type="button" onClick={onCancel} disabled={busy}>
+            Cancel
+          </button>
+          <button className="ghost-btn danger" type="button" onClick={confirm} disabled={busy}>
+            {busy ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 /**
  * Inline style for a category glyph badge: colored icon on a translucent
@@ -290,9 +380,20 @@ function BudgetBar({ cat, spent, budget, onClick, currency }) {
 
 // ── TransactionRow: single expense/income line item ─────────────────
 function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryIndex }) {
+  const [scopeOpen, setScopeOpen] = useState(false);
   const sub = categoryIndex.subById[exp.sub];
   const cat = sub ? categoryIndex.catById[sub.catId] : null;
   if (!sub || !cat) return null;
+
+  /** Start delete — ask for scope when the row is recurring. */
+  const requestDelete = () => {
+    if (isRecurring(exp)) {
+      setScopeOpen(true);
+      return;
+    }
+    onDelete(exp.id);
+  };
+
   return (
     <div className="txn">
       <div className="txn-date">
@@ -309,8 +410,18 @@ function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryI
       </div>
       <div className="txn-actions">
         <button onClick={() => onEdit(exp)} aria-label="Edit"><Icon name="edit" size={16} /></button>
-        <button onClick={() => onDelete(exp.id)} aria-label="Delete"><Icon name="trash" size={16} /></button>
+        <button onClick={requestDelete} aria-label="Delete"><Icon name="trash" size={16} /></button>
       </div>
+      {scopeOpen ? (
+        <DeleteScopeDialog
+          title="Delete recurring transaction"
+          onCancel={() => setScopeOpen(false)}
+          onConfirm={async (scope) => {
+            await onDelete(exp.id, { scope, fromDate: exp.date });
+            setScopeOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -447,6 +558,7 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
   const [recurringFreq, setRecurringFreq] = useState<RecurringInterval>(
     initRecurring !== false ? initRecurring : "monthly",
   );
+  const [scopeOpen, setScopeOpen] = useState(false);
   const selectedWallet = wallets.find((w) => w.id === walletId) ?? wallets[0];
   const cur = getCurrency(selectedWallet?.currency);
   const visibleCategories = kind === "income" ? [incomeCategory] : expenseCategories;
@@ -454,9 +566,9 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
 
   useEffect(() => { if (amtRef.current) amtRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose(); };
+    const h = (e) => { if (e.key === "Escape" && !scopeOpen) onClose(); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, []);
+  }, [scopeOpen]);
 
   const switchKind = (next) => {
     setKind(next);
@@ -486,8 +598,18 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
     });
   };
 
+  /** Start delete — ask for scope when editing a recurring transaction. */
+  const requestDelete = () => {
+    if (!initial?.id) return;
+    if (isRecurring(initial)) {
+      setScopeOpen(true);
+      return;
+    }
+    onDelete(initial.id);
+  };
+
   return (
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{editing ? "Edit transaction" : "Add transaction"}</h3>
@@ -587,7 +709,7 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
         </div>
 
         <div className="modal-foot">
-          {editing ? <button className="ghost-btn danger" type="button" onClick={() => onDelete(initial.id)}>Delete</button> : <span />}
+          {editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />}
           <div className="mf-right">
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>
@@ -596,10 +718,20 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
           </div>
         </div>
       </div>
+      {scopeOpen && initial?.id ? (
+        <DeleteScopeDialog
+          title="Delete recurring transaction"
+          onCancel={() => setScopeOpen(false)}
+          onConfirm={async (scope) => {
+            await onDelete(initial.id, { scope, fromDate: initial.date });
+            setScopeOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
 export {
-  AddExpenseModal, BudgetBar, CatGlyph, EmptyState, Icon, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
+  AddExpenseModal, BudgetBar, CatGlyph, DeleteScopeDialog, EmptyState, Icon, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
 };

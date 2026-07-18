@@ -1,0 +1,36 @@
+---
+description: Write CSS rules in expanded multi-line form, not single-line blocks
+globs: "**/*.css"
+alwaysApply: false
+---
+
+# CSS Formatting
+
+Write each selector as an expanded block. Put the opening `{` on the same line as the selector, one declaration per line, and indent declarations with **2 spaces**.
+
+```css
+/* ❌ BAD — compacted single-line rules */
+.recent-row{display:flex;align-items:center;gap:var(--sp-3);padding:14px;}
+.rr-note{font-weight:600;font-size:14px;}
+
+/* ✅ GOOD — expanded multi-line rules */
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 14px;
+}
+
+.rr-note {
+  font-weight: 600;
+  font-size: 14px;
+}
+```
+
+## Details
+
+- Space before `{` and after `:` (`display: flex`, not `display:flex`)
+- Trailing semicolon on every declaration
+- Blank line between top-level rule blocks
+- Keep related selectors grouped; prefer separate blocks over long comma-chained one-liners when editing
+- When changing existing compacted CSS, expand the rules you touch into this form
