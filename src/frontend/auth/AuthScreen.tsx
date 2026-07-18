@@ -177,7 +177,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
           </div>
         ) : null}
         <div className="or-div"><span>import a recovery phrase</span></div>
-        <textarea className="phrase-in" placeholder="Enter your 12-word recovery phrase, separated by spaces" value={phrase} onChange={(e) => setPhrase(e.target.value)} />
+        <textarea className="phrase-in" placeholder="Enter your 12- or 24-word recovery phrase, separated by spaces" value={phrase} onChange={(e) => setPhrase(e.target.value)} />
         {error ? <div className="auth-error">{error}</div> : null}
         <button className="primary-btn lg full" type="button" disabled={busy || !phrase.trim()} onClick={doImport}>{busy ? "Restoring…" : "Restore identity"}</button>
         {walletClient.hasInjected() ? <button className="ghost-btn full u-gap-top" type="button" onClick={connectInjected}><Icon name="wallet" size={17} /> Connect browser wallet</button> : null}

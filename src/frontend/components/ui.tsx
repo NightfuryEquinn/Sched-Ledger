@@ -6,10 +6,8 @@ import {
   MIN_MONTH_KEY,
   TODAY_ISO,
   clampMonthKey,
-  fmtBudgetLimit,
   fmtMoney,
   getCurrency,
-  isBudgetSet,
   monthLabel,
   monthRangeBounds,
   pad,
@@ -28,7 +26,7 @@ import { createPortal } from "react-dom";
  * ────────────────────
  *   Icon, CatGlyph, glyphTint  — visual atoms
  *   Sidebar, MonthSwitcher   — navigation
- *   SummaryCard, BudgetBar, TransactionRow — data display
+ *   SummaryCard, TransactionRow — data display
  *   Segmented, EmptyState    — controls & placeholders
  *   AddExpenseModal          — add / edit transaction
  *   DeleteScopeDialog        — recurring delete scope chooser
@@ -352,34 +350,6 @@ function SummaryCard({ label, value, sub, tone, foot }) {
   );
 }
 
-// ── BudgetBar: spent-vs-budget progress row ─────────────────────────
-function BudgetBar({ cat, spent, budget, onClick, currency }) {
-  const budgetSet = isBudgetSet(budget);
-  const pct = budgetSet ? spent / budget : 0;
-  const over = budgetSet && pct > 1;
-  const w = Math.min(pct, 1) * 100;
-  return (
-    <button className="budget-row" onClick={onClick}>
-      <div className="br-head">
-        <div className="br-name"><CatGlyph glyph={cat.glyph} id={cat.id} /> {cat.name}</div>
-        <div className={"br-amt" + (over ? " over" : "")}>
-          {fmtMoney(spent, { cents: false, currency })} <span className="br-of">/ {fmtBudgetLimit(budget, { currency })}</span>
-        </div>
-      </div>
-      <div className="br-track">
-        <div className="br-fill" style={{ width: w + "%", background: over ? "var(--danger)" : cat.color }} />
-        {over ? <div className="br-overmark" /> : null}
-      </div>
-      <div className="br-meta">
-        {!budgetSet ? <span>Unset</span>
-          : over
-            ? <span className="br-over-txt">Over by {fmtMoney(spent - budget, { cents: false, currency })}</span>
-            : <span>{fmtMoney(budget - spent, { cents: false, currency })} left · {Math.round(pct * 100)}%</span>}
-      </div>
-    </button>
-  );
-}
-
 // ── TransactionRow: single expense/income line item ─────────────────
 function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryIndex }) {
   const [scopeOpen, setScopeOpen] = useState(false);
@@ -542,7 +512,7 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
 }
 
 // ── Add / edit expense modal ────────────────────────────────────────
-function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, categoryIndex, onSave, onClose, onDelete }) {
+function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onSave, onClose, onDelete }) {
   const editing = !!(initial && initial.id);
   const initKind = initial?.kind ?? "expense";
   const { expenseCategories, incomeCategory, subById, catById } = categoryIndex;
@@ -735,5 +705,5 @@ function AddExpenseModal({ initial, defaultMonth, wallets, defaultWalletId, cate
 }
 
 export {
-  AddExpenseModal, BudgetBar, CatGlyph, DeleteScopeDialog, EmptyState, Icon, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
+  AddExpenseModal, CatGlyph, DeleteScopeDialog, EmptyState, Icon, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
 };

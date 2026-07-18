@@ -2012,13 +2012,6 @@ h1, h2, h3 {
   flex: 1;
 }
 
-.ov-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  min-width: 0;
-}
-
 .trend-now {
   font-family: var(--font-num);
   font-weight: 600;
@@ -2107,46 +2100,11 @@ h1, h2, h3 {
   color: var(--ink);
 }
 
-/* Budget bars */
-.budget-list, .budget-edit-list {
+/* Budget bars (Budgets view) */
+.budget-edit-list {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
-}
-
-.budget-row {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 2px 0;
-}
-
-.br-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.br-name {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-weight: 600;
-  font-size: 14.5px;
-  white-space: nowrap;
-}
-
-.br-amt {
-  font-family: var(--font-num);
-  font-size: 13.5px;
-  font-weight: 600;
-  font-feature-settings: "tnum";
-}
-
-.br-amt.over, .be-amt.over {
-  color: var(--danger);
 }
 
 .br-of {
@@ -2170,15 +2128,6 @@ h1, h2, h3 {
   height: 100%;
   border-radius: var(--r-full);
   transition: width .5s cubic-bezier(.4, 0, .2, 1);
-}
-
-.br-meta {
-  font-size: 12px;
-  color: var(--ink-faint);
-  margin-top: 7px;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
 }
 
 .br-over-txt {
@@ -2515,6 +2464,10 @@ h1, h2, h3 {
 
 .be-amt:hover {
   background: var(--surface-2);
+}
+
+.be-amt.over {
+  color: var(--danger);
 }
 
 .be-edit {

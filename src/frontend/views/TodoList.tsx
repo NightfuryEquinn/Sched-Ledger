@@ -299,12 +299,14 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
           ) : null}
         </>
       ) : (
-        <section className="panel">
-          <EmptyState title="No lists yet" sub="Create a list to start tracking tasks." />
-          <div className="todo-empty-action">
-            <button className="primary-btn" type="button" onClick={openAddList}>
-              <Icon name="plus" size={15} /> New list
-            </button>
+        <section className="panel" data-tour="tour-todos-tabs">
+          <div data-tour="tour-todos-tasks">
+            <EmptyState title="No lists yet" sub="Create a list to start tracking tasks." />
+            <div className="todo-empty-action">
+              <button className="primary-btn" type="button" onClick={openAddList}>
+                <Icon name="plus" size={15} /> New list
+              </button>
+            </div>
           </div>
         </section>
       )}

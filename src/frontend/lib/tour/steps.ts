@@ -73,7 +73,7 @@ export const SHELL_TOUR_STEPS: TourStep[] = [
   lastStep(
     "shell-account",
     "Account",
-    "Theme, exports & imports, privacy settings, and sign out live here. You can also restart any tab tour from Take a tour.",
+    "Exports & imports, privacy settings, and sign out live here. Restart this tab's tour anytime from Take a tour. Theme is in the top bar.",
     '[data-tour="tour-account"]',
     "bottom",
   ),
@@ -91,16 +91,16 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
   ],
   todos: [
     step("todos-nav", "TO-DO List", "Organize tasks into separate lists — groceries, work, travel, and more.", navTarget("todos"), "right"),
-    step("todos-summary", "List stats", "Quick counts for lists, open tasks, and completed items.", '[data-tour="tour-todos-summary"]'),
+    step("todos-summary", "List stats", "Quick counts for lists, total tasks, and completed items.", '[data-tour="tour-todos-summary"]'),
     step("todos-toolbar", "New list", "Create a named list with an icon to keep tasks grouped.", '[data-tour="tour-todos-toolbar"]', "bottom"),
-    step("todos-tabs", "Switch lists", "Each tab is a list. The badge shows completed vs total tasks.", '[data-tour="tour-todos-tabs"]'),
+    step("todos-tabs", "Switch lists", "Each tab is a list. The badge shows completed vs total tasks. Create a list first if you have none yet.", '[data-tour="tour-todos-tabs"]'),
     lastStep("todos-tasks", "Tasks", "Check items off, add new tasks at the bottom, or edit the list with the icons above.", '[data-tour="tour-todos-tasks"]'),
   ],
   schedule: [
     step("schedule-nav", "Schedule", "Plan events and reminders on a calendar tied to your selected month.", navTarget("schedule"), "right"),
     step("schedule-summary", "At a glance", "See how many events you have, the next reminder, and email alerts queued.", '[data-tour="tour-schedule-summary"]'),
     step("schedule-cal", "Calendar", "Click a day to focus it in the agenda below. Click an event chip to edit.", '[data-tour="tour-schedule-cal"]', "top"),
-    lastStep("schedule-agenda", "Agenda", "Browse day by day, add events with New event, and review what's coming up.", '[data-tour="tour-schedule-agenda"]'),
+    lastStep("schedule-agenda", "Agenda", "Browse day by day, add events with New event (optional email reminders), and review what's coming up.", '[data-tour="tour-schedule-agenda"]'),
   ],
   transactions: [
     step("transactions-nav", "Transactions", "Every expense and income entry for the month, grouped by day.", navTarget("transactions"), "right"),
@@ -116,6 +116,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
   calculator: [
     step("calculator-nav", "Calculator", "Plan budgets from income after custom tax deductions.", navTarget("calculator"), "right"),
     step("calculator-summary", "Totals", "Gross income, tax taken, and net left to allocate across categories.", '[data-tour="tour-calculator-summary"]'),
+    step("calculator-income", "Income", "Set the gross amount to plan from — it stays on this screen only until you apply budgets.", '[data-tour="tour-calculator-income"]'),
     step("calculator-tax", "Tax lines", "Add titled percentage deductions — they stay on this screen only.", '[data-tour="tour-calculator-tax"]'),
     step("calculator-allocate", "Allocate", "Set a percent per expense category until the total is 100%.", '[data-tour="tour-calculator-allocate"]'),
     lastStep("calculator-apply", "Apply", "Confirm to replace all expense category budgets on the active wallet.", '[data-tour="tour-calculator-apply"]', "top"),
@@ -126,7 +127,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     lastStep("categories-tree", "Category tree", "Expand categories to manage subcategories, colors, and icons.", '[data-tour="tour-categories-tree"]'),
   ],
   recurring: [
-    step("recurring-nav", "Recurring", "Fixed charges that repeat weekly, monthly, or on another interval.", navTarget("recurring"), "right"),
+    step("recurring-nav", "Recurring", "Fixed charges that repeat monthly, quarterly, or yearly.", navTarget("recurring"), "right"),
     step("recurring-summary", "This month", "Total recurring due and the normalized monthly equivalent.", '[data-tour="tour-recurring-summary"]'),
     lastStep("recurring-list", "Scheduled items", "Tap a row to edit the underlying transaction. Add new ones via Add transaction with Recurring enabled.", '[data-tour="tour-recurring-list"]'),
   ],
@@ -139,8 +140,9 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
   ],
   transparency: [
     step("transparency-nav", "Transparency", "A read-only map of how Sched Ledger stores your data in MongoDB.", navTarget("transparency"), "right"),
+    step("transparency-intro", "How data is stored", "Collections, document keys, and which fields are encrypted vs plaintext for reminders and queries.", '[data-tour="tour-transparency-intro"]'),
     step("transparency-flow", "Relationships", "See how your wallet address links users, wallets, expenses, events, and more.", '[data-tour="tour-transparency-flow"]'),
-    step("transparency-e2ee", "Encryption path", "Sensitive fields are AES-GCM encrypted in the browser before they hit the database.", '[data-tour="tour-transparency-e2ee"]'),
+    step("transparency-e2ee", "Encryption path", "Ledger secrets are AES-256-GCM encrypted in the browser before they hit the database.", '[data-tour="tour-transparency-e2ee"]'),
     lastStep("transparency-collections", "Keys & values", "Browse every collection and the document fields it saves.", '[data-tour="tour-transparency-collections"]'),
   ],
 };

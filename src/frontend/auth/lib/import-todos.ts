@@ -1,6 +1,5 @@
 import {
   colIndex,
-  isValidIsoDate,
   OBJECT_ID,
   parseCsv,
   stripBom,

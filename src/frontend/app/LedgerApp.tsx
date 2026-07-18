@@ -393,7 +393,6 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
       {modal && activeWallet ? (
         <AddExpenseModal
           initial={"add" in modal ? null : modal}
-          defaultMonth={month}
           wallets={wallets}
           defaultWalletId={activeWallet.id}
           categoryIndex={ledger.categoryIndex}

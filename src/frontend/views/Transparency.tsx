@@ -78,6 +78,7 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "enc", value: "1" },
       { key: "payload", value: "base64 AES-GCM", note: "sub, amount, note" },
       { key: "seriesKey?", value: "sha256 hex", note: "recurring series id" },
+      { key: "skipped?", value: "false", note: "soft-delete for recurring cron" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -92,7 +93,8 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "catId", value: '"bill" | "custom" | …' },
       { key: "date", value: '"2026-07-20"' },
       { key: "allDay / time / repeat", value: "schedule metadata" },
-      { key: "notify / lead / email", value: "reminder settings (plaintext for cron)" },
+      { key: "exceptDates? / until?", value: "recurrence exceptions / end date" },
+      { key: "notify / lead / email", value: "reminder settings (plaintext for cron)", note: "emails use a generic title; real title stays encrypted" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -125,6 +127,7 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "message", value: "sign-in message" },
       { key: "expiresAt", value: "Date" },
       { key: "usedAt?", value: "Date" },
+      { key: "createdAt", value: "Date" },
     ],
   },
   {
@@ -152,7 +155,7 @@ const COLLECTIONS: CollectionDoc[] = [
   },
   {
     name: "budget_alert_logs",
-    purpose: "Dedupes budget-near-limit email delivery",
+    purpose: "Dedupes budget-near-limit email delivery (client evaluates; server delivers)",
     fields: [
       { key: "userAddress", value: '"0xabc…"' },
       { key: "walletId / categoryId", value: "ids" },
@@ -167,7 +170,7 @@ const RELATIONSHIP_CHART = `flowchart TB
   subgraph Client["Browser client"]
     UI["React UI"]
     Key["In-memory ledger key<br/>from wallet signature"]
-    LS["localStorage<br/>identities · session · theme · tour"]
+    LS["localStorage<br/>identities · session · theme · tour<br/>active wallet · prefs"]
   end
 
   subgraph API["API / MongoDB"]
@@ -185,12 +188,12 @@ const RELATIONSHIP_CHART = `flowchart TB
 
   UI --> Key
   UI --> LS
-  UI -->|"signed requests"| API
-  Key -->|"AES-GCM encrypt/decrypt"| Wallets
-  Key -->|"AES-GCM encrypt/decrypt"| Cats
-  Key -->|"AES-GCM encrypt/decrypt"| Exp
-  Key -->|"AES-GCM encrypt/decrypt"| Ev
-  Key -->|"AES-GCM encrypt/decrypt"| Todos
+  UI -->|"session cookie"| API
+  Key -->|"AES-256-GCM encrypt/decrypt"| Wallets
+  Key -->|"AES-256-GCM encrypt/decrypt"| Cats
+  Key -->|"AES-256-GCM encrypt/decrypt"| Exp
+  Key -->|"AES-256-GCM encrypt/decrypt"| Ev
+  Key -->|"AES-256-GCM encrypt/decrypt"| Todos
   Users -->|"owns"| Profile
   Users -->|"owns"| Wallets
   Users -->|"owns"| Cats
@@ -209,7 +212,7 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     direction TB
     UI["React UI"]
     Key["In-memory ledger key<br/>from wallet signature"]
-    LS["localStorage<br/>identities · session · theme · tour"]
+    LS["localStorage<br/>identities · session · theme · tour<br/>active wallet · prefs"]
     UI --> Key
     UI --> LS
   end
@@ -238,22 +241,22 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     Wallets --> Logs
   end
 
-  Client -->|"signed requests"| API
-  Key -.->|"AES-GCM"| Wallets
-  Key -.->|"AES-GCM"| Cats
-  Key -.->|"AES-GCM"| Exp
-  Key -.->|"AES-GCM"| Ev
-  Key -.->|"AES-GCM"| Todos
+  Client -->|"session cookie"| API
+  Key -.->|"AES-256-GCM"| Wallets
+  Key -.->|"AES-256-GCM"| Cats
+  Key -.->|"AES-256-GCM"| Exp
+  Key -.->|"AES-256-GCM"| Ev
+  Key -.->|"AES-256-GCM"| Todos
 `;
 
 const E2EE_CHART = `flowchart LR
   Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · budgets"]
-  Enc["AES-GCM encrypt<br/>with ledger key"]
+  Enc["AES-256-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
   DB[("MongoDB")]
   DbOut["Fetch document"]
-  Decr["AES-GCM decrypt<br/>in browser"]
-  Ready["UI sees plaintext<br/>server never does"]
+  Decr["AES-256-GCM decrypt<br/>in browser"]
+  Ready["UI sees plaintext<br/>E2EE fields stay ciphertext on server"]
 
   Plain --> Enc --> Doc --> DB
   DB --> DbOut --> Decr --> Ready
@@ -262,12 +265,12 @@ const E2EE_CHART = `flowchart LR
 /** Mobile: same write path stacked top-to-bottom. */
 const E2EE_CHART_MOBILE = `flowchart TB
   Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · budgets"]
-  Enc["AES-GCM encrypt<br/>with ledger key"]
+  Enc["AES-256-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
   DB[("MongoDB")]
   DbOut["Fetch document"]
-  Decr["AES-GCM decrypt<br/>in browser"]
-  Ready["UI sees plaintext<br/>server never does"]
+  Decr["AES-256-GCM decrypt<br/>in browser"]
+  Ready["UI sees plaintext<br/>E2EE fields stay ciphertext on server"]
 
   Plain --> Enc --> Doc --> DB
   DB --> DbOut --> Decr --> Ready
@@ -404,7 +407,8 @@ export function Transparency() {
             <h2>How your data is stored</h2>
             <p className="panel-sub">
               Read-only map of MongoDB collections, document keys, and the end-to-end encryption path.
-              Sensitive ledger fields never leave your browser as plaintext.
+              Ledger secrets are AES-256-GCM encrypted client-side; schedule/email metadata stays plaintext so
+              reminders can run, and budget alerts may send category names and amounts from your browser when enabled.
             </p>
           </div>
         </div>
@@ -429,7 +433,7 @@ export function Transparency() {
           <div>
             <h2>Encrypted write path</h2>
             <p className="panel-sub">
-              Categories, events, todos, expenses, and wallet secrets are AES-GCM encrypted client-side before save
+              Categories, events, todos, expenses, and wallet secrets are AES-256-GCM encrypted client-side before save
             </p>
           </div>
         </div>

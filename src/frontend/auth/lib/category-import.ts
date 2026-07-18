@@ -88,7 +88,6 @@ export function resolveImportSub(
 
   let next = categories;
   let newCategory = false;
-  let newSubcategory = false;
 
   if (subId && subIdTaken(next, subId)) {
     const existing = buildCategoryIndex(next).subById[subId]!;

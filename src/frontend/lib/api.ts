@@ -1,4 +1,4 @@
-import type { Account, Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "./types";
+import type { Account, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "./types";
 
 export class ApiError extends Error {
   status: number;

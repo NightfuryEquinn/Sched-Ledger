@@ -179,7 +179,6 @@ export function AccountMenu({
           <button
             className="am-item"
             type="button"
-            data-tour="tour-csv"
             onClick={() => { setCsvOpen(true); setOpen(false); }}
           >
             <Icon name="download" size={16} /> Exports &amp; imports
