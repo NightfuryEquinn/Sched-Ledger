@@ -60,6 +60,7 @@ export type ViewId =
   | "overview"
   | "transactions"
   | "budgets"
+  | "calculator"
   | "categories"
   | "schedule"
   | "insights"

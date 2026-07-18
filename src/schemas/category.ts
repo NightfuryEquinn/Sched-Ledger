@@ -1,6 +1,7 @@
 import { DEFAULT_GLYPH } from "@/lib/glyphs";
 import { z } from "zod";
 import { walletAddressSchema } from "./address";
+import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
 export const categoryIdSchema = z
   .string()
@@ -35,13 +36,17 @@ export const categorySchema = z.object({
 
 export const categoryTaxonomySchema = z.object({
   userAddress: walletAddressSchema,
-  categories: z.array(categorySchema).min(1),
+  enc: e2eeVersionSchema.optional(),
+  payload: encryptedPayloadSchema.optional(),
+  /** Legacy plaintext tree (pre-E2EE). */
+  categories: z.array(categorySchema).min(1).optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
 export const updateCategoriesSchema = z.object({
-  categories: z.array(categorySchema).min(1),
+  enc: e2eeVersionSchema,
+  payload: encryptedPayloadSchema,
 });
 
 export type Subcategory = z.infer<typeof subcategorySchema>;
@@ -100,3 +105,36 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
   },
 ];
+
+/**
+ * Validate a plaintext category taxonomy (unique ids, ≥1 income + ≥1 expense).
+ * Used client-side before encrypting; the server cannot inspect ciphertext.
+ */
+export function validateTaxonomy(
+  categories: Array<{
+    id: string;
+    type?: "expense" | "income";
+    subs: Array<{ id: string }>;
+  }>,
+): string | null {
+  const catIds = new Set<string>();
+  const subIds = new Set<string>();
+  let hasIncome = false;
+  let hasExpense = false;
+
+  for (const cat of categories) {
+    if (catIds.has(cat.id)) return `Duplicate category id: ${cat.id}`;
+    catIds.add(cat.id);
+    if (cat.type === "income") hasIncome = true;
+    else hasExpense = true;
+    for (const sub of cat.subs) {
+      if (subIds.has(sub.id)) return `Duplicate subcategory id: ${sub.id}`;
+      subIds.add(sub.id);
+    }
+  }
+
+  if (!hasIncome) return "At least one income category is required";
+  if (!hasExpense) return "At least one expense category is required";
+
+  return null;
+}

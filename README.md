@@ -11,6 +11,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 ### Ledger
 
 - **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress
+- **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable category/subcategory taxonomy with glyphs and colors
 - **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron
@@ -28,14 +29,14 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Dark mode** — system-aware theme toggle, persisted locally
 - **Sessions & privacy** — HttpOnly session cookies, revoke devices, clear local data under **Account → Data & privacy**
 - **CSV export & import** — transactions (with categories), schedule events, and to-do lists via **Account → Exports & imports**
-- **Encrypted ledger** — amounts, categories, and notes encrypted client-side; unlock with your wallet key each session
+- **Encrypted ledger** — amounts, categories, notes, schedule titles, and to-dos encrypted client-side; unlock with your wallet key each session
 - **Budget alerts** — email when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates, server only delivers)
 - **Transparency** — read-only in-app map of MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagram)
 - **Guided tour** — Shepherd.js walkthrough for each main view
 
 ### Security
 
-- **End-to-end encryption** — transaction amounts, categories, notes, and wallet budgets are AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext
+- **End-to-end encryption** — ledger content (transactions, category trees, event titles/comments, to-do lists, and wallet budgets) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for reminder cron)
 - Signature verification, rate limiting, security headers, in-memory profile cache
 - Automated tests for crypto unlock/codec, session auth, and budget-alert evaluation (`bun test`)
 
@@ -140,10 +141,10 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `users` | `users` | Account profile (codename, notify email, timezone, reminder/alert prefs) |
 | `ledger_profiles` | `ledgerProfiles` | Per-user UI state (`currentMonth`) |
 | `financial_wallets` | `financialWallets` | Wallets (currency, funding mode; E2EE financials) |
-| `category_taxonomies` | `categoryTaxonomies` | One document per user — full category tree |
+| `category_taxonomies` | `categoryTaxonomies` | One document per user — E2EE category tree |
 | `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
-| `events` | `events` | Schedule events and reminders (plaintext) |
-| `todo_lists` | `todoLists` | Named to-do lists with embedded tasks (plaintext) |
+| `events` | `events` | Schedule events (E2EE title/comments; plaintext schedule + email for reminders) |
+| `todo_lists` | `todoLists` | Named to-do lists (E2EE name/icon/tasks) |
 | `consent` | `consent` | Data-sharing opt-in flag |
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
@@ -156,7 +157,10 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 |------------|-------------------------|----------------------------------------|
 | `expenses` | `payload` (amount, subcategory, note) via `enc` | `date`, `kind`, `recurring`, `walletId`, `seriesKey` |
 | `financial_wallets` | `payload` (income, starting balance, budgets) via `enc` | `name`, `currency`, `fundingMode`, `isDefault` |
-| `events`, `todo_lists`, `users`, … | — | Stored in plaintext |
+| `category_taxonomies` | `payload` (full `categories[]` tree) via `enc` | `userAddress` |
+| `events` | `payload` (title, comments, customLabel/Glyph) via `enc` | `catId`, schedule fields, `notify`, `lead`, `email` |
+| `todo_lists` | `payload` (name, icon, tasks) via `enc` | `userAddress` |
+| `users`, `sessions`, … | — | Stored in plaintext |
 
 The in-app **Transparency** view documents the same collections with example field shapes.
 
@@ -190,7 +194,7 @@ Manage sessions under **Account → Data & privacy** (revoke devices, sign out e
 
 ### Encryption
 
-Ledger data (transaction amounts, subcategories, notes, and per-wallet budgets/income) is encrypted in your browser with **AES-256-GCM**. The encryption key is derived from a wallet signature over a fixed message — it never leaves your device and is held in memory for the session only.
+Ledger data (transaction amounts, categories, notes, schedule titles, to-do lists, and per-wallet budgets/income) is encrypted in your browser with **AES-256-GCM**. The encryption key is derived from a wallet signature over a fixed message — it never leaves your device and is held in memory for the session only.
 
 On each visit you may be prompted to **unlock** your ledger (one signature for browser wallets; silent for in-app wallets with a stored key). MongoDB stores ciphertext plus plaintext metadata needed for queries and cron — see [Encryption vs plaintext](#encryption-vs-plaintext).
 

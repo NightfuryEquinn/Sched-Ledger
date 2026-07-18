@@ -2,6 +2,13 @@ import type { Db } from "mongodb";
 import { COLLECTIONS } from "./collections";
 
 export async function ensureIndexes(db: Db): Promise<void> {
+  /* Name uniqueness moved client-side once todo lists are E2EE. */
+  try {
+    await db.collection(COLLECTIONS.todoLists).dropIndex("userAddress_1_name_1");
+  } catch {
+    /* Index may already be absent. */
+  }
+
   await Promise.all([
     db.collection(COLLECTIONS.users).createIndex({ address: 1 }, { unique: true }),
     db.collection(COLLECTIONS.ledgerProfiles).createIndex({ userAddress: 1 }, { unique: true }),
@@ -53,8 +60,5 @@ export async function ensureIndexes(db: Db): Promise<void> {
       { unique: true },
     ),
     db.collection(COLLECTIONS.todoLists).createIndex({ userAddress: 1, createdAt: 1 }),
-    db
-      .collection(COLLECTIONS.todoLists)
-      .createIndex({ userAddress: 1, name: 1 }, { unique: true }),
   ]);
 }

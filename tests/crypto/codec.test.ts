@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
+  decodeCategories,
+  decodeEvent,
   decodeExpense,
+  decodeTodoList,
   decodeWallet,
+  encodeCategories,
+  encodeEventCreate,
   encodeExpenseCreate,
+  encodeTodoListCreate,
   encodeWalletFinancials,
 } from "@/frontend/lib/crypto/codec";
 import {
@@ -11,6 +17,7 @@ import {
 } from "@/frontend/lib/crypto/e2ee";
 import { Wallet } from "ethers";
 
+/** Derive a test AES key from a random wallet signature. */
 async function testKey() {
   const wallet = Wallet.createRandom();
   const signature = await wallet.signMessage(buildDerivationMessage(wallet.address));
@@ -160,5 +167,134 @@ describe("crypto codec", () => {
     );
     expect(decoded.startingBalance).toBe(250);
     expect(decoded.budgets.food).toBe(100);
+  });
+
+  test("encodeCategories / decodeCategories round-trip", async () => {
+    const key = await testKey();
+    const categories = [
+      {
+        id: "food",
+        name: "Food",
+        color: "#5b7a8a",
+        glyph: "🍽️",
+        type: "expense" as const,
+        builtin: true,
+        subs: [{ id: "groceries", name: "Groceries" }],
+      },
+      {
+        id: "income",
+        name: "Income",
+        color: "#6f8b6f",
+        glyph: "💵",
+        type: "income" as const,
+        builtin: true,
+        subs: [{ id: "salary", name: "Salary" }],
+      },
+    ];
+    const wire = await encodeCategories(categories, key);
+    expect(wire.enc).toBe(1);
+    expect(wire).not.toHaveProperty("categories");
+    const decoded = await decodeCategories(wire, key);
+    expect(decoded).toEqual(categories);
+  });
+
+  test("decodeCategories supports legacy plaintext trees", async () => {
+    const key = await testKey();
+    const categories = [
+      {
+        id: "fun",
+        name: "Fun",
+        color: "#a06f95",
+        glyph: "🎬",
+        type: "expense" as const,
+        subs: [{ id: "games", name: "Games" }],
+      },
+    ];
+    const decoded = await decodeCategories({ categories }, key);
+    expect(decoded[0].id).toBe("fun");
+  });
+
+  test("encodeEventCreate encrypts title/comments and leaves schedule plaintext", async () => {
+    const key = await testKey();
+    const wire = await encodeEventCreate(
+      {
+        title: "Dentist",
+        catId: "appointment",
+        date: "2026-07-20",
+        allDay: false,
+        time: "14:30",
+        repeat: "once",
+        notify: true,
+        lead: "1d",
+        email: "you@mail.com",
+        comments: [{ id: "c1", text: "Bring card", at: "2026-07-18T10:00:00" }],
+      },
+      key,
+    );
+    expect(wire.enc).toBe(1);
+    expect(wire.payload).toBeTruthy();
+    expect(wire.catId).toBe("appointment");
+    expect(wire.date).toBe("2026-07-20");
+    expect(wire.email).toBe("you@mail.com");
+    expect(wire).not.toHaveProperty("title");
+    expect(wire).not.toHaveProperty("comments");
+
+    const decoded = await decodeEvent({ id: "ev1", ...wire }, key);
+    expect(decoded.title).toBe("Dentist");
+    expect(decoded.comments[0].text).toBe("Bring card");
+    expect(decoded.email).toBe("you@mail.com");
+  });
+
+  test("decodeEvent supports legacy plaintext events", async () => {
+    const key = await testKey();
+    const decoded = await decodeEvent(
+      {
+        id: "legacy",
+        title: "Old event",
+        catId: "personal",
+        date: "2026-01-01",
+        allDay: true,
+        time: null,
+        repeat: "once",
+        notify: false,
+        lead: "1d",
+        email: "",
+        comments: [],
+      },
+      key,
+    );
+    expect(decoded.title).toBe("Old event");
+  });
+
+  test("encodeTodoListCreate / decodeTodoList round-trip", async () => {
+    const key = await testKey();
+    const wire = await encodeTodoListCreate(
+      {
+        name: "Groceries",
+        icon: "📋",
+        tasks: [{ id: "t1", title: "Milk", done: false }],
+      },
+      key,
+    );
+    expect(wire.enc).toBe(1);
+    expect(wire).not.toHaveProperty("name");
+    const decoded = await decodeTodoList({ id: "list1", ...wire }, key);
+    expect(decoded.name).toBe("Groceries");
+    expect(decoded.tasks[0].title).toBe("Milk");
+  });
+
+  test("decodeTodoList supports legacy plaintext lists", async () => {
+    const key = await testKey();
+    const decoded = await decodeTodoList(
+      {
+        id: "legacy",
+        name: "Chores",
+        icon: "☑",
+        tasks: [{ id: "t1", title: "Sweep", done: true }],
+      },
+      key,
+    );
+    expect(decoded.name).toBe("Chores");
+    expect(decoded.tasks[0].done).toBe(true);
   });
 });

@@ -1,12 +1,8 @@
-import { badRequest, notFound } from "@/api/lib/errors";
+import { notFound } from "@/api/lib/errors";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
-import {
-  DEFAULT_CATEGORIES,
-  updateCategoriesSchema,
-  type Category,
-} from "@/schemas/category";
+import { updateCategoriesSchema } from "@/schemas/category";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 
@@ -14,72 +10,46 @@ export const categoriesRoutes = new Hono<{ Variables: SessionVariables }>();
 
 categoriesRoutes.use("*", sessionAuth);
 
-function cloneDefaults(): Category[] {
-  return DEFAULT_CATEGORIES.map((c) => ({
-    ...c,
-    subs: c.subs.map((s) => ({ ...s })),
-  }));
-}
-
-async function getOrCreateTaxonomy(userAddress: string) {
-  const { categoryTaxonomies } = getCollections(getDb());
-  const existing = await categoryTaxonomies.findOne({ userAddress });
-  if (existing) return existing;
-
-  const now = new Date();
-  const result = await categoryTaxonomies.insertOne({
-    userAddress,
-    categories: cloneDefaults(),
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  const created = await categoryTaxonomies.findOne({ _id: result.insertedId });
-  if (!created) throw new Error("Failed to create category taxonomy");
-  return created;
-}
-
-function validateTaxonomy(categories: Category[]) {
-  const catIds = new Set<string>();
-  const subIds = new Set<string>();
-  let hasIncome = false;
-  let hasExpense = false;
-
-  for (const cat of categories) {
-    if (catIds.has(cat.id)) badRequest(`Duplicate category id: ${cat.id}`);
-    catIds.add(cat.id);
-    if (cat.type === "income") hasIncome = true;
-    else hasExpense = true;
-    for (const sub of cat.subs) {
-      if (subIds.has(sub.id)) badRequest(`Duplicate subcategory id: ${sub.id}`);
-      subIds.add(sub.id);
-    }
-  }
-
-  if (!hasIncome) badRequest("At least one income category is required");
-  if (!hasExpense) badRequest("At least one expense category is required");
-}
-
+/**
+ * Return the user's taxonomy as enc/payload, legacy plaintext categories,
+ * or { seed: true } when no document exists yet.
+ */
 categoriesRoutes.get("/", async (c) => {
   const walletAddress = c.get("walletAddress");
-  const taxonomy = await getOrCreateTaxonomy(walletAddress);
-  return c.json({ categories: taxonomy.categories });
+  const { categoryTaxonomies } = getCollections(getDb());
+  const taxonomy = await categoryTaxonomies.findOne({ userAddress: walletAddress });
+
+  if (!taxonomy) {
+    return c.json({ seed: true });
+  }
+
+  if (taxonomy.enc === 1 && taxonomy.payload) {
+    return c.json({ enc: taxonomy.enc, payload: taxonomy.payload });
+  }
+
+  return c.json({ categories: taxonomy.categories ?? [] });
 });
 
+/**
+ * Upsert encrypted category taxonomy; clears legacy plaintext `categories`.
+ */
 categoriesRoutes.put("/", zValidator("json", updateCategoriesSchema), async (c) => {
   const walletAddress = c.get("walletAddress");
-  const { categories } = c.req.valid("json");
-  validateTaxonomy(categories);
-
+  const { enc, payload } = c.req.valid("json");
   const { categoryTaxonomies } = getCollections(getDb());
-  await getOrCreateTaxonomy(walletAddress);
+  const now = new Date();
 
   const updated = await categoryTaxonomies.findOneAndUpdate(
     { userAddress: walletAddress },
-    { $set: { categories, updatedAt: new Date() } },
-    { returnDocument: "after" },
+    {
+      $set: { enc, payload, updatedAt: now },
+      $setOnInsert: { userAddress: walletAddress, createdAt: now },
+      $unset: { categories: "" },
+    },
+    { upsert: true, returnDocument: "after" },
   );
 
   if (!updated) notFound("Category taxonomy not found");
-  return c.json({ categories: updated.categories });
+
+  return c.json({ enc: updated.enc, payload: updated.payload });
 });

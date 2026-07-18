@@ -1,6 +1,7 @@
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import { z } from "zod";
 import { walletAddressSchema } from "./address";
+import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
 export const TODO_ICONS = TODO_ICON_OPTIONS;
 
@@ -21,22 +22,24 @@ export const todoTaskSchema = z.object({
 
 export const todoListSchema = z.object({
   userAddress: walletAddressSchema,
-  name: z.string().trim().min(1).max(80),
-  icon: todoIconSchema.default("📋"),
-  tasks: z.array(todoTaskSchema).default([]),
+  enc: e2eeVersionSchema.optional(),
+  payload: encryptedPayloadSchema.optional(),
+  /** Legacy plaintext fields (pre-E2EE). */
+  name: z.string().trim().min(1).max(80).optional(),
+  icon: todoIconSchema.optional(),
+  tasks: z.array(todoTaskSchema).optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
 export const createTodoListSchema = z.object({
-  name: z.string().trim().min(1).max(80),
-  icon: todoIconSchema.default("📋"),
+  enc: e2eeVersionSchema,
+  payload: encryptedPayloadSchema,
 });
 
 export const updateTodoListSchema = z.object({
-  name: z.string().trim().min(1).max(80).optional(),
-  icon: todoIconSchema.optional(),
-  tasks: z.array(todoTaskSchema).optional(),
+  enc: e2eeVersionSchema,
+  payload: encryptedPayloadSchema,
 });
 
 export type TodoIcon = z.infer<typeof todoIconSchema>;

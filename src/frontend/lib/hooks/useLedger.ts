@@ -1,12 +1,23 @@
 import { api } from "@/frontend/lib/api";
 import { maybeNotifyBudgetAlerts } from "@/frontend/lib/budget/notify";
 import {
+  decodeCategories,
+  decodeEvent,
   decodeExpense,
+  decodeTodoList,
   decodeWallet,
+  encodeCategories,
+  encodeEventCreate,
+  encodeEventUpdate,
   encodeExpenseCreate,
   encodeExpenseUpdate,
+  encodeTodoListCreate,
+  encodeTodoListUpdate,
   encodeWalletFinancials,
+  type CategoriesWire,
+  type EventWire,
   type ExpenseWire,
+  type TodoListWire,
   type WalletWire,
 } from "@/frontend/lib/crypto/codec";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
@@ -15,6 +26,7 @@ import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
 import { normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
 import type { Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
+import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -22,14 +34,31 @@ const ACTIVE_WALLET_KEY = "ledger:active-wallet";
 
 export type DeleteScopeOpts = { scope?: DeleteScope; fromDate?: string };
 
+/** Storage key for the last active wallet per account. */
 function activeWalletStorageKey(wallet: string) {
   return `${ACTIVE_WALLET_KEY}:${wallet.toLowerCase()}`;
 }
 
+/** Require an unlocked ledger crypto key for the given address. */
 function requireKey(address: string): CryptoKey {
   const key = ledgerKeyStore.get(address);
   if (!key) throw new Error("Encryption key is locked");
   return key;
+}
+
+/** Client-side check that custom events include label + glyph before encrypt. */
+function assertCustomEventFields(data: Pick<LedgerEvent, "catId" | "customLabel" | "customGlyph">) {
+  if (data.catId !== "custom") return;
+  if (!data.customLabel?.trim()) throw new Error("Custom type name is required");
+  if (!data.customGlyph?.trim()) throw new Error("Custom emoji is required");
+}
+
+/** Clone default category taxonomy for first-time seed. */
+function cloneDefaultCategories(): Category[] {
+  return DEFAULT_CATEGORIES.map((c) => ({
+    ...c,
+    subs: c.subs.map((s) => ({ ...s })),
+  }));
 }
 
 const keys = {
@@ -90,8 +119,23 @@ export function useLedger(walletAddress: string) {
   const categoriesQuery = useQuery({
     queryKey: keys.categories(wallet),
     queryFn: async () => {
-      const { categories } = await api.categories.list();
-      return categories;
+      const wire = (await api.categories.list()) as CategoriesWire;
+      const cryptoKey = requireKey(wallet);
+
+      if (wire.seed) {
+        const defaults = cloneDefaultCategories();
+        const encrypted = await encodeCategories(defaults, cryptoKey);
+        await api.categories.update(encrypted);
+        return defaults;
+      }
+
+      if (!wire.enc && wire.categories) {
+        const encrypted = await encodeCategories(wire.categories, cryptoKey);
+        await api.categories.update(encrypted);
+        return wire.categories;
+      }
+
+      return decodeCategories(wire, cryptoKey);
     },
     enabled: cryptoReady,
   });
@@ -156,7 +200,36 @@ export function useLedger(walletAddress: string) {
     queryKey: keys.events(wallet),
     queryFn: async () => {
       const { events } = await api.events.list();
-      return events;
+      const cryptoKey = requireKey(wallet);
+      return Promise.all(
+        events.map(async (e) => {
+          const wire = e as EventWire;
+          if (!wire.enc && wire.title) {
+            const body = await encodeEventUpdate(
+              {
+                title: wire.title,
+                comments: wire.comments ?? [],
+                customLabel: wire.customLabel,
+                customGlyph: wire.customGlyph,
+                catId: wire.catId,
+                date: wire.date,
+                allDay: wire.allDay,
+                time: wire.time,
+                repeat: wire.repeat,
+                exceptDates: wire.exceptDates,
+                until: wire.until,
+                notify: wire.notify,
+                lead: wire.lead,
+                email: wire.email ?? "",
+              },
+              cryptoKey,
+            );
+            const { event } = await api.events.update(wire.id, body);
+            return decodeEvent(event as EventWire, cryptoKey);
+          }
+          return decodeEvent(wire, cryptoKey);
+        }),
+      );
     },
     enabled: cryptoReady && !!profileQuery.data,
   });
@@ -165,7 +238,25 @@ export function useLedger(walletAddress: string) {
     queryKey: keys.todoLists(wallet),
     queryFn: async () => {
       const { todoLists } = await api.todoLists.list();
-      return todoLists;
+      const cryptoKey = requireKey(wallet);
+      return Promise.all(
+        todoLists.map(async (l) => {
+          const wire = l as TodoListWire;
+          if (!wire.enc && wire.name) {
+            const encrypted = await encodeTodoListUpdate(
+              {
+                name: wire.name,
+                icon: wire.icon ?? "📋",
+                tasks: wire.tasks ?? [],
+              },
+              cryptoKey,
+            );
+            const { todoList } = await api.todoLists.update(wire.id, encrypted);
+            return decodeTodoList(todoList as TodoListWire, cryptoKey);
+          }
+          return decodeTodoList(wire, cryptoKey);
+        }),
+      );
     },
     enabled: cryptoReady && !!profileQuery.data,
   });
@@ -362,12 +453,16 @@ export function useLedger(walletAddress: string) {
 
   const saveEventMutation = useMutation({
     mutationFn: async (data: LedgerEvent & { id?: string }) => {
+      const cryptoKey = requireKey(wallet);
+      assertCustomEventFields(data);
       if (data.id) {
-        const { event } = await api.events.update(data.id, data);
-        return event;
+        const body = await encodeEventUpdate(data, cryptoKey);
+        const { event } = await api.events.update(data.id, body);
+        return decodeEvent(event as EventWire, cryptoKey);
       }
-      const { event } = await api.events.create(data);
-      return event;
+      const body = await encodeEventCreate(data, cryptoKey);
+      const { event } = await api.events.create(body);
+      return decodeEvent(event as EventWire, cryptoKey);
     },
     onSuccess: (event, variables) => {
       queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet), (prev = []) => {
@@ -383,8 +478,15 @@ export function useLedger(walletAddress: string) {
   });
 
   const saveCategoriesMutation = useMutation({
-    mutationFn: (categories: Category[]) => api.categories.update(categories),
-    onSuccess: async ({ categories }) => {
+    mutationFn: async (categories: Category[]) => {
+      const error = validateTaxonomy(categories);
+      if (error) throw new Error(error);
+      const cryptoKey = requireKey(wallet);
+      const encrypted = await encodeCategories(categories, cryptoKey);
+      await api.categories.update(encrypted);
+      return categories;
+    },
+    onSuccess: async (categories) => {
       queryClient.setQueryData(keys.categories(wallet), categories);
       if (!activeWallet) return;
       const merged = { ...activeWallet.budgets };
@@ -411,8 +513,17 @@ export function useLedger(walletAddress: string) {
   });
 
   const deleteEventMutation = useMutation({
-    mutationFn: ({ id, opts }: { id: string; opts?: DeleteScopeOpts }) =>
-      api.events.remove(id, opts),
+    mutationFn: async ({ id, opts }: { id: string; opts?: DeleteScopeOpts }) => {
+      const res = await api.events.remove(id, opts);
+      if (!res.deleted && res.event) {
+        const cryptoKey = requireKey(wallet);
+        return {
+          ...res,
+          event: await decodeEvent(res.event as EventWire, cryptoKey),
+        };
+      }
+      return res;
+    },
     onSuccess: (res, { id }) => {
       queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet), (prev = []) => {
         if (res.deleted || !res.event) {
@@ -425,15 +536,39 @@ export function useLedger(walletAddress: string) {
 
   const saveTodoListMutation = useMutation({
     mutationFn: async (data: Partial<TodoList> & { id?: string; name?: string; icon?: string }) => {
-      if (data.id) {
-        const { todoList } = await api.todoLists.update(data.id, data);
-        return todoList;
+      const cryptoKey = requireKey(wallet);
+      const existing = (queryClient.getQueryData<TodoList[]>(keys.todoLists(wallet)) ?? []);
+      const name = data.name ?? "";
+      const icon = data.icon ?? "📋";
+      const tasks = data.tasks ?? (data.id ? existing.find((l) => l.id === data.id)?.tasks ?? [] : []);
+
+      if (name) {
+        const clash = existing.find(
+          (l) =>
+            l.id !== data.id &&
+            l.name.toLowerCase() === name.trim().toLowerCase(),
+        );
+        if (clash) throw new Error("A list with this name already exists");
       }
-      const { todoList } = await api.todoLists.create({
-        name: data.name!,
-        icon: data.icon ?? "☑",
-      });
-      return todoList;
+
+      if (data.id) {
+        const current = existing.find((l) => l.id === data.id);
+        if (!current) throw new Error("List not found");
+        const encrypted = await encodeTodoListUpdate(
+          {
+            name: data.name ?? current.name,
+            icon: data.icon ?? current.icon,
+            tasks: data.tasks ?? current.tasks,
+          },
+          cryptoKey,
+        );
+        const { todoList } = await api.todoLists.update(data.id, encrypted);
+        return decodeTodoList(todoList as TodoListWire, cryptoKey);
+      }
+
+      const encrypted = await encodeTodoListCreate({ name, icon, tasks }, cryptoKey);
+      const { todoList } = await api.todoLists.create(encrypted);
+      return decodeTodoList(todoList as TodoListWire, cryptoKey);
     },
     onSuccess: (saved, variables) => {
       queryClient.setQueryData<TodoList[]>(keys.todoLists(wallet), (prev = []) => {

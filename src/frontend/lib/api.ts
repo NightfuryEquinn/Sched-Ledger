@@ -174,12 +174,17 @@ export const api = {
 
   categories: {
     list() {
-      return request<{ categories: Category[] }>("/categories");
+      return request<{
+        enc?: 1;
+        payload?: string;
+        categories?: Category[];
+        seed?: boolean;
+      }>("/categories");
     },
-    update(categories: Category[]) {
-      return request<{ categories: Category[] }>("/categories", {
+    update(body: { enc: 1; payload: string }) {
+      return request<{ enc: 1; payload: string }>("/categories", {
         method: "PUT",
-        body: { categories },
+        body,
       });
     },
   },
@@ -220,10 +225,10 @@ export const api = {
       const qs = query?.month ? `?month=${encodeURIComponent(query.month)}` : "";
       return request<{ events: LedgerEvent[] }>(`/events${qs}`);
     },
-    create(body: Omit<LedgerEvent, "id" | "comments"> & { comments?: LedgerEvent["comments"] }) {
+    create(body: Record<string, unknown>) {
       return request<{ event: LedgerEvent }>("/events", { method: "POST", body });
     },
-    update(id: string, body: Partial<Omit<LedgerEvent, "id">>) {
+    update(id: string, body: Record<string, unknown>) {
       return request<{ event: LedgerEvent }>(`/events/${id}`, { method: "PATCH", body });
     },
     remove(id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) {
@@ -236,22 +241,16 @@ export const api = {
         { method: "DELETE" },
       );
     },
-    addComment(id: string, text: string) {
-      return request<{ event: LedgerEvent }>(`/events/${id}/comments`, {
-        method: "POST",
-        body: { text },
-      });
-    },
   },
 
   todoLists: {
     list() {
       return request<{ todoLists: TodoList[] }>("/todo-lists");
     },
-    create(body: { name: string; icon: string }) {
+    create(body: { enc: 1; payload: string }) {
       return request<{ todoList: TodoList }>("/todo-lists", { method: "POST", body });
     },
-    update(id: string, body: Partial<Pick<TodoList, "name" | "icon" | "tasks">>) {
+    update(id: string, body: { enc: 1; payload: string }) {
       return request<{ todoList: TodoList }>(`/todo-lists/${id}`, { method: "PATCH", body });
     },
     remove(id: string) {

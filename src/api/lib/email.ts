@@ -102,7 +102,9 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id: 
   return { ok: true, id: payload.id ?? "unknown" };
 }
 
-/** Build reminder / confirmation email subject, HTML, and plain text. */
+/** Build reminder / confirmation email subject, HTML, and plain text.
+ * Title is intentionally generic when event content is E2EE (server never sees it).
+ */
 export function reminderEmailHtml(opts: {
   title: string;
   when: string;
@@ -122,7 +124,7 @@ export function reminderEmailHtml(opts: {
 <html>
 <body style="font-family:system-ui,sans-serif;line-height:1.5;color:#2a2520;max-width:480px;margin:0 auto;padding:24px">
   ${emailLogoHtml()}
-  <h2 style="margin:0 0 12px;font-size:20px">${opts.isConfirmation ? "Reminder scheduled" : opts.title}</h2>
+  <h2 style="margin:0 0 12px;font-size:20px">${opts.isConfirmation ? "Reminder scheduled" : escapeHtml(opts.title)}</h2>
   <p style="margin:0 0 16px">${intro}</p>
   <table style="width:100%;border-collapse:collapse;font-size:15px">
     <tr><td style="padding:6px 0;color:#6b6560">Event</td><td style="padding:6px 0"><strong>${escapeHtml(opts.title)}</strong></td></tr>

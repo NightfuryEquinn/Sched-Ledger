@@ -113,6 +113,13 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("budgets-summary", "Totals", "Total budget, amount spent so far, and what's left to allocate.", '[data-tour="tour-budgets-summary"]'),
     lastStep("budgets-list", "Per category", "Tap an amount to edit a category budget. Progress bars show spend vs limit.", '[data-tour="tour-budgets-list"]'),
   ],
+  calculator: [
+    step("calculator-nav", "Calculator", "Plan budgets from income after custom tax deductions.", navTarget("calculator"), "right"),
+    step("calculator-summary", "Totals", "Gross income, tax taken, and net left to allocate across categories.", '[data-tour="tour-calculator-summary"]'),
+    step("calculator-tax", "Tax lines", "Add titled percentage deductions — they stay on this screen only.", '[data-tour="tour-calculator-tax"]'),
+    step("calculator-allocate", "Allocate", "Set a percent per expense category until the total is 100%.", '[data-tour="tour-calculator-allocate"]'),
+    lastStep("calculator-apply", "Apply", "Confirm to replace all expense category budgets on the active wallet.", '[data-tour="tour-calculator-apply"]', "top"),
+  ],
   categories: [
     step("categories-nav", "Categories", "Your expense and income taxonomy — categories and subcategories.", navTarget("categories"), "right"),
     step("categories-toolbar", "Filter & add", "Filter by type or add new expense and income categories.", '[data-tour="tour-categories-toolbar"]'),

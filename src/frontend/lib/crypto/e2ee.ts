@@ -16,6 +16,31 @@ export type WalletSecrets = {
   budgets: Record<string, number>;
 };
 
+export type CategorySecrets = {
+  categories: Array<{
+    id: string;
+    name: string;
+    color: string;
+    glyph: string;
+    type?: "expense" | "income";
+    builtin?: boolean;
+    subs: Array<{ id: string; name: string }>;
+  }>;
+};
+
+export type EventSecrets = {
+  title: string;
+  comments: Array<{ id: string; text: string; at: string }>;
+  customLabel?: string;
+  customGlyph?: string;
+};
+
+export type TodoListSecrets = {
+  name: string;
+  icon: string;
+  tasks: Array<{ id: string; title: string; done: boolean }>;
+};
+
 export function buildDerivationMessage(address: string): string {
   return `${DERIVATION_MESSAGE_PREFIX}\n\nAddress: ${getAddress(address)}`;
 }

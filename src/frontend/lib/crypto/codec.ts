@@ -2,10 +2,20 @@ import {
   decryptJson,
   encryptJson,
   expenseSeriesKey,
+  type CategorySecrets,
+  type EventSecrets,
   type ExpenseSecrets,
+  type TodoListSecrets,
   type WalletSecrets,
 } from "@/frontend/lib/crypto/e2ee";
-import type { Budgets, Expense, FinancialWallet } from "@/frontend/lib/types";
+import type {
+  Budgets,
+  Category,
+  Expense,
+  FinancialWallet,
+  LedgerEvent,
+  TodoList,
+} from "@/frontend/lib/types";
 import { normalizeRecurring } from "@/frontend/lib/stats";
 import type { RecurringField } from "@/lib/recurring";
 
@@ -151,5 +161,229 @@ export async function encodeWalletFinancials(
       startingBalance: data.startingBalance ?? 0,
       budgets: data.budgets ?? {},
     } satisfies WalletSecrets),
+  };
+}
+
+export type CategoriesWire = {
+  enc?: 1;
+  payload?: string;
+  /** Legacy plaintext tree (pre-E2EE). */
+  categories?: Category[];
+  /** No taxonomy doc yet — client should seed encrypted defaults. */
+  seed?: boolean;
+};
+
+/** Decrypt category taxonomy wire, or return legacy plaintext categories. */
+export async function decodeCategories(wire: CategoriesWire, key: CryptoKey): Promise<Category[]> {
+  if (wire.enc === 1 && wire.payload) {
+    const secrets = await decryptJson<CategorySecrets>(key, wire.payload);
+
+    return secrets.categories;
+  }
+
+  if (wire.categories) return wire.categories;
+
+  throw new Error("Category taxonomy is encrypted but no key is available");
+}
+
+/** Encrypt the full category tree for PUT /api/categories. */
+export async function encodeCategories(categories: Category[], key: CryptoKey) {
+  return {
+    enc: 1 as const,
+    payload: await encryptJson(key, { categories } satisfies CategorySecrets),
+  };
+}
+
+export type EventWire = {
+  id: string;
+  catId: string;
+  date: string;
+  allDay: boolean;
+  time: string | null;
+  repeat: string;
+  exceptDates?: string[];
+  until?: string | null;
+  notify: boolean;
+  lead: string;
+  email?: string;
+  enc?: 1;
+  payload?: string;
+  /** Legacy plaintext secrets. */
+  title?: string;
+  comments?: LedgerEvent["comments"];
+  customLabel?: string;
+  customGlyph?: string;
+};
+
+/** Decrypt event secrets and merge with plaintext schedule metadata. */
+export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<LedgerEvent> {
+  if (wire.enc === 1 && wire.payload) {
+    const secrets = await decryptJson<EventSecrets>(key, wire.payload);
+
+    return {
+      id: wire.id,
+      catId: wire.catId,
+      date: wire.date,
+      allDay: wire.allDay,
+      time: wire.time,
+      repeat: wire.repeat,
+      exceptDates: wire.exceptDates,
+      until: wire.until,
+      notify: wire.notify,
+      lead: wire.lead,
+      email: wire.email ?? "",
+      title: secrets.title,
+      comments: secrets.comments ?? [],
+      ...(secrets.customLabel ? { customLabel: secrets.customLabel } : {}),
+      ...(secrets.customGlyph ? { customGlyph: secrets.customGlyph } : {}),
+    };
+  }
+
+  if (wire.title == null) {
+    throw new Error("Event is encrypted but no key is available");
+  }
+
+  return {
+    id: wire.id,
+    title: wire.title,
+    catId: wire.catId,
+    customLabel: wire.customLabel,
+    customGlyph: wire.customGlyph,
+    date: wire.date,
+    allDay: wire.allDay,
+    time: wire.time,
+    repeat: wire.repeat,
+    exceptDates: wire.exceptDates,
+    until: wire.until,
+    notify: wire.notify,
+    lead: wire.lead,
+    email: wire.email ?? "",
+    comments: wire.comments ?? [],
+  };
+}
+
+/** Build encrypted create body for an event (secrets in payload). */
+export async function encodeEventCreate(
+  event: Omit<LedgerEvent, "id">,
+  key: CryptoKey,
+) {
+  const secrets: EventSecrets = {
+    title: event.title,
+    comments: event.comments ?? [],
+  };
+  if (event.catId === "custom") {
+    if (event.customLabel) secrets.customLabel = event.customLabel;
+    if (event.customGlyph) secrets.customGlyph = event.customGlyph;
+  }
+
+  return {
+    catId: event.catId,
+    date: event.date,
+    allDay: event.allDay,
+    time: event.time,
+    repeat: event.repeat,
+    notify: event.notify,
+    lead: event.lead,
+    email: event.email ?? "",
+    enc: 1 as const,
+    payload: await encryptJson(key, secrets),
+  };
+}
+
+/** Build encrypted update body for an event. */
+export async function encodeEventUpdate(
+  event: Partial<Omit<LedgerEvent, "id">> & Pick<LedgerEvent, "title" | "comments">,
+  key: CryptoKey,
+) {
+  const secrets: EventSecrets = {
+    title: event.title,
+    comments: event.comments ?? [],
+  };
+  if (event.catId === "custom") {
+    if (event.customLabel) secrets.customLabel = event.customLabel;
+    if (event.customGlyph) secrets.customGlyph = event.customGlyph;
+  }
+
+  const patch: Record<string, unknown> = {
+    enc: 1,
+    payload: await encryptJson(key, secrets),
+  };
+
+  if (event.catId !== undefined) patch.catId = event.catId;
+  if (event.date !== undefined) patch.date = event.date;
+  if (event.allDay !== undefined) patch.allDay = event.allDay;
+  if (event.time !== undefined) patch.time = event.time;
+  if (event.repeat !== undefined) patch.repeat = event.repeat;
+  if (event.exceptDates !== undefined) patch.exceptDates = event.exceptDates;
+  if (event.until !== undefined) patch.until = event.until;
+  if (event.notify !== undefined) patch.notify = event.notify;
+  if (event.lead !== undefined) patch.lead = event.lead;
+  if (event.email !== undefined) patch.email = event.email;
+
+  return patch;
+}
+
+export type TodoListWire = {
+  id: string;
+  enc?: 1;
+  payload?: string;
+  /** Legacy plaintext fields. */
+  name?: string;
+  icon?: string;
+  tasks?: TodoList["tasks"];
+};
+
+/** Decrypt a todo list wire, or return legacy plaintext fields. */
+export async function decodeTodoList(wire: TodoListWire, key: CryptoKey): Promise<TodoList> {
+  if (wire.enc === 1 && wire.payload) {
+    const secrets = await decryptJson<TodoListSecrets>(key, wire.payload);
+
+    return {
+      id: wire.id,
+      name: secrets.name,
+      icon: secrets.icon,
+      tasks: secrets.tasks ?? [],
+    };
+  }
+
+  if (wire.name == null) {
+    throw new Error("Todo list is encrypted but no key is available");
+  }
+
+  return {
+    id: wire.id,
+    name: wire.name,
+    icon: wire.icon ?? "📋",
+    tasks: wire.tasks ?? [],
+  };
+}
+
+/** Encrypt todo list secrets for create. */
+export async function encodeTodoListCreate(
+  data: Pick<TodoList, "name" | "icon"> & { tasks?: TodoList["tasks"] },
+  key: CryptoKey,
+) {
+  return {
+    enc: 1 as const,
+    payload: await encryptJson(key, {
+      name: data.name,
+      icon: data.icon,
+      tasks: data.tasks ?? [],
+    } satisfies TodoListSecrets),
+  };
+}
+
+/** Encrypt todo list secrets for update. */
+export async function encodeTodoListUpdate(
+  data: Pick<TodoList, "name" | "icon" | "tasks">,
+  key: CryptoKey,
+) {
+  return {
+    enc: 1 as const,
+    payload: await encryptJson(key, {
+      name: data.name,
+      icon: data.icon,
+      tasks: data.tasks ?? [],
+    } satisfies TodoListSecrets),
   };
 }

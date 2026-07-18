@@ -8,6 +8,7 @@ import {
   walletAddressSchema,
   type LeadId,
 } from "./common";
+import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
 export const eventCommentSchema = z.object({
   id: z.string().min(1),
@@ -18,6 +19,7 @@ export const eventCommentSchema = z.object({
 const customLabelSchema = z.string().min(1).max(40);
 const customGlyphSchema = z.string().min(1).max(8);
 
+/** Refine lead against allDay for plaintext schedule fields. */
 function refineLeadForAllDay(data: { allDay?: boolean; lead?: LeadId }, ctx: z.RefinementCtx) {
   if (data.lead === undefined) return;
   const allDay = data.allDay ?? true;
@@ -32,26 +34,8 @@ function refineLeadForAllDay(data: { allDay?: boolean; lead?: LeadId }, ctx: z.R
   }
 }
 
-function withCustomFields<T extends z.ZodRawShape>(shape: T) {
-  return z.object(shape).superRefine((data, ctx) => {
-    if (data.catId === "custom") {
-      if (!data.customLabel?.trim()) {
-        ctx.addIssue({ code: "custom", message: "Custom type name is required", path: ["customLabel"] });
-      }
-      if (!data.customGlyph?.trim()) {
-        ctx.addIssue({ code: "custom", message: "Custom emoji is required", path: ["customGlyph"] });
-      }
-    }
-    refineLeadForAllDay(data, ctx);
-  });
-}
-
-export const eventSchema = z.object({
-  userAddress: walletAddressSchema,
-  title: z.string().min(1).max(200),
+const eventScheduleShape = {
   catId: eventCategoryIdSchema,
-  customLabel: customLabelSchema.optional(),
-  customGlyph: customGlyphSchema.optional(),
   date: isoDateSchema,
   allDay: z.boolean().default(true),
   time: z
@@ -61,43 +45,51 @@ export const eventSchema = z.object({
     .default(null),
   repeat: repeatIdSchema.default("once"),
   /** Occurrence dates removed with "This Only". */
-  exceptDates: z.array(isoDateSchema).optional().default([]),
+  exceptDates: z.array(isoDateSchema).optional(),
   /** Inclusive last occurrence; null/undefined means unbounded. */
   until: isoDateSchema.nullable().optional(),
   notify: z.boolean().default(false),
   lead: leadIdSchema.default("1d"),
   email: z.string().email().optional().or(z.literal("")),
-  comments: z.array(eventCommentSchema).default([]),
+};
+
+export const eventSchema = z.object({
+  userAddress: walletAddressSchema,
+  ...eventScheduleShape,
+  enc: e2eeVersionSchema.optional(),
+  payload: encryptedPayloadSchema.optional(),
+  /** Legacy plaintext secrets (pre-E2EE). */
+  title: z.string().min(1).max(200).optional(),
+  customLabel: customLabelSchema.optional(),
+  customGlyph: customGlyphSchema.optional(),
+  comments: z.array(eventCommentSchema).optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
 
-export const createEventSchema = withCustomFields({
-  title: z.string().min(1).max(200),
-  catId: eventCategoryIdSchema,
-  customLabel: customLabelSchema.optional(),
-  customGlyph: customGlyphSchema.optional(),
-  date: isoDateSchema,
-  allDay: z.boolean().optional().default(true),
-  time: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
-    .nullable()
-    .optional()
-    .default(null),
-  repeat: repeatIdSchema.optional().default("once"),
-  notify: z.boolean().optional().default(false),
-  lead: leadIdSchema.optional().default("1d"),
-  email: z.string().email().optional().or(z.literal("")),
-  comments: z.array(eventCommentSchema).optional().default([]),
-});
+export const createEventSchema = z
+  .object({
+    catId: eventCategoryIdSchema,
+    date: isoDateSchema,
+    allDay: z.boolean().optional().default(true),
+    time: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+      .nullable()
+      .optional()
+      .default(null),
+    repeat: repeatIdSchema.optional().default("once"),
+    notify: z.boolean().optional().default(false),
+    lead: leadIdSchema.optional().default("1d"),
+    email: z.string().email().optional().or(z.literal("")),
+    enc: e2eeVersionSchema,
+    payload: encryptedPayloadSchema,
+  })
+  .superRefine(refineLeadForAllDay);
 
 export const updateEventSchema = z
   .object({
-    title: z.string().min(1).max(200).optional(),
     catId: eventCategoryIdSchema.optional(),
-    customLabel: customLabelSchema.optional(),
-    customGlyph: customGlyphSchema.optional(),
     date: isoDateSchema.optional(),
     allDay: z.boolean().optional(),
     time: z
@@ -111,26 +103,13 @@ export const updateEventSchema = z
     notify: z.boolean().optional(),
     lead: leadIdSchema.optional(),
     email: z.string().email().optional().or(z.literal("")),
-    comments: z.array(eventCommentSchema).optional(),
+    enc: e2eeVersionSchema,
+    payload: encryptedPayloadSchema,
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
   })
-  .superRefine((data, ctx) => {
-    if (data.catId === "custom") {
-      if (!data.customLabel?.trim()) {
-        ctx.addIssue({ code: "custom", message: "Custom type name is required", path: ["customLabel"] });
-      }
-      if (!data.customGlyph?.trim()) {
-        ctx.addIssue({ code: "custom", message: "Custom emoji is required", path: ["customGlyph"] });
-      }
-    }
-    refineLeadForAllDay(data, ctx);
-  });
-
-export const addEventCommentSchema = z.object({
-  text: z.string().min(1).max(2000),
-});
+  .superRefine(refineLeadForAllDay);
 
 export const listEventsQuerySchema = z.object({
   month: z
@@ -143,5 +122,4 @@ export type EventComment = z.infer<typeof eventCommentSchema>;
 export type Event = z.infer<typeof eventSchema>;
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
-export type AddEventCommentInput = z.infer<typeof addEventCommentSchema>;
 export type ListEventsQuery = z.infer<typeof listEventsQuerySchema>;

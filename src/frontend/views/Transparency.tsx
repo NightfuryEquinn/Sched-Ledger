@@ -57,10 +57,11 @@ const COLLECTIONS: CollectionDoc[] = [
   {
     name: "category_taxonomies",
     purpose: "Expense / income category tree per user",
+    encrypted: true,
     fields: [
       { key: "userAddress", value: '"0xabc…"' },
-      { key: "categories[]", value: "{ id, name, color, glyph, type, builtin, subs[] }" },
-      { key: "categories[].subs[]", value: "{ id, name }" },
+      { key: "enc", value: "1", note: "E2EE version" },
+      { key: "payload", value: "base64 AES-GCM", note: "categories[] tree" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -83,28 +84,26 @@ const COLLECTIONS: CollectionDoc[] = [
   {
     name: "events",
     purpose: "Calendar events and reminders",
+    encrypted: true,
     fields: [
       { key: "userAddress", value: '"0xabc…"' },
-      { key: "title", value: '"Dentist"' },
-      { key: "catId", value: '"health" | "custom"' },
-      { key: "customLabel? / customGlyph?", value: "when catId is custom" },
+      { key: "enc", value: "1", note: "E2EE version" },
+      { key: "payload", value: "base64 AES-GCM", note: "title, comments, customLabel/Glyph" },
+      { key: "catId", value: '"bill" | "custom" | …' },
       { key: "date", value: '"2026-07-20"' },
-      { key: "allDay", value: "true" },
-      { key: "time", value: '"14:30" | null' },
-      { key: "repeat", value: '"once" | …' },
-      { key: "notify / lead / email", value: "reminder settings" },
-      { key: "comments[]", value: "{ id, text, at }" },
+      { key: "allDay / time / repeat", value: "schedule metadata" },
+      { key: "notify / lead / email", value: "reminder settings (plaintext for cron)" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
   {
     name: "todo_lists",
     purpose: "Named task lists",
+    encrypted: true,
     fields: [
       { key: "userAddress", value: '"0xabc…"' },
-      { key: "name", value: '"Groceries"' },
-      { key: "icon", value: '"📋"' },
-      { key: "tasks[]", value: "{ id, title, done }" },
+      { key: "enc", value: "1", note: "E2EE version" },
+      { key: "payload", value: "base64 AES-GCM", note: "name, icon, tasks[]" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -175,10 +174,10 @@ const RELATIONSHIP_CHART = `flowchart TB
     Users["users"]
     Profile["ledger_profiles"]
     Wallets["financial_wallets<br/>enc + payload"]
-    Cats["category_taxonomies"]
+    Cats["category_taxonomies<br/>enc + payload"]
     Exp["expenses<br/>enc + payload"]
-    Ev["events"]
-    Todos["todo_lists"]
+    Ev["events<br/>enc + payload"]
+    Todos["todo_lists<br/>enc + payload"]
     Consent["consent"]
     Auth["auth_nonces · sessions"]
     Logs["reminder_logs · budget_alert_logs"]
@@ -188,7 +187,10 @@ const RELATIONSHIP_CHART = `flowchart TB
   UI --> LS
   UI -->|"signed requests"| API
   Key -->|"AES-GCM encrypt/decrypt"| Wallets
+  Key -->|"AES-GCM encrypt/decrypt"| Cats
   Key -->|"AES-GCM encrypt/decrypt"| Exp
+  Key -->|"AES-GCM encrypt/decrypt"| Ev
+  Key -->|"AES-GCM encrypt/decrypt"| Todos
   Users -->|"owns"| Profile
   Users -->|"owns"| Wallets
   Users -->|"owns"| Cats
@@ -217,10 +219,10 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     Users["users"]
     Profile["ledger_profiles"]
     Wallets["financial_wallets<br/>enc + payload"]
-    Cats["category_taxonomies"]
+    Cats["category_taxonomies<br/>enc + payload"]
     Exp["expenses<br/>enc + payload"]
-    Ev["events"]
-    Todos["todo_lists"]
+    Ev["events<br/>enc + payload"]
+    Todos["todo_lists<br/>enc + payload"]
     Consent["consent"]
     Auth["auth_nonces · sessions"]
     Logs["reminder_logs · budget_alert_logs"]
@@ -238,11 +240,14 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
 
   Client -->|"signed requests"| API
   Key -.->|"AES-GCM"| Wallets
+  Key -.->|"AES-GCM"| Cats
   Key -.->|"AES-GCM"| Exp
+  Key -.->|"AES-GCM"| Ev
+  Key -.->|"AES-GCM"| Todos
 `;
 
 const E2EE_CHART = `flowchart LR
-  Plain["Plain fields<br/>sub · amount · note<br/>income · budgets"]
+  Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · budgets"]
   Enc["AES-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
   DB[("MongoDB")]
@@ -256,7 +261,7 @@ const E2EE_CHART = `flowchart LR
 
 /** Mobile: same write path stacked top-to-bottom. */
 const E2EE_CHART_MOBILE = `flowchart TB
-  Plain["Plain fields<br/>sub · amount · note<br/>income · budgets"]
+  Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · budgets"]
   Enc["AES-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
   DB[("MongoDB")]
@@ -399,7 +404,7 @@ export function Transparency() {
             <h2>How your data is stored</h2>
             <p className="panel-sub">
               Read-only map of MongoDB collections, document keys, and the end-to-end encryption path.
-              Sensitive money fields never leave your browser as plaintext.
+              Sensitive ledger fields never leave your browser as plaintext.
             </p>
           </div>
         </div>
@@ -424,7 +429,7 @@ export function Transparency() {
           <div>
             <h2>Encrypted write path</h2>
             <p className="panel-sub">
-              Expenses and wallet secrets are AES-GCM encrypted client-side before save
+              Categories, events, todos, expenses, and wallet secrets are AES-GCM encrypted client-side before save
             </p>
           </div>
         </div>

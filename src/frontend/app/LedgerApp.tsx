@@ -24,6 +24,7 @@ import {
 } from "@/frontend/views";
 import { EventModal, Schedule } from "@/frontend/views/Schedule";
 import { TodoListView } from "@/frontend/views/TodoList";
+import { Calculator } from "@/frontend/views/Calculator";
 import { Transparency } from "@/frontend/views/Transparency";
 import { useEffect, useRef, useState } from "react";
 
@@ -46,6 +47,7 @@ const VIEW_TITLES: Record<ViewId, string> = {
   schedule: "Schedule",
   transactions: "Transactions",
   budgets: "Budgets",
+  calculator: "Calculator",
   categories: "Categories",
   recurring: "Recurring",
   insights: "Insights",
@@ -309,6 +311,15 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
             <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
           )}
           {view === "budgets" && <BudgetsView {...viewProps} setBudgets={setBudgets} />}
+          {view === "calculator" && (
+            <Calculator
+              wallet={wallet}
+              budgets={budgets}
+              setBudgets={setBudgets}
+              currency={currency}
+              categoryIndex={ledger.categoryIndex}
+            />
+          )}
           {view === "categories" && (
             <CategoriesView
               categoryIndex={ledger.categoryIndex}

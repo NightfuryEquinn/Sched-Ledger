@@ -6,7 +6,7 @@ export const E2EE_VERSION = 1 as const;
 export const e2eeVersionSchema = z.literal(E2EE_VERSION);
 
 /** Base64-encoded AES-GCM blob (IV + ciphertext + tag). */
-export const encryptedPayloadSchema = z.string().min(1).max(16_384);
+export const encryptedPayloadSchema = z.string().min(1).max(65_536);
 
 /** SHA-256 hex digest identifying a recurring expense series. */
 export const seriesKeySchema = z

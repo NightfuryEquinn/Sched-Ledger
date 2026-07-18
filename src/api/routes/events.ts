@@ -10,12 +10,7 @@ import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { deleteScopeQuerySchema, resolveEventDeleteAction } from "@/lib/delete-scope";
 import { objectIdSchema, isLeadAllowedForEvent, type LeadId } from "@/schemas/common";
-import {
-  addEventCommentSchema,
-  createEventSchema,
-  listEventsQuerySchema,
-  updateEventSchema,
-} from "@/schemas/event";
+import { createEventSchema, listEventsQuerySchema, updateEventSchema } from "@/schemas/event";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -104,17 +99,16 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
   }
 
   const $set: Record<string, unknown> = { ...body, updatedAt: new Date() };
-  const $unset: Record<string, ""> = {};
-  if (body.catId && body.catId !== "custom") {
-    delete $set.customLabel;
-    delete $set.customGlyph;
-    $unset.customLabel = "";
-    $unset.customGlyph = "";
-  }
+  const $unset: Record<string, ""> = {
+    title: "",
+    comments: "",
+    customLabel: "",
+    customGlyph: "",
+  };
 
   const updated = await events.findOneAndUpdate(
     { _id: new ObjectId(id.data), userAddress: walletAddress },
-    Object.keys($unset).length ? { $set, $unset } : { $set },
+    { $set, $unset },
     { returnDocument: "after" },
   );
 
@@ -130,32 +124,6 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
     );
   }
   return c.json({ event: serializeDoc(updated) });
-});
-
-eventsRoutes.post("/:id/comments", zValidator("json", addEventCommentSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
-  const id = objectIdSchema.safeParse(c.req.param("id"));
-  if (!id.success) notFound("Event not found");
-
-  const { text } = c.req.valid("json");
-  const comment = {
-    id: crypto.randomUUID(),
-    text,
-    at: new Date().toISOString(),
-  };
-
-  const { events } = getCollections(getDb());
-  const updated = await events.findOneAndUpdate(
-    { _id: new ObjectId(id.data), userAddress: walletAddress },
-    {
-      $push: { comments: comment },
-      $set: { updatedAt: new Date() },
-    },
-    { returnDocument: "after" },
-  );
-
-  if (!updated) notFound("Event not found");
-  return c.json({ event: serializeDoc(updated) }, 201);
 });
 
 eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (c) => {

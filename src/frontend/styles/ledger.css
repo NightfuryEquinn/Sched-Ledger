@@ -12,6 +12,7 @@
      8.  Views: transactions, budgets edit, insights, recurring
      9.  Views: categories, to-do list
      9b. Views: transparency (data map)
+     9c. Views: calculator (budget helper)
      10. Views: schedule (calendar, agenda, event modal)
      11. Modals & empty states
      12. Auth screen
@@ -3386,6 +3387,232 @@ h1, h2, h3 {
   font-size: 11px;
   color: var(--ink-faint);
   line-height: 1.35;
+}
+
+/* ── 9c. Views: calculator ────────────────────────────────────────── */
+.calculator-tax-list,
+.calculator-alloc-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.calculator-tax-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px auto;
+  gap: var(--sp-3);
+  align-items: end;
+}
+
+.calculator-tax-title,
+.calculator-tax-pct {
+  min-width: 0;
+}
+
+.calculator-tax-remove {
+  margin-bottom: 2px;
+}
+
+.calculator-tax-remove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.calculator-pct-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.calculator-pct-field:focus-within {
+  border-color: var(--accent);
+}
+
+.calculator-pct-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-num);
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+}
+
+.calculator-pct-field input::-webkit-outer-spin-button,
+.calculator-pct-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.calculator-pct-suffix {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.calculator-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.calculator-meta {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.calculator-meta--ok {
+  color: var(--ok);
+}
+
+.calculator-meta--warn {
+  color: var(--danger);
+}
+
+.calculator-warn {
+  margin: var(--sp-3) 0 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.calculator-alloc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px minmax(88px, auto);
+  gap: var(--sp-3);
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.calculator-alloc-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.calculator-alloc-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.calculator-alloc-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calculator-alloc-amt {
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.calculator-apply {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  padding-bottom: var(--sp-4);
+}
+
+.calculator-apply-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.primary-btn.calculator-apply-success:disabled {
+  opacity: 1;
+  background: var(--ok);
+  color: #fff;
+  cursor: default;
+}
+
+  .calculator-confirm-lead {
+  margin: 0 0 var(--sp-4);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+}
+
+.calculator-confirm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calculator-confirm-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  font-size: 14px;
+}
+
+.calculator-confirm-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .calculator-tax-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title remove"
+      "pct pct";
+  }
+
+  .calculator-tax-title {
+    grid-area: title;
+  }
+
+  .calculator-tax-pct {
+    grid-area: pct;
+  }
+
+  .calculator-tax-remove {
+    grid-area: remove;
+    align-self: center;
+    margin-bottom: 0;
+  }
+
+  .calculator-alloc-row {
+    grid-template-columns: minmax(0, 1fr) 96px;
+    grid-template-areas:
+      "name name"
+      "pct amt";
+  }
+
+  .calculator-alloc-name {
+    grid-area: name;
+  }
+
+  .calculator-alloc-row .calculator-pct-field {
+    grid-area: pct;
+  }
+
+  .calculator-alloc-amt {
+    grid-area: amt;
+  }
 }
 
 /* ── 10. Views: schedule ──────────────────────────────────────────── */

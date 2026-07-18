@@ -24,12 +24,14 @@ const EVENT_CAT_NAMES: Record<string, string> = {
   custom: "Custom",
 };
 
-/** Human-readable label for an event's schedule category. */
-function eventCategoryLabel(doc: { catId: string; customLabel?: string }): string {
-  if (doc.catId === "custom" && doc.customLabel?.trim()) return doc.customLabel.trim();
-
+/** Human-readable label for an event's schedule category (plaintext catId only). */
+function eventCategoryLabel(doc: { catId: string }): string {
   return EVENT_CAT_NAMES[doc.catId] ?? doc.catId;
 }
+
+/** Generic event title used in emails — real titles are E2EE and unavailable server-side. */
+const GENERIC_EVENT_TITLE = "Upcoming event";
+
 
 export type ReminderProcessResult = {
   scanned: number;
@@ -70,7 +72,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   const category = eventCategoryLabel(doc);
   const lead = leadDescription(doc.lead as LeadId);
   const { html, text, subject } = reminderEmailHtml({
-    title: doc.title,
+    title: GENERIC_EVENT_TITLE,
     when,
     category,
     lead,
@@ -132,7 +134,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       const outcome = await sendReminderOnce(ev, iso, email, prefs.timezone);
       if (outcome === "sent") result.sent++;
       else if (outcome === "skipped") result.skipped++;
-      else result.errors.push(`${ev.title} (${iso}): ${outcome.error}`);
+      else result.errors.push(`event ${ev._id} (${iso}): ${outcome.error}`);
     }
   }
 
@@ -164,7 +166,7 @@ async function sendReminderOnce(
   const lead = leadDescription(ev.lead as LeadId);
 
   const { html, text, subject } = reminderEmailHtml({
-    title: ev.title,
+    title: GENERIC_EVENT_TITLE,
     when,
     category,
     lead,
@@ -221,7 +223,7 @@ export async function sendImmediateReminderIfDue(
 
     const outcome = await sendReminderOnce(doc, iso, email, prefs.timezone);
     if (typeof outcome !== "string") {
-      console.error(`[reminders] immediate send failed for "${doc.title}" (${iso}): ${outcome.error}`);
+      console.error(`[reminders] immediate send failed for event ${doc._id} (${iso}): ${outcome.error}`);
     }
   }
 }

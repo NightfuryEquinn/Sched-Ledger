@@ -1,34 +1,19 @@
-import { badRequest, notFound } from "@/api/lib/errors";
+import { notFound } from "@/api/lib/errors";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { objectIdSchema } from "@/schemas/common";
-import {
-  createTodoListSchema,
-  updateTodoListSchema,
-  type TodoTask,
-} from "@/schemas/todo";
+import { createTodoListSchema, updateTodoListSchema } from "@/schemas/todo";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { MongoServerError, ObjectId } from "mongodb";
-
-function isDuplicateKeyError(err: unknown): boolean {
-  return err instanceof MongoServerError && err.code === 11000;
-}
+import { ObjectId } from "mongodb";
 
 export const todoListsRoutes = new Hono<{ Variables: SessionVariables }>();
 
 todoListsRoutes.use("*", sessionAuth);
 
-function validateTasks(tasks: TodoTask[]) {
-  const ids = new Set<string>();
-  for (const task of tasks) {
-    if (ids.has(task.id)) badRequest(`Duplicate task id: ${task.id}`);
-    ids.add(task.id);
-  }
-}
-
+/** Find a todo list owned by the session user. */
 async function findOwnedList(userAddress: string, listId: string) {
   const { todoLists } = getCollections(getDb());
   return todoLists.findOne({
@@ -61,22 +46,13 @@ todoListsRoutes.post("/", zValidator("json", createTodoListSchema), async (c) =>
   const { todoLists } = getCollections(getDb());
   const now = new Date();
 
-  /* The unique { userAddress, name } index is the source of truth; a pre-check
-     alone races with concurrent creates and would surface as a 500. */
-  let result;
-  try {
-    result = await todoLists.insertOne({
-      userAddress: walletAddress,
-      name: body.name,
-      icon: body.icon,
-      tasks: [],
-      createdAt: now,
-      updatedAt: now,
-    });
-  } catch (err) {
-    if (isDuplicateKeyError(err)) badRequest("A list with this name already exists");
-    throw err;
-  }
+  const result = await todoLists.insertOne({
+    userAddress: walletAddress,
+    enc: body.enc,
+    payload: body.payload,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   const doc = await todoLists.findOne({ _id: result.insertedId });
   if (!doc) notFound("List not found");
@@ -90,21 +66,16 @@ todoListsRoutes.patch("/:id", zValidator("json", updateTodoListSchema), async (c
   if (!id.success) notFound("List not found");
 
   const body = c.req.valid("json");
-  if (body.tasks) validateTasks(body.tasks);
-
   const { todoLists } = getCollections(getDb());
 
-  let updated;
-  try {
-    updated = await todoLists.findOneAndUpdate(
-      { _id: new ObjectId(id.data), userAddress: walletAddress },
-      { $set: { ...body, updatedAt: new Date() } },
-      { returnDocument: "after" },
-    );
-  } catch (err) {
-    if (isDuplicateKeyError(err)) badRequest("A list with this name already exists");
-    throw err;
-  }
+  const updated = await todoLists.findOneAndUpdate(
+    { _id: new ObjectId(id.data), userAddress: walletAddress },
+    {
+      $set: { enc: body.enc, payload: body.payload, updatedAt: new Date() },
+      $unset: { name: "", icon: "", tasks: "" },
+    },
+    { returnDocument: "after" },
+  );
 
   if (!updated) notFound("List not found");
   return c.json({ todoList: serializeDoc(updated) });
