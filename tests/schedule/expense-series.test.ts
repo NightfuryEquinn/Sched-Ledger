@@ -10,7 +10,7 @@ import { ObjectId } from "mongodb";
 function doc(partial: Partial<ExpenseDocument> & Pick<ExpenseDocument, "date" | "recurring">): ExpenseDocument {
   return {
     _id: new ObjectId(),
-    userAddress: "0xabc",
+    accountId: "64b64c4f2f1c2e0012345678",
     walletId: new ObjectId("64b64c4f2f1c2e0012345678"),
     kind: "expense",
     enc: 1,
@@ -25,8 +25,8 @@ function doc(partial: Partial<ExpenseDocument> & Pick<ExpenseDocument, "date" | 
 describe("expenseSeriesFilter", () => {
   test("uses seriesKey for encrypted recurring expenses", () => {
     const expense = doc({ date: "2026-07-01", recurring: "monthly" });
-    expect(expenseSeriesFilter(expense, "0xabc")).toEqual({
-      userAddress: "0xabc",
+    expect(expenseSeriesFilter(expense, "64b64c4f2f1c2e0012345678")).toEqual({
+      accountId: "64b64c4f2f1c2e0012345678",
       walletId: expense.walletId,
       seriesKey: "series-abc",
     });
@@ -43,8 +43,8 @@ describe("expenseSeriesFilter", () => {
       note: "Rent",
       amount: 100,
     });
-    expect(expenseSeriesFilter(expense, "0xabc")).toMatchObject({
-      userAddress: "0xabc",
+    expect(expenseSeriesFilter(expense, "64b64c4f2f1c2e0012345678")).toMatchObject({
+      accountId: "64b64c4f2f1c2e0012345678",
       walletId: expense.walletId,
       sub: "food-groceries",
       note: "Rent",

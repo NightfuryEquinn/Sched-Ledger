@@ -49,14 +49,28 @@ export type CategoryTaxonomyDocument = Omit<CategoryTaxonomy, "createdAt" | "upd
   updatedAt: Date;
 };
 
-export type ExpenseDocument = Omit<Expense, "createdAt" | "updatedAt"> & {
+/**
+ * Mongo storage shape for expenses.
+ * Linked ids are ObjectIds in the DB (serialized to hex strings on read).
+ * `recurring: true` is a legacy value still present in older rows.
+ */
+export type ExpenseDocument = Omit<
+  Expense,
+  "createdAt" | "updatedAt" | "walletId" | "eventId" | "recurring" | "skipped"
+> & {
   _id: ObjectId;
+  walletId?: ObjectId | string;
+  eventId?: ObjectId | string;
+  recurring: Expense["recurring"] | true;
+  skipped?: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type EventDocument = Omit<Event, "createdAt" | "updatedAt"> & {
+/** Mongo storage shape for events (`expenseId` stored as ObjectId). */
+export type EventDocument = Omit<Event, "createdAt" | "updatedAt" | "expenseId"> & {
   _id: ObjectId;
+  expenseId?: ObjectId | string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -79,7 +93,10 @@ export type AuthNonceDocument = {
 
 export type SessionDocument = {
   _id: ObjectId;
-  address: string;
+  /** Opaque users._id hex — primary ownership key after cutover. */
+  accountId?: string;
+  /** Legacy SIWE address; kept for old sessions until backfill. */
+  address?: string;
   tokenHash: string;
   userAgent: string;
   ip: string;
@@ -103,7 +120,9 @@ export type ReminderLogDocument = {
 /** Dedupes budget-near-limit delivery (one per user/wallet/category/month/level). */
 export type BudgetAlertLogDocument = {
   _id: ObjectId;
-  userAddress: string;
+  accountId: string;
+  /** Legacy ownership key; unset after backfill. */
+  userAddress?: string;
   walletId: string;
   categoryId: string;
   month: string;
@@ -134,6 +153,7 @@ export type Collections = {
   todoLists: Collection<TodoListDocument>;
 };
 
+/** Get typed collection handles for the connected database. */
 export function getCollections(db: Db): Collections {
   return {
     users: db.collection<UserDocument>(COLLECTIONS.users),

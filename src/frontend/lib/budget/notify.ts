@@ -128,6 +128,7 @@ export async function maybeNotifyBudgetAlerts(opts: {
   try {
     await api.budgetAlerts.notify({
       walletId: opts.wallet.id,
+      walletName: opts.wallet.name,
       month: opts.month,
       alerts: fresh.map((a) => ({
         categoryId: a.categoryId,

@@ -35,11 +35,16 @@ export type ExpenseWire = {
   note?: string;
 };
 
-export type WalletWire = FinancialWallet & {
+export type WalletWire = Omit<FinancialWallet, "name" | "income" | "startingBalance" | "budgets"> & {
+  name?: string;
+  income?: number;
+  startingBalance?: number;
+  budgets?: Budgets;
   enc?: 1;
   payload?: string;
 };
 
+/** Decrypt expense secrets and merge with plaintext metadata. */
 export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<Expense> {
   if (wire.enc === 1 && wire.payload) {
     const secrets = await decryptJson<ExpenseSecrets>(key, wire.payload);
@@ -117,35 +122,41 @@ export async function encodeExpenseUpdate(
   if (expense.recurring !== undefined) {
     patch.recurring = normalizeRecurring(expense.recurring);
     const recurring = patch.recurring as RecurringField | false;
-    if (recurring !== false && expense.walletId) {
+    if (recurring === false) {
+      patch.seriesKey = null;
+    } else if (expense.walletId) {
       patch.seriesKey = await expenseSeriesKey({
         walletId: expense.walletId,
         sub: expense.sub,
         note: expense.note ?? "",
         recurring,
       });
-    } else {
-      patch.seriesKey = null;
     }
+    /* If walletId is omitted, leave seriesKey untouched so we do not wipe/fork the series. */
   }
   return patch;
 }
 
+/** Decrypt wallet secrets (name + financials), with legacy plaintext fallback. */
 export async function decodeWallet(wire: WalletWire, key: CryptoKey): Promise<FinancialWallet> {
   if (wire.enc === 1 && wire.payload) {
-    const secrets = await decryptJson<WalletSecrets>(key, wire.payload);
+    const secrets = await decryptJson<Partial<WalletSecrets> & { income?: number }>(key, wire.payload);
+
     return {
       id: wire.id,
-      name: wire.name,
+      name: secrets.name ?? wire.name ?? "Wallet",
       currency: wire.currency,
       fundingMode: wire.fundingMode ?? "monthly",
       isDefault: wire.isDefault,
-      ...secrets,
+      income: secrets.income ?? 0,
+      startingBalance: secrets.startingBalance ?? 0,
+      budgets: secrets.budgets ?? {},
     };
   }
+
   return {
     id: wire.id,
-    name: wire.name,
+    name: wire.name ?? "Wallet",
     currency: wire.currency,
     fundingMode: wire.fundingMode ?? "monthly",
     income: wire.income ?? 0,
@@ -155,13 +166,15 @@ export async function decodeWallet(wire: WalletWire, key: CryptoKey): Promise<Fi
   };
 }
 
+/** Encrypt wallet name and financial fields for create/update. */
 export async function encodeWalletFinancials(
-  data: { income?: number; startingBalance?: number; budgets?: Budgets },
+  data: { name: string; income?: number; startingBalance?: number; budgets?: Budgets },
   key: CryptoKey,
 ) {
   return {
     enc: 1 as const,
     payload: await encryptJson(key, {
+      name: data.name,
       income: data.income ?? 0,
       startingBalance: data.startingBalance ?? 0,
       budgets: data.budgets ?? {},
@@ -201,15 +214,15 @@ export async function encodeCategories(categories: Category[], key: CryptoKey) {
 
 export type EventWire = {
   id: string;
-  catId: string;
+  catId: LedgerEvent["catId"];
   date: string;
   allDay: boolean;
   time: string | null;
-  repeat: string;
+  repeat: LedgerEvent["repeat"];
   exceptDates?: string[];
   until?: string | null;
   notify: boolean;
-  lead: string;
+  lead: LedgerEvent["lead"];
   email?: string;
   expenseId?: string;
   enc?: 1;

@@ -17,15 +17,24 @@ import { badRequest, notFound, unauthorized } from "@/api/lib/errors";
 import { authChallengeRateLimit, authVerifyRateLimit } from "@/api/middleware/rate-limit";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
+import type { SessionDocument } from "@/db/collections";
 import { getCollections, getDb } from "@/db";
 import { authChallengeSchema, authVerifySchema } from "@/schemas/auth";
 import { objectIdSchema } from "@/schemas/common";
 import { zValidator } from "@hono/zod-validator";
 import { getAddress } from "ethers";
 import { Hono } from "hono";
-import { ObjectId } from "mongodb";
+import { ObjectId, type Filter } from "mongodb";
 
 export const authRoutes = new Hono<{ Variables: SessionVariables }>();
+
+/**
+ * Session ownership filter: prefer accountId, also match legacy address-only rows.
+ */
+function sessionOwnershipFilter(accountId: string, address?: string): Filter<SessionDocument> {
+  if (!address) return { accountId };
+  return { $or: [{ accountId }, { address }, { address: address.toLowerCase() }] };
+}
 
 authRoutes.post("/challenge", authChallengeRateLimit, zValidator("json", authChallengeSchema), async (c) => {
   const { address } = c.req.valid("json");
@@ -38,6 +47,7 @@ authRoutes.post("/challenge", authChallengeRateLimit, zValidator("json", authCha
 
   const { authNonces } = getCollections(getDb());
   await authNonces.insertOne({
+    _id: new ObjectId(),
     address: normalized,
     nonce,
     message,
@@ -71,22 +81,7 @@ authRoutes.post("/verify", authVerifyRateLimit, zValidator("json", authVerifySch
 
   if (!nonceDoc) badRequest("Sign-in challenge expired or invalid. Request a new one.");
 
-  const token = generateToken();
-  const tokenHash = hashToken(token);
-  const ip = getClientIp(c);
-  const userAgent = getUserAgent(c);
-
-  const sessionResult = await sessions.insertOne({
-    address: normalized,
-    tokenHash,
-    userAgent,
-    ip,
-    createdAt: now,
-    lastSeenAt: now,
-    expiresAt: new Date(now.getTime() + SESSION_TTL_MS),
-  });
-
-  /* Upsert to avoid a duplicate-key race against the unique address index. */
+  /* Upsert user first so the session can store the opaque accountId. */
   const user = await users.findOneAndUpdate(
     { address: normalized },
     {
@@ -101,12 +96,31 @@ authRoutes.post("/verify", authVerifyRateLimit, zValidator("json", authVerifySch
     { upsert: true, returnDocument: "after" },
   );
 
+  if (!user) badRequest("Could not create account. Try again.");
+
+  const accountId = user._id.toHexString();
+  const token = generateToken();
+  const tokenHash = hashToken(token);
+  const ip = getClientIp(c);
+  const userAgent = getUserAgent(c);
+
+  const sessionResult = await sessions.insertOne({
+    _id: new ObjectId(),
+    accountId,
+    tokenHash,
+    userAgent,
+    ip,
+    createdAt: now,
+    lastSeenAt: now,
+    expiresAt: new Date(now.getTime() + SESSION_TTL_MS),
+  });
+
   setSessionCookie(c, token);
 
   return c.json({
     account: {
       address: normalized,
-      codename: user?.codename || normalized.slice(0, 6),
+      codename: user.codename || normalized.slice(0, 6),
       injected: false,
     },
     session: {
@@ -120,19 +134,19 @@ authRoutes.post("/verify", authVerifyRateLimit, zValidator("json", authVerifySch
 });
 
 authRoutes.get("/me", sessionAuth, async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const sessionId = c.get("sessionId");
   const { users, sessions } = getCollections(getDb());
 
-  const user = await users.findOne({ address: walletAddress });
+  const user = await users.findOne({ _id: new ObjectId(accountId) });
   const session = await sessions.findOne({ _id: new ObjectId(sessionId) });
 
-  if (!session || session.revokedAt) unauthorized("Session expired or invalid. Sign in again.");
+  if (!user || !session || session.revokedAt) unauthorized("Session expired or invalid. Sign in again.");
 
   return c.json({
     account: {
-      address: walletAddress,
-      codename: user?.codename || walletAddress.slice(0, 6),
+      address: user.address,
+      codename: user.codename || user.address.slice(0, 6),
       injected: false,
     },
     session: {
@@ -159,12 +173,17 @@ authRoutes.post("/logout", async (c) => {
 });
 
 authRoutes.get("/sessions", sessionAuth, async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const sessionId = c.get("sessionId");
-  const { sessions } = getCollections(getDb());
+  const { sessions, users } = getCollections(getDb());
+  const user = await users.findOne({ _id: new ObjectId(accountId) });
 
   const docs = await sessions
-    .find({ address: walletAddress, revokedAt: { $exists: false }, expiresAt: { $gt: new Date() } })
+    .find({
+      ...sessionOwnershipFilter(accountId, user?.address),
+      revokedAt: { $exists: false },
+      expiresAt: { $gt: new Date() },
+    })
     .sort({ lastSeenAt: -1 })
     .toArray();
 
@@ -181,13 +200,14 @@ authRoutes.get("/sessions", sessionAuth, async (c) => {
 });
 
 authRoutes.delete("/sessions", sessionAuth, async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const sessionId = c.get("sessionId");
-  const { sessions } = getCollections(getDb());
+  const { sessions, users } = getCollections(getDb());
+  const user = await users.findOne({ _id: new ObjectId(accountId) });
 
   await sessions.updateMany(
     {
-      address: walletAddress,
+      ...sessionOwnershipFilter(accountId, user?.address),
       _id: { $ne: new ObjectId(sessionId) },
       revokedAt: { $exists: false },
     },
@@ -198,7 +218,7 @@ authRoutes.delete("/sessions", sessionAuth, async (c) => {
 });
 
 authRoutes.delete("/sessions/:id", sessionAuth, async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const sessionId = c.get("sessionId");
   const parsed = objectIdSchema.safeParse(c.req.param("id"));
   if (!parsed.success) notFound("Session not found");
@@ -206,11 +226,12 @@ authRoutes.delete("/sessions/:id", sessionAuth, async (c) => {
   const targetId = parsed.data;
   if (targetId === sessionId) badRequest("Cannot revoke your current session from here. Sign out instead.");
 
-  const { sessions } = getCollections(getDb());
+  const { sessions, users } = getCollections(getDb());
+  const user = await users.findOne({ _id: new ObjectId(accountId) });
   const result = await sessions.updateOne(
     {
       _id: new ObjectId(targetId),
-      address: walletAddress,
+      ...sessionOwnershipFilter(accountId, user?.address),
       revokedAt: { $exists: false },
     },
     { $set: { revokedAt: new Date() } },
@@ -221,12 +242,16 @@ authRoutes.delete("/sessions/:id", sessionAuth, async (c) => {
 });
 
 authRoutes.post("/clear", sessionAuth, async (c) => {
-  const walletAddress = c.get("walletAddress");
-  const { sessions } = getCollections(getDb());
+  const accountId = c.get("accountId");
+  const { sessions, users } = getCollections(getDb());
+  const user = await users.findOne({ _id: new ObjectId(accountId) });
   const now = new Date();
 
   await sessions.updateMany(
-    { address: walletAddress, revokedAt: { $exists: false } },
+    {
+      ...sessionOwnershipFilter(accountId, user?.address),
+      revokedAt: { $exists: false },
+    },
     { $set: { revokedAt: now } },
   );
 

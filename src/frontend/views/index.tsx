@@ -48,7 +48,7 @@ import {
   type ChartPeriod
 } from "@/frontend/lib/stats";
 import { getAccent } from "@/frontend/lib/theme";
-import type { LedgerEvent, TodoList } from "@/frontend/lib/types";
+import type { Budgets, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import { useEffect, useMemo, useState } from "react";
 
@@ -93,7 +93,22 @@ function remainingTodayEvents(events: LedgerEvent[], now: Date, limit = 3) {
     .slice(0, limit);
 }
 
+type OverviewProps = {
+  expenses: Expense[];
+  budgets: Budgets;
+  wallet: FinancialWallet | null | undefined;
+  month: string;
+  currency: string;
+  categoryIndex: CategoryIndex;
+  todoLists?: TodoList[];
+  events?: LedgerEvent[];
+  setView: (view: ViewId) => void;
+  onEdit: (expense: Expense) => void;
+  onEditEvent: (event: LedgerEvent) => void;
+};
+
 // ── Overview ────────────────────────────────────────────────────────
+/** Home summary: spend, todos, today's schedule, trend, and recent transactions. */
 export function Overview({
   expenses,
   budgets,
@@ -106,7 +121,7 @@ export function Overview({
   setView,
   onEdit,
   onEditEvent,
-}) {
+}: OverviewProps) {
   const [loadedAt] = useState(() => new Date());
   const st = useMemo(
     () => monthStats(expenses, budgets, wallet, month, categoryIndex),

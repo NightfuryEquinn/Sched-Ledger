@@ -11,6 +11,7 @@ export type ExpenseSecrets = {
 };
 
 export type WalletSecrets = {
+  name: string;
   income: number;
   startingBalance: number;
   budgets: Record<string, number>;
@@ -76,7 +77,13 @@ const HKDF_INFO = new TextEncoder().encode("ledger-e2ee-aes-gcm-v1");
 
 export async function deriveKeyFromSignature(signature: string): Promise<CryptoKey> {
   const sigBytes = hexToBytes(signature);
-  const keyMaterial = await crypto.subtle.importKey("raw", sigBytes, "HKDF", false, ["deriveKey"]);
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    sigBytes as BufferSource,
+    "HKDF",
+    false,
+    ["deriveKey"],
+  );
   return crypto.subtle.deriveKey(
     { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: HKDF_INFO },
     keyMaterial,

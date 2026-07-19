@@ -2,6 +2,7 @@ import { z } from "zod";
 import { categoryIdSchema } from "./category";
 
 export { walletAddressSchema } from "./address";
+export { accountIdSchema, objectIdSchema } from "./ids";
 
 export const monthKeySchema = z
   .string()
@@ -10,10 +11,6 @@ export const monthKeySchema = z
 export const isoDateSchema = z
   .string()
   .regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Date must be YYYY-MM-DD");
-
-export const objectIdSchema = z
-  .string()
-  .regex(/^[a-f0-9]{24}$/i, "Invalid document id");
 
 export { categoryIdSchema, subcategoryIdSchema } from "./category";
 

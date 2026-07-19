@@ -4,6 +4,7 @@ import {
   retireOldExpenseSeries,
   shouldRetireOldExpenseSeries,
 } from "@/api/lib/expense-delete-scope";
+import { randomObjectId } from "@/api/lib/ids";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -25,15 +26,16 @@ export const expensesRoutes = new Hono<{ Variables: SessionVariables }>();
 expensesRoutes.use("*", sessionAuth);
 
 expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
-  const { month, recurring, sub, walletId } = c.req.valid("query");
+  const accountId = c.get("accountId");
+  const { month, recurring, sub, walletId, kind } = c.req.valid("query");
   const { expenses } = getCollections(getDb());
 
   const filter: Record<string, unknown> = {
-    userAddress: walletAddress,
+    accountId,
     skipped: { $ne: true },
   };
   if (walletId) filter.walletId = new ObjectId(walletId);
+  if (kind) filter.kind = kind;
   if (month) filter.date = { $regex: `^${month}` };
   if (recurring === true) {
     filter.recurring = { $in: [true, "monthly", "quarterly", "yearly"] };
@@ -47,14 +49,14 @@ expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) 
 });
 
 expensesRoutes.get("/:id", async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Expense not found");
 
   const { expenses } = getCollections(getDb());
   const doc = await expenses.findOne({
     _id: new ObjectId(id.data),
-    userAddress: walletAddress,
+    accountId,
     skipped: { $ne: true },
   });
   if (!doc) notFound("Expense not found");
@@ -63,23 +65,24 @@ expensesRoutes.get("/:id", async (c) => {
 });
 
 expensesRoutes.post("/", zValidator("json", createExpenseSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const body = c.req.valid("json");
   const now = new Date();
   const { expenses, financialWallets } = getCollections(getDb());
 
   const wallet = await financialWallets.findOne({
     _id: new ObjectId(body.walletId),
-    userAddress: walletAddress,
+    accountId,
   });
   if (!wallet) notFound("Wallet not found");
 
-  if (body.recurring && body.recurring !== false && !body.seriesKey) {
+  if (body.recurring !== false && !body.seriesKey) {
     badRequest("seriesKey is required for encrypted recurring expenses");
   }
 
   const result = await expenses.insertOne({
-    userAddress: walletAddress,
+    _id: randomObjectId(),
+    accountId,
     walletId: new ObjectId(body.walletId),
     kind: body.kind ?? "expense",
     date: body.date,
@@ -99,7 +102,7 @@ expensesRoutes.post("/", zValidator("json", createExpenseSchema), async (c) => {
 });
 
 expensesRoutes.patch("/:id", zValidator("json", updateExpenseSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Expense not found");
 
@@ -109,14 +112,14 @@ expensesRoutes.patch("/:id", zValidator("json", updateExpenseSchema), async (c) 
   if (body.walletId) {
     const wallet = await financialWallets.findOne({
       _id: new ObjectId(body.walletId),
-      userAddress: walletAddress,
+      accountId,
     });
     if (!wallet) notFound("Wallet not found");
   }
 
   const existing = await expenses.findOne({
     _id: new ObjectId(id.data),
-    userAddress: walletAddress,
+    accountId,
     skipped: { $ne: true },
   });
   if (!existing) notFound("Expense not found");
@@ -129,7 +132,7 @@ expensesRoutes.patch("/:id", zValidator("json", updateExpenseSchema), async (c) 
     seriesRetire = await retireOldExpenseSeries({
       expenses,
       doc: existing,
-      userAddress: walletAddress,
+      accountId,
       pivotDate,
     });
   }
@@ -146,33 +149,22 @@ expensesRoutes.patch("/:id", zValidator("json", updateExpenseSchema), async (c) 
     patch.eventId = new ObjectId(body.eventId);
   }
 
-  const update =
-    body.payload !== undefined
-      ? {
-          $set: patch,
-          $unset: {
-            sub: "",
-            amount: "",
-            note: "",
-            ...(body.eventId === null ? { eventId: "" } : {}),
-          },
-        }
-      : body.seriesKey === null || body.eventId === null
-        ? {
-            $set: patch,
-            $unset: {
-              ...(body.seriesKey === null ? { seriesKey: "" } : {}),
-              ...(body.eventId === null ? { eventId: "" } : {}),
-            },
-          }
-        : { $set: patch };
-
-  if (body.seriesKey === null && body.payload !== undefined) {
-    (update as { $unset: Record<string, string> }).$unset.seriesKey = "";
+  const unset: Record<string, "" | 1> = {};
+  if (body.payload !== undefined) {
+    unset.sub = "";
+    unset.amount = "";
+    unset.note = "";
   }
+  if (body.seriesKey === null) unset.seriesKey = "";
+  if (body.eventId === null) unset.eventId = "";
+
+  const update =
+    Object.keys(unset).length > 0
+      ? { $set: patch, $unset: unset }
+      : { $set: patch };
 
   const updated = await expenses.findOneAndUpdate(
-    { _id: existing._id, userAddress: walletAddress, skipped: { $ne: true } },
+    { _id: existing._id, accountId, skipped: { $ne: true } },
     update,
     { returnDocument: "after" },
   );
@@ -187,7 +179,7 @@ expensesRoutes.patch("/:id", zValidator("json", updateExpenseSchema), async (c) 
 });
 
 expensesRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Expense not found");
 
@@ -195,7 +187,7 @@ expensesRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async
   const { expenses } = getCollections(getDb());
   const doc = await expenses.findOne({
     _id: new ObjectId(id.data),
-    userAddress: walletAddress,
+    accountId,
     skipped: { $ne: true },
   });
   if (!doc) notFound("Expense not found");
@@ -205,7 +197,7 @@ expensesRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async
   if (!isRecurring || !scope) {
     const result = await expenses.deleteOne({
       _id: doc._id,
-      userAddress: walletAddress,
+      accountId,
     });
     if (result.deletedCount === 0) notFound("Expense not found");
     return c.json({ ok: true, deletedIds: [doc._id.toString()] });
@@ -215,7 +207,7 @@ expensesRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async
   const applied = await applyExpenseDeleteScope({
     expenses,
     doc,
-    userAddress: walletAddress,
+    accountId,
     scope,
     fromDate: effectiveFrom,
   });

@@ -21,7 +21,7 @@ const COLLECTIONS: CollectionDoc[] = [
     name: "users",
     purpose: "Wallet identity and notification preferences",
     fields: [
-      { key: "address", value: '"0xabc…"', note: "wallet address (unique)" },
+      { key: "address", value: '"0xabc…"', note: "SIWE login address only (unique); prefer a ledger-only key" },
       { key: "codename", value: '"Maple Owl"' },
       { key: "notifyEmail?", value: '"you@mail.com"' },
       { key: "timezone?", value: '"Asia/Kuala_Lumpur"' },
@@ -34,7 +34,7 @@ const COLLECTIONS: CollectionDoc[] = [
     name: "ledger_profiles",
     purpose: "Per-user UI state (selected month)",
     fields: [
-      { key: "userAddress", value: '"0xabc…"' },
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "currentMonth", value: '"2026-07"', note: "YYYY-MM" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
@@ -44,12 +44,11 @@ const COLLECTIONS: CollectionDoc[] = [
     purpose: "Wallets — income, starting balance, and budgets",
     encrypted: true,
     fields: [
-      { key: "userAddress", value: '"0xabc…"' },
-      { key: "name", value: '"Main"' },
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "currency", value: '"MYR"' },
       { key: "fundingMode", value: '"monthly" | "starting"' },
       { key: "enc", value: "1", note: "E2EE version" },
-      { key: "payload", value: "base64 AES-GCM", note: "income, startingBalance, budgets" },
+      { key: "payload", value: "base64 AES-GCM", note: "name, income, startingBalance, budgets" },
       { key: "isDefault", value: "true" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
@@ -59,7 +58,7 @@ const COLLECTIONS: CollectionDoc[] = [
     purpose: "Expense / income category tree per user",
     encrypted: true,
     fields: [
-      { key: "userAddress", value: '"0xabc…"' },
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
       { key: "payload", value: "base64 AES-GCM", note: "categories[] tree" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
@@ -70,8 +69,8 @@ const COLLECTIONS: CollectionDoc[] = [
     purpose: "Transactions (expense or income)",
     encrypted: true,
     fields: [
-      { key: "userAddress", value: '"0xabc…"' },
-      { key: "walletId", value: "ObjectId" },
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
+      { key: "walletId", value: "ObjectId", note: "random ObjectId (no timestamp)" },
       { key: "kind", value: '"expense" | "income"' },
       { key: "date", value: '"2026-07-16"' },
       { key: "recurring", value: "false | interval" },
@@ -88,7 +87,7 @@ const COLLECTIONS: CollectionDoc[] = [
     purpose: "Calendar events and reminders",
     encrypted: true,
     fields: [
-      { key: "userAddress", value: '"0xabc…"' },
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
       { key: "payload", value: "base64 AES-GCM", note: "title, comments, customLabel/Glyph" },
       { key: "catId", value: '"bill" | "custom" | …' },
@@ -105,7 +104,7 @@ const COLLECTIONS: CollectionDoc[] = [
     purpose: "Named task lists",
     encrypted: true,
     fields: [
-      { key: "userAddress", value: '"0xabc…"' },
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
       { key: "payload", value: "base64 AES-GCM", note: "name, icon, tasks[]" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
@@ -115,7 +114,7 @@ const COLLECTIONS: CollectionDoc[] = [
     name: "consent",
     purpose: "Third-party data-sharing opt-in",
     fields: [
-      { key: "userAddress", value: '"0xabc…"' },
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "optedIn", value: "false" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
@@ -136,8 +135,8 @@ const COLLECTIONS: CollectionDoc[] = [
     name: "sessions",
     purpose: "Authenticated browser sessions",
     fields: [
-      { key: "address", value: '"0xabc…"' },
-      { key: "tokenHash", value: "hashed cookie token" },
+      { key: "accountId", value: '"64b6…"', note: "opaque users._id" },
+      { key: "tokenHash", value: "hashed cookie token (rotated on sliding renewal)" },
       { key: "userAgent / ip", value: "client metadata" },
       { key: "createdAt / lastSeenAt / expiresAt", value: "Dates" },
       { key: "revokedAt?", value: "Date" },
@@ -159,7 +158,7 @@ const COLLECTIONS: CollectionDoc[] = [
     name: "budget_alert_logs",
     purpose: "Dedupes budget-near-limit email delivery (client evaluates; server delivers)",
     fields: [
-      { key: "userAddress", value: '"0xabc…"' },
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "walletId / categoryId", value: "ids" },
       { key: "month", value: '"2026-07"' },
       { key: "level", value: '"warning" | "exceeded"' },
@@ -252,7 +251,7 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
 `;
 
 const E2EE_CHART = `flowchart LR
-  Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · budgets"]
+  Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · wallet names · budgets"]
   Enc["AES-256-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
   DB[("MongoDB")]
@@ -266,7 +265,7 @@ const E2EE_CHART = `flowchart LR
 
 /** Mobile: same write path stacked top-to-bottom. */
 const E2EE_CHART_MOBILE = `flowchart TB
-  Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · budgets"]
+  Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · wallet names · budgets"]
   Enc["AES-256-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
   DB[("MongoDB")]
@@ -465,11 +464,22 @@ export function Transparency() {
           <div>
             <h2>What the server can infer</h2>
             <p className="panel-sub">
-              Even with E2EE, plaintext metadata remains for queries and cron. The server can see wallet addresses,
-              session cookies, wallet names/currencies, expense dates/kinds/recurrence flags, schedule timing,
-              reminder email addresses and lead times, and that a budget-alert email was delivered — but not amounts,
-              category trees, notes, event titles, or to-do text. Reminder emails use a generic subject; titles stay encrypted.
-              Linking a bill payment stores plaintext <code>eventId</code> / <code>expenseId</code> references only.
+              Even with E2EE, plaintext metadata remains for queries and accurate schedule reminders (day-level dates
+              and lead times are intentional — not bucketed). Owned documents are keyed by an opaque{" "}
+              <code>accountId</code> (<code>users._id</code>); the SIWE wallet address lives only on{" "}
+              <code>users</code> for login. The server can still see that address, session cookies (HttpOnly, rotated
+              on sliding renewal), wallet currencies/funding modes, expense dates/kinds/recurrence flags, schedule
+              timing, reminder email addresses and lead times, and that a budget-alert email was delivered — but not
+              amounts, wallet names, category trees, notes, event titles, or to-do text. Reminder emails use a generic
+              subject; titles stay encrypted. Linking a bill payment stores plaintext <code>eventId</code> /{" "}
+              <code>expenseId</code> references only.
+            </p>
+            <p className="panel-sub" style={{ marginTop: "0.75rem" }}>
+              If the same auth key is ever used on-chain, chain analysis can correlate it with this account. Prefer a{" "}
+              <strong>ledger-only</strong> identity created in-app (not a funded exchange or hot wallet). Optional
+              notification email plus timing metadata still form an identity/behavior graph without decrypting
+              ciphertext. E2EE does not remove data-protection obligations for plaintext metadata under regimes like
+              GDPR/CCPA — not legal advice; get a lawyer&apos;s read if you ship commercially.
             </p>
           </div>
         </div>
@@ -479,7 +489,7 @@ export function Transparency() {
         <div className="panel-head panel-head--stack">
           <div>
             <h2>Data relationships</h2>
-            <p className="panel-sub">Your wallet address anchors every user-owned collection</p>
+            <p className="panel-sub">Opaque accountId anchors every user-owned collection; SIWE address stays on users</p>
           </div>
         </div>
         <MermaidDiagram
@@ -494,7 +504,7 @@ export function Transparency() {
           <div>
             <h2>Encrypted write path</h2>
             <p className="panel-sub">
-              Categories, events, todos, expenses, and wallet secrets are AES-256-GCM encrypted client-side before save
+              Categories, events, todos, expenses, and wallet names/budgets are AES-256-GCM encrypted client-side before save
             </p>
           </div>
         </div>

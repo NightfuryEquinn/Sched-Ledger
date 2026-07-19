@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { walletAddressSchema } from "./common";
+import { accountIdSchema } from "./common";
 
 export const consentSchema = z.object({
-  userAddress: walletAddressSchema,
+  accountId: accountIdSchema,
   optedIn: z.boolean().default(false),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

@@ -26,13 +26,13 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ### Identity & privacy
 
-- **Web3 identity** — create or restore an in-browser wallet (12- or 24-word recovery phrase); sign in with a cryptographic challenge (SIWE-style)
+- **Web3 identity** — create or restore an in-browser wallet (12- or 24-word recovery phrase); sign in with a cryptographic challenge (SIWE-style). Prefer a **ledger-only** key so the auth address is not correlated with on-chain activity
 - **Device passphrase vault** — recovery phrase quiz on create; in-app keys wrapped with a local passphrase (PBKDF2 + AES-GCM) instead of plaintext `localStorage`; WebAuthn wrapping can come later
 - **Dark mode** — system-aware theme toggle, persisted locally
-- **Sessions & privacy** — HttpOnly session cookies, revoke devices, clear local data, and third-party data-sharing consent under **Account → Data & privacy**
+- **Sessions & privacy** — HttpOnly session cookies with sliding token rotation, revoke devices, clear local data, and third-party data-sharing consent under **Account → Data & privacy**
 - **Encrypted backup** — download/restore a full ledger pack encrypted with your ledger key (client-only; not stored on the server) via **Account → Exports & imports**
 - **CSV export & import** — transactions (with categories), schedule events, and to-do lists (plaintext spreadsheet portability)
-- **Encrypted ledger** — amounts, categories, notes, schedule titles, and to-dos encrypted client-side; unlock with your wallet key each session
+- **Encrypted ledger** — amounts, wallet names, categories, notes, schedule titles, and to-dos encrypted client-side; unlock with your wallet key each session
 - **PWA read cache** — installable app shell + IndexedDB ciphertext cache for offline reads (writes still require the network)
 - **Budget alerts** — email when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates and sends names/amounts; server only delivers)
 - **Transparency** — in-app map of hosting roles, what the server can infer, MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagrams)
@@ -40,7 +40,9 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ### Security
 
-- **End-to-end encryption** — ledger content (transactions, category trees, event titles/comments, to-do lists, and wallet budgets) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for reminder cron)
+- **End-to-end encryption** — ledger content (transactions, wallet names/budgets, category trees, event titles/comments, and to-do lists) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for accurate reminder cron — day-level dates are intentional)
+- Ownership uses opaque `accountId` (`users._id`); the SIWE address stays on `users` for login only
+- New document ids are random ObjectIds (no embedded creation timestamp)
 - Signature verification, rate limiting, security headers, in-memory profile cache
 - Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, and budget-alert evaluation (`bun test`)
 
@@ -69,7 +71,7 @@ src/
 ├── api/
 │   ├── app.ts            # Hono app + error handler
 │   ├── lib/              # auth, cache, email, reminders, recurring-expenses,
-│   │                     # budget-alerts, expense-delete-scope, serialize, errors
+│   │                     # budget-alerts, expense-delete-scope, ids, serialize, errors
 │   ├── middleware/       # session, rate-limit, security, db
 │   └── routes/           # auth, users, profile, wallets, categories,
 │                         # expenses, events, todo-lists, consent,
@@ -136,7 +138,7 @@ Connectivity check: `curl http://localhost:3000/api/health`
 
 ## Database schema
 
-MongoDB database name defaults to `ledger` (`MONGODB_DB`). All user-owned documents are keyed by lowercase Ethereum `address` / `userAddress`. Every collection also has `_id` (`ObjectId`) and, where noted, `createdAt` / `updatedAt`.
+MongoDB database name defaults to `ledger` (`MONGODB_DB`). User-owned documents are keyed by opaque `accountId` (`users._id` hex). The SIWE wallet `address` lives on `users` (and `auth_nonces`) for login only. Every collection also has `_id` (`ObjectId`) and, where noted, `createdAt` / `updatedAt`.
 
 Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Indexes are created on connect via `src/db/indexes.ts`.
 
@@ -161,12 +163,15 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 
 | Collection | Encrypted (client-side) | Plaintext (needed for queries / cron) |
 |------------|-------------------------|----------------------------------------|
-| `expenses` | `payload` (amount, subcategory, note) via `enc` | `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId` |
-| `financial_wallets` | `payload` (income, starting balance, budgets) via `enc` | `name`, `currency`, `fundingMode`, `isDefault` |
-| `category_taxonomies` | `payload` (full `categories[]` tree) via `enc` | `userAddress` |
-| `events` | `payload` (title, comments, customLabel/Glyph) via `enc` | `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId` |
-| `todo_lists` | `payload` (name, icon, tasks) via `enc` | `userAddress` |
-| `users`, `sessions`, … | — | Stored in plaintext |
+| `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId` |
+| `financial_wallets` | `payload` (name, income, starting balance, budgets) via `enc` | `accountId`, `currency`, `fundingMode`, `isDefault` |
+| `category_taxonomies` | `payload` (full `categories[]` tree) via `enc` | `accountId` |
+| `events` | `payload` (title, comments, customLabel/Glyph) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId` |
+| `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
+| `users` | — | `address` (SIWE login), notify prefs |
+| `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |
+
+Owned collections use opaque `accountId` (`users._id` hex). Run `bun scripts/backfill-account-id.ts` once after upgrading an existing database.
 
 The in-app **Transparency** view documents hosting roles, what the server can infer, and the same collections with example field shapes.
 

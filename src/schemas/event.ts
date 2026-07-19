@@ -1,12 +1,12 @@
 import { z } from "zod";
 import {
+  accountIdSchema,
   eventCategoryIdSchema,
   isoDateSchema,
   isLeadAllowedForEvent,
   leadIdSchema,
   objectIdSchema,
   repeatIdSchema,
-  walletAddressSchema,
   type LeadId,
 } from "./common";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
@@ -57,7 +57,7 @@ const eventScheduleShape = {
 };
 
 export const eventSchema = z.object({
-  userAddress: walletAddressSchema,
+  accountId: accountIdSchema,
   ...eventScheduleShape,
   enc: e2eeVersionSchema.optional(),
   payload: encryptedPayloadSchema.optional(),

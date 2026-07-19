@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
+  accountIdSchema,
   budgetsSchema,
-  walletAddressSchema,
 } from "./common";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
@@ -42,8 +42,9 @@ export const currencyCodeSchema = z.enum(CURRENCY_CODES);
 export const fundingModeSchema = z.enum(["monthly", "starting"]);
 
 export const financialWalletSchema = z.object({
-  userAddress: walletAddressSchema,
-  name: z.string().trim().min(1).max(60),
+  accountId: accountIdSchema,
+  /** Legacy plaintext name (pre-E2EE); prefer payload secrets. */
+  name: z.string().trim().min(1).max(60).optional(),
   currency: currencyCodeSchema,
   fundingMode: fundingModeSchema.default("monthly"),
   enc: e2eeVersionSchema.optional(),
@@ -57,14 +58,14 @@ export const financialWalletSchema = z.object({
 });
 
 export const createWalletSchema = z.object({
-  name: z.string().trim().min(1).max(60),
   currency: currencyCodeSchema,
   fundingMode: fundingModeSchema.optional().default("monthly"),
+  enc: e2eeVersionSchema,
+  payload: encryptedPayloadSchema,
 });
 
 export const updateWalletSchema = z
   .object({
-    name: z.string().trim().min(1).max(60).optional(),
     currency: currencyCodeSchema.optional(),
     fundingMode: fundingModeSchema.optional(),
     isDefault: z.boolean().optional(),

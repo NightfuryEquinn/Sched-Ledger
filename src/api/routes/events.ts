@@ -1,4 +1,5 @@
 import { notFound } from "@/api/lib/errors";
+import { randomObjectId } from "@/api/lib/ids";
 import {
   clearReminderLogsForEvent,
   sendEventConfirmation,
@@ -21,11 +22,11 @@ export const eventsRoutes = new Hono<{ Variables: SessionVariables }>();
 eventsRoutes.use("*", sessionAuth);
 
 eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const { month } = c.req.valid("query");
   const { events } = getCollections(getDb());
 
-  const filter: Record<string, unknown> = { userAddress: walletAddress };
+  const filter: Record<string, unknown> = { accountId };
   if (month) filter.date = { $regex: `^${month}` };
 
   const docs = await events.find(filter).sort({ date: 1 }).toArray();
@@ -33,14 +34,14 @@ eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
 });
 
 eventsRoutes.get("/:id", async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Event not found");
 
   const { events } = getCollections(getDb());
   const doc = await events.findOne({
     _id: new ObjectId(id.data),
-    userAddress: walletAddress,
+    accountId,
   });
   if (!doc) notFound("Event not found");
 
@@ -48,14 +49,15 @@ eventsRoutes.get("/:id", async (c) => {
 });
 
 eventsRoutes.post("/", zValidator("json", createEventSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const body = c.req.valid("json");
   const now = new Date();
   const { events } = getCollections(getDb());
 
   const { expenseId, ...rest } = body;
   const result = await events.insertOne({
-    userAddress: walletAddress,
+    _id: randomObjectId(),
+    accountId,
     ...rest,
     ...(expenseId ? { expenseId: new ObjectId(expenseId) } : {}),
     createdAt: now,
@@ -77,7 +79,7 @@ eventsRoutes.post("/", zValidator("json", createEventSchema), async (c) => {
 });
 
 eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Event not found");
 
@@ -86,7 +88,7 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
 
   const existing = await events.findOne({
     _id: new ObjectId(id.data),
-    userAddress: walletAddress,
+    accountId,
   });
   if (!existing) notFound("Event not found");
 
@@ -117,7 +119,7 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
   }
 
   const updated = await events.findOneAndUpdate(
-    { _id: new ObjectId(id.data), userAddress: walletAddress },
+    { _id: new ObjectId(id.data), accountId },
     { $set, $unset },
     { returnDocument: "after" },
   );
@@ -137,7 +139,7 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
 });
 
 eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Event not found");
 
@@ -145,7 +147,7 @@ eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (
   const { events } = getCollections(getDb());
   const doc = await events.findOne({
     _id: new ObjectId(id.data),
-    userAddress: walletAddress,
+    accountId,
   });
   if (!doc) notFound("Event not found");
 
@@ -156,7 +158,7 @@ eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (
   if (!repeating || effectiveScope === "all") {
     const result = await events.deleteOne({
       _id: doc._id,
-      userAddress: walletAddress,
+      accountId,
     });
     if (result.deletedCount === 0) notFound("Event not found");
     await clearReminderLogsForEvent(doc._id);
@@ -168,7 +170,7 @@ eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (
   if (action.type === "delete") {
     const result = await events.deleteOne({
       _id: doc._id,
-      userAddress: walletAddress,
+      accountId,
     });
     if (result.deletedCount === 0) notFound("Event not found");
     await clearReminderLogsForEvent(doc._id);
@@ -177,7 +179,7 @@ eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (
 
   if (action.type === "except") {
     const updated = await events.findOneAndUpdate(
-      { _id: doc._id, userAddress: walletAddress },
+      { _id: doc._id, accountId },
       {
         $addToSet: { exceptDates: action.date },
         $set: { updatedAt: new Date() },
@@ -189,7 +191,7 @@ eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (
   }
 
   const updated = await events.findOneAndUpdate(
-    { _id: doc._id, userAddress: walletAddress },
+    { _id: doc._id, accountId },
     {
       $set: { until: action.until, updatedAt: new Date() },
     },

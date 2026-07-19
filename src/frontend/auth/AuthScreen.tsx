@@ -459,7 +459,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     <div className="auth-wrap"><div className="auth-card">
       <Brand variant="auth" />
       <h1 className="auth-h1">Private by design.</h1>
-      <p className="auth-lead">Track every ringgit without handing over your name, email, or phone number. Your identity is a cryptographic key that only you hold — secured with Web3.</p>
+      <p className="auth-lead">Track every ringgit without an email or password account. Your identity is a cryptographic key that only you hold — secured with Web3. Prefer a ledger-only key created here so the login address is less likely to be correlated with on-chain activity.</p>
       <div className="auth-actions">
         <button className="primary-btn lg full" type="button" onClick={startCreate}><Icon name="shield" size={18} /> Create anonymous identity</button>
         <button className="ghost-btn lg full" type="button" onClick={() => { setError(""); setMode("restore"); }}><Icon name="key" size={17} /> I already have one</button>
@@ -467,9 +467,10 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
       {walletClient.hasInjected() ? <button className="link-btn auth-injected" type="button" onClick={() => void connectInjected()}>or connect your browser wallet</button> : null}
       {error ? <div className="auth-error auth-error--gap">{error}</div> : null}
       <ul className="auth-feat">
-        <li><Icon name="check" /> No email, phone, or password account</li>
+        <li><Icon name="check" /> No email or password required to sign in</li>
         <li><Icon name="check" /> Encrypted cloud sync — server stores ciphertext</li>
         <li><Icon name="check" /> Sign in by signing with your key</li>
+        <li><Icon name="check" /> Ledger-only key reduces on-chain correlation</li>
       </ul>
     </div></div>
   );

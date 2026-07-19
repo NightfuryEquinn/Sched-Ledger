@@ -207,16 +207,41 @@ describe("auth session routes", () => {
     expect(res.status).toBe(400);
   });
 
-  test("x-wallet-address mismatch is rejected", async () => {
+  test("sliding renewal rotates the session cookie", async () => {
     const wallet = Wallet.createRandom();
     const { token } = await challengeAndVerify(wallet);
-    const res = await app.request("/api/auth/me", {
-      headers: {
-        Cookie: `${SESSION_COOKIE}=${token}`,
-        "x-wallet-address": Wallet.createRandom().address.toLowerCase(),
-      },
+    const { sessions } = getCollections(memory as unknown as Db);
+    const session = await sessions.findOne({ tokenHash: hashToken(token) });
+    expect(session).toBeTruthy();
+
+    const stale = new Date(Date.now() - 6 * 60_000);
+    await sessions.updateOne({ _id: session!._id }, { $set: { lastSeenAt: stale } });
+
+    const renewed = await app.request("/api/auth/me", {
+      headers: { Cookie: `${SESSION_COOKIE}=${token}` },
     });
-    expect(res.status).toBe(401);
+    expect(renewed.status).toBe(200);
+
+    const setCookie = renewed.headers.get("set-cookie") || "";
+    const match = setCookie.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`));
+    expect(match).toBeTruthy();
+    const newToken = match![1]!;
+    expect(newToken).not.toBe(token);
+
+    const oldMe = await app.request("/api/auth/me", {
+      headers: { Cookie: `${SESSION_COOKIE}=${token}` },
+    });
+    expect(oldMe.status).toBe(401);
+
+    const newMe = await app.request("/api/auth/me", {
+      headers: { Cookie: `${SESSION_COOKIE}=${newToken}` },
+    });
+    expect(newMe.status).toBe(200);
+
+    const after = await sessions.findOne({ _id: session!._id });
+    expect(after!.tokenHash).toBe(hashToken(newToken));
+    expect(after!.createdAt.getTime()).toBe(session!.createdAt.getTime());
+    expect(after!.accountId).toBeTruthy();
   });
 
   test("absolute lifetime cap revokes expired sessions", async () => {

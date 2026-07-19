@@ -127,17 +127,16 @@ describe("crypto codec", () => {
     expect(decoded.amount).toBe(40);
   });
 
-  test("encodeWalletFinancials encrypts budgets and balances", async () => {
+  test("encodeWalletFinancials encrypts name, budgets and balances", async () => {
     const key = await testKey();
     const wire = await encodeWalletFinancials(
-      { income: 5000, startingBalance: 100, budgets: { food: 800, transport: 200 } },
+      { name: "Main", income: 5000, startingBalance: 100, budgets: { food: 800, transport: 200 } },
       key,
     );
     expect(wire.enc).toBe(1);
     const decoded = await decodeWallet(
       {
         id: "w1",
-        name: "Main",
         currency: "MYR",
         fundingMode: "monthly",
         isDefault: true,
@@ -145,9 +144,30 @@ describe("crypto codec", () => {
       },
       key,
     );
+    expect(decoded.name).toBe("Main");
     expect(decoded.income).toBe(5000);
     expect(decoded.startingBalance).toBe(100);
     expect(decoded.budgets).toEqual({ food: 800, transport: 200 });
+  });
+
+  test("decodeWallet prefers encrypted name over plaintext leftover", async () => {
+    const key = await testKey();
+    const wire = await encodeWalletFinancials(
+      { name: "Secret", income: 1, startingBalance: 0, budgets: {} },
+      key,
+    );
+    const decoded = await decodeWallet(
+      {
+        id: "w1",
+        name: "Plain leftover",
+        currency: "MYR",
+        fundingMode: "monthly",
+        isDefault: true,
+        ...wire,
+      },
+      key,
+    );
+    expect(decoded.name).toBe("Secret");
   });
 
   test("decodeWallet supports legacy plaintext wallets", async () => {
@@ -165,6 +185,7 @@ describe("crypto codec", () => {
       },
       key,
     );
+    expect(decoded.name).toBe("Cash");
     expect(decoded.startingBalance).toBe(250);
     expect(decoded.budgets.food).toBe(100);
   });

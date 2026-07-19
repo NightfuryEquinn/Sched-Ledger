@@ -1,7 +1,7 @@
 import { RECURRING_INTERVALS } from "@/lib/recurring";
 import { z } from "zod";
 import { encryptedPayloadSchema, e2eeVersionSchema, seriesKeySchema } from "./encryption";
-import { isoDateSchema, objectIdSchema, subcategoryIdSchema, walletAddressSchema } from "./common";
+import { accountIdSchema, isoDateSchema, objectIdSchema, subcategoryIdSchema } from "./common";
 
 export const txnKindSchema = z.enum(["expense", "income"]);
 
@@ -50,7 +50,7 @@ export const updateExpenseSchema = z
   });
 
 export const expenseSchema = z.object({
-  userAddress: walletAddressSchema,
+  accountId: accountIdSchema,
   walletId: objectIdSchema.optional(),
   kind: txnKindSchema.default("expense"),
   date: isoDateSchema,

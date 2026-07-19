@@ -1,4 +1,11 @@
-import type { Account, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "./types";
+import type { Account, FinancialWallet } from "./types";
+import type {
+  CategoriesWire,
+  EventWire,
+  ExpenseWire,
+  TodoListWire,
+  WalletWire,
+} from "@/frontend/lib/crypto/codec";
 import { getCipherCache, putCipherCache } from "@/frontend/lib/pwa/cipher-cache";
 import { identityStorage } from "@/frontend/auth/lib/identity-storage";
 
@@ -14,7 +21,6 @@ export class ApiError extends Error {
 
 export type ApiProfile = {
   id: string;
-  userAddress: string;
   currentMonth: string;
 };
 
@@ -39,7 +45,6 @@ export type ApiUser = {
 
 export type ApiConsent = {
   id: string;
-  userAddress: string;
   optedIn: boolean;
   updatedAt: string;
 };
@@ -187,16 +192,16 @@ export const api = {
 
   wallets: {
     list() {
-      return request<{ wallets: FinancialWallet[] }>("/wallets");
+      return request<{ wallets: WalletWire[] }>("/wallets");
     },
-    create(body: { name: string; currency: string; fundingMode?: string }) {
-      return request<{ wallet: FinancialWallet }>("/wallets", { method: "POST", body });
+    create(body: { currency: string; fundingMode?: string; enc: 1; payload: string } | Record<string, unknown>) {
+      return request<{ wallet: WalletWire }>("/wallets", { method: "POST", body });
     },
-    update(id: string, body: Partial<Pick<FinancialWallet, "name" | "currency" | "fundingMode" | "income" | "startingBalance" | "budgets" | "isDefault">> | Record<string, unknown>) {
-      return request<{ wallet: FinancialWallet }>(`/wallets/${id}`, { method: "PATCH", body });
+    update(id: string, body: Partial<Pick<FinancialWallet, "currency" | "fundingMode" | "isDefault">> | Record<string, unknown>) {
+      return request<{ wallet: WalletWire }>(`/wallets/${id}`, { method: "PATCH", body });
     },
     updateBudgets(id: string, body: { enc: 1; payload: string }) {
-      return request<{ wallet: FinancialWallet }>(`/wallets/${id}/budgets`, {
+      return request<{ wallet: WalletWire }>(`/wallets/${id}/budgets`, {
         method: "PUT",
         body,
       });
@@ -208,12 +213,7 @@ export const api = {
 
   categories: {
     list() {
-      return request<{
-        enc?: 1;
-        payload?: string;
-        categories?: Category[];
-        seed?: boolean;
-      }>("/categories");
+      return request<CategoriesWire>("/categories");
     },
     update(body: { enc: 1; payload: string }) {
       return request<{ enc: 1; payload: string }>("/categories", {
@@ -224,20 +224,21 @@ export const api = {
   },
 
   expenses: {
-    list(query?: { month?: string; recurring?: boolean; walletId?: string }) {
+    list(query?: { month?: string; recurring?: boolean; walletId?: string; kind?: "expense" | "income" }) {
       const params = new URLSearchParams();
       if (query?.month) params.set("month", query.month);
       if (query?.recurring !== undefined) params.set("recurring", String(query.recurring));
       if (query?.walletId) params.set("walletId", query.walletId);
+      if (query?.kind) params.set("kind", query.kind);
       const qs = params.toString();
-      return request<{ expenses: Expense[] }>(`/expenses${qs ? `?${qs}` : ""}`);
+      return request<{ expenses: ExpenseWire[] }>(`/expenses${qs ? `?${qs}` : ""}`);
     },
-    create(body: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring"> | Record<string, unknown>) {
-      return request<{ expense: Expense }>("/expenses", { method: "POST", body });
+    create(body: Record<string, unknown>) {
+      return request<{ expense: ExpenseWire }>("/expenses", { method: "POST", body });
     },
-    update(id: string, body: Partial<Omit<Expense, "id">> | Record<string, unknown>) {
+    update(id: string, body: Record<string, unknown>) {
       return request<{
-        expense: Expense;
+        expense: ExpenseWire;
         deletedIds?: string[];
         endedIds?: string[];
       }>(`/expenses/${id}`, { method: "PATCH", body });
@@ -257,20 +258,20 @@ export const api = {
   events: {
     list(query?: { month?: string }) {
       const qs = query?.month ? `?month=${encodeURIComponent(query.month)}` : "";
-      return request<{ events: LedgerEvent[] }>(`/events${qs}`);
+      return request<{ events: EventWire[] }>(`/events${qs}`);
     },
     create(body: Record<string, unknown>) {
-      return request<{ event: LedgerEvent }>("/events", { method: "POST", body });
+      return request<{ event: EventWire }>("/events", { method: "POST", body });
     },
     update(id: string, body: Record<string, unknown>) {
-      return request<{ event: LedgerEvent }>(`/events/${id}`, { method: "PATCH", body });
+      return request<{ event: EventWire }>(`/events/${id}`, { method: "PATCH", body });
     },
     remove(id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) {
       const params = new URLSearchParams();
       if (opts?.scope) params.set("scope", opts.scope);
       if (opts?.fromDate) params.set("fromDate", opts.fromDate);
       const qs = params.toString();
-      return request<{ ok: boolean; deleted?: boolean; event?: LedgerEvent }>(
+      return request<{ ok: boolean; deleted?: boolean; event?: EventWire }>(
         `/events/${id}${qs ? `?${qs}` : ""}`,
         { method: "DELETE" },
       );
@@ -279,13 +280,13 @@ export const api = {
 
   todoLists: {
     list() {
-      return request<{ todoLists: TodoList[] }>("/todo-lists");
+      return request<{ todoLists: TodoListWire[] }>("/todo-lists");
     },
     create(body: { enc: 1; payload: string }) {
-      return request<{ todoList: TodoList }>("/todo-lists", { method: "POST", body });
+      return request<{ todoList: TodoListWire }>("/todo-lists", { method: "POST", body });
     },
     update(id: string, body: { enc: 1; payload: string }) {
-      return request<{ todoList: TodoList }>(`/todo-lists/${id}`, { method: "PATCH", body });
+      return request<{ todoList: TodoListWire }>(`/todo-lists/${id}`, { method: "PATCH", body });
     },
     remove(id: string) {
       return request<{ ok: boolean }>(`/todo-lists/${id}`, { method: "DELETE" });
@@ -306,6 +307,7 @@ export const api = {
   budgetAlerts: {
     notify(body: {
       walletId: string;
+      walletName?: string;
       month: string;
       alerts: Array<{
         categoryId: string;

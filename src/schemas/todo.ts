@@ -1,6 +1,6 @@
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import { z } from "zod";
-import { walletAddressSchema } from "./address";
+import { accountIdSchema } from "./ids";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
 export const TODO_ICONS = TODO_ICON_OPTIONS;
@@ -21,7 +21,7 @@ export const todoTaskSchema = z.object({
 });
 
 export const todoListSchema = z.object({
-  userAddress: walletAddressSchema,
+  accountId: accountIdSchema,
   enc: e2eeVersionSchema.optional(),
   payload: encryptedPayloadSchema.optional(),
   /** Legacy plaintext fields (pre-E2EE). */

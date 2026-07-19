@@ -25,7 +25,7 @@ function resolveSrvViaNslookup(srvName: string): SrvRecord[] {
       continue;
     }
     const hostMatch = line.match(/svr hostname\s*=\s*(\S+)/i);
-    if (hostMatch && pendingPort) {
+    if (hostMatch?.[1] && pendingPort) {
       records.push({ host: hostMatch[1], port: pendingPort });
       pendingPort = null;
     }

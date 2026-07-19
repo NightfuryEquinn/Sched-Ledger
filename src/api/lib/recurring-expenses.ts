@@ -1,3 +1,4 @@
+import { randomObjectId } from "@/api/lib/ids";
 import { getCollections, getDb } from "@/db";
 import type { ExpenseDocument } from "@/db/collections";
 import {
@@ -11,7 +12,7 @@ import {
   type RecurringInterval,
 } from "@/lib/recurring";
 import { DEFAULT_TIMEZONE } from "@/lib/timezone";
-import type { ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
 
 /** Only materialize dues in the last ~5 weeks (missed cron days), not years of history. */
 const LOOKBACK_DAYS = 35;
@@ -49,13 +50,14 @@ function addDaysIso(iso: string, delta: number): string {
   return formatIsoDateParts(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
 }
 
-async function userTimezone(userAddress: string, cache: Map<string, string>): Promise<string> {
-  const hit = cache.get(userAddress);
+/** Resolve a user's IANA timezone, caching by accountId. */
+async function userTimezone(accountId: string, cache: Map<string, string>): Promise<string> {
+  const hit = cache.get(accountId);
   if (hit) return hit;
   const { users } = getCollections(getDb());
-  const user = await users.findOne({ address: userAddress });
+  const user = await users.findOne({ _id: new ObjectId(accountId) });
   const tz = user?.timezone ?? DEFAULT_TIMEZONE;
-  cache.set(userAddress, tz);
+  cache.set(accountId, tz);
   return tz;
 }
 
@@ -78,9 +80,9 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
   const anchors = await expenses
     .find({
       recurring: { $in: [true, "monthly", "quarterly", "yearly"] },
-      walletId: { $exists: true, $ne: null },
+      walletId: { $exists: true },
       skipped: { $ne: true },
-    })
+    } as Record<string, unknown>)
     .sort({ date: -1 })
     .limit(ANCHOR_BATCH_LIMIT)
     .toArray();
@@ -96,7 +98,7 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
   for (const doc of anchors) {
     const freq = normalizeRecurring(doc.recurring);
     if (!freq || !doc.walletId) continue;
-    const key = `${doc.userAddress}|${seriesKey(doc)}`;
+    const key = `${doc.accountId}|${seriesKey(doc)}`;
     const prev = bySeries.get(key);
     if (!prev) {
       bySeries.set(key, { latest: doc, anchorIso: doc.date });
@@ -122,7 +124,7 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
     }
 
     try {
-      const tz = await userTimezone(template.userAddress, tzCache);
+      const tz = await userTimezone(template.accountId, tzCache);
       const today = zonedTodayIso(tz, now);
       const minDue = addDaysIso(today, -LOOKBACK_DAYS);
       let cursor = template.date;
@@ -140,8 +142,8 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
 
         const dedupe = encrypted
           ? {
-              userAddress: template.userAddress,
-              walletId: template.walletId as ObjectId,
+              accountId: template.accountId,
+              walletId: template.walletId,
               seriesKey: template.seriesKey,
               date: due,
               recurring:
@@ -150,8 +152,8 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
                   : freq,
             }
           : {
-              userAddress: template.userAddress,
-              walletId: template.walletId as ObjectId,
+              accountId: template.accountId,
+              walletId: template.walletId,
               sub: template.sub,
               note: template.note,
               date: due,
@@ -170,7 +172,8 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
 
         const stamp = new Date();
         await expenses.insertOne({
-          userAddress: template.userAddress,
+          _id: randomObjectId(),
+          accountId: template.accountId,
           walletId: template.walletId,
           kind: template.kind ?? "expense",
           date: due,

@@ -54,10 +54,10 @@ type UserReminderPrefs = {
   timezone: string;
 };
 
-/** Load reminder kill-switch and timezone for a user. */
-async function userReminderPrefs(userAddress: string): Promise<UserReminderPrefs> {
+/** Load reminder kill-switch and timezone for an account. */
+async function userReminderPrefs(accountId: string): Promise<UserReminderPrefs> {
   const { users } = getCollections(getDb());
-  const user = await users.findOne({ address: userAddress });
+  const user = await users.findOne({ _id: new ObjectId(accountId) });
 
   return {
     remindersEnabled: user?.emailRemindersEnabled !== false,
@@ -70,7 +70,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   if (!doc.notify || !doc.email?.trim()) return;
   if (!emailConfigured()) return;
 
-  const prefs = await userReminderPrefs(doc.userAddress);
+  const prefs = await userReminderPrefs(doc.accountId);
   if (!prefs.remindersEnabled) return;
 
   const when = formatEventWhen(doc.date, doc.time, doc.allDay, prefs.timezone);
@@ -119,10 +119,10 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       break;
     }
 
-    let prefs = prefsCache.get(ev.userAddress);
+    let prefs = prefsCache.get(ev.accountId);
     if (!prefs) {
-      prefs = await userReminderPrefs(ev.userAddress);
-      prefsCache.set(ev.userAddress, prefs);
+      prefs = await userReminderPrefs(ev.accountId);
+      prefsCache.set(ev.accountId, prefs);
     }
     if (!prefs.remindersEnabled) {
       result.skipped++;
@@ -197,6 +197,7 @@ async function sendReminderOnce(
 
   try {
     await reminderLogs.insertOne({
+      _id: new ObjectId(),
       ...logKey,
       email,
       channels: ["email"],
@@ -222,7 +223,7 @@ export async function sendImmediateReminderIfDue(
   if (!doc.notify) return;
   if (!emailConfigured()) return;
 
-  const prefs = await userReminderPrefs(doc.userAddress);
+  const prefs = await userReminderPrefs(doc.accountId);
   if (!prefs.remindersEnabled) return;
 
   const email = doc.email?.trim() || "";
