@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 
 /** Convert a Mongo ObjectId (or hex string) to the API id string. */
-export function toApiId(id: ObjectId | string): string {
+function toApiId(id: ObjectId | string): string {
   return typeof id === "string" ? id : id.toHexString();
 }
 

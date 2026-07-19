@@ -11,6 +11,14 @@ export type ScheduleEvent = {
   until?: string | null;
 };
 
+/** Minimal shape needed to evaluate recurrence on a calendar day. */
+export type OccurrenceEvent = {
+  date: string;
+  repeat: string;
+  exceptDates?: string[];
+  until?: string | null;
+};
+
 const LEAD_MS: Record<LeadId, number> = {
   at: 0,
   "15m": 15 * 60 * 1000,
@@ -55,15 +63,21 @@ export function isReminderDueNow(
   return nowMs >= remindAtMs - earlyBufferMs && nowMs <= remindAtMs + pollIntervalMs;
 }
 
+/** Milliseconds before event time for a given reminder lead id. */
 export function leadOffsetMs(lead: LeadId): number {
   return LEAD_MS[lead] ?? 0;
 }
 
+/** Human-readable reminder lead phrase (e.g. "1 day before"). */
 export function leadDescription(lead: LeadId): string {
   return LEAD_LABELS[lead] ?? LEAD_LABELS.at;
 }
 
-export function occursOn(ev: ScheduleEvent, iso: string): boolean {
+/**
+ * Whether a (possibly recurring) event occurs on the given ISO calendar day.
+ * Respects `until` (inclusive) and `exceptDates`.
+ */
+export function occursOn(ev: OccurrenceEvent, iso: string): boolean {
   if (iso < ev.date) return false;
   if (ev.until && iso > ev.until) return false;
   if (ev.exceptDates?.includes(iso)) return false;

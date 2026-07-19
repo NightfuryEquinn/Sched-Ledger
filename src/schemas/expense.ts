@@ -54,7 +54,7 @@ export const updateExpenseSchema = z
     message: "At least one field is required",
   });
 
-export const expenseSchema = z.object({
+const expenseSchema = z.object({
   accountId: accountIdSchema,
   walletId: objectIdSchema.optional(),
   kind: txnKindSchema.default("expense"),

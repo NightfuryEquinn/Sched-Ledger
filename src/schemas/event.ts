@@ -56,7 +56,7 @@ const eventScheduleShape = {
   expenseId: objectIdSchema.optional(),
 };
 
-export const eventSchema = z.object({
+const eventSchema = z.object({
   accountId: accountIdSchema,
   ...eventScheduleShape,
   enc: e2eeVersionSchema.optional(),

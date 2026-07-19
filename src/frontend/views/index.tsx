@@ -134,30 +134,40 @@ export function Overview({
     [events, loadedAt],
   );
 
-  const donutData = categoryIndex.expenseCategories
-    .map((c) => ({
-      id: c.id,
-      label: c.name,
-      value: st.byCat[c.id] || 0,
-      color: c.color,
-      glyph: displayGlyph(c.glyph, c.id),
-    }))
-    .filter((d) => d.value > 0)
-    .sort((a, b) => b.value - a.value);
-  const totalAll = donutData.reduce((s, d) => s + d.value, 0);
+  const donutData = useMemo(
+    () =>
+      categoryIndex.expenseCategories
+        .map((c) => ({
+          id: c.id,
+          label: c.name,
+          value: st.byCat[c.id] || 0,
+          color: c.color,
+          glyph: displayGlyph(c.glyph, c.id),
+        }))
+        .filter((d) => d.value > 0)
+        .sort((a, b) => b.value - a.value),
+    [categoryIndex.expenseCategories, st.byCat],
+  );
+  const totalAll = useMemo(() => donutData.reduce((s, d) => s + d.value, 0), [donutData]);
 
   const [yy, mm] = month.split("-").map(Number);
   const days = new Date(yy, mm, 0).getDate();
   const todayCap = month === CURRENT_MONTH_KEY ? CURRENT_DAY : days;
-  const cum = [];
-  let run = 0;
-  for (let d = 1; d <= todayCap; d++) {
-    const dayKey = `${month}-${String(d).padStart(2, "0")}`;
-    run += st.list
-      .filter((e) => e.date === dayKey && isOutgoing(e) && !isSavings(e, categoryIndex))
-      .reduce((s, e) => s + e.amount, 0);
-    cum.push({ x: String(d), v: Math.round(run) });
-  }
+  const cum = useMemo(() => {
+    const byDay = new Map<string, number>();
+    for (const e of st.list) {
+      if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
+      byDay.set(e.date, (byDay.get(e.date) || 0) + e.amount);
+    }
+    const points: Array<{ x: string; v: number }> = [];
+    let run = 0;
+    for (let d = 1; d <= todayCap; d++) {
+      const dayKey = `${month}-${pad(d)}`;
+      run += byDay.get(dayKey) || 0;
+      points.push({ x: String(d), v: Math.round(run) });
+    }
+    return points;
+  }, [st.list, month, todayCap, categoryIndex]);
 
   const recent = st.list.slice(0, 3);
   const spentPct = st.totalBudget ? st.spent / st.totalBudget : 0;
@@ -318,22 +328,36 @@ export function Overview({
 export function Transactions({ expenses, month, currency, categoryIndex, onEdit, onDelete }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
-  let list = monthExpenses(expenses, month);
-  if (filter === "income") list = list.filter(isIncome);
-  else if (filter !== "all") list = list.filter((e) => catOf(e.sub, categoryIndex) === filter);
-  if (q.trim()) {
-    const s = q.toLowerCase();
-    list = list.filter((e) =>
-      e.note.toLowerCase().includes(s) ||
-      (categoryIndex.subById[e.sub]?.name ?? "").toLowerCase().includes(s) ||
-      (categoryIndex.catById[catOf(e.sub, categoryIndex)]?.name ?? "").toLowerCase().includes(s),
-    );
-  }
-  const netTotal = list.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
-  // group by date
-  const groups = {};
-  list.forEach((e) => { (groups[e.date] = groups[e.date] || []).push(e); });
-  const dates = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
+
+  const { list, netTotal, dates, groups } = useMemo(() => {
+    let rows = monthExpenses(expenses, month);
+    if (filter === "income") rows = rows.filter(isIncome);
+    else if (filter !== "all") rows = rows.filter((e) => catOf(e.sub, categoryIndex) === filter);
+    if (q.trim()) {
+      const s = q.toLowerCase();
+      rows = rows.filter((e) =>
+        e.note.toLowerCase().includes(s) ||
+        (categoryIndex.subById[e.sub]?.name ?? "").toLowerCase().includes(s) ||
+        (categoryIndex.catById[catOf(e.sub, categoryIndex)]?.name ?? "").toLowerCase().includes(s),
+      );
+    }
+    const net = rows.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
+    const byDate: Record<string, typeof rows> = {};
+    rows.forEach((e) => {
+      (byDate[e.date] = byDate[e.date] || []).push(e);
+    });
+    const sortedDates = Object.keys(byDate).sort((a, b) => (a < b ? 1 : -1));
+
+    return { list: rows, netTotal: net, dates: sortedDates, groups: byDate };
+  }, [expenses, month, filter, q, categoryIndex]);
+
+  const sortedCats = useMemo(
+    () =>
+      [...categoryIndex.categories].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      ),
+    [categoryIndex.categories],
+  );
 
   return (
     <div className="view">
@@ -346,16 +370,15 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
       </div>
       <div className="filter-chips" data-tour="tour-txn-filters">
         <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => setFilter("all")}>All</button>
-        {[...categoryIndex.categories]
-          .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
-          .map((c) => {
-            const key = c.type === "income" ? "income" : c.id;
-            return (
-              <button key={c.id} className={"fchip" + (filter === key ? " active" : "")} onClick={() => setFilter(key)}>
-                <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
-              </button>
-            );
-          })}
+        {sortedCats.map((c) => {
+          const key = c.type === "income" ? "income" : c.id;
+
+          return (
+            <button key={c.id} className={"fchip" + (filter === key ? " active" : "")} onClick={() => setFilter(key)}>
+              <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
+            </button>
+          );
+        })}
       </div>
 
       <section key={filter + ":" + q} className="panel txn-panel txn-panel--filter" data-tour="tour-txn-list">
@@ -513,7 +536,27 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
   const spendingBudgets = Object.fromEntries(Object.entries(budgets).filter(([id]) => id !== "income"));
   const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
-  const chartMonths = monthsWindow(month);
+  const chartMonths = useMemo(() => monthsWindow(month), [month]);
+
+  /** Pre-aggregate outgoing spend by month and category once for Insights charts. */
+  const monthlyAgg = useMemo(() => {
+    const monthKeys = new Set(chartMonths.map((m) => m.key));
+    const byMonth = new Map<string, { spent: number; byCat: Record<string, number> }>();
+    for (const key of monthKeys) byMonth.set(key, { spent: 0, byCat: {} });
+
+    for (const e of expenses) {
+      const key = e.date.slice(0, 7);
+      if (!monthKeys.has(key)) continue;
+      if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
+      const bucket = byMonth.get(key)!;
+      bucket.spent += e.amount;
+      const cat = catOf(e.sub, categoryIndex);
+      bucket.byCat[cat] = (bucket.byCat[cat] || 0) + e.amount;
+    }
+
+    return byMonth;
+  }, [expenses, chartMonths, categoryIndex]);
+
   const chartBars = useMemo(() => {
     return spendingChartSeries(chartPeriod, expenses, month, categoryIndex).map((bar) => ({
       ...bar,
@@ -525,33 +568,52 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     [chartPeriod, totalBudget, month, currency, displayCurrency, fxRates],
   );
   const activeChartKey = chartActiveKey(chartPeriod, month);
-  const perMonth = chartMonths.map((mo) => {
-    const list = monthExpenses(expenses, mo.key).filter((e) => isOutgoing(e) && !isSavings(e, categoryIndex));
-    return { key: mo.key, label: monthLabel(mo.key).split(" ")[0], spent: Math.round(list.reduce((s, e) => s + e.amount, 0)) };
-  });
+  const perMonth = useMemo(
+    () =>
+      chartMonths.map((mo) => ({
+        key: mo.key,
+        label: monthLabel(mo.key).split(" ")[0],
+        spent: Math.round(monthlyAgg.get(mo.key)?.spent || 0),
+      })),
+    [chartMonths, monthlyAgg],
+  );
   const cur = monthStats(expenses, budgets, wallet, month, categoryIndex);
   const idx = MONTHS.findIndex((m) => m.key === month);
   const prevKey = idx > 0 ? MONTHS[idx - 1].key : null;
   const prev = prevKey ? monthStats(expenses, budgets, wallet, prevKey, categoryIndex) : null;
 
-  const catRows = categoryIndex.expenseCategories.map((c) => {
-    const now = cur.byCat[c.id] || 0;
-    const was = prev ? (prev.byCat[c.id] || 0) : 0;
-    const series = chartMonths.map((mo) =>
-      Math.round(
-        fxConvert(
-          monthExpenses(expenses, mo.key)
-            .filter((e) => isOutgoing(e) && catOf(e.sub, categoryIndex) === c.id)
-            .reduce((s, e) => s + e.amount, 0),
-          currency,
-          displayCurrency,
-          fxRates,
-        ),
-      ),
-    );
-    const delta = was ? (now - was) / was : now > 0 ? 1 : 0;
-    return { c, now, was, delta, series };
-  }).sort((a, b) => b.now - a.now);
+  const catRows = useMemo(
+    () =>
+      categoryIndex.expenseCategories
+        .map((c) => {
+          const now = cur.byCat[c.id] || 0;
+          const was = prev ? prev.byCat[c.id] || 0 : 0;
+          const series = chartMonths.map((mo) =>
+            Math.round(
+              fxConvert(
+                monthlyAgg.get(mo.key)?.byCat[c.id] || 0,
+                currency,
+                displayCurrency,
+                fxRates,
+              ),
+            ),
+          );
+          const delta = was ? (now - was) / was : now > 0 ? 1 : 0;
+
+          return { c, now, was, delta, series };
+        })
+        .sort((a, b) => b.now - a.now),
+    [
+      categoryIndex.expenseCategories,
+      cur.byCat,
+      prev,
+      chartMonths,
+      monthlyAgg,
+      currency,
+      displayCurrency,
+      fxRates,
+    ],
+  );
 
   // top subcategories this month
   const subTotals = {};

@@ -2,7 +2,7 @@ import { timezoneSchema } from "@/lib/timezone";
 import { z } from "zod";
 import { walletAddressSchema } from "./common";
 
-export const userSchema = z.object({
+const userSchema = z.object({
   address: walletAddressSchema,
   codename: z.string().min(1).max(64),
   notifyEmail: z.string().email().optional().or(z.literal("")),

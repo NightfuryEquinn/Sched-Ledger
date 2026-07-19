@@ -1,4 +1,5 @@
 import { DEFAULT_CATEGORIES } from "@/schemas/category";
+import { occursOn } from "@/lib/schedule";
 import type { MonthEntry } from "./types";
 
 const CURRENCY = { code: "MYR", symbol: "RM" };
@@ -177,30 +178,7 @@ export function leadTimesForEvent(allDay: boolean) {
   return allDay ? LEAD_TIMES.filter((l) => ALL_DAY_LEAD_SET.has(l.id)) : LEAD_TIMES;
 }
 
-/** Whether a recurring event occurs on a given ISO date. */
-export function occursOn(ev, iso) {
-  if (iso < ev.date) return false;
-  if (ev.until && iso > ev.until) return false;
-  if (ev.exceptDates?.includes(iso)) return false;
-
-  const a = new Date(ev.date + "T00:00:00");
-  const b = new Date(iso + "T00:00:00");
-
-  switch (ev.repeat) {
-    case "once":
-      return iso === ev.date;
-    case "daily":
-      return true;
-    case "weekly":
-      return a.getDay() === b.getDay();
-    case "monthly":
-      return a.getDate() === b.getDate();
-    case "yearly":
-      return a.getDate() === b.getDate() && a.getMonth() === b.getMonth();
-    default:
-      return iso === ev.date;
-  }
-}
+export { occursOn };
 
 /** Sort events on the same day: all-day first, then earliest time, then title. */
 export function compareEventsByEarliest(
@@ -222,20 +200,56 @@ export function compareEventsByEarliest(
   return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
 }
 
+type DayEvent = {
+  date: string;
+  allDay?: boolean;
+  time?: string | null;
+  title?: string;
+  repeat?: string;
+  until?: string | null;
+  exceptDates?: string[];
+};
+
 /** Events occurring on `iso`, sorted earliest-first within the day. */
-export function eventsForDay(events, iso) {
+export function eventsForDay<T extends DayEvent>(events: T[], iso: string): T[] {
   return events.filter((ev) => occursOn(ev, iso)).sort(compareEventsByEarliest);
 }
 
-/** All occurrences within a month, sorted by date then earliest time. */
-export function scheduleForMonth(events, monthKey) {
+/** Build a day → events map for one month (single pass per event). */
+export function eventsByDayForMonth<T extends DayEvent>(
+  events: T[],
+  monthKey: string,
+): Map<string, T[]> {
   const [y, m] = monthKey.split("-").map(Number);
-  const days = new Date(y, m, 0).getDate();
-  const out = [];
+  const days = new Date(y!, m!, 0).getDate();
+  const map = new Map<string, T[]>();
 
   for (let d = 1; d <= days; d++) {
-    const iso = `${monthKey}-${pad(d)}`;
-    eventsForDay(events, iso).forEach((ev) => out.push({ iso, ev }));
+    map.set(`${monthKey}-${pad(d)}`, []);
+  }
+
+  for (const ev of events) {
+    for (let d = 1; d <= days; d++) {
+      const iso = `${monthKey}-${pad(d)}`;
+      if (!occursOn(ev, iso)) continue;
+      map.get(iso)!.push(ev);
+    }
+  }
+
+  for (const [, list] of map) {
+    list.sort(compareEventsByEarliest);
+  }
+
+  return map;
+}
+
+/** All occurrences within a month, sorted by date then earliest time. */
+export function scheduleForMonth<T extends DayEvent>(events: T[], monthKey: string) {
+  const byDay = eventsByDayForMonth(events, monthKey);
+  const out: Array<{ iso: string; ev: T }> = [];
+
+  for (const [iso, list] of byDay) {
+    for (const ev of list) out.push({ iso, ev });
   }
 
   return out;

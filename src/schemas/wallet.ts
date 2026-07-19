@@ -41,7 +41,7 @@ export const currencyCodeSchema = z.enum(CURRENCY_CODES);
 
 export const fundingModeSchema = z.enum(["monthly", "starting"]);
 
-export const financialWalletSchema = z.object({
+const financialWalletSchema = z.object({
   accountId: accountIdSchema,
   /** Legacy plaintext name (pre-E2EE); prefer payload secrets. */
   name: z.string().trim().min(1).max(60).optional(),

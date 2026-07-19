@@ -3,11 +3,13 @@ import type { Account } from "@/frontend/lib/types";
 import { codenameFor } from "./codename";
 import { identityStorage } from "./identity-storage";
 
+/** Read the locally remembered account from identity storage. */
 export function getSavedAccount(): Account | null {
   const addr = identityStorage.session();
   if (!addr) return null;
   const idn = identityStorage.find(addr);
   if (!idn) return null;
+
   return {
     address: idn.address,
     codename: idn.codename || codenameFor(idn.address),
@@ -15,10 +17,12 @@ export function getSavedAccount(): Account | null {
   };
 }
 
-export function clearSession(): void {
+/** Clear the locally remembered session address. */
+function clearSession(): void {
   identityStorage.setSession(null);
 }
 
+/** Log out on the server and clear the local session pointer. */
 export async function logoutSession(): Promise<void> {
   try {
     await api.auth.logout();
