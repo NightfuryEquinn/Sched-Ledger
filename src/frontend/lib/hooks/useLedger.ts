@@ -56,6 +56,22 @@ function cloneDefaultCategories(): Category[] {
   }));
 }
 
+/** Shift a YYYY-MM key by a signed month delta. */
+function shiftMonthKey(key: string, delta: number): string {
+  const [y, m] = key.split("-").map(Number);
+  const d = new Date(y!, (m! - 1) + delta, 1);
+
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** ISO date at the start of a month key. */
+function monthStartIso(key: string): string {
+  return `${key}-01`;
+}
+
+const EXPENSE_LOOKBACK_MONTHS = 36;
+const LIST_PAGE_LIMIT = 2000;
+
 const keys = {
   profile: (wallet: string) => ["profile", wallet] as const,
   wallets: (wallet: string) => ["wallets", wallet] as const,
@@ -176,9 +192,25 @@ export function useLedger(walletAddress: string) {
   const expensesQuery = useQuery({
     queryKey: keys.expenses(wallet),
     queryFn: async () => {
-      const { expenses } = await api.expenses.list();
+      const from = monthStartIso(shiftMonthKey(CURRENT_MONTH_KEY, -EXPENSE_LOOKBACK_MONTHS));
       const cryptoKey = requireKey(wallet);
-      return Promise.all(expenses.map((e) => decodeExpense(e, cryptoKey)));
+      const collected: Awaited<ReturnType<typeof decodeExpense>>[] = [];
+      let before: string | undefined;
+
+      for (;;) {
+        const page = await api.expenses.list({
+          from,
+          limit: LIST_PAGE_LIMIT,
+          before,
+        });
+        const decoded = await Promise.all(page.expenses.map((e) => decodeExpense(e, cryptoKey)));
+        collected.push(...decoded);
+        if (!page.hasMore || !page.nextBefore) break;
+        before = page.nextBefore;
+        if (collected.length >= LIST_PAGE_LIMIT * 5) break;
+      }
+
+      return collected;
     },
     enabled: cryptoReady && !!profileQuery.data && wallets.length > 0 && categoriesQuery.data !== undefined,
   });
@@ -196,8 +228,11 @@ export function useLedger(walletAddress: string) {
   const eventsQuery = useQuery({
     queryKey: keys.events(wallet),
     queryFn: async () => {
-      const { events } = await api.events.list();
+      /* Load active recurring series + recent once events (36-month lookback). */
+      const from = monthStartIso(shiftMonthKey(CURRENT_MONTH_KEY, -EXPENSE_LOOKBACK_MONTHS));
       const cryptoKey = requireKey(wallet);
+      const { events } = await api.events.list({ from, limit: LIST_PAGE_LIMIT });
+
       return Promise.all(
         events.map(async (wire) => {
           if (!wire.enc && wire.title) {

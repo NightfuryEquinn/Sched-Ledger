@@ -11,7 +11,7 @@ import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { deleteScopeQuerySchema } from "@/lib/delete-scope";
 import { normalizeRecurring } from "@/lib/recurring";
-import { objectIdSchema } from "@/schemas/common";
+import { monthDateBounds, objectIdSchema } from "@/schemas/common";
 import {
   createExpenseSchema,
   listExpensesQuerySchema,
@@ -27,7 +27,7 @@ expensesRoutes.use("*", sessionAuth);
 
 expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) => {
   const accountId = c.get("accountId");
-  const { month, recurring, sub, walletId, kind } = c.req.valid("query");
+  const { month, recurring, sub, walletId, kind, from, to, limit, before } = c.req.valid("query");
   const { expenses } = getCollections(getDb());
 
   const filter: Record<string, unknown> = {
@@ -36,7 +36,19 @@ expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) 
   };
   if (walletId) filter.walletId = new ObjectId(walletId);
   if (kind) filter.kind = kind;
-  if (month) filter.date = { $regex: `^${month}` };
+
+  const dateFilter: Record<string, string> = {};
+  if (month) {
+    const bounds = monthDateBounds(month);
+    dateFilter.$gte = bounds.$gte;
+    dateFilter.$lte = bounds.$lte;
+  } else {
+    if (from) dateFilter.$gte = from;
+    if (to) dateFilter.$lte = to;
+  }
+  if (before) dateFilter.$lt = before;
+  if (Object.keys(dateFilter).length) filter.date = dateFilter;
+
   if (recurring === true) {
     filter.recurring = { $in: [true, "monthly", "quarterly", "yearly"] };
   } else if (recurring === false) {
@@ -44,8 +56,15 @@ expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) 
   }
   if (sub) filter.sub = sub;
 
-  const docs = await expenses.find(filter).sort({ date: -1 }).toArray();
-  return c.json({ expenses: serializeDocs(docs) });
+  const docs = await expenses.find(filter).sort({ date: -1 }).limit(limit).toArray();
+  const hasMore = docs.length === limit;
+  const nextBefore = hasMore ? docs[docs.length - 1]?.date : undefined;
+
+  return c.json({
+    expenses: serializeDocs(docs),
+    hasMore,
+    nextBefore: nextBefore ?? null,
+  });
 });
 
 expensesRoutes.get("/:id", async (c) => {

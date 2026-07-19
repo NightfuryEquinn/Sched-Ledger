@@ -27,6 +27,7 @@ const EVENT_CAT_NAMES: Record<string, string> = {
 /** Bound work per cron-job.org poll (aligned with ~30s request timeout). */
 const REMINDER_BATCH_LIMIT = 80;
 const CRON_TIME_BUDGET_MS = 22_000;
+const SEND_CONCURRENCY = 5;
 
 /** Human-readable label for an event's schedule category (plaintext catId only). */
 function eventCategoryLabel(doc: { catId: string }): string {
@@ -35,7 +36,6 @@ function eventCategoryLabel(doc: { catId: string }): string {
 
 /** Generic event title used in emails — real titles are E2EE and unavailable server-side. */
 const GENERIC_EVENT_TITLE = "Upcoming event";
-
 
 export type ReminderProcessResult = {
   scanned: number;
@@ -57,12 +57,37 @@ type UserReminderPrefs = {
 /** Load reminder kill-switch and timezone for an account. */
 async function userReminderPrefs(accountId: string): Promise<UserReminderPrefs> {
   const { users } = getCollections(getDb());
-  const user = await users.findOne({ _id: new ObjectId(accountId) });
+  const user = await users.findOne(
+    { _id: new ObjectId(accountId) },
+    { projection: { emailRemindersEnabled: 1, timezone: 1 } },
+  );
 
   return {
     remindersEnabled: user?.emailRemindersEnabled !== false,
     timezone: user?.timezone ?? DEFAULT_TIMEZONE,
   };
+}
+
+/** Run async tasks with a fixed concurrency cap. */
+async function mapPool<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+
+  async function run(): Promise<void> {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await worker(items[i]!);
+    }
+  }
+
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, () => run());
+  await Promise.all(runners);
+
+  return results;
 }
 
 /** Send the "reminder enabled" confirmation email when an event turns notify on. */
@@ -93,10 +118,11 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
 
   if (!emailConfigured()) {
     result.errors.push("RESEND_API_KEY not configured");
+
     return result;
   }
 
-  const { events } = getCollections(getDb());
+  const { events, reminderLogs } = getCollections(getDb());
   const nowMs = now.getTime();
   const started = Date.now();
 
@@ -112,6 +138,14 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
 
   /* Cache per-user reminder prefs across events in this run. */
   const prefsCache = new Map<string, UserReminderPrefs>();
+
+  type PendingSend = {
+    ev: EventDocument;
+    iso: string;
+    email: string;
+    timezone: string;
+  };
+  const pending: PendingSend[] = [];
 
   for (const ev of notifyEvents) {
     if (Date.now() - started > CRON_TIME_BUDGET_MS) {
@@ -149,10 +183,43 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
         continue;
       }
 
-      const outcome = await sendReminderOnce(ev, iso, email, prefs.timezone);
+      pending.push({ ev, iso, email, timezone: prefs.timezone });
+    }
+  }
+
+  if (pending.length) {
+    /* Prefetch existing reminder logs for this batch to skip duplicates. */
+    const logFilter = {
+      $or: pending.map((p) => ({
+        eventId: p.ev._id,
+        occurrenceIso: p.iso,
+        lead: p.ev.lead,
+      })),
+    };
+    const existingLogs = await reminderLogs.find(logFilter).toArray();
+    const existingKeys = new Set(
+      existingLogs.map((log) => `${log.eventId.toHexString()}|${log.occurrenceIso}|${log.lead}`),
+    );
+
+    const toSend = pending.filter((p) => {
+      const key = `${p.ev._id.toHexString()}|${p.iso}|${p.ev.lead}`;
+      if (existingKeys.has(key)) {
+        result.skipped++;
+
+        return false;
+      }
+
+      return true;
+    });
+
+    const outcomes = await mapPool(toSend, SEND_CONCURRENCY, (item) =>
+      sendReminderOnce(item.ev, item.iso, item.email, item.timezone, true),
+    );
+
+    for (const outcome of outcomes) {
       if (outcome === "sent") result.sent++;
       else if (outcome === "skipped") result.skipped++;
-      else result.errors.push(`event ${ev._id} (${iso}): ${outcome.error}`);
+      else result.errors.push(outcome.error);
     }
   }
 
@@ -168,6 +235,7 @@ async function sendReminderOnce(
   occurrenceIso: string,
   email: string,
   timezone: string,
+  alreadyChecked = false,
 ): Promise<"sent" | "skipped" | { error: string }> {
   const { reminderLogs } = getCollections(getDb());
   const logKey = {
@@ -176,8 +244,10 @@ async function sendReminderOnce(
     lead: ev.lead,
   };
 
-  const existing = await reminderLogs.findOne(logKey);
-  if (existing) return "skipped";
+  if (!alreadyChecked) {
+    const existing = await reminderLogs.findOne(logKey);
+    if (existing) return "skipped";
+  }
 
   const when = formatEventWhen(occurrenceIso, ev.time, ev.allDay, timezone);
   const category = eventCategoryLabel(ev);
@@ -206,6 +276,7 @@ async function sendReminderOnce(
   } catch (err) {
     const code = (err as { code?: number }).code;
     if (code === 11000) return "skipped";
+
     return { error: "failed to log reminder send" };
   }
 

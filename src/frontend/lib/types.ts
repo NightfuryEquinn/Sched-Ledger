@@ -111,16 +111,25 @@ export type IdentityVault = {
   ciphertext: string;
 };
 
+/** In-memory / migration-only secrets — never persist to localStorage. */
+export type LegacyIdentitySecrets = {
+  mnemonic: string;
+  privateKey: string;
+};
+
 export type IdentityRecord = {
   address: string;
   codename?: string;
   /** Encrypted mnemonic + privateKey (in-app wallets). */
   vault?: IdentityVault;
   /**
-   * Legacy plaintext fields — migrated into `vault` on next unlock.
-   * Prefer sessionSecrets + vault; do not write these on new identities.
+   * @deprecated ACTIVE MIGRATION — read-only until vaulted; never write to localStorage.
+   * Prefer sessionSecrets + vault.
    */
   mnemonic?: string;
+  /**
+   * @deprecated ACTIVE MIGRATION — read-only until vaulted; never write to localStorage.
+   */
   privateKey?: string;
   injected?: boolean;
   lastSeen?: number;

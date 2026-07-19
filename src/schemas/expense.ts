@@ -1,7 +1,12 @@
 import { RECURRING_INTERVALS } from "@/lib/recurring";
 import { z } from "zod";
 import { encryptedPayloadSchema, e2eeVersionSchema, seriesKeySchema } from "./encryption";
-import { accountIdSchema, isoDateSchema, objectIdSchema, subcategoryIdSchema } from "./common";
+import {
+  accountIdSchema,
+  isoDateSchema,
+  objectIdSchema,
+  subcategoryIdSchema,
+} from "./common";
 
 export const txnKindSchema = z.enum(["expense", "income"]);
 
@@ -76,6 +81,10 @@ export const listExpensesQuerySchema = z.object({
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
     .optional(),
+  from: isoDateSchema.optional(),
+  to: isoDateSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(5000).optional().default(2000),
+  before: isoDateSchema.optional(),
   recurring: z
     .enum(["true", "false"])
     .optional()
