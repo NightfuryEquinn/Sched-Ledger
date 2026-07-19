@@ -51,10 +51,11 @@
   --sp-4: 16px;
   --sp-5: 20px;
   --sp-6: 24px;
+  --sp-7: 32px;
   --pad: var(--sp-6); /* view / topbar padding   */
   --card-pad: var(--sp-5); /* card & panel padding    */
-  --gap: var(--sp-4); /* grid gap                */
-  --vgap: var(--sp-4); /* vertical stack gap      */
+  --gap: var(--sp-5); /* grid gap                */
+  --vgap: var(--sp-6); /* vertical stack gap      */
 
   /* Motion */
   --ease: ease-in-out;
@@ -680,14 +681,14 @@ h1, h2, h3 {
   color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: .03em;
-  margin-bottom: 9px;
+  margin-bottom: 10px;
 }
 
 .fld-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-4);
-  margin-bottom: 18px;
+  margin-bottom: var(--sp-5);
   align-items: stretch;
 }
 
@@ -750,7 +751,7 @@ h1, h2, h3 {
   font-size: 14.5px;
   font-weight: 500;
   cursor: pointer;
-  margin-bottom: 22px;
+  margin-bottom: var(--sp-6);
 }
 
 .toggle-line > span:not(.toggle-ui) {
@@ -760,7 +761,7 @@ h1, h2, h3 {
 }
 
 .toggle-line.tight {
-  margin-bottom: 18px;
+  margin-bottom: var(--sp-5);
 }
 
 .toggle-line input {
@@ -853,7 +854,7 @@ h1, h2, h3 {
 }
 
 .modal .seg {
-  margin-bottom: 18px;
+  margin-bottom: var(--sp-5);
 }
 
 /* ── 5. Wallet switcher & account menu ────────────────────────────── */
@@ -991,11 +992,11 @@ h1, h2, h3 {
 }
 
 .wallet-field {
-  margin-bottom: 16px;
+  margin-bottom: var(--sp-5);
 }
 
 .wallet-amount {
-  margin-bottom: 16px;
+  margin-bottom: var(--sp-5);
 }
 
 .wallet-amount input {
@@ -1005,12 +1006,12 @@ h1, h2, h3 {
 .wallet-form-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 20px;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
 }
 
 .wallet-seg {
-  margin-bottom: 10px;
+  margin-bottom: var(--sp-3);
 }
 
 /* Account menu */
@@ -1128,7 +1129,7 @@ h1, h2, h3 {
 .am-div {
   height: 1px;
   background: var(--hair);
-  margin: 6px 4px;
+  margin: 10px 6px;
 }
 
 .am-tz {
@@ -1787,7 +1788,7 @@ h1, h2, h3 {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--sp-3);
-  margin-bottom: 18px;
+  margin-bottom: var(--sp-5);
 }
 
 .panel-head h2 {
@@ -2966,7 +2967,8 @@ h1, h2, h3 {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-2);
-  margin-bottom: 16px;
+  margin-bottom: var(--sp-5);
+  max-width: 100%;
 }
 
 .cat-glyph-btn {
@@ -3947,7 +3949,7 @@ h1, h2, h3 {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: 15px;
-  margin-bottom: 18px;
+  margin-bottom: var(--sp-5);
 }
 
 .cmt-thread {
@@ -3958,7 +3960,7 @@ h1, h2, h3 {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: 14px;
-  margin-bottom: 22px;
+  margin-bottom: var(--sp-6);
 }
 
 .cmt {
@@ -4054,7 +4056,13 @@ h1, h2, h3 {
 
 .modal-scrim.center {
   align-items: center;
-  padding: 20px;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes fade {
@@ -4070,7 +4078,8 @@ h1, h2, h3 {
   border-radius: var(--r-2xl) var(--r-2xl) 0 0;
   padding: var(--sp-6);
   box-shadow: 0 -10px 50px -10px rgba(0, 0, 0, .3);
-  max-height: 92vh;
+  max-height: min(92vh, calc(100dvh - 16px));
+  overflow-x: hidden;
   overflow-y: auto;
   animation: slideup .26s cubic-bezier(.32, .72, 0, 1);
 }
@@ -4083,15 +4092,17 @@ h1, h2, h3 {
 }
 
 .modal.sm {
-  max-width: 420px;
+  width: min(100%, 420px);
+  max-width: 100%;
   border-radius: var(--r-2xl);
-  max-height: min(88vh, 760px);
+  max-height: min(88vh, 760px, calc(100dvh - 32px));
   display: flex;
   flex-direction: column;
   padding: 0;
   overflow: hidden;
   box-shadow: 0 16px 48px -12px rgba(0, 0, 0, .28);
   animation: modalfade .2s var(--ease);
+  min-width: 0;
 }
 
 @keyframes modalfade {
@@ -4105,18 +4116,36 @@ h1, h2, h3 {
   flex: none;
   padding: var(--sp-6) var(--sp-6) 0;
   margin-bottom: 0;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.modal.sm .modal-head h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.modal.sm .modal-head .icon-btn {
+  flex: none;
 }
 
 .modal.sm .modal-body {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
-  padding: 18px var(--sp-6);
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--sp-5) var(--sp-6);
 }
 
 .modal.sm .modal-body > * {
   min-width: 0;
   max-width: 100%;
+}
+
+.modal.sm .modal-body > *:last-child {
+  margin-bottom: 0;
 }
 
 .modal.sm .seg {
@@ -4169,9 +4198,12 @@ h1, h2, h3 {
 .modal.sm .modal-foot {
   flex: none;
   margin: 0;
-  padding: 14px var(--sp-6) var(--sp-6);
+  padding: var(--sp-4) var(--sp-6) var(--sp-6);
   border-top: 1px solid var(--border);
   background: var(--surface);
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .modal-scroll {
@@ -4183,30 +4215,37 @@ h1, h2, h3 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 18px;
+  gap: var(--sp-3);
 }
 
 .modal-head h3 {
   font-family: var(--font-display);
   font-size: 21px;
   font-weight: 600;
+  min-width: 0;
 }
 
 .modal-foot {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .mf-right {
   display: flex;
   gap: 10px;
   margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 /* Amount input */
 .txn-wallet-field {
-  margin-bottom: 24px;
+  margin-bottom: var(--sp-6);
 }
 
 .txn-wallet-field .fld-label {
@@ -4239,7 +4278,8 @@ h1, h2, h3 {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: 14px 18px;
-  margin-bottom: 20px;
+  margin-bottom: var(--sp-5);
+  min-width: 0;
 }
 
 .amount-cur {
@@ -4247,6 +4287,7 @@ h1, h2, h3 {
   font-size: 24px;
   color: var(--ink-faint);
   font-weight: 500;
+  flex: none;
 }
 
 .amount-field input {
@@ -4258,6 +4299,7 @@ h1, h2, h3 {
   font-size: 32px;
   color: var(--ink);
   width: 100%;
+  min-width: 0;
   letter-spacing: -1px;
 }
 
@@ -4278,7 +4320,7 @@ h1, h2, h3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--sp-2);
-  margin-bottom: 18px;
+  margin-bottom: var(--sp-5);
 }
 
 .cat-chip {
@@ -4314,7 +4356,7 @@ h1, h2, h3 {
   display: flex;
   gap: var(--sp-2);
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: var(--sp-5);
 }
 
 .sub-chip {
@@ -4653,7 +4695,7 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 16px 0 14px;
+  margin: var(--sp-5) 0 18px;
 }
 
 .or-div span {
@@ -4701,7 +4743,7 @@ h1, h2, h3 {
   font-size: 13.5px;
   color: var(--ink-soft);
   line-height: 1.55;
-  margin: 0 0 16px;
+  margin: 0 0 var(--sp-4);
 }
 
 .dm-note {
@@ -4722,13 +4764,13 @@ h1, h2, h3 {
 .dm-div {
   height: 1px;
   background: var(--hair);
-  margin: 20px 2px;
+  margin: var(--sp-6) 2px;
 }
 
 .delete-scope-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .delete-scope-option {
@@ -4740,6 +4782,7 @@ h1, h2, h3 {
   border-radius: var(--radius);
   background: var(--surface-2);
   cursor: pointer;
+  min-width: 0;
 }
 
 .delete-scope-option.active {
@@ -4799,7 +4842,13 @@ h1, h2, h3 {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.consent-top > div:first-child {
+  min-width: 0;
+  flex: 1;
 }
 
 .consent-title {
@@ -4861,11 +4910,17 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface-2);
+  min-width: 0;
+}
+
+.session-main {
+  min-width: 0;
+  flex: 1;
 }
 
 .session-device {
@@ -4985,7 +5040,7 @@ h1, h2, h3 {
 
 /* ── 14. Utilities & loading states ───────────────────────────────── */
 .u-gap-top {
-  margin-top: 10px;
+  margin-top: var(--sp-3);
 }
 
 .app--loading {
@@ -5056,8 +5111,8 @@ h1, h2, h3 {
   .panel-head {
     flex-direction: column;
     align-items: stretch;
-    gap: 6px;
-    margin-bottom: 14px;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
   }
   .panel-head--todo {
     flex-direction: row;
@@ -5076,6 +5131,45 @@ h1, h2, h3 {
   .panel-sub {
     line-height: 1.45;
   }
+
+  /* Modals — keep usable on tablet / large phone */
+  .modal-scrim.center {
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  .modal.sm {
+    max-height: min(90dvh, calc(100dvh - 24px));
+  }
+
+  .modal.sm .modal-head {
+    padding: var(--sp-5) var(--sp-5) 0;
+  }
+
+  .modal.sm .modal-body {
+    padding: var(--sp-4) var(--sp-5);
+  }
+
+  .modal.sm .modal-foot {
+    padding: var(--sp-3) var(--sp-5) var(--sp-5);
+  }
+
+  .session-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .session-row .ghost-btn {
+    flex: none;
+  }
+
+  .consent-top {
+    gap: var(--sp-3);
+  }
+
   .insights-chart-head .seg {
     align-self: stretch;
     overflow-x: auto;
@@ -5398,7 +5492,9 @@ h1, h2, h3 {
 @media (max-width: 560px) {
   :root {
     --pad: 16px;
-    --vgap: 14px;
+    --gap: var(--sp-4);
+    --vgap: var(--sp-5);
+    --card-pad: var(--sp-4);
   }
   .summary-grid, .summary-grid.sg-3 {
     grid-template-columns: repeat(2, 1fr);
@@ -5471,7 +5567,7 @@ h1, h2, h3 {
     font-size: 28px;
   }
   .cat-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .fld-2col {
     grid-template-columns: 1fr;
@@ -5479,8 +5575,114 @@ h1, h2, h3 {
   .donut-wrap {
     justify-content: center;
   }
+
+  /* Modals — prevent overflow on phones */
+  .modal-scrim.center {
+    align-items: flex-end;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      0
+      0
+      0;
+  }
+
   .modal {
     max-width: none;
+    max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 8px));
+  }
+
+  .modal.sm {
+    width: 100%;
+    max-width: none;
+    border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+    max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 8px));
+  }
+
+  .modal.sm .modal-head {
+    padding: var(--sp-5) var(--sp-4) 0;
+  }
+
+  .modal.sm .modal-head h3 {
+    font-size: 19px;
+  }
+
+  .modal.sm .modal-body {
+    padding: var(--sp-4);
+  }
+
+  .modal.sm .modal-foot {
+    padding: var(--sp-3) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom));
+    align-items: center;
+  }
+
+  .modal-foot {
+    gap: var(--sp-2);
+  }
+
+  .modal-foot > .ghost-btn,
+  .modal-foot > .primary-btn {
+    min-height: 44px;
+  }
+
+  .mf-right {
+    flex: 1 1 auto;
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: min(100%, 180px);
+  }
+
+  .mf-right .ghost-btn,
+  .mf-right .primary-btn {
+    min-height: 44px;
+  }
+
+  .amount-field {
+    padding: 12px 14px;
+  }
+
+  .amount-cur {
+    font-size: 20px;
+  }
+
+  .amount-field input {
+    font-size: 26px;
+  }
+
+  .phrase-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .phrase-grid .word {
+    min-width: 0;
+    padding: 8px;
+    font-size: 12.5px;
+  }
+
+  .wallet-form-actions {
+    gap: 8px;
+    margin-top: var(--sp-5);
+  }
+
+  .dm-div {
+    margin: var(--sp-5) 2px;
+  }
+
+  .consent-top {
+    flex-wrap: wrap;
+  }
+
+  .consent-top .switch {
+    margin-left: auto;
+  }
+
+  .session-row {
+    padding: 11px;
+  }
+
+  .calculator-presets {
+    gap: 6px;
   }
 
   /* Schedule upcoming */
@@ -5809,15 +6011,4 @@ h1, h2, h3 {
 
 .calculator-presets .mini-btn {
   font-size: 12px;
-}
-
-@media (max-width: 560px) {
-  .calculator-presets {
-    gap: 6px;
-  }
-
-  .mf-right {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
 }
