@@ -163,14 +163,14 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
   const editorTitle =
     editor?.type === "add-cat"
       ? editor.catType === "income"
-        ? "Add income category"
-        : "Add expense category"
+        ? "Add Income Category"
+        : "Add Expense Category"
       : editor?.type === "add-sub"
-        ? "Add subcategory"
+        ? "Add Subcategory"
         : editor?.type === "edit-cat"
-          ? "Edit category"
+          ? "Edit Category"
           : editor?.type === "edit-sub"
-            ? "Rename subcategory"
+            ? "Rename Subcategory"
             : "";
 
   return (
@@ -198,7 +198,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
       <section className="panel">
         <div className="panel-head">
           <div>
-            <h2>Your taxonomy</h2>
+            <h2>Your Taxonomy</h2>
             <p className="panel-sub">
               {categories.length} categories · {categories.reduce((n, c) => n + c.subs.length, 0)} subcategories
             </p>
@@ -247,7 +247,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                     <button type="button" onClick={() => openEditCat(cat)} aria-label="Edit" tabIndex={filteredOut ? -1 : undefined}>
                       <Icon name="edit" size={16} />
                     </button>
-                    <button type="button" onClick={() => openAddSub(cat.id)} aria-label="Add subcategory" tabIndex={filteredOut ? -1 : undefined}>
+                    <button type="button" onClick={() => openAddSub(cat.id)} aria-label="Add Subcategory" tabIndex={filteredOut ? -1 : undefined}>
                       <Icon name="plus" size={16} />
                     </button>
                     {!cat.builtin ? (
@@ -283,10 +283,10 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
               </div>
             );
           }) : (
-            <EmptyState title="No categories" sub="Add a category to start organizing transactions." />
+            <EmptyState title="No Categories" sub="Add a category to start organizing transactions." />
           )}
           {categories.length && !visibleCount ? (
-            <EmptyState title="Nothing matches" sub="Try a different filter." />
+            <EmptyState title="Nothing Matches" sub="Try a different filter." />
           ) : null}
         </div>
       </section>
@@ -316,7 +316,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                   <>
                     <label className="fld-label">Color</label>
                     <div className="cat-color-row">
-                      <input type="color" value={color} onChange={(e) => setColor(e.target.value)} aria-label="Category color" />
+                      <input type="color" value={color} onChange={(e) => setColor(e.target.value)} aria-label="Category Color" />
                       <span className="cat-color-preview" style={{ background: color }} aria-hidden />
                     </div>
 

@@ -431,7 +431,7 @@ export function Transparency() {
       <section className="panel" data-tour="tour-transparency-intro">
         <div className="panel-head panel-head--stack">
           <div>
-            <h2>How the whole system works</h2>
+            <h2>How the Whole System Works</h2>
             <p className="panel-sub">
               Sched Ledger is private by design: your browser derives a ledger key from your wallet signature,
               encrypts secrets with AES-256-GCM, and syncs ciphertext to MongoDB Atlas. Vercel hosts the app and API
@@ -448,21 +448,21 @@ export function Transparency() {
       <section className="panel" data-tour="tour-transparency-system">
         <div className="panel-head panel-head--stack">
           <div>
-            <h2>Hosting &amp; jobs</h2>
+            <h2>Hosting &amp; Jobs</h2>
             <p className="panel-sub">Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules</p>
           </div>
         </div>
         <MermaidDiagram
           chart={SYSTEM_CHART}
           mobileChart={SYSTEM_CHART_MOBILE}
-          label="System hosting flowchart"
+          label="System Hosting Flowchart"
         />
       </section>
 
       <section className="panel" data-tour="tour-transparency-infer">
         <div className="panel-head panel-head--stack">
           <div>
-            <h2>What the server can infer</h2>
+            <h2>What the Server Can Infer</h2>
             <p className="panel-sub">
               Even with E2EE, plaintext metadata remains for queries and accurate schedule reminders (day-level dates
               and lead times are intentional — not bucketed). Owned documents are keyed by an opaque{" "}
@@ -488,21 +488,21 @@ export function Transparency() {
       <section className="panel" data-tour="tour-transparency-flow">
         <div className="panel-head panel-head--stack">
           <div>
-            <h2>Data relationships</h2>
+            <h2>Data Relationships</h2>
             <p className="panel-sub">Opaque accountId anchors every user-owned collection; SIWE address stays on users</p>
           </div>
         </div>
         <MermaidDiagram
           chart={RELATIONSHIP_CHART}
           mobileChart={RELATIONSHIP_CHART_MOBILE}
-          label="Collection relationship flowchart"
+          label="Collection Relationship Flowchart"
         />
       </section>
 
       <section className="panel" data-tour="tour-transparency-e2ee">
         <div className="panel-head panel-head--stack">
           <div>
-            <h2>Encrypted write path</h2>
+            <h2>Encrypted Write Path</h2>
             <p className="panel-sub">
               Categories, events, todos, expenses, and wallet names/budgets are AES-256-GCM encrypted client-side before save
             </p>
@@ -518,7 +518,7 @@ export function Transparency() {
       <section className="panel" data-tour="tour-transparency-collections">
         <div className="panel-head panel-head--stack">
           <div>
-            <h2>Collections · keys &amp; values</h2>
+            <h2>Collections · Keys &amp; Values</h2>
             <p className="panel-sub">Each Mongo document stores these fields</p>
           </div>
         </div>

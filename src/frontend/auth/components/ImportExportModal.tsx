@@ -295,7 +295,7 @@ export function ImportExportModal({
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby="ie-modal-title">
         <div className="modal-head">
-          <h3 id="ie-modal-title">Exports &amp; imports</h3>
+          <h3 id="ie-modal-title">Exports &amp; Imports</h3>
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
 
@@ -303,7 +303,7 @@ export function ImportExportModal({
           <div className="dm-sec">
             <p className="dm-lead">Download or restore your ledger. Prefer the encrypted backup for private portability; use CSV when you need a spreadsheet.</p>
 
-            <p className="dm-subhead">Encrypted backup</p>
+            <p className="dm-subhead">Encrypted Backup</p>
             <p className="dm-note">Client-side AES pack unlocked with your ledger key. Not stored on the server.</p>
             <button
               className="primary-btn full"
@@ -312,12 +312,12 @@ export function ImportExportModal({
               onClick={() => void exportEncryptedBackup()}
             >
               <Icon name={backupExported ? "check" : "download"} size={17} />
-              {backupBusy ? "Working…" : backupExported ? "Downloaded" : "Download encrypted backup"}
+              {backupBusy ? "Working…" : backupExported ? "Downloaded" : "Download Encrypted Backup"}
             </button>
             {onRestoreBackup ? (
               <label className="ghost-btn full u-gap-top ie-file-label">
                 <Icon name="download" size={17} />
-                {backupBusy ? "Restoring…" : "Restore encrypted backup"}
+                {backupBusy ? "Restoring…" : "Restore Encrypted Backup"}
                 <input
                   type="file"
                   accept="application/json,.json"
@@ -348,7 +348,7 @@ export function ImportExportModal({
               <CsvImportPanel
                 importLead="Import transactions from a CSV you exported from Ledger."
                 exported={txnExported}
-                exportLabel="Export transactions"
+                exportLabel="Export Transactions"
                 onExport={exportTransactions}
                 countNote={`${txnCount} transaction${txnCount === 1 ? "" : "s"} across all wallets.`}
                 onReadFile={readTxnFile}
@@ -368,7 +368,7 @@ export function ImportExportModal({
               <>
                 <button className="primary-btn full" type="button" onClick={exportTransactions}>
                   <Icon name={txnExported ? "check" : "download"} size={17} />
-                  {txnExported ? "Downloaded" : "Export transactions"}
+                  {txnExported ? "Downloaded" : "Export Transactions"}
                 </button>
                 <p className="dm-note">{txnCount} transaction{txnCount === 1 ? "" : "s"} across all wallets.</p>
               </>
@@ -381,7 +381,7 @@ export function ImportExportModal({
               <CsvImportPanel
                 importLead="Import schedule events from a schedule CSV export."
                 exported={schedExported}
-                exportLabel="Export schedule"
+                exportLabel="Export Schedule"
                 onExport={exportSchedule}
                 countNote={`${eventCount} event${eventCount === 1 ? "" : "s"} in your calendar.`}
                 onReadFile={readSchedFile}
@@ -401,7 +401,7 @@ export function ImportExportModal({
               <>
                 <button className="primary-btn full" type="button" onClick={exportSchedule}>
                   <Icon name={schedExported ? "check" : "download"} size={17} />
-                  {schedExported ? "Downloaded" : "Export schedule"}
+                  {schedExported ? "Downloaded" : "Export Schedule"}
                 </button>
                 <p className="dm-note">{eventCount} event{eventCount === 1 ? "" : "s"} in your calendar.</p>
               </>
@@ -409,12 +409,12 @@ export function ImportExportModal({
 
             <div className="dm-div" />
 
-            <p className="dm-subhead">TO-DO lists</p>
+            <p className="dm-subhead">TO-DO Lists</p>
             {onImportTodos ? (
               <CsvImportPanel
                 importLead="Import to-do lists and tasks from a todos CSV export."
                 exported={todoExported}
-                exportLabel="Export to-do lists"
+                exportLabel="Export To-Do Lists"
                 onExport={exportTodos}
                 countNote={`${todoLists.length} list${todoLists.length === 1 ? "" : "s"} · ${todoTaskCount} task${todoTaskCount === 1 ? "" : "s"}.`}
                 onReadFile={readTodoFile}
@@ -434,7 +434,7 @@ export function ImportExportModal({
               <>
                 <button className="primary-btn full" type="button" onClick={exportTodos}>
                   <Icon name={todoExported ? "check" : "download"} size={17} />
-                  {todoExported ? "Downloaded" : "Export to-do lists"}
+                  {todoExported ? "Downloaded" : "Export To-Do Lists"}
                 </button>
                 <p className="dm-note">{todoLists.length} list{todoLists.length === 1 ? "" : "s"} · {todoTaskCount} task{todoTaskCount === 1 ? "" : "s"}.</p>
               </>

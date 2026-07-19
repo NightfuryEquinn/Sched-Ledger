@@ -169,18 +169,18 @@ export function Calculator({
     <div className="view">
       <div className="summary-grid sg-3" data-tour="tour-calculator-summary">
         <SummaryCard
-          label="Gross income"
+          label="Gross Income"
           value={fmtMoney(gross, { cents: false, currency })}
           sub="calculator draft"
         />
         <SummaryCard
-          label="Tax total"
+          label="Tax Total"
           tone="spent"
           value={fmtMoney(taxAmount, { cents: false, currency })}
           sub={taxOk ? `${formatPct(taxSum)} of gross` : "tax exceeds 100%"}
         />
         <SummaryCard
-          label="Net after tax"
+          label="Net After Tax"
           tone={taxOk ? "ok" : "danger"}
           value={fmtMoney(net, { cents: false, currency })}
           sub="available to allocate"
@@ -214,7 +214,7 @@ export function Calculator({
 
       <section className="panel" data-tour="tour-calculator-tax">
         <div className="panel-head">
-          <h2>Tax collection</h2>
+          <h2>Tax Collection</h2>
           <p className="panel-sub">Custom titles and percentages — not saved. MY presets are estimates only.</p>
         </div>
         <div className="calculator-presets">
@@ -269,7 +269,7 @@ export function Calculator({
               <button
                 type="button"
                 className="icon-btn calculator-tax-remove"
-                aria-label="Remove tax line"
+                aria-label="Remove Tax Line"
                 disabled={taxLines.length <= 1}
                 onClick={() => {
                   markDirty();
@@ -295,7 +295,7 @@ export function Calculator({
               addTax();
             }}
           >
-            Add tax line
+            Add Tax Line
           </button>
           <span className="calculator-meta">Total tax {formatPct(taxSum)}</span>
         </div>
@@ -303,12 +303,12 @@ export function Calculator({
 
       <section className="panel" data-tour="tour-calculator-allocate">
         <div className="panel-head">
-          <h2>Allocate by category</h2>
+          <h2>Allocate by Category</h2>
           <p className="panel-sub">Percentages must total 100%</p>
         </div>
 
         {!expenseCategories.length ? (
-          <EmptyState title="No expense categories" sub="Add categories first, then return here to allocate." />
+          <EmptyState title="No Expense Categories" sub="Add categories first, then return here to allocate." />
         ) : (
           <>
             <div className="calculator-alloc-list">
@@ -374,7 +374,7 @@ export function Calculator({
           disabled={!canApply || applied}
           onClick={() => setConfirmOpen(true)}
         >
-          {applied ? "Apply Successful" : "Apply to budgets"}
+          {applied ? "Apply Successful" : "Apply to Budgets"}
         </button>
         <p className="calculator-apply-hint">
           Replaces every expense category budget on the active wallet.
@@ -390,7 +390,7 @@ export function Calculator({
         >
           <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby={titleId}>
             <div className="modal-head">
-              <h3 id={titleId}>Apply calculator budgets?</h3>
+              <h3 id={titleId}>Apply Calculator Budgets?</h3>
               <button
                 className="icon-btn"
                 type="button"
@@ -425,7 +425,7 @@ export function Calculator({
                   Cancel
                 </button>
                 <button type="button" className="primary-btn" onClick={applyBudgets}>
-                  Confirm apply
+                  Confirm Apply
                 </button>
               </div>
             </div>

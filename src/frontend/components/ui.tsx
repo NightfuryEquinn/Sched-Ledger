@@ -42,7 +42,7 @@ const DELETE_SCOPE_OPTIONS: { v: DeleteScope; label: string; note: string }[] = 
 
 /** Confirm which recurring occurrences to delete. */
 function DeleteScopeDialog({
-  title = "Delete recurring",
+  title = "Delete Recurring",
   onConfirm,
   onCancel,
 }: {
@@ -88,7 +88,7 @@ function DeleteScopeDialog({
         </div>
         <div className="modal-body">
           <p className="dm-lead">Choose how much of this series to remove. This cannot be undone.</p>
-          <div className="delete-scope-list" role="radiogroup" aria-label="Delete scope">
+          <div className="delete-scope-list" role="radiogroup" aria-label="Delete Scope">
             {DELETE_SCOPE_OPTIONS.map((o) => (
               <label key={o.v} className={"delete-scope-option" + (scope === o.v ? " active" : "")}>
                 <input
@@ -286,11 +286,11 @@ function MonthSwitcher({ months, current, onChange }) {
   const picker = open ? (
     <div ref={menuRef} className="month-pick-menu" style={menuStyle} role="dialog" aria-modal="true">
       <div className="picker-cal-head">
-        <button type="button" className="picker-nav-btn" disabled={!canPrevYear} onClick={() => goYear(-1)} aria-label="Previous year">
+        <button type="button" className="picker-nav-btn" disabled={!canPrevYear} onClick={() => goYear(-1)} aria-label="Previous Year">
           <Icon name="chevL" size={16} />
         </button>
         <span className="picker-cal-title">{pickY}</span>
-        <button type="button" className="picker-nav-btn" disabled={!canNextYear} onClick={() => goYear(1)} aria-label="Next year">
+        <button type="button" className="picker-nav-btn" disabled={!canNextYear} onClick={() => goYear(1)} aria-label="Next Year">
           <Icon name="chevR" size={16} />
         </button>
       </div>
@@ -319,7 +319,7 @@ function MonthSwitcher({ months, current, onChange }) {
 
   return (
     <div className="month-switch" data-tour="tour-month" ref={rootRef}>
-      <button className="msbtn" disabled={idx <= 0} onClick={() => go(-1)} aria-label="Previous month"><Icon name="chevL" size={18} /></button>
+      <button className="msbtn" disabled={idx <= 0} onClick={() => go(-1)} aria-label="Previous Month"><Icon name="chevL" size={18} /></button>
       <button
         ref={labelRef}
         className="ms-label-btn"
@@ -332,7 +332,7 @@ function MonthSwitcher({ months, current, onChange }) {
         <span>{monthLabel(current, true)}</span>
         <Icon name="chevD" size={14} />
       </button>
-      <button className="msbtn" disabled={idx >= months.length - 1} onClick={() => go(1)} aria-label="Next month"><Icon name="chevR" size={18} /></button>
+      <button className="msbtn" disabled={idx >= months.length - 1} onClick={() => go(1)} aria-label="Next Month"><Icon name="chevR" size={18} /></button>
       {picker ? createPortal(picker, document.body) : null}
     </div>
   );
@@ -386,7 +386,7 @@ function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryI
       </div>
       {scopeOpen ? (
         <DeleteScopeDialog
-          title="Delete recurring transaction"
+          title="Delete Recurring Transaction"
           onCancel={() => setScopeOpen(false)}
           onConfirm={async (scope) => {
             await onDelete(exp.id, { scope, fromDate: exp.date });
@@ -485,7 +485,7 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
         <>
           <div className="am-div" />
           <button type="button" className="wallet-menu-item manage" onClick={() => { onManage(); setOpen(false); }}>
-            <Icon name="edit" size={15} /> Manage wallets
+            <Icon name="edit" size={15} /> Manage Wallets
           </button>
         </>
       ) : null}
@@ -585,7 +585,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
-          <h3>{editing ? "Edit transaction" : "Add transaction"}</h3>
+          <h3>{editing ? "Edit Transaction" : "Add Transaction"}</h3>
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
 
@@ -686,14 +686,14 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
           <div className="mf-right">
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>
-              {editing ? "Save changes" : kind === "income" ? "Add income" : "Add expense"}
+              {editing ? "Save Changes" : kind === "income" ? "Add Income" : "Add Expense"}
             </button>
           </div>
         </div>
       </div>
       {scopeOpen && initial?.id ? (
         <DeleteScopeDialog
-          title="Delete recurring transaction"
+          title="Delete Recurring Transaction"
           onCancel={() => setScopeOpen(false)}
           onConfirm={async (scope) => {
             await onDelete(initial.id, { scope, fromDate: initial.date });

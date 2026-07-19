@@ -302,7 +302,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     return (
       <div className="auth-wrap"><div className="auth-card">
         <button className="auth-back" type="button" onClick={reset}>← Back</button>
-        <h2 className="auth-h2">Meet your new identity</h2>
+        <h2 className="auth-h2">Meet Your New Identity</h2>
         <div className="identity-hero">
           <Identicon address={draft.address} size={54} radius={15} />
           <div>
@@ -311,7 +311,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
           </div>
         </div>
         <div className="recovery">
-          <div className="rec-label"><Icon name="key" size={15} /> Recovery phrase <span className="rec-warn">— write this down</span></div>
+          <div className="rec-label"><Icon name="key" size={15} /> Recovery Phrase <span className="rec-warn">— write this down</span></div>
           <div className="phrase-grid">
             {words.map((w, i) => <span key={i} className="word"><b>{i + 1}</b>{w}</span>)}
           </div>
@@ -334,7 +334,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     return (
       <div className="auth-wrap"><div className="auth-card">
         <button className="auth-back" type="button" onClick={() => { setMode("create"); setError(""); }}>← Back</button>
-        <h2 className="auth-h2">Confirm your phrase</h2>
+        <h2 className="auth-h2">Confirm Your Phrase</h2>
         <p className="auth-lead">Enter the requested words from your recovery phrase to make sure you wrote them down.</p>
         <div className="vault-quiz">
           {quizIndices.map((idx) => (
@@ -364,7 +364,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
           setMode(quizIndices.length ? "quiz" : "restore");
           setError("");
         }}>← Back</button>
-        <h2 className="auth-h2">Device passphrase</h2>
+        <h2 className="auth-h2">Device Passphrase</h2>
         <p className="auth-lead">
           Encrypt your recovery key on this device. The server never receives this passphrase — only ciphertext syncs to the cloud.
         </p>
@@ -389,7 +389,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         <p className="rec-note2">At least 8 characters. You will need this passphrase to unlock Sched Ledger on this browser.</p>
         {error ? <div className="auth-error">{error}</div> : null}
         <button className="primary-btn lg full" type="button" disabled={busy} onClick={() => void sealAndEnter()}>
-          {busy ? "Signing…" : "Sign & enter Ledger"}
+          {busy ? "Signing…" : "Sign & Enter Ledger"}
         </button>
       </div></div>
     );
@@ -399,7 +399,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     return (
       <div className="auth-wrap"><div className="auth-card">
         <button className="auth-back" type="button" onClick={() => { setMode("restore"); setPendingIdn(null); setError(""); }}>← Back</button>
-        <h2 className="auth-h2">Unlock this device</h2>
+        <h2 className="auth-h2">Unlock this Device</h2>
         <p className="auth-lead">Enter the passphrase that encrypts your key on this browser.</p>
         <div className="identity-hero">
           <Identicon address={pendingIdn.address} size={44} radius={12} />
@@ -408,7 +408,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
             <div className="ih-addr num">{shortAddr(pendingIdn.address)}</div>
           </div>
         </div>
-        <label className="fld-label">Device passphrase
+        <label className="fld-label">Device Passphrase
           <input
             className="text-in"
             type="password"
@@ -420,7 +420,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         </label>
         {error ? <div className="auth-error">{error}</div> : null}
         <button className="primary-btn lg full" type="button" disabled={busy || !unlockPass} onClick={() => void unlockDeviceVault()}>
-          {busy ? "Unlocking…" : "Unlock & sign in"}
+          {busy ? "Unlocking…" : "Unlock & Sign In"}
         </button>
       </div></div>
     );
@@ -430,7 +430,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     return (
       <div className="auth-wrap"><div className="auth-card">
         <button className="auth-back" type="button" onClick={reset}>← Back</button>
-        <h2 className="auth-h2">Welcome back</h2>
+        <h2 className="auth-h2">Welcome Back</h2>
         {identities.length ? (
           <div className="known">
             <span className="known-label">On this device</span>
@@ -449,8 +449,8 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         <div className="or-div"><span>import a recovery phrase</span></div>
         <textarea className="phrase-in" placeholder="Enter your 12- or 24-word recovery phrase, separated by spaces" value={phrase} onChange={(e) => setPhrase(e.target.value)} />
         {error ? <div className="auth-error">{error}</div> : null}
-        <button className="primary-btn lg full" type="button" disabled={busy || !phrase.trim()} onClick={() => void doImport()}>{busy ? "Restoring…" : "Restore identity"}</button>
-        {walletClient.hasInjected() ? <button className="ghost-btn full u-gap-top" type="button" onClick={() => void connectInjected()}><Icon name="wallet" size={17} /> Connect browser wallet</button> : null}
+        <button className="primary-btn lg full" type="button" disabled={busy || !phrase.trim()} onClick={() => void doImport()}>{busy ? "Restoring…" : "Restore Identity"}</button>
+        {walletClient.hasInjected() ? <button className="ghost-btn full u-gap-top" type="button" onClick={() => void connectInjected()}><Icon name="wallet" size={17} /> Connect Browser Wallet</button> : null}
       </div></div>
     );
   }
@@ -458,13 +458,13 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   return (
     <div className="auth-wrap"><div className="auth-card">
       <Brand variant="auth" />
-      <h1 className="auth-h1">Private by design.</h1>
-      <p className="auth-lead">Track every ringgit without an email or password account. Your identity is a cryptographic key that only you hold — secured with Web3. Prefer a ledger-only key created here so the login address is less likely to be correlated with on-chain activity.</p>
+      <h1 className="auth-h1">Private by Design.</h1>
+      <p className="auth-lead">No email. No password. Just a cryptographic key only you hold.</p>
       <div className="auth-actions">
-        <button className="primary-btn lg full" type="button" onClick={startCreate}><Icon name="shield" size={18} /> Create anonymous identity</button>
-        <button className="ghost-btn lg full" type="button" onClick={() => { setError(""); setMode("restore"); }}><Icon name="key" size={17} /> I already have one</button>
+        <button className="primary-btn lg" type="button" onClick={startCreate}><Icon name="shield" size={18} /> Create New</button>
+        <button className="ghost-btn lg" type="button" onClick={() => { setError(""); setMode("restore"); }}><Icon name="key" size={17} /> Open Existing</button>
       </div>
-      {walletClient.hasInjected() ? <button className="link-btn auth-injected" type="button" onClick={() => void connectInjected()}>or connect your browser wallet</button> : null}
+      {walletClient.hasInjected() ? <button className="link-btn auth-injected" type="button" onClick={() => void connectInjected()}>Or Connect Your Browser Wallet</button> : null}
       {error ? <div className="auth-error auth-error--gap">{error}</div> : null}
       <ul className="auth-feat">
         <li><Icon name="check" /> No email or password required to sign in</li>

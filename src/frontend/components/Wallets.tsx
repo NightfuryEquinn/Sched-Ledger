@@ -111,7 +111,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
     }
   };
 
-  const title = mode === "list" ? "Wallets" : mode === "add" ? "Add wallet" : "Edit wallet";
+  const title = mode === "list" ? "Wallets" : mode === "add" ? "Add Wallet" : "Edit Wallet";
 
   return createPortal(
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -153,7 +153,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                 })}
               </div>
               <button className="primary-btn full u-gap-top" type="button" onClick={startAdd}>
-                <Icon name="plus" size={17} /> Add wallet
+                <Icon name="plus" size={17} /> Add Wallet
               </button>
               <p className="dm-note">{wallets.length} wallet{wallets.length === 1 ? "" : "s"} · switch between them from the top bar.</p>
             </div>
@@ -193,8 +193,8 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
               <div className="wallet-seg">
                 <Segmented
                   options={[
-                    { v: "monthly", label: "Monthly income" },
-                    { v: "starting", label: "Starting balance" },
+                    { v: "monthly", label: "Monthly Income" },
+                    { v: "starting", label: "Starting Balance" },
                   ]}
                   value={fundingMode}
                   onChange={setFundingMode}
@@ -208,7 +208,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
 
               {fundingMode === "monthly" ? (
                 <>
-                  <label className="fld-label">Monthly income</label>
+                  <label className="fld-label">Monthly Income</label>
                   <div className="amount-field compact wallet-amount">
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
                     <input
@@ -222,7 +222,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                 </>
               ) : (
                 <>
-                  <label className="fld-label">Starting balance</label>
+                  <label className="fld-label">Starting Balance</label>
                   <div className="amount-field compact wallet-amount">
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
                     <input
@@ -244,7 +244,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                   <span className="fld-label">Remove wallet</span>
                   <p className="dm-lead">Delete this wallet only if it has no transactions. This cannot be undone.</p>
                   <button className="ghost-btn danger full" type="button" disabled={busy} onClick={() => remove(editId)}>
-                    Delete wallet
+                    Delete Wallet
                   </button>
                 </>
               ) : null}
@@ -252,7 +252,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
               <div className="wallet-form-actions">
                 <button className="ghost-btn full" type="button" onClick={backToList}>Back</button>
                 <button className="primary-btn full" type="button" disabled={busy || !name.trim()} onClick={submit}>
-                  {busy ? "Saving…" : mode === "add" ? "Add wallet" : "Save changes"}
+                  {busy ? "Saving…" : mode === "add" ? "Add Wallet" : "Save Changes"}
                 </button>
               </div>
             </div>

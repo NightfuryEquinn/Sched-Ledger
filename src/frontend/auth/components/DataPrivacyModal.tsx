@@ -170,7 +170,7 @@ export function DataPrivacyModal({
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
-          <h3>Data &amp; privacy</h3>
+          <h3>Data &amp; Privacy</h3>
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
 
@@ -194,7 +194,7 @@ export function DataPrivacyModal({
             </div>
             {sessions.some((s) => !s.current) ? (
               <button className="ghost-btn full u-gap-top" type="button" disabled={sessionsBusy} onClick={revokeOthers}>
-                Sign out all other devices
+                Sign Out All Other Devices
               </button>
             ) : null}
           </div>
@@ -207,7 +207,7 @@ export function DataPrivacyModal({
             <div className="consent-card">
               <div className="consent-top">
                 <div>
-                  <div className="consent-title">Allow reminder emails</div>
+                  <div className="consent-title">Allow Reminder Emails</div>
                   <p className="consent-desc">Events can send you email reminders when you turn them on per event. Switching this off stops all reminder delivery at once, without editing each event.</p>
                 </div>
                 <label className="switch">
@@ -231,7 +231,7 @@ export function DataPrivacyModal({
             <div className="consent-card">
               <div className="consent-top">
                 <div>
-                  <div className="consent-title">Email when nearing a limit</div>
+                  <div className="consent-title">Email When Nearing a Limit</div>
                   <p className="consent-desc">Uses the notification email below. One email per category per month at the warning and exceeded levels.</p>
                 </div>
                 <label className="switch">
@@ -281,7 +281,7 @@ export function DataPrivacyModal({
             <div className="consent-card">
               <div className="consent-top">
                 <div>
-                  <div className="consent-title">Sell anonymized spending data to partners</div>
+                  <div className="consent-title">Sell Anonymized Spending Data to Partners</div>
                   <p className="consent-desc">When on, we share a de-identified copy of your category totals with vetted research &amp; advertising partners, who pay for the insight. Your name, address and notes are never included. Off by default — opt in or out anytime.</p>
                 </div>
                 <label className="switch">
@@ -304,7 +304,7 @@ export function DataPrivacyModal({
             <span className="fld-label">Cookies &amp; local data</span>
             <p className="dm-lead">Sign out everywhere and remove Ledger data stored in this browser, including saved identities and preferences. Your ledger itself stays on the server — restore it anytime with your recovery phrase.</p>
             <button className="ghost-btn danger full" type="button" disabled={clearBusy} onClick={clearEverything}>
-              {clearBusy ? "Clearing…" : "Clear sessions, cookies & local data"}
+              {clearBusy ? "Clearing…" : "Clear Sessions, Cookies & Local Data"}
             </button>
           </div>
         </div>

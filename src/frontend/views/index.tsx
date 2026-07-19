@@ -187,7 +187,7 @@ export function Overview({
         <section className="panel" data-tour="tour-overview-oldest-todo">
           <div className="panel-head">
             <h2>Recent To-Do</h2>
-            <button className="link-btn" onClick={() => setView("todos")}>See all</button>
+            <button className="link-btn" onClick={() => setView("todos")}>See All</button>
           </div>
           <div className="recent-list">
             {recentTodos.length ? recentTodos.map((list) => {
@@ -207,13 +207,13 @@ export function Overview({
                   <span className="rr-main">
                     <span className="rr-note">{list.name}</span>
                     <span className="rr-sub">
-                      {total ? `${done}/${total} done` : "No tasks yet"}
+                      {total ? `${done}/${total} done` : "No Tasks Yet"}
                     </span>
                   </span>
                 </button>
               );
             }) : (
-              <EmptyState title="No lists yet" sub="Create a to-do list to get started." />
+              <EmptyState title="No Lists Yet" sub="Create a to-do list to get started." />
             )}
           </div>
         </section>
@@ -221,7 +221,7 @@ export function Overview({
         <section className="panel" data-tour="tour-overview-today-schedule">
           <div className="panel-head">
             <h2>Recent Schedule</h2>
-            <button className="link-btn" onClick={() => setView("schedule")}>See all</button>
+            <button className="link-btn" onClick={() => setView("schedule")}>See All</button>
           </div>
           <div className="recent-list">
             {todayEvents.length ? todayEvents.map((ev) => {
@@ -246,7 +246,7 @@ export function Overview({
                 </button>
               );
             }) : (
-              <EmptyState title="Nothing left today" sub="No upcoming events for the rest of today." />
+              <EmptyState title="Nothing Left Today" sub="No upcoming events for the rest of today." />
             )}
           </div>
         </section>
@@ -255,7 +255,7 @@ export function Overview({
       <section className="panel trend-panel" data-tour="tour-overview-trend">
         <div className="panel-head">
           <div>
-            <h2>Spending this month</h2>
+            <h2>Spending this Month</h2>
             <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}</p>
           </div>
           <div className="trend-now">{fmtMoney(st.spent, { cents: false, currency })}</div>
@@ -265,7 +265,7 @@ export function Overview({
 
       <div className="ov-grid ov-grid--charts">
         <section className="panel donut-panel" data-tour="tour-overview-donut">
-          <div className="panel-head"><h2>By category</h2></div>
+          <div className="panel-head"><h2>By Category</h2></div>
           <div className="donut-wrap">
             <div className="donut-stage">
               <Donut data={donutData} size={188} thickness={26} onHover={setHoverCat} activeId={activeCat} />
@@ -289,7 +289,7 @@ export function Overview({
         <section className="panel" data-tour="tour-overview-recent">
           <div className="panel-head">
             <h2>Recent Transaction</h2>
-            <button className="link-btn" onClick={() => setView("transactions")}>See all</button>
+            <button className="link-btn" onClick={() => setView("transactions")}>See All</button>
           </div>
           <div className="recent-list">
             {recent.length ? recent.map((e) => {
@@ -306,7 +306,7 @@ export function Overview({
                   </span>
                 </button>
               );
-            }) : <EmptyState title="No transactions yet" sub="Add your first one for this month." />}
+            }) : <EmptyState title="No Transactions Yet" sub="Add your first one for this month." />}
           </div>
         </section>
       </div>
@@ -379,7 +379,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
               />
             ))}
           </div>
-        )) : <EmptyState title="Nothing matches" sub="Try a different search or filter." />}
+        )) : <EmptyState title="Nothing Matches" sub="Try a different search or filter." />}
       </section>
     </div>
   );
@@ -406,13 +406,13 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
   return (
     <div className="view">
       <div className="summary-grid sg-3" data-tour="tour-budgets-summary">
-        <SummaryCard label="Total budget" value={fmtMoney(totalBudget, { cents: false, currency })} sub="across all categories" />
-        <SummaryCard label="Spent so far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
-        <SummaryCard label="Left to spend" tone={totalBudget - totalSpent < 0 ? "danger" : "ok"} value={fmtMoney(totalBudget - totalSpent, { cents: false, currency })} sub={monthLabel(month, true)} />
+        <SummaryCard label="Total Budget" value={fmtMoney(totalBudget, { cents: false, currency })} sub="across all categories" />
+        <SummaryCard label="Spent so Far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
+        <SummaryCard label="Left to Spend" tone={totalBudget - totalSpent < 0 ? "danger" : "ok"} value={fmtMoney(totalBudget - totalSpent, { cents: false, currency })} sub={monthLabel(month, true)} />
       </div>
 
       <section className="panel">
-        <div className="panel-head"><h2>Budget by category</h2><p className="panel-sub">Tap an amount to allocate</p></div>
+        <div className="panel-head"><h2>Budget by Category</h2><p className="panel-sub">Tap an amount to allocate</p></div>
         <div className="budget-edit-list" data-tour="tour-budgets-list">
           {categoryIndex.expenseCategories.map((c) => {
             const spent = st.byCat[c.id] || 0;
@@ -607,13 +607,13 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       <section className="panel insights-habits" data-tour="tour-insights-habits">
         <div className="panel-head insights-habits-head">
           <div>
-            <h2>Spending habit</h2>
+            <h2>Spending Habit</h2>
             <p className="panel-sub">{habitSub}</p>
           </div>
           <Segmented
             options={[
-              { v: "month", label: "Per month" },
-              { v: "year", label: "Per year" },
+              { v: "month", label: "Per Month" },
+              { v: "year", label: "Per Year" },
             ]}
             value={habitPeriod}
             onChange={setHabitPeriod}
@@ -637,7 +637,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
               aria-valuemin={0}
               aria-valuemax={habit.daysNeeded}
               aria-valuenow={habit.daysHave}
-              aria-label="Transaction days toward habit unlock"
+              aria-label="Transaction Days Toward Habit Unlock"
             >
               <div
                 className="insights-habits-progress-fill"
@@ -656,7 +656,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
             </div>
             <div className="insights-habits-copy">
               <div className="insights-habits-block">
-                <p className="insights-habits-kicker">Data pattern</p>
+                <p className="insights-habits-kicker">Data Pattern</p>
                 <p>{habit.style.pattern}</p>
               </div>
               <div className="insights-habits-block">
@@ -669,17 +669,17 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       </section>
 
       <div className="summary-grid sg-3">
-        <SummaryCard label="This month" tone="spent" value={money(cur.spent)} sub={monthLabel(month)} />
-        <SummaryCard label="vs last month" tone={prev && cur.spent > prev.spent ? "danger" : "saved"}
+        <SummaryCard label="This Month" tone="spent" value={money(cur.spent)} sub={monthLabel(month)} />
+        <SummaryCard label="Vs Last Month" tone={prev && cur.spent > prev.spent ? "danger" : "saved"}
           value={prev ? (cur.spent >= prev.spent ? "+" : "−") + money(Math.abs(cur.spent - prev.spent)) : "—"}
           sub={prev ? `${Math.round(Math.abs(cur.spent - prev.spent) / (prev.spent || 1) * 100)}% ${cur.spent >= prev.spent ? "higher" : "lower"}` : "no prior data"} />
-        <SummaryCard label="6-month average" value={money(avgSpent)} sub="monthly spend" />
+        <SummaryCard label="6-Month Average" value={money(avgSpent)} sub="monthly spend" />
       </div>
 
       <section className="panel" data-tour="tour-insights-chart">
         <div className="panel-head insights-chart-head">
           <div>
-            <h2>Month over month</h2>
+            <h2>Month Over Month</h2>
             <p className="panel-sub">{chartSub}</p>
           </div>
           <Segmented
@@ -704,7 +704,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
       <div className="ov-grid" data-tour="tour-insights-trends">
         <section className="panel">
-          <div className="panel-head"><h2>Category trends</h2><p className="panel-sub">vs previous month</p></div>
+          <div className="panel-head"><h2>Category Trends</h2><p className="panel-sub">vs previous month</p></div>
           <div className="cat-trend-list">
             {catRows.map(({ c, now, delta, series }) => (
               <div key={c.id} className="ctrow">
@@ -720,7 +720,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         </section>
 
         <section className="panel">
-          <div className="panel-head"><h2>Top subcategories</h2><p className="panel-sub">{monthLabel(month, true)}</p></div>
+          <div className="panel-head"><h2>Top Subcategories</h2><p className="panel-sub">{monthLabel(month, true)}</p></div>
           <div className="topsub-list">
             {topSubs.map(({ sub, v }) => {
               const s = categoryIndex.subById[sub];
@@ -748,11 +748,11 @@ export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) 
   return (
     <div className="view">
       <div className="summary-grid sg-2" data-tour="tour-recurring-summary">
-        <SummaryCard label="Recurring this month" value={fmtMoney(total, { cents: false, currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
-        <SummaryCard label="Monthly equivalent" tone="spent" value={fmtMoney(monthlyEq, { cents: false, currency })} sub="normalized across intervals" />
+        <SummaryCard label="Recurring this Month" value={fmtMoney(total, { cents: false, currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
+        <SummaryCard label="Monthly Equivalent" tone="spent" value={fmtMoney(monthlyEq, { cents: false, currency })} sub="normalized across intervals" />
       </div>
       <section className="panel">
-        <div className="panel-head"><h2>Fixed & recurring</h2><p className="panel-sub">Auto-posted on due dates from your last amount</p></div>
+        <div className="panel-head"><h2>Fixed & Recurring</h2><p className="panel-sub">Auto-posted on due dates from your last amount</p></div>
         <div className="rec-list" data-tour="tour-recurring-list">
           {list.length ? list.map((e) => {
             const s = categoryIndex.subById[e.sub];
@@ -774,7 +774,7 @@ export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) 
                 <span className="rec-amt">{fmtMoney(e.amount, { currency })}</span>
               </button>
             );
-          }) : <EmptyState title="No recurring items" sub="Mark an expense as recurring when adding it." />}
+          }) : <EmptyState title="No Recurring Items" sub="Mark an expense as recurring when adding it." />}
         </div>
       </section>
     </div>

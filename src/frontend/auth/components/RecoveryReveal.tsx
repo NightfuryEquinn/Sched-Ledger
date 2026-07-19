@@ -43,7 +43,7 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
-          <h3>Recovery phrase</h3>
+          <h3>Recovery Phrase</h3>
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={20} /></button>
         </div>
         <div className="modal-body">
@@ -61,7 +61,7 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
               </label>
               {error ? <p className="auth-error">{error}</p> : null}
               <button className="primary-btn full" type="button" disabled={busy || !passphrase} onClick={() => void revealFromVault()}>
-                {busy ? "Unlocking…" : "Reveal phrase"}
+                {busy ? "Unlocking…" : "Reveal Phrase"}
               </button>
             </>
           ) : (
@@ -73,7 +73,7 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
               </div>
               <div className="reveal-actions">
                 {!shown ? (
-                  <button className="ghost-btn full" type="button" onClick={() => setShown(true)}>Tap to reveal</button>
+                  <button className="ghost-btn full" type="button" onClick={() => setShown(true)}>Tap to Reveal</button>
                 ) : (
                   <button
                     className="mini-btn"
@@ -84,7 +84,7 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
                       setTimeout(() => setCopied(false), 1200);
                     }}
                   >
-                    <Icon name={copied ? "check" : "copy"} size={14} /> {copied ? "Copied" : "Copy phrase"}
+                    <Icon name={copied ? "check" : "copy"} size={14} /> {copied ? "Copied" : "Copy Phrase"}
                   </button>
                 )}
               </div>

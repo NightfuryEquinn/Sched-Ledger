@@ -10,7 +10,7 @@ export function TermsModal({ onClose }: LegalModalProps) {
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby="tnc-title">
         <div className="modal-head">
-          <h3 id="tnc-title">Terms &amp; conditions</h3>
+          <h3 id="tnc-title">Terms &amp; Conditions</h3>
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
         <div className="modal-body modal-scroll">

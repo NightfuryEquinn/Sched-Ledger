@@ -166,7 +166,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
     );
   };
 
-  const editorTitle = editor?.type === "add-list" ? "New list" : editor ? "Edit list" : "";
+  const editorTitle = editor?.type === "add-list" ? "New List" : editor ? "Edit List" : "";
 
   return (
     <div className="view">
@@ -187,7 +187,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
 
       <div className="todo-toolbar" data-tour="tour-todos-toolbar">
         <button className="primary-btn" type="button" onClick={openAddList}>
-          <Icon name="plus" size={15} /> New list
+          <Icon name="plus" size={15} /> New List
         </button>
       </div>
 
@@ -230,7 +230,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                   <button
                     type="button"
                     onClick={() => openEditList(active)}
-                    aria-label="Edit list"
+                    aria-label="Edit List"
                   >
                     <Icon name="edit" size={16} />
                   </button>
@@ -239,7 +239,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                     className="danger"
                     disabled={busy}
                     onClick={() => removeList(active.id)}
-                    aria-label="Delete list"
+                    aria-label="Delete List"
                   >
                     <Icon name="trash" size={16} />
                   </button>
@@ -270,7 +270,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                     </div>
                   ))
                 ) : (
-                  <EmptyState title="No tasks yet" sub="Add your first task below." />
+                  <EmptyState title="No Tasks Yet" sub="Add your first task below." />
                 )}
               </div>
 
@@ -301,10 +301,10 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
       ) : (
         <section className="panel" data-tour="tour-todos-tabs">
           <div data-tour="tour-todos-tasks">
-            <EmptyState title="No lists yet" sub="Create a list to start tracking tasks." />
+            <EmptyState title="No Lists Yet" sub="Create a list to start tracking tasks." />
             <div className="todo-empty-action">
               <button className="primary-btn" type="button" onClick={openAddList}>
-                <Icon name="plus" size={15} /> New list
+                <Icon name="plus" size={15} /> New List
               </button>
             </div>
           </div>

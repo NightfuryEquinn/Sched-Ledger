@@ -414,7 +414,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           <button
             className="fab-action"
             type="button"
-            aria-label="Add event"
+            aria-label="Add Event"
             tabIndex={fabOpen ? 0 : -1}
             onClick={() => {
               setFabOpen(false);
@@ -427,7 +427,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           <button
             className="fab-action"
             type="button"
-            aria-label="Add transaction"
+            aria-label="Add Transaction"
             tabIndex={fabOpen ? 0 : -1}
             onClick={() => {
               setFabOpen(false);
@@ -441,7 +441,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         <button
           className="fab"
           type="button"
-          aria-label={fabOpen ? "Close add menu" : "Open add menu"}
+          aria-label={fabOpen ? "Close Add Menu" : "Open Add Menu"}
           aria-expanded={fabOpen}
           onClick={() => setFabOpen((o) => !o)}
         >

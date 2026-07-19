@@ -125,11 +125,11 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
     >
       <div ref={menuRef} className="picker-menu picker-menu--date" role="dialog" aria-modal="true">
         <div className="picker-cal-head">
-        <button type="button" className="picker-nav-btn" disabled={!canPrev} onClick={() => goMonth(-1)} aria-label="Previous month">
+        <button type="button" className="picker-nav-btn" disabled={!canPrev} onClick={() => goMonth(-1)} aria-label="Previous Month">
           <PickerIcon name="chevL" />
         </button>
         <span className="picker-cal-title">{monthLabel(viewKey, true)}</span>
-        <button type="button" className="picker-nav-btn" disabled={!canNext} onClick={() => goMonth(1)} aria-label="Next month">
+        <button type="button" className="picker-nav-btn" disabled={!canNext} onClick={() => goMonth(1)} aria-label="Next Month">
           <PickerIcon name="chevR" />
         </button>
       </div>

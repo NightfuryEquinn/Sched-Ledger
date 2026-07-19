@@ -167,11 +167,11 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
   return (
     <div className="view">
       <div className="summary-grid sg-3" data-tour="tour-schedule-summary">
-        <SummaryCard label="Events this month" value={String(occ.length)} sub={monthLabel(month, true)} />
-        <SummaryCard label="Next reminder" tone="ok"
+        <SummaryCard label="Events this Month" value={String(occ.length)} sub={monthLabel(month, true)} />
+        <SummaryCard label="Next Reminder" tone="ok"
           value={nextRem ? dayLabel(nextRem.iso) : "—"}
           sub={nextRem ? `${nextRem.ev.title} · ${leadLabel(nextRem.ev.lead).toLowerCase()}` : "no upcoming reminders"} />
-        <SummaryCard label="Email reminders" value={String(alertsCount)} sub="occurrences will notify you" />
+        <SummaryCard label="Email Reminders" value={String(alertsCount)} sub="occurrences will notify you" />
       </div>
 
       <section className="panel" data-tour="tour-schedule-agenda">
@@ -182,7 +182,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
               className="agenda-nav-btn"
               disabled={!canPrevDay}
               onClick={() => navigateDay(-1)}
-              aria-label="Previous day"
+              aria-label="Previous Day"
             >
               <Icon name="chevL" size={18} />
             </button>
@@ -199,7 +199,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
               className="agenda-nav-btn"
               disabled={!canNextDay}
               onClick={() => navigateDay(1)}
-              aria-label="Next day"
+              aria-label="Next Day"
             >
               <Icon name="chevR" size={18} />
             </button>
@@ -223,7 +223,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
               ))
             ) : (
               <EmptyState
-                title="No upcoming events"
+                title="No Upcoming Events"
                 sub="Nothing scheduled from today onward — add an event or pick another day on the calendar."
               />
             )
@@ -241,7 +241,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
             </div>
           ) : (
             <EmptyState
-              title="No events this day"
+              title="No Events this Day"
               sub="Add something to this date, click the day again to show all upcoming, or use the arrows to browse."
             />
           )}
@@ -255,7 +255,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
             <p className="panel-sub">Click a day to view or add · click an event to edit</p>
           </div>
           <button className="add-btn add-btn--top" onClick={() => onAddEvent(TODAY_ISO)}>
-            <Icon name="plus" size={17} /> <span className="abt-txt">New event</span>
+            <Icon name="plus" size={17} /> <span className="abt-txt">New Event</span>
           </button>
         </div>
 
@@ -395,7 +395,7 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
-          <h3>{editing ? "Edit event" : "New event"}</h3>
+          <h3>{editing ? "Edit Event" : "New Event"}</h3>
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
 
@@ -519,7 +519,7 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
               <input className="cmt-in" type="text" placeholder="Add a comment…" value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addComment(); } }} />
-              <button className="cmt-send" type="button" disabled={!draft.trim()} onClick={addComment} aria-label="Post comment"><Icon name="send" size={17} /></button>
+              <button className="cmt-send" type="button" disabled={!draft.trim()} onClick={addComment} aria-label="Post Comment"><Icon name="send" size={17} /></button>
             </div>
           </div>
         </div>
@@ -538,17 +538,17 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
                   expenseId: initial.expenseId,
                 })}
               >
-                {initial.expenseId ? "View linked payment" : "Log payment"}
+                {initial.expenseId ? "View Linked Payment" : "Log Payment"}
               </button>
             ) : null}
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
-            <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>{editing ? "Save changes" : "Add event"}</button>
+            <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>{editing ? "Save Changes" : "Add Event"}</button>
           </div>
         </div>
       </div>
       {scopeOpen && initial?.id ? (
         <DeleteScopeDialog
-          title="Delete recurring event"
+          title="Delete Recurring Event"
           onCancel={() => setScopeOpen(false)}
           onConfirm={confirmScopedDelete}
         />

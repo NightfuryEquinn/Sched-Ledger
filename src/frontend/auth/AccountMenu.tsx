@@ -166,30 +166,30 @@ export function AccountMenu({
           </div>
           <div className="am-div" />
           <button className="am-item" type="button" onClick={() => { copyText(account.address); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>
-            <Icon name={copied ? "check" : "copy"} size={16} /> {copied ? "Address copied" : "Copy address"}
+            <Icon name={copied ? "check" : "copy"} size={16} /> {copied ? "Address Copied" : "Copy Address"}
           </button>
           {stored?.vault || stored?.mnemonic || sessionSecrets.get(account.address)?.mnemonic ? (
             <button className="am-item" type="button" onClick={() => { setReveal(true); setOpen(false); }}>
-              <Icon name="key" size={16} /> Recovery phrase
+              <Icon name="key" size={16} /> Recovery Phrase
             </button>
           ) : null}
           {stored?.injected ? (
             <div className="am-item am-item--static">
-              <Icon name="wallet" size={16} /> Browser wallet
+              <Icon name="wallet" size={16} /> Browser Wallet
             </div>
           ) : null}
           <button className="am-item" type="button" onClick={() => { setDataOpen(true); setOpen(false); }}>
-            <Icon name="database" size={16} /> Data &amp; privacy
+            <Icon name="database" size={16} /> Data &amp; Privacy
           </button>
           <button
             className="am-item"
             type="button"
             onClick={() => { setCsvOpen(true); setOpen(false); }}
           >
-            <Icon name="download" size={16} /> Exports &amp; imports
+            <Icon name="download" size={16} /> Exports &amp; Imports
           </button>
           <button className="am-item" type="button" onClick={() => { setTermsOpen(true); setOpen(false); }}>
-            <Icon name="file" size={16} /> Terms &amp; conditions
+            <Icon name="file" size={16} /> Terms &amp; Conditions
           </button>
           <button className="am-item" type="button" onClick={() => { setCopyrightOpen(true); setOpen(false); }}>
             <Icon name="info" size={16} /> Copyright
@@ -197,11 +197,11 @@ export function AccountMenu({
           <div className="am-div" />
           {onTakeTour ? (
             <button className="am-item" type="button" onClick={() => { onTakeTour(); setOpen(false); }}>
-              <Icon name="info" size={16} /> Take a tour
+              <Icon name="info" size={16} /> Take a Tour
             </button>
           ) : null}
           <button className="am-item danger" type="button" onClick={onSignOut}>
-            <Icon name="logout" size={16} /> Sign out
+            <Icon name="logout" size={16} /> Sign Out
           </button>
         </div>
       ) : null}

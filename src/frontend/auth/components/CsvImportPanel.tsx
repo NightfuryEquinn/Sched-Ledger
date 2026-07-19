@@ -79,7 +79,7 @@ export function CsvImportPanel({
         className={`csv-dropzone${dragging ? " csv-dropzone--drag" : ""}`}
         role="button"
         tabIndex={0}
-        aria-label="Import CSV file"
+        aria-label="Import CSV File"
         onClick={() => fileRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -103,7 +103,7 @@ export function CsvImportPanel({
           {fileName ? (
             <>Selected: <strong>{fileName}</strong></>
           ) : (
-            <>Drop your CSV here or <span className="csv-dropzone-link">choose a file</span></>
+            <>Drop your CSV here or <span className="csv-dropzone-link">Choose a File</span></>
           )}
         </p>
       </div>
