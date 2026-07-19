@@ -1,4 +1,6 @@
 import type { Account, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "./types";
+import { getCipherCache, putCipherCache } from "@/frontend/lib/pwa/cipher-cache";
+import { identityStorage } from "@/frontend/auth/lib/identity-storage";
 
 export class ApiError extends Error {
   status: number;
@@ -44,25 +46,57 @@ export type ApiConsent = {
 
 type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
 
+/** Paths safe to serve from the IndexedDB ciphertext read cache when offline. */
+const CACHEABLE_GET_PREFIXES = [
+  "/wallets",
+  "/categories",
+  "/expenses",
+  "/events",
+  "/todo-lists",
+  "/profile",
+];
+
+/** Whether a GET path may fall back to the local ciphertext cache. */
+function isCacheableGet(path: string, method: string): boolean {
+  if (method !== "GET") return false;
+  return CACHEABLE_GET_PREFIXES.some((p) => path === p || path.startsWith(`${p}?`) || path.startsWith(`${p}/`));
+}
+
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { body, headers, ...rest } = opts;
-  const res = await fetch(`/api${path}`, {
-    ...rest,
-    credentials: "include",
-    headers: {
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...headers,
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const method = (rest.method ?? (body !== undefined ? "POST" : "GET")).toUpperCase();
+  const address = identityStorage.session();
 
-  if (!res.ok) {
-    const payload = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new ApiError(res.status, payload.error ?? res.statusText);
+  try {
+    const res = await fetch(`/api${path}`, {
+      ...rest,
+      method,
+      credentials: "include",
+      headers: {
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...headers,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+
+    if (!res.ok) {
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new ApiError(res.status, payload.error ?? res.statusText);
+    }
+
+    if (res.status === 204) return undefined as T;
+    const json = (await res.json()) as T;
+    if (address && isCacheableGet(path, method)) {
+      void putCipherCache(address, path, json);
+    }
+    return json;
+  } catch (err) {
+    if (address && isCacheableGet(path, method) && (err instanceof TypeError || !navigator.onLine)) {
+      const cached = await getCipherCache<T>(address, path);
+      if (cached != null) return cached;
+    }
+    throw err;
   }
-
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
 }
 
 export const api = {

@@ -11,6 +11,8 @@ export type Expense = {
   amount: number;
   note: string;
   recurring: RecurringInterval | false;
+  /** Optional link to a schedule event (plaintext metadata). */
+  eventId?: string;
 };
 
 export type FinancialWallet = {
@@ -46,6 +48,8 @@ export type LedgerEvent = {
   lead: string;
   email: string;
   comments: EventComment[];
+  /** Optional link to a ledger expense created from this event. */
+  expenseId?: string;
 };
 
 export type Budgets = Record<string, number>;
@@ -99,9 +103,23 @@ export type TodoList = {
   tasks: TodoTask[];
 };
 
+/** On-device passphrase vault blob (no plaintext keys). */
+export type IdentityVault = {
+  v: 1;
+  salt: string;
+  iv: string;
+  ciphertext: string;
+};
+
 export type IdentityRecord = {
   address: string;
   codename?: string;
+  /** Encrypted mnemonic + privateKey (in-app wallets). */
+  vault?: IdentityVault;
+  /**
+   * Legacy plaintext fields — migrated into `vault` on next unlock.
+   * Prefer sessionSecrets + vault; do not write these on new identities.
+   */
   mnemonic?: string;
   privateKey?: string;
   injected?: boolean;

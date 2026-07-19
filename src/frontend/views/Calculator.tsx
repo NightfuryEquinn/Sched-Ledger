@@ -9,7 +9,9 @@ import {
   computeNet,
   isValidAllocationTotal,
   isValidTaxTotal,
+  MY_TAX_PRESETS,
   sumPercents,
+  type TaxPreset,
 } from "@/frontend/lib/calculator";
 import { fmtMoney, getCurrency } from "@/frontend/lib/data";
 import {
@@ -134,6 +136,18 @@ export function Calculator({
     setTaxLines((rows) => (rows.length <= 1 ? rows : rows.filter((r) => r.id !== id)));
   };
 
+  /** Apply a Malaysia / generic tax preset pack into the tax lines. */
+  const applyTaxPreset = (preset: TaxPreset) => {
+    markDirty();
+    setTaxLines(
+      preset.lines.map((line) => ({
+        id: newTaxId(),
+        title: line.title,
+        pct: String(line.pct),
+      })),
+    );
+  };
+
   /** Persist computed budgets after modal confirm. */
   const applyBudgets = () => {
     if (!canApply) return;
@@ -201,7 +215,20 @@ export function Calculator({
       <section className="panel" data-tour="tour-calculator-tax">
         <div className="panel-head">
           <h2>Tax collection</h2>
-          <p className="panel-sub">Custom titles and percentages — not saved</p>
+          <p className="panel-sub">Custom titles and percentages — not saved. MY presets are estimates only.</p>
+        </div>
+        <div className="calculator-presets">
+          {MY_TAX_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className="mini-btn"
+              title={preset.description}
+              onClick={() => applyTaxPreset(preset)}
+            >
+              {preset.label}
+            </button>
+          ))}
         </div>
         <div className="calculator-tax-list">
           {taxLines.map((line) => (

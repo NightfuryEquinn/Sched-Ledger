@@ -307,7 +307,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
 }
 
 // ── EventModal (add / edit event) ───────────────────────────────────
-export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClose, onDelete }) {
+export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClose, onDelete, onLogPayment }) {
   const editing = !!(initial && initial.id);
   const lastEmail = (() => { try { return localStorage.getItem("ledger:notifyEmail") || ""; } catch (e) { return ""; } })();
   const customMeta = EVENT_CATS.find((c) => c.id === "custom")!;
@@ -527,6 +527,20 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
         <div className="modal-foot">
           {editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />}
           <div className="mf-right">
+            {editing && onLogPayment && (catId === "bill" || catId === "renewal") ? (
+              <button
+                className="ghost-btn"
+                type="button"
+                onClick={() => onLogPayment({
+                  id: initial.id,
+                  title: title.trim() || initial.title,
+                  date,
+                  expenseId: initial.expenseId,
+                })}
+              >
+                {initial.expenseId ? "View linked payment" : "Log payment"}
+              </button>
+            ) : null}
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>{editing ? "Save changes" : "Add event"}</button>
           </div>

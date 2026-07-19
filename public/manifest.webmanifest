@@ -1,0 +1,23 @@
+{
+  "name": "Sched Ledger",
+  "short_name": "Sched Ledger",
+  "description": "Private expense ledger, schedule, and to-do — unlock with your key.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1419",
+  "theme_color": "#1a2332",
+  "icons": [
+    {
+      "src": "/src/frontend/assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/src/frontend/assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

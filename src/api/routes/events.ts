@@ -53,9 +53,11 @@ eventsRoutes.post("/", zValidator("json", createEventSchema), async (c) => {
   const now = new Date();
   const { events } = getCollections(getDb());
 
+  const { expenseId, ...rest } = body;
   const result = await events.insertOne({
     userAddress: walletAddress,
-    ...body,
+    ...rest,
+    ...(expenseId ? { expenseId: new ObjectId(expenseId) } : {}),
     createdAt: now,
     updatedAt: now,
   });
@@ -98,13 +100,21 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
     });
   }
 
-  const $set: Record<string, unknown> = { ...body, updatedAt: new Date() };
+  const { expenseId, ...rest } = body;
+  const $set: Record<string, unknown> = { ...rest, updatedAt: new Date() };
+  if ("expenseId" in body) {
+    if (expenseId) $set.expenseId = new ObjectId(expenseId);
+    else delete $set.expenseId;
+  }
   const $unset: Record<string, ""> = {
     title: "",
     comments: "",
     customLabel: "",
     customGlyph: "",
   };
+  if ("expenseId" in body && !expenseId) {
+    $unset.expenseId = "";
+  }
 
   const updated = await events.findOneAndUpdate(
     { _id: new ObjectId(id.data), userAddress: walletAddress },

@@ -87,6 +87,7 @@ expensesRoutes.post("/", zValidator("json", createExpenseSchema), async (c) => {
     enc: body.enc,
     payload: body.payload,
     seriesKey: body.seriesKey,
+    ...(body.eventId ? { eventId: new ObjectId(body.eventId) } : {}),
     createdAt: now,
     updatedAt: now,
   });
@@ -141,12 +142,29 @@ expensesRoutes.patch("/:id", zValidator("json", updateExpenseSchema), async (c) 
   if (body.enc !== undefined) patch.enc = body.enc;
   if (body.payload !== undefined) patch.payload = body.payload;
   if ("seriesKey" in body) patch.seriesKey = body.seriesKey ?? undefined;
+  if (body.eventId) {
+    patch.eventId = new ObjectId(body.eventId);
+  }
 
   const update =
     body.payload !== undefined
-      ? { $set: patch, $unset: { sub: "", amount: "", note: "" } }
-      : body.seriesKey === null
-        ? { $set: patch, $unset: { seriesKey: "" } }
+      ? {
+          $set: patch,
+          $unset: {
+            sub: "",
+            amount: "",
+            note: "",
+            ...(body.eventId === null ? { eventId: "" } : {}),
+          },
+        }
+      : body.seriesKey === null || body.eventId === null
+        ? {
+            $set: patch,
+            $unset: {
+              ...(body.seriesKey === null ? { seriesKey: "" } : {}),
+              ...(body.eventId === null ? { eventId: "" } : {}),
+            },
+          }
         : { $set: patch };
 
   if (body.seriesKey === null && body.payload !== undefined) {

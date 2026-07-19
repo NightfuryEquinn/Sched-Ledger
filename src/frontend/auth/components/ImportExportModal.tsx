@@ -1,8 +1,18 @@
 import { CsvImportPanel, type CsvImportPreview } from "@/frontend/auth/components/CsvImportPanel";
 import { Icon } from "@/frontend/components/ui";
+import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import type { Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  buildBackupPlain,
+  decryptBackup,
+  downloadEncryptedBackup,
+  encryptBackup,
+  parseBackupFile,
+} from "../lib/encrypted-backup";
+import type { LedgerBackupPlain } from "../lib/encrypted-backup";
+import type { BackupRestoreResult } from "../lib/restore-backup";
 import { downloadEventsCsv } from "../lib/export-events";
 import { downloadTodosCsv } from "../lib/export-todos";
 import { downloadExpenseCsv } from "../lib/export";
@@ -11,6 +21,7 @@ import { parseTodosCsv, type TodoImportList } from "../lib/import-todos";
 import { parseExpenseCsv, type ExpenseImportRow } from "../lib/import";
 
 type ImportExportModalProps = {
+  accountAddress: string;
   expenses: Expense[];
   events?: LedgerEvent[];
   todoLists?: TodoList[];
@@ -27,10 +38,12 @@ type ImportExportModalProps = {
   onImportTodos?: (
     lists: TodoImportList[],
   ) => Promise<{ importedLists: number; importedTasks: number; failed: number }>;
+  onRestoreBackup?: (plain: LedgerBackupPlain) => Promise<BackupRestoreResult>;
   onClose: () => void;
 };
 
 export function ImportExportModal({
+  accountAddress,
   expenses,
   events = [],
   todoLists = [],
@@ -40,11 +53,16 @@ export function ImportExportModal({
   onImportExpenses,
   onImportEvents,
   onImportTodos,
+  onRestoreBackup,
   onClose,
 }: ImportExportModalProps) {
   const [txnExported, setTxnExported] = useState(false);
   const [schedExported, setSchedExported] = useState(false);
   const [todoExported, setTodoExported] = useState(false);
+  const [backupExported, setBackupExported] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupError, setBackupError] = useState("");
+  const [backupResult, setBackupResult] = useState<BackupRestoreResult | null>(null);
 
   const [txnPreview, setTxnPreview] = useState<ReturnType<typeof parseExpenseCsv> | null>(null);
   const [schedPreview, setSchedPreview] = useState<ReturnType<typeof parseEventsCsv> | null>(null);
@@ -94,6 +112,48 @@ export function ImportExportModal({
   const exportTodos = () => {
     downloadTodosCsv(todoLists);
     flash(setTodoExported);
+  };
+
+  /** Download an encrypted full-ledger backup (client-only). */
+  const exportEncryptedBackup = async () => {
+    setBackupError("");
+    setBackupBusy(true);
+    try {
+      const key = ledgerKeyStore.get(accountAddress);
+      if (!key) throw new Error("Unlock your ledger before exporting a backup.");
+      const plain = buildBackupPlain({
+        address: accountAddress,
+        wallets,
+        categories: categoryIndex?.categories ?? [],
+        expenses,
+        events,
+        todoLists,
+      });
+      const file = await encryptBackup(key, plain);
+      downloadEncryptedBackup(file);
+      flash(setBackupExported);
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : "Could not export backup.");
+    }
+    setBackupBusy(false);
+  };
+
+  /** Restore from an encrypted backup JSON file. */
+  const readBackupFile = async (file: File) => {
+    if (!onRestoreBackup) return;
+    setBackupError("");
+    setBackupResult(null);
+    setBackupBusy(true);
+    try {
+      const key = ledgerKeyStore.get(accountAddress);
+      if (!key) throw new Error("Unlock your ledger before restoring a backup.");
+      const parsed = parseBackupFile(await file.text());
+      const plain = await decryptBackup(key, parsed);
+      setBackupResult(await onRestoreBackup(plain));
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : "Could not restore backup.");
+    }
+    setBackupBusy(false);
   };
 
   const readTxnFile = async (file: File) => {
@@ -241,9 +301,49 @@ export function ImportExportModal({
 
         <div className="modal-body modal-scroll">
           <div className="dm-sec">
-            <p className="dm-lead">Download or restore your ledger as CSV files — transactions, schedule events, and to-do lists each have their own export and import.</p>
+            <p className="dm-lead">Download or restore your ledger. Prefer the encrypted backup for private portability; use CSV when you need a spreadsheet.</p>
 
-            <p className="dm-subhead">Transactions</p>
+            <p className="dm-subhead">Encrypted backup</p>
+            <p className="dm-note">Client-side AES pack unlocked with your ledger key. Not stored on the server.</p>
+            <button
+              className="primary-btn full"
+              type="button"
+              disabled={backupBusy}
+              onClick={() => void exportEncryptedBackup()}
+            >
+              <Icon name={backupExported ? "check" : "download"} size={17} />
+              {backupBusy ? "Working…" : backupExported ? "Downloaded" : "Download encrypted backup"}
+            </button>
+            {onRestoreBackup ? (
+              <label className="ghost-btn full u-gap-top ie-file-label">
+                <Icon name="download" size={17} />
+                {backupBusy ? "Restoring…" : "Restore encrypted backup"}
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                  disabled={backupBusy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void readBackupFile(file);
+                  }}
+                />
+              </label>
+            ) : null}
+            {backupError ? <p className="auth-error">{backupError}</p> : null}
+            {backupResult ? (
+              <p className="dm-note">
+                Restored {backupResult.expenses} expenses · {backupResult.events} events · {backupResult.todos} todos
+                {backupResult.wallets ? ` · ${backupResult.wallets} wallets` : ""}
+                {backupResult.categories ? " · categories" : ""}
+                {backupResult.failed ? ` · ${backupResult.failed} failed` : ""}.
+              </p>
+            ) : null}
+
+            <div className="dm-div" />
+
+            <p className="dm-subhead">Transactions (CSV)</p>
             {onImportExpenses && categoryIndex ? (
               <CsvImportPanel
                 importLead="Import transactions from a CSV you exported from Ledger."

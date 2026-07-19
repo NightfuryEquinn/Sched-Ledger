@@ -78,6 +78,7 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "enc", value: "1" },
       { key: "payload", value: "base64 AES-GCM", note: "sub, amount, note" },
       { key: "seriesKey?", value: "sha256 hex", note: "recurring series id" },
+      { key: "eventId?", value: "ObjectId", note: "optional link to a schedule event (plaintext)" },
       { key: "skipped?", value: "false", note: "soft-delete for recurring cron" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
@@ -95,6 +96,7 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "allDay / time / repeat", value: "schedule metadata" },
       { key: "exceptDates? / until?", value: "recurrence exceptions / end date" },
       { key: "notify / lead / email", value: "reminder settings (plaintext for cron)", note: "emails use a generic title; real title stays encrypted" },
+      { key: "expenseId?", value: "ObjectId", note: "optional link when a bill payment was logged" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -276,6 +278,32 @@ const E2EE_CHART_MOBILE = `flowchart TB
   DB --> DbOut --> Decr --> Ready
 `;
 
+/** Hosting and scheduler roles — free-tier stack. */
+const SYSTEM_CHART = `flowchart LR
+  Browser["Browser<br/>unlock · encrypt · PWA cache"]
+  Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
+  Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
+  Cron["cron-job.org<br/>HTTP poll every ~5 min"]
+  Resend["Resend<br/>reminder / alert email"]
+
+  Browser -->|"HTTPS session"| Vercel
+  Vercel -->|"read/write docs"| Atlas
+  Cron -->|"GET /api/cron/reminders"| Vercel
+  Vercel -->|"send email"| Resend
+`;
+
+const SYSTEM_CHART_MOBILE = `flowchart TB
+  Browser["Browser<br/>unlock · encrypt · PWA cache"]
+  Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
+  Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
+  Cron["cron-job.org<br/>HTTP poll every ~5 min"]
+  Resend["Resend<br/>reminder / alert email"]
+
+  Browser --> Vercel --> Atlas
+  Cron --> Vercel
+  Vercel --> Resend
+`;
+
 const MOBILE_MQ = "(max-width: 860px)";
 
 /** Read the current color theme for Mermaid. */
@@ -404,11 +432,44 @@ export function Transparency() {
       <section className="panel" data-tour="tour-transparency-intro">
         <div className="panel-head panel-head--stack">
           <div>
-            <h2>How your data is stored</h2>
+            <h2>How the whole system works</h2>
             <p className="panel-sub">
-              Read-only map of MongoDB collections, document keys, and the end-to-end encryption path.
-              Ledger secrets are AES-256-GCM encrypted client-side; schedule/email metadata stays plaintext so
-              reminders can run, and budget alerts may send category names and amounts from your browser when enabled.
+              Sched Ledger is private by design: your browser derives a ledger key from your wallet signature,
+              encrypts secrets with AES-256-GCM, and syncs ciphertext to MongoDB Atlas. Vercel hosts the app and API
+              (plus Analytics / Speed Insights) but does not run cron. cron-job.org is the only scheduler — it polls
+              <code> GET /api/cron/reminders </code>
+              about every five minutes for email reminders and recurring expense rows. Optional email uses Resend.
+              A device passphrase wraps your in-app recovery key on this browser; encrypted backups download to your
+              machine only. The installable PWA may cache ciphertext locally for offline reads — saves still need the network.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel" data-tour="tour-transparency-system">
+        <div className="panel-head panel-head--stack">
+          <div>
+            <h2>Hosting &amp; jobs</h2>
+            <p className="panel-sub">Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules</p>
+          </div>
+        </div>
+        <MermaidDiagram
+          chart={SYSTEM_CHART}
+          mobileChart={SYSTEM_CHART_MOBILE}
+          label="System hosting flowchart"
+        />
+      </section>
+
+      <section className="panel" data-tour="tour-transparency-infer">
+        <div className="panel-head panel-head--stack">
+          <div>
+            <h2>What the server can infer</h2>
+            <p className="panel-sub">
+              Even with E2EE, plaintext metadata remains for queries and cron. The server can see wallet addresses,
+              session cookies, wallet names/currencies, expense dates/kinds/recurrence flags, schedule timing,
+              reminder email addresses and lead times, and that a budget-alert email was delivered — but not amounts,
+              category trees, notes, event titles, or to-do text. Reminder emails use a generic subject; titles stay encrypted.
+              Linking a bill payment stores plaintext <code>eventId</code> / <code>expenseId</code> references only.
             </p>
           </div>
         </div>

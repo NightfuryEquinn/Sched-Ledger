@@ -12,6 +12,12 @@ export function serializeDoc<T extends { _id: ObjectId }>(
   if ("walletId" in out && out.walletId instanceof ObjectId) {
     out.walletId = toApiId(out.walletId as ObjectId);
   }
+  if ("eventId" in out && out.eventId instanceof ObjectId) {
+    out.eventId = toApiId(out.eventId as ObjectId);
+  }
+  if ("expenseId" in out && out.expenseId instanceof ObjectId) {
+    out.expenseId = toApiId(out.expenseId as ObjectId);
+  }
   return out as Omit<T, "_id"> & { id: string };
 }
 

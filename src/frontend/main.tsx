@@ -1,6 +1,7 @@
 import { Root } from "@/frontend/app/Root";
 import logoUrl from "@/frontend/assets/logo.png";
 import { applyTheme, getStoredTheme, resolveDark } from "@/frontend/lib/theme";
+import { registerServiceWorker } from "@/frontend/lib/pwa/register";
 import "@/frontend/styles/ledger.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
@@ -10,6 +11,14 @@ import { createRoot } from "react-dom/client";
 import "shepherd.js/dist/css/shepherd.css";
 
 applyTheme(resolveDark(getStoredTheme()));
+registerServiceWorker();
+
+/** Attach the web app manifest without involving the HTML bundler. */
+const manifestLink =
+  document.querySelector<HTMLLinkElement>("link[rel='manifest']") ??
+  Object.assign(document.createElement("link"), { rel: "manifest" });
+manifestLink.href = "/manifest.webmanifest";
+document.head.appendChild(manifestLink);
 
 const favicon =
   document.querySelector<HTMLLinkElement>("link[rel='icon']") ??

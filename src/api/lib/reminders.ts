@@ -24,6 +24,10 @@ const EVENT_CAT_NAMES: Record<string, string> = {
   custom: "Custom",
 };
 
+/** Bound work per cron-job.org poll (aligned with ~30s request timeout). */
+const REMINDER_BATCH_LIMIT = 80;
+const CRON_TIME_BUDGET_MS = 22_000;
+
 /** Human-readable label for an event's schedule category (plaintext catId only). */
 function eventCategoryLabel(doc: { catId: string }): string {
   return EVENT_CAT_NAMES[doc.catId] ?? doc.catId;
@@ -38,6 +42,7 @@ export type ReminderProcessResult = {
   sent: number;
   skipped: number;
   errors: string[];
+  truncated?: boolean;
 };
 
 /**
@@ -82,7 +87,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   await sendEmail({ to: doc.email.trim(), subject, html, text });
 }
 
-/** Cron entry: scan notify events and deliver due reminder emails. */
+/** Cron entry: scan notify events and deliver due reminder emails (batched). */
 export async function processDueReminders(now = new Date()): Promise<ReminderProcessResult> {
   const result: ReminderProcessResult = { scanned: 0, sent: 0, skipped: 0, errors: [] };
 
@@ -93,14 +98,27 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
 
   const { events } = getCollections(getDb());
   const nowMs = now.getTime();
+  const started = Date.now();
 
-  const notifyEvents = await events.find({ notify: true }).toArray();
+  const notifyEvents = await events
+    .find({ notify: true })
+    .sort({ _id: 1 })
+    .limit(REMINDER_BATCH_LIMIT)
+    .toArray();
   result.scanned = notifyEvents.length;
+  if (notifyEvents.length >= REMINDER_BATCH_LIMIT) {
+    result.truncated = true;
+  }
 
   /* Cache per-user reminder prefs across events in this run. */
   const prefsCache = new Map<string, UserReminderPrefs>();
 
   for (const ev of notifyEvents) {
+    if (Date.now() - started > CRON_TIME_BUDGET_MS) {
+      result.truncated = true;
+      break;
+    }
+
     let prefs = prefsCache.get(ev.userAddress);
     if (!prefs) {
       prefs = await userReminderPrefs(ev.userAddress);

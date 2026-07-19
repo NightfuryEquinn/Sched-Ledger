@@ -8,6 +8,53 @@ export type AllocationRow = {
   pct: number;
 };
 
+export type TaxPresetLine = {
+  title: string;
+  pct: number;
+};
+
+export type TaxPreset = {
+  id: string;
+  label: string;
+  description: string;
+  lines: TaxPresetLine[];
+};
+
+/**
+ * Malaysia-oriented payroll / tax preset packs (approximate employee-side %).
+ * Estimates only — not official LHDN/EPF advice; all math stays in-browser.
+ */
+export const MY_TAX_PRESETS: TaxPreset[] = [
+  {
+    id: "my-epf-employee",
+    label: "MY · EPF employee (11%)",
+    description: "Employee EPF contribution at 11%.",
+    lines: [{ title: "EPF (employee)", pct: 11 }],
+  },
+  {
+    id: "my-epf-socso-eis",
+    label: "MY · EPF + SOCSO + EIS",
+    description: "Common employee statutory deductions (approx.).",
+    lines: [
+      { title: "EPF (employee)", pct: 11 },
+      { title: "SOCSO (employee)", pct: 0.5 },
+      { title: "EIS (employee)", pct: 0.2 },
+    ],
+  },
+  {
+    id: "my-pcb-ballpark",
+    label: "MY · PCB ballpark (10%)",
+    description: "Rough PCB withholding placeholder — adjust to your payslip.",
+    lines: [{ title: "PCB (estimate)", pct: 10 }],
+  },
+  {
+    id: "my-sst",
+    label: "MY · SST (6%)",
+    description: "Service tax style line for taxable spend planning.",
+    lines: [{ title: "SST", pct: 6 }],
+  },
+];
+
 const PCT_TOLERANCE = 0.01;
 
 /** Sum finite percentage values (non-finite treated as 0). */

@@ -4,6 +4,7 @@ import {
   isoDateSchema,
   isLeadAllowedForEvent,
   leadIdSchema,
+  objectIdSchema,
   repeatIdSchema,
   walletAddressSchema,
   type LeadId,
@@ -51,6 +52,8 @@ const eventScheduleShape = {
   notify: z.boolean().default(false),
   lead: leadIdSchema.default("1d"),
   email: z.string().email().optional().or(z.literal("")),
+  /** Optional expense logged from this event (e.g. bill paid). */
+  expenseId: objectIdSchema.optional(),
 };
 
 export const eventSchema = z.object({
@@ -82,6 +85,7 @@ export const createEventSchema = z
     notify: z.boolean().optional().default(false),
     lead: leadIdSchema.optional().default("1d"),
     email: z.string().email().optional().or(z.literal("")),
+    expenseId: objectIdSchema.optional(),
     enc: e2eeVersionSchema,
     payload: encryptedPayloadSchema,
   })
@@ -103,6 +107,7 @@ export const updateEventSchema = z
     notify: z.boolean().optional(),
     lead: leadIdSchema.optional(),
     email: z.string().email().optional().or(z.literal("")),
+    expenseId: objectIdSchema.nullable().optional(),
     enc: e2eeVersionSchema,
     payload: encryptedPayloadSchema,
   })

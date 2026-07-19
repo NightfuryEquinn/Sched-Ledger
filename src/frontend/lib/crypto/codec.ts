@@ -28,6 +28,7 @@ export type ExpenseWire = {
   enc?: 1;
   payload?: string;
   seriesKey?: string;
+  eventId?: string;
   /** Legacy plaintext fields (pre-E2EE or migration). */
   sub?: string;
   amount?: number;
@@ -48,6 +49,7 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
       kind: wire.kind ?? "expense",
       date: wire.date,
       recurring: normalizeRecurring(wire.recurring),
+      ...(wire.eventId ? { eventId: wire.eventId } : {}),
       ...secrets,
     };
   }
@@ -63,11 +65,12 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
     amount: wire.amount,
     note: wire.note ?? "",
     recurring: normalizeRecurring(wire.recurring),
+    ...(wire.eventId ? { eventId: wire.eventId } : {}),
   };
 }
 
 export async function encodeExpenseCreate(
-  expense: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring">,
+  expense: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring" | "eventId">,
   key: CryptoKey,
 ) {
   const payload = await encryptJson(key, {
@@ -93,6 +96,7 @@ export async function encodeExpenseCreate(
     enc: 1 as const,
     payload,
     ...(seriesKey ? { seriesKey } : {}),
+    ...(expense.eventId ? { eventId: expense.eventId } : {}),
   };
 }
 
@@ -109,6 +113,7 @@ export async function encodeExpenseUpdate(
   if (expense.walletId) patch.walletId = expense.walletId;
   if (expense.kind) patch.kind = expense.kind;
   if (expense.date) patch.date = expense.date;
+  if (expense.eventId !== undefined) patch.eventId = expense.eventId || null;
   if (expense.recurring !== undefined) {
     patch.recurring = normalizeRecurring(expense.recurring);
     const recurring = patch.recurring as RecurringField | false;
@@ -206,6 +211,7 @@ export type EventWire = {
   notify: boolean;
   lead: string;
   email?: string;
+  expenseId?: string;
   enc?: 1;
   payload?: string;
   /** Legacy plaintext secrets. */
@@ -232,6 +238,7 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
       notify: wire.notify,
       lead: wire.lead,
       email: wire.email ?? "",
+      ...(wire.expenseId ? { expenseId: wire.expenseId } : {}),
       title: secrets.title,
       comments: secrets.comments ?? [],
       ...(secrets.customLabel ? { customLabel: secrets.customLabel } : {}),
@@ -259,6 +266,7 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
     lead: wire.lead,
     email: wire.email ?? "",
     comments: wire.comments ?? [],
+    ...(wire.expenseId ? { expenseId: wire.expenseId } : {}),
   };
 }
 
@@ -285,6 +293,7 @@ export async function encodeEventCreate(
     notify: event.notify,
     lead: event.lead,
     email: event.email ?? "",
+    ...(event.expenseId ? { expenseId: event.expenseId } : {}),
     enc: 1 as const,
     payload: await encryptJson(key, secrets),
   };
@@ -319,6 +328,7 @@ export async function encodeEventUpdate(
   if (event.notify !== undefined) patch.notify = event.notify;
   if (event.lead !== undefined) patch.lead = event.lead;
   if (event.email !== undefined) patch.email = event.email;
+  if (event.expenseId !== undefined) patch.expenseId = event.expenseId || null;
 
   return patch;
 }

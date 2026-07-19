@@ -1,4 +1,5 @@
 import type { IdentityRecord } from "@/frontend/lib/types";
+import { sessionSecrets } from "@/frontend/auth/lib/session-secrets";
 import { Wallet } from "ethers";
 
 async function fakeSign(message: string): Promise<string> {
@@ -6,6 +7,13 @@ async function fakeSign(message: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", data);
   const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
   return `0x${hex}${hex.slice(0, 64)}1b`;
+}
+
+/** Resolve a private key from the identity or in-memory session secrets. */
+function resolvePrivateKey(idn: IdentityRecord): string | undefined {
+  if (idn.privateKey) return idn.privateKey;
+
+  return sessionSecrets.get(idn.address)?.privateKey;
 }
 
 export const walletClient = {
@@ -30,8 +38,9 @@ export const walletClient = {
         params: [message, idn.address],
       });
     }
-    if (idn.privateKey) {
-      return await new Wallet(idn.privateKey).signMessage(message);
+    const privateKey = resolvePrivateKey(idn);
+    if (privateKey) {
+      return await new Wallet(privateKey).signMessage(message);
     }
     return await fakeSign(message);
   },

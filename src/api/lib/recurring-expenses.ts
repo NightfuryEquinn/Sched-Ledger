@@ -16,12 +16,17 @@ import type { ObjectId } from "mongodb";
 /** Only materialize dues in the last ~5 weeks (missed cron days), not years of history. */
 const LOOKBACK_DAYS = 35;
 
+/** Bound work per cron-job.org poll (aligned with ~30s request timeout). */
+const ANCHOR_BATCH_LIMIT = 200;
+const CRON_TIME_BUDGET_MS = 22_000;
+
 export type RecurringMaterializeResult = {
   scanned: number;
   series: number;
   created: number;
   skipped: number;
   errors: string[];
+  truncated?: boolean;
 };
 
 function legacySeriesKey(doc: ExpenseDocument): string {
@@ -69,6 +74,7 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
   };
 
   const { expenses } = getCollections(getDb());
+  const started = Date.now();
   const anchors = await expenses
     .find({
       recurring: { $in: [true, "monthly", "quarterly", "yearly"] },
@@ -76,9 +82,13 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
       skipped: { $ne: true },
     })
     .sort({ date: -1 })
+    .limit(ANCHOR_BATCH_LIMIT)
     .toArray();
 
   result.scanned = anchors.length;
+  if (anchors.length >= ANCHOR_BATCH_LIMIT) {
+    result.truncated = true;
+  }
 
   /** Latest row supplies payload/amount; earliest date supplies day-of-month (avoids clamp drift). */
   type SeriesState = { latest: ExpenseDocument; anchorIso: string };
@@ -100,6 +110,11 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
   const tzCache = new Map<string, string>();
 
   for (const { latest: template, anchorIso } of bySeries.values()) {
+    if (Date.now() - started > CRON_TIME_BUDGET_MS) {
+      result.truncated = true;
+      break;
+    }
+
     const freq = normalizeRecurring(template.recurring) as RecurringInterval;
     if (!template.walletId) {
       result.skipped++;
