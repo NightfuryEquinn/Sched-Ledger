@@ -3,18 +3,22 @@ import { processDueReminders } from "@/api/lib/reminders";
 import { ensureDb } from "@/api/middleware/db";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { timingSafeEqual } from "node:crypto";
 
 export const cronRoutes = new Hono();
 
 cronRoutes.use("*", ensureDb);
 
+/** Constant-time compare of the Authorization header to `Bearer ${CRON_SECRET}`. */
 function assertCronAuth(authHeader: string | undefined): void {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
     throw new HTTPException(503, { message: "CRON_SECRET not configured" });
   }
   const expected = `Bearer ${secret}`;
-  if (authHeader !== expected) {
+  const a = Buffer.from(authHeader ?? "");
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
     throw new HTTPException(401, { message: "Unauthorized" });
   }
 }
@@ -29,5 +33,6 @@ cronRoutes.get("/reminders", async (c) => {
     processDueReminders(),
     processDueRecurringExpenses(),
   ]);
+
   return c.json({ ok: true, reminders, recurring });
 });

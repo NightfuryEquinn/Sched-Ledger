@@ -12,6 +12,16 @@ export const isoDateSchema = z
   .string()
   .regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Date must be YYYY-MM-DD");
 
+/** Inclusive ISO date bounds for a YYYY-MM month key (uses -31 so indexes apply). */
+export function monthDateBounds(month: string): { $gte: string; $lte: string } {
+  return { $gte: `${month}-01`, $lte: `${month}-31` };
+}
+
+/** Shared list pagination: limit + optional cursor on date. */
+export const listPaginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(5000).optional().default(2000),
+  before: isoDateSchema.optional(),
+});
 export { categoryIdSchema, subcategoryIdSchema } from "./category";
 
 export const budgetsSchema = z.record(categoryIdSchema, z.number().nonnegative());

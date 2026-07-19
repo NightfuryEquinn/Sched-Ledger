@@ -21,7 +21,16 @@ export const COLLECTIONS = {
   reminderLogs: "reminder_logs",
   budgetAlertLogs: "budget_alert_logs",
   todoLists: "todo_lists",
+  rateLimits: "rate_limits",
 } as const;
+
+/** Shared rate-limit bucket document (keyed by limit prefix + client key). */
+export type RateLimitDocument = {
+  _id: string;
+  count: number;
+  /** Window end — Date so the TTL index can expire stale buckets. */
+  resetAt: Date;
+};
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 

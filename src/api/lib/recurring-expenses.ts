@@ -30,6 +30,7 @@ export type RecurringMaterializeResult = {
   truncated?: boolean;
 };
 
+/** Build a legacy plaintext series key for dedupe. */
 function legacySeriesKey(doc: ExpenseDocument): string {
   return recurringScheduleKey({
     walletId: doc.walletId?.toString() ?? "",
@@ -39,14 +40,18 @@ function legacySeriesKey(doc: ExpenseDocument): string {
   });
 }
 
+/** Prefer encrypted seriesKey when present. */
 function seriesKey(doc: ExpenseDocument): string {
   if (doc.enc === 1 && doc.seriesKey) return doc.seriesKey;
+
   return legacySeriesKey(doc);
 }
 
+/** Add a signed day delta to an ISO calendar date. */
 function addDaysIso(iso: string, delta: number): string {
   const { y, m, d } = parseIsoDate(iso);
   const dt = new Date(Date.UTC(y, m - 1, d + delta));
+
   return formatIsoDateParts(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
 }
 
@@ -55,16 +60,45 @@ async function userTimezone(accountId: string, cache: Map<string, string>): Prom
   const hit = cache.get(accountId);
   if (hit) return hit;
   const { users } = getCollections(getDb());
-  const user = await users.findOne({ _id: new ObjectId(accountId) });
+  const user = await users.findOne(
+    { _id: new ObjectId(accountId) },
+    { projection: { timezone: 1 } },
+  );
   const tz = user?.timezone ?? DEFAULT_TIMEZONE;
   cache.set(accountId, tz);
+
   return tz;
+}
+
+/** Collect due ISO dates for a series between lookback and today. */
+function collectDueDates(
+  anchorIso: string,
+  freq: RecurringInterval,
+  cursorStart: string,
+  today: string,
+  minDue: string,
+): string[] {
+  const dues: string[] = [];
+  let cursor = cursorStart;
+  let createdForSeries = 0;
+
+  while (createdForSeries < RECURRING_CATCHUP_LIMIT) {
+    const due = nextRecurringDueDate(anchorIso, freq, cursor);
+    if (!due || due > today) break;
+    if (due >= minDue) {
+      dues.push(due);
+      createdForSeries++;
+    }
+    cursor = due;
+  }
+
+  return dues;
 }
 
 /**
  * Create ledger rows for due recurring expenses/income through each user's local today.
  * Idempotent: skips dates that already have a matching series row.
- * Only fills dues within LOOKBACK_DAYS of today (plus RECURRING_CATCHUP_LIMIT per series).
+ * Prefetches existing dates and uses insertMany to avoid N+1 writes.
  */
 export async function processDueRecurringExpenses(now = new Date()): Promise<RecurringMaterializeResult> {
   const result: RecurringMaterializeResult = {
@@ -110,6 +144,7 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
 
   result.series = bySeries.size;
   const tzCache = new Map<string, string>();
+  const pendingInserts: ExpenseDocument[] = [];
 
   for (const { latest: template, anchorIso } of bySeries.values()) {
     if (Date.now() - started > CRON_TIME_BUDGET_MS) {
@@ -127,51 +162,41 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
       const tz = await userTimezone(template.accountId, tzCache);
       const today = zonedTodayIso(tz, now);
       const minDue = addDaysIso(today, -LOOKBACK_DAYS);
-      let cursor = template.date;
-      let createdForSeries = 0;
+      const dues = collectDueDates(anchorIso, freq, template.date, today, minDue);
+      if (!dues.length) continue;
+
       const encrypted = template.enc === 1;
+      const existingFilter = encrypted
+        ? {
+            accountId: template.accountId,
+            walletId: template.walletId,
+            seriesKey: template.seriesKey,
+            date: { $in: dues },
+            recurring:
+              freq === "monthly" ? ({ $in: ["monthly", true] } as const) : freq,
+          }
+        : {
+            accountId: template.accountId,
+            walletId: template.walletId,
+            sub: template.sub,
+            note: template.note,
+            date: { $in: dues },
+            recurring:
+              freq === "monthly" ? ({ $in: ["monthly", true] } as const) : freq,
+          };
 
-      while (createdForSeries < RECURRING_CATCHUP_LIMIT) {
-        const due = nextRecurringDueDate(anchorIso, freq, cursor);
-        if (!due || due > today) break;
+      const existing = await expenses
+        .find(existingFilter as Record<string, unknown>)
+        .toArray();
+      const existingDates = new Set(existing.map((row) => row.date));
 
-        if (due < minDue) {
-          cursor = due;
-          continue;
-        }
-
-        const dedupe = encrypted
-          ? {
-              accountId: template.accountId,
-              walletId: template.walletId,
-              seriesKey: template.seriesKey,
-              date: due,
-              recurring:
-                freq === "monthly"
-                  ? ({ $in: ["monthly", true] } as const)
-                  : freq,
-            }
-          : {
-              accountId: template.accountId,
-              walletId: template.walletId,
-              sub: template.sub,
-              note: template.note,
-              date: due,
-              recurring:
-                freq === "monthly"
-                  ? ({ $in: ["monthly", true] } as const)
-                  : freq,
-            };
-
-        const existing = await expenses.findOne(dedupe as Record<string, unknown>);
-        if (existing) {
+      const stamp = new Date();
+      for (const due of dues) {
+        if (existingDates.has(due)) {
           result.skipped++;
-          cursor = due;
           continue;
         }
-
-        const stamp = new Date();
-        await expenses.insertOne({
+        pendingInserts.push({
           _id: randomObjectId(),
           accountId: template.accountId,
           walletId: template.walletId,
@@ -191,10 +216,7 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
               }),
           createdAt: stamp,
           updatedAt: stamp,
-        });
-        result.created++;
-        createdForSeries++;
-        cursor = due;
+        } as ExpenseDocument);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -204,6 +226,11 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
           : template.note || template.sub || "recurring";
       result.errors.push(`${label} (${anchorIso}): ${msg}`);
     }
+  }
+
+  if (pendingInserts.length) {
+    await expenses.insertMany(pendingInserts);
+    result.created += pendingInserts.length;
   }
 
   return result;

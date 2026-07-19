@@ -34,7 +34,7 @@ export const categorySchema = z.object({
   subs: z.array(subcategorySchema).min(1),
 });
 
-export const categoryTaxonomySchema = z.object({
+const categoryTaxonomySchema = z.object({
   accountId: accountIdSchema,
   enc: e2eeVersionSchema.optional(),
   payload: encryptedPayloadSchema.optional(),

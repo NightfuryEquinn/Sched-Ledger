@@ -47,13 +47,18 @@ export async function sendBudgetAlerts(opts: {
 
   if (!emailConfigured()) {
     result.errors.push("RESEND_API_KEY not configured");
+
     return result;
   }
 
   const { users, budgetAlertLogs } = getCollections(getDb());
-  const user = await users.findOne({ _id: new ObjectId(opts.accountId) });
+  const user = await users.findOne(
+    { _id: new ObjectId(opts.accountId) },
+    { projection: { budgetAlertsEnabled: 1, notifyEmail: 1 } },
+  );
   if (!user) {
     result.errors.push("User not found");
+
     return result;
   }
 
@@ -62,23 +67,28 @@ export async function sendBudgetAlerts(opts: {
 
   if (!emailOn || !email) {
     result.skipped += opts.alerts.length;
+
     return result;
   }
 
   const walletName = opts.walletName;
   const label = monthLabel(opts.month);
 
-  for (const alert of opts.alerts) {
-    const logKey = {
+  /* Prefetch this month's logs for the wallet to avoid per-alert findOne. */
+  const existingLogs = await budgetAlertLogs
+    .find({
       accountId: opts.accountId,
       walletId: opts.walletId,
-      categoryId: alert.categoryId,
       month: opts.month,
-      level: alert.level,
-    };
+    })
+    .toArray();
+  const existingKeys = new Set(
+    existingLogs.map((log) => `${log.categoryId}|${log.level}`),
+  );
 
-    const existing = await budgetAlertLogs.findOne(logKey);
-    if (existing) {
+  for (const alert of opts.alerts) {
+    const dedupeKey = `${alert.categoryId}|${alert.level}`;
+    if (existingKeys.has(dedupeKey)) {
       result.skipped++;
       continue;
     }
@@ -106,11 +116,16 @@ export async function sendBudgetAlerts(opts: {
     try {
       await budgetAlertLogs.insertOne({
         _id: new ObjectId(),
-        ...logKey,
+        accountId: opts.accountId,
+        walletId: opts.walletId,
+        categoryId: alert.categoryId,
+        month: opts.month,
+        level: alert.level,
         email,
         channels: ["email"],
         sentAt: new Date(),
       });
+      existingKeys.add(dedupeKey);
       result.sent++;
     } catch (err) {
       const code = (err as { code?: number }).code;

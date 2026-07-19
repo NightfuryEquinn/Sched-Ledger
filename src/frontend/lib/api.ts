@@ -224,14 +224,31 @@ export const api = {
   },
 
   expenses: {
-    list(query?: { month?: string; recurring?: boolean; walletId?: string; kind?: "expense" | "income" }) {
+    list(query?: {
+      month?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      before?: string;
+      recurring?: boolean;
+      walletId?: string;
+      kind?: "expense" | "income";
+    }) {
       const params = new URLSearchParams();
       if (query?.month) params.set("month", query.month);
+      if (query?.from) params.set("from", query.from);
+      if (query?.to) params.set("to", query.to);
+      if (query?.limit != null) params.set("limit", String(query.limit));
+      if (query?.before) params.set("before", query.before);
       if (query?.recurring !== undefined) params.set("recurring", String(query.recurring));
       if (query?.walletId) params.set("walletId", query.walletId);
       if (query?.kind) params.set("kind", query.kind);
       const qs = params.toString();
-      return request<{ expenses: ExpenseWire[] }>(`/expenses${qs ? `?${qs}` : ""}`);
+      return request<{
+        expenses: ExpenseWire[];
+        hasMore?: boolean;
+        nextBefore?: string | null;
+      }>(`/expenses${qs ? `?${qs}` : ""}`);
     },
     create(body: Record<string, unknown>) {
       return request<{ expense: ExpenseWire }>("/expenses", { method: "POST", body });
@@ -256,9 +273,19 @@ export const api = {
   },
 
   events: {
-    list(query?: { month?: string }) {
-      const qs = query?.month ? `?month=${encodeURIComponent(query.month)}` : "";
-      return request<{ events: EventWire[] }>(`/events${qs}`);
+    list(query?: { month?: string; from?: string; to?: string; limit?: number; before?: string }) {
+      const params = new URLSearchParams();
+      if (query?.month) params.set("month", query.month);
+      if (query?.from) params.set("from", query.from);
+      if (query?.to) params.set("to", query.to);
+      if (query?.limit != null) params.set("limit", String(query.limit));
+      if (query?.before) params.set("before", query.before);
+      const qs = params.toString();
+      return request<{
+        events: EventWire[];
+        hasMore?: boolean;
+        nextBefore?: string | null;
+      }>(`/events${qs ? `?${qs}` : ""}`);
     },
     create(body: Record<string, unknown>) {
       return request<{ event: EventWire }>("/events", { method: "POST", body });

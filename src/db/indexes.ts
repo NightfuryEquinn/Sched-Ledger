@@ -90,5 +90,15 @@ export async function ensureIndexes(db: Db): Promise<void> {
       { unique: true },
     ),
     db.collection(COLLECTIONS.todoLists).createIndex({ accountId: 1, createdAt: 1 }),
+    /* TTL cleanup for shared rate-limit buckets (resetAt is epoch ms). */
+    db.collection(COLLECTIONS.rateLimits).createIndex(
+      { resetAt: 1 },
+      { expireAfterSeconds: 0 },
+    ),
+    /* Cron reminder scan: only events that opted into email notify. */
+    db.collection(COLLECTIONS.events).createIndex(
+      { notify: 1 },
+      { partialFilterExpression: { notify: true }, name: "events_notify_true" },
+    ),
   ]);
 }

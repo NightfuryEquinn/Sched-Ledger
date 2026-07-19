@@ -10,17 +10,28 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
       if (!clauses.some((clause) => matches(doc, clause))) return false;
       continue;
     }
+    if (key === "$and") {
+      const clauses = value as Record<string, unknown>[];
+      if (!clauses.every((clause) => matches(doc, clause))) return false;
+      continue;
+    }
     if (key === "_id") {
       if (value && typeof value === "object" && !(value instanceof ObjectId) && !(value instanceof Date) && !Array.isArray(value)) {
         const ops = value as Record<string, unknown>;
         if ("$ne" in ops) {
           const right = ops.$ne;
-          if (right instanceof ObjectId && doc._id.equals(right)) return false;
+          if (right instanceof ObjectId && doc._id instanceof ObjectId && doc._id.equals(right)) return false;
+          if (typeof right === "string" && String(doc._id) === right) return false;
           continue;
         }
       }
-      const id = value instanceof ObjectId ? value.toHexString() : String(value);
-      if (doc._id.toHexString() !== id) return false;
+      const id =
+        value instanceof ObjectId
+          ? value.toHexString()
+          : String(value);
+      const docId =
+        doc._id instanceof ObjectId ? doc._id.toHexString() : String(doc._id);
+      if (docId !== id) return false;
       continue;
     }
     if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date) && !(value instanceof ObjectId)) {
@@ -34,7 +45,39 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
         const left = doc[key];
         const right = ops.$gt;
         if (!(left instanceof Date && right instanceof Date && left.getTime() > right.getTime())) {
-          if (!(typeof left === "number" && typeof right === "number" && left > right)) return false;
+          if (!(typeof left === "number" && typeof right === "number" && left > right)) {
+            if (!(typeof left === "string" && typeof right === "string" && left > right)) return false;
+          }
+        }
+        continue;
+      }
+      if ("$gte" in ops) {
+        const left = doc[key];
+        const right = ops.$gte;
+        if (!(left instanceof Date && right instanceof Date && left.getTime() >= right.getTime())) {
+          if (!(typeof left === "number" && typeof right === "number" && left >= right)) {
+            if (!(typeof left === "string" && typeof right === "string" && left >= right)) return false;
+          }
+        }
+        continue;
+      }
+      if ("$lt" in ops) {
+        const left = doc[key];
+        const right = ops.$lt;
+        if (!(left instanceof Date && right instanceof Date && left.getTime() < right.getTime())) {
+          if (!(typeof left === "number" && typeof right === "number" && left < right)) {
+            if (!(typeof left === "string" && typeof right === "string" && left < right)) return false;
+          }
+        }
+        continue;
+      }
+      if ("$lte" in ops) {
+        const left = doc[key];
+        const right = ops.$lte;
+        if (!(left instanceof Date && right instanceof Date && left.getTime() <= right.getTime())) {
+          if (!(typeof left === "number" && typeof right === "number" && left <= right)) {
+            if (!(typeof left === "string" && typeof right === "string" && left <= right)) return false;
+          }
         }
         continue;
       }
@@ -62,6 +105,12 @@ function applyUpdate(doc: Doc, update: Record<string, unknown>): void {
   if (update.$set && typeof update.$set === "object") {
     Object.assign(doc, update.$set);
   }
+  if (update.$inc && typeof update.$inc === "object") {
+    for (const [k, v] of Object.entries(update.$inc as Record<string, number>)) {
+      const current = typeof doc[k] === "number" ? (doc[k] as number) : 0;
+      doc[k] = current + v;
+    }
+  }
   if (update.$setOnInsert && typeof update.$setOnInsert === "object") {
     /* only applied on insert by findOneAndUpdate path */
   }
@@ -74,13 +123,22 @@ function createCollection() {
   const docs: Doc[] = [];
 
   return {
+    async insertMany(incoming: Record<string, unknown>[]) {
+      const insertedIds: ObjectId[] = [];
+      for (const doc of incoming) {
+        const _id = (doc._id as ObjectId) ?? new ObjectId();
+        docs.push({ ...doc, _id } as Doc);
+        insertedIds.push(_id);
+      }
+      return { insertedIds, insertedCount: insertedIds.length, acknowledged: true };
+    },
     async insertOne(doc: Record<string, unknown>) {
       const _id = (doc._id as ObjectId) ?? new ObjectId();
       const stored = { ...doc, _id } as Doc;
       docs.push(stored);
       return { insertedId: _id, acknowledged: true };
     },
-    async findOne(filter: Record<string, unknown>) {
+    async findOne(filter: Record<string, unknown>, _options?: Record<string, unknown>) {
       return docs.find((d) => matches(d, filter)) ?? null;
     },
     async findOneAndUpdate(
@@ -90,14 +148,12 @@ function createCollection() {
     ) {
       let doc = docs.find((d) => matches(d, filter));
       if (!doc && options?.upsert) {
-        const _id = new ObjectId();
+        const _id = (filter._id as ObjectId | string | undefined) ?? new ObjectId();
         doc = { _id } as Doc;
         if (update.$setOnInsert && typeof update.$setOnInsert === "object") {
           Object.assign(doc, update.$setOnInsert);
         }
-        if (update.$set && typeof update.$set === "object") {
-          Object.assign(doc, update.$set);
-        }
+        applyUpdate(doc, update);
         /* Merge equality filter fields onto inserted doc (Mongo upsert behavior). */
         for (const [k, v] of Object.entries(filter)) {
           if (!k.startsWith("$") && doc[k] === undefined) doc[k] = v as never;
@@ -127,12 +183,21 @@ function createCollection() {
     },
     find(filter: Record<string, unknown> = {}) {
       const matched = docs.filter((d) => matches(d, filter));
-      const state = { docs: matched, sortKey: null as string | null, sortDir: 1 };
+      const state = {
+        docs: matched,
+        sortKey: null as string | null,
+        sortDir: 1,
+        limitN: null as number | null,
+      };
       const api = {
         sort(spec: Record<string, 1 | -1>) {
           const [key, dir] = Object.entries(spec)[0] ?? [];
           state.sortKey = key ?? null;
           state.sortDir = dir ?? 1;
+          return api;
+        },
+        limit(n: number) {
+          state.limitN = n;
           return api;
         },
         async toArray() {
@@ -149,6 +214,7 @@ function createCollection() {
               return String(av).localeCompare(String(bv)) * dir;
             });
           }
+          if (state.limitN != null) return out.slice(0, state.limitN);
           return out;
         },
       };
