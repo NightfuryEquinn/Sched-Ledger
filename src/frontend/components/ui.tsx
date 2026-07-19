@@ -517,14 +517,14 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
   const initKind = initial?.kind ?? "expense";
   const { expenseCategories, incomeCategory, subById, catById } = categoryIndex;
   const firstSub = (catId) => catById[catId]?.subs[0]?.id ?? catId;
-  const initCat = initial && subById[initial.sub] ? subById[initial.sub].catId : "food";
+  const initCat = initial?.sub && subById[initial.sub] ? subById[initial.sub].catId : "food";
   const [kind, setKind] = useState(initKind);
   const [walletId, setWalletId] = useState(initial?.walletId ?? defaultWalletId);
   const [catId, setCatId] = useState(initKind === "income" ? "income" : initCat);
-  const [sub, setSub] = useState(initial ? initial.sub : firstSub("food"));
-  const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
-  const [date, setDate] = useState(initial ? initial.date : TODAY_ISO);
-  const [note, setNote] = useState(initial ? initial.note : "");
+  const [sub, setSub] = useState(initial?.sub ? initial.sub : firstSub("food"));
+  const [amount, setAmount] = useState(initial?.amount != null ? String(initial.amount) : "");
+  const [date, setDate] = useState(initial?.date ? initial.date : TODAY_ISO);
+  const [note, setNote] = useState(initial?.note ? initial.note : "");
   const initRecurring = normalizeRecurring(initial?.recurring);
   const [recurringOn, setRecurringOn] = useState(initRecurring !== false);
   const [recurringFreq, setRecurringFreq] = useState<RecurringInterval>(
@@ -567,6 +567,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
       amount: Math.round(parseFloat(amount) * 100) / 100,
       note: note.trim() || subById[sub]?.name || "Transaction",
       recurring: recurringOn ? recurringFreq : false,
+      ...(initial?.eventId ? { eventId: initial.eventId } : {}),
     });
   };
 

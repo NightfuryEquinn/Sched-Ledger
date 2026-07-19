@@ -1,4 +1,8 @@
 import { AccountMenu } from "@/frontend/auth";
+import type { LedgerBackupPlain } from "@/frontend/auth/lib/encrypted-backup";
+import type { EventImportRow } from "@/frontend/auth/lib/import-events";
+import type { TodoImportList } from "@/frontend/auth/lib/import-todos";
+import { restoreBackupToLedger } from "@/frontend/auth/lib/restore-backup";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { WalletManageModal, WalletSwitcher } from "@/frontend/components/Wallets";
 import {
@@ -12,8 +16,6 @@ import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour } from "@/frontend/lib/tour";
 import type { Account, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
-import type { EventImportRow } from "@/frontend/auth/lib/import-events";
-import type { TodoImportList } from "@/frontend/auth/lib/import-todos";
 import {
   Budgets as BudgetsView,
   Categories as CategoriesView,
@@ -57,7 +59,7 @@ const VIEW_TITLES: Record<ViewId, string> = {
 export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   const ledger = useLedger(account.address);
   const [view, setView] = useState<ViewId>("overview");
-  const [modal, setModal] = useState<Expense | { add: true } | null>(null);
+  const [modal, setModal] = useState<Expense | { add: true; eventId?: string; date?: string; note?: string } | null>(null);
   const [evModal, setEvModal] = useState<LedgerEvent | { add: true; date: string } | null>(null);
   const [evOccurrenceIso, setEvOccurrenceIso] = useState<string | undefined>(undefined);
   const [walletModal, setWalletModal] = useState(false);
@@ -114,8 +116,37 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   const saveExpense = async (data: Expense & { id?: string }) => {
     const walletId = data.walletId || activeWallet?.id;
     if (!walletId) return;
-    await ledger.saveExpense({ ...data, walletId });
+    const saved = await ledger.saveExpense({ ...data, walletId });
+    if (!data.id && data.eventId && saved?.expense?.id) {
+      const ev = events.find((e) => e.id === data.eventId);
+      if (ev) {
+        try {
+          await ledger.saveEvent({ ...ev, expenseId: saved.expense.id });
+        } catch {
+          /* Link-back is best-effort; expense already saved with eventId. */
+        }
+      }
+    }
     setModal(null);
+  };
+
+  /** Open expense modal prefilled from a bill/renewal schedule event. */
+  const logPaymentFromEvent = (ev: { id: string; title: string; date: string; expenseId?: string }) => {
+    if (ev.expenseId) {
+      const linked = allExpenses.find((e) => e.id === ev.expenseId);
+      if (linked) {
+        setEvModal(null);
+        setModal(linked);
+        return;
+      }
+    }
+    setEvModal(null);
+    setModal({
+      add: true,
+      eventId: ev.id,
+      date: ev.date,
+      note: ev.title,
+    });
   };
 
   const importExpenses = async (rows: Omit<Expense, "id">[], categories?: Category[]) => {
@@ -203,6 +234,33 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     return { importedLists, importedTasks, failed };
   };
 
+  /** Restore an encrypted backup snapshot into the unlocked ledger. */
+  const restoreBackup = async (plain: LedgerBackupPlain) => {
+    return restoreBackupToLedger(
+      plain,
+      {
+        address: account.address,
+        wallets,
+        expenses: allExpenses,
+        events,
+        todoLists: ledger.todoLists,
+      },
+      {
+        saveCategories: ledger.saveCategories,
+        saveWallet: async (w) => ledger.saveWallet(w),
+        saveExpense: async (e) => {
+          await ledger.saveExpense(e);
+        },
+        saveEvent: async (e) => {
+          await ledger.saveEvent(e);
+        },
+        saveTodoList: async (t) => {
+          await ledger.saveTodoList(t);
+        },
+      },
+    );
+  };
+
   const deleteExpense = async (id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) => {
     await ledger.deleteExpense(id, opts);
     setModal(null);
@@ -259,6 +317,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
                 onImportExpenses={importExpenses}
                 onImportEvents={importEvents}
                 onImportTodos={importTodos}
+                onRestoreBackup={restoreBackup}
                 onTakeTour={() => startViewTour(view)}
               />
             </div>
@@ -392,7 +451,17 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
 
       {modal && activeWallet ? (
         <AddExpenseModal
-          initial={"add" in modal ? null : modal}
+          initial={
+            "add" in modal
+              ? modal.eventId || modal.date || modal.note
+                ? {
+                    eventId: modal.eventId,
+                    date: modal.date,
+                    note: modal.note,
+                  }
+                : null
+              : modal
+          }
           wallets={wallets}
           defaultWalletId={activeWallet.id}
           categoryIndex={ledger.categoryIndex}
@@ -416,6 +485,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           defaultDate={"add" in evModal ? evModal.date : undefined}
           occurrenceIso={"add" in evModal ? undefined : evOccurrenceIso}
           onSave={saveEvent}
+          onLogPayment={logPaymentFromEvent}
           onClose={() => {
             setEvModal(null);
             setEvOccurrenceIso(undefined);

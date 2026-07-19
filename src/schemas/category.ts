@@ -1,6 +1,6 @@
 import { DEFAULT_GLYPH } from "@/lib/glyphs";
 import { z } from "zod";
-import { walletAddressSchema } from "./address";
+import { accountIdSchema } from "./ids";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
 export const categoryIdSchema = z
@@ -35,7 +35,7 @@ export const categorySchema = z.object({
 });
 
 export const categoryTaxonomySchema = z.object({
-  userAddress: walletAddressSchema,
+  accountId: accountIdSchema,
   enc: e2eeVersionSchema.optional(),
   payload: encryptedPayloadSchema.optional(),
   /** Legacy plaintext tree (pre-E2EE). */

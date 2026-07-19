@@ -28,8 +28,8 @@ export function WalletSwitcher({ wallets, activeId, onChange, onManage }: Wallet
 type WalletManageModalProps = {
   wallets: FinancialWallet[];
   activeId: string;
-  onSave: (data: Partial<FinancialWallet> & { id?: string; name?: string; currency?: string }) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onSave: (data: Partial<FinancialWallet> & { id?: string; name?: string; currency?: string }) => Promise<unknown>;
+  onDelete: (id: string) => Promise<unknown>;
   onClose: () => void;
 };
 

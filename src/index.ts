@@ -19,6 +19,14 @@ try {
 const server = serve({
   routes: {
     "/api/*": (req) => api.fetch(req),
+    "/manifest.webmanifest": () =>
+      new Response(Bun.file("public/manifest.webmanifest"), {
+        headers: { "Content-Type": "application/manifest+json" },
+      }),
+    "/sw.js": () =>
+      new Response(Bun.file("public/sw.js"), {
+        headers: { "Content-Type": "application/javascript", "Service-Worker-Allowed": "/" },
+      }),
     "/*": index,
   },
 

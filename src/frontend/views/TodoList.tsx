@@ -17,7 +17,7 @@ const ICONS = TODO_ICON_OPTIONS;
 type TodoListViewProps = {
   todoLists: TodoList[];
   onSave: (data: Partial<TodoList> & { id?: string; name?: string; icon?: string }) => Promise<TodoList>;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<unknown>;
 };
 
 type EditorMode =
@@ -43,7 +43,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
 
   useEffect(() => {
     setLists(todoLists);
-    if (!activeId && todoLists.length) setActiveId(todoLists[0].id);
+    if (!activeId && todoLists.length) setActiveId(todoLists[0]?.id ?? null);
     if (activeId && !todoLists.some((l) => l.id === activeId)) {
       setActiveId(todoLists[0]?.id ?? null);
     }

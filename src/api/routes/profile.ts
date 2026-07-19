@@ -7,6 +7,7 @@ import { getCollections, getDb } from "@/db";
 import { defaultProfile, updateProfileSchema } from "@/schemas/profile";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { ObjectId } from "mongodb";
 
 const PROFILE_CACHE_TTL_MS = 30_000;
 
@@ -14,36 +15,41 @@ export const profileRoutes = new Hono<{ Variables: SessionVariables }>();
 
 profileRoutes.use("*", sessionAuth);
 
-function profileCacheKey(address: string) {
-  return `profile:${address}`;
+/** Build the in-memory profile cache key for an account. */
+function profileCacheKey(accountId: string) {
+  return `profile:${accountId}`;
 }
 
-function serializeProfile(doc: { _id: import("mongodb").ObjectId; userAddress: string; currentMonth: string }) {
+/** Expose only id + currentMonth (ownership keys stay server-side). */
+function serializeProfile(doc: { _id: import("mongodb").ObjectId; currentMonth: string }) {
   const serialized = serializeDoc(doc);
+
   return {
     id: serialized.id,
-    userAddress: serialized.userAddress,
     currentMonth: serialized.currentMonth,
   };
 }
 
-async function getOrCreateProfile(walletAddress: string) {
-  const cached = cacheGet<Awaited<ReturnType<typeof fetchProfile>>>(profileCacheKey(walletAddress));
+/** Load or create the ledger profile for an account (with short TTL cache). */
+async function getOrCreateProfile(accountId: string) {
+  const cached = cacheGet<Awaited<ReturnType<typeof fetchProfile>>>(profileCacheKey(accountId));
   if (cached) return cached;
 
-  const profile = await fetchProfile(walletAddress);
-  cacheSet(profileCacheKey(walletAddress), profile, PROFILE_CACHE_TTL_MS);
+  const profile = await fetchProfile(accountId);
+  cacheSet(profileCacheKey(accountId), profile, PROFILE_CACHE_TTL_MS);
   return profile;
 }
 
-async function fetchProfile(walletAddress: string) {
+/** Fetch the profile document, inserting a default when missing. */
+async function fetchProfile(accountId: string) {
   const { ledgerProfiles } = getCollections(getDb());
-  const existing = await ledgerProfiles.findOne({ userAddress: walletAddress });
+  const existing = await ledgerProfiles.findOne({ accountId });
   if (existing) return existing;
 
   const now = new Date();
-  const seed = defaultProfile(walletAddress);
+  const seed = defaultProfile(accountId);
   const result = await ledgerProfiles.insertOne({
+    _id: new ObjectId(),
     ...seed,
     createdAt: now,
     updatedAt: now,
@@ -54,27 +60,28 @@ async function fetchProfile(walletAddress: string) {
   return created;
 }
 
-function invalidateProfile(walletAddress: string) {
-  cacheDel(profileCacheKey(walletAddress));
+/** Drop the cached profile for an account after a write. */
+function invalidateProfile(accountId: string) {
+  cacheDel(profileCacheKey(accountId));
 }
 
 profileRoutes.get("/", async (c) => {
-  const walletAddress = c.get("walletAddress");
-  const profile = await getOrCreateProfile(walletAddress);
+  const accountId = c.get("accountId");
+  const profile = await getOrCreateProfile(accountId);
   c.header("Cache-Control", "private, max-age=30");
   return c.json({ profile: serializeProfile(profile) });
 });
 
 profileRoutes.patch("/", zValidator("json", updateProfileSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const body = c.req.valid("json");
   const { ledgerProfiles } = getCollections(getDb());
 
-  await fetchProfile(walletAddress);
-  invalidateProfile(walletAddress);
+  await fetchProfile(accountId);
+  invalidateProfile(accountId);
 
   const updated = await ledgerProfiles.findOneAndUpdate(
-    { userAddress: walletAddress },
+    { accountId },
     { $set: { ...body, updatedAt: new Date() } },
     { returnDocument: "after" },
   );

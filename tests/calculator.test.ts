@@ -4,6 +4,7 @@ import {
   computeNet,
   isValidAllocationTotal,
   isValidTaxTotal,
+  MY_TAX_PRESETS,
   sumPercents,
 } from "@/frontend/lib/calculator";
 
@@ -58,5 +59,13 @@ describe("calculator", () => {
 
   test("allocateBudgets returns empty map for empty allocations", () => {
     expect(allocateBudgets(500, [])).toEqual({});
+  });
+
+  test("MY_TAX_PRESETS stay within a valid combined tax total", () => {
+    expect(MY_TAX_PRESETS.length).toBeGreaterThan(0);
+    for (const preset of MY_TAX_PRESETS) {
+      expect(isValidTaxTotal(preset.lines.map((l) => l.pct))).toBe(true);
+      expect(preset.lines.every((l) => l.title.trim().length > 0)).toBe(true);
+    }
   });
 });

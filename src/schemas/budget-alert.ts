@@ -14,6 +14,8 @@ export const budgetAlertItemSchema = z.object({
 
 export const createBudgetAlertsSchema = z.object({
   walletId: objectIdSchema,
+  /** Client-decrypted display label (wallet names are E2EE). */
+  walletName: z.string().trim().min(1).max(60).optional(),
   month: monthKeySchema,
   alerts: z.array(budgetAlertItemSchema).min(1).max(32),
 });

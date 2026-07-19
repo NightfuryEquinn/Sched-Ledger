@@ -11,6 +11,7 @@ import { RecoveryReveal } from "./components/RecoveryReveal";
 import { copyText } from "./lib/clipboard";
 import { shortAddr } from "./lib/format";
 import { identityStorage } from "./lib/identity-storage";
+import { sessionSecrets } from "./lib/session-secrets";
 import type { EventImportRow } from "./lib/import-events";
 import type { ExpenseImportRow } from "./lib/import";
 import type { TodoImportList } from "./lib/import-todos";
@@ -38,6 +39,9 @@ type AccountMenuProps = {
   ) => Promise<{ imported: number; failed: number; newCategories: number; newSubcategories: number }>;
   onImportEvents?: (rows: EventImportRow[]) => Promise<{ imported: number; failed: number }>;
   onImportTodos?: (lists: TodoImportList[]) => Promise<{ importedLists: number; importedTasks: number; failed: number }>;
+  onRestoreBackup?: (plain: import("./lib/encrypted-backup").LedgerBackupPlain) => Promise<
+    import("./lib/restore-backup").BackupRestoreResult
+  >;
   onTakeTour?: () => void;
 };
 
@@ -53,6 +57,7 @@ export function AccountMenu({
   onImportExpenses,
   onImportEvents,
   onImportTodos,
+  onRestoreBackup,
   onTakeTour,
 }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
@@ -163,7 +168,7 @@ export function AccountMenu({
           <button className="am-item" type="button" onClick={() => { copyText(account.address); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>
             <Icon name={copied ? "check" : "copy"} size={16} /> {copied ? "Address copied" : "Copy address"}
           </button>
-          {stored?.mnemonic ? (
+          {stored?.vault || stored?.mnemonic || sessionSecrets.get(account.address)?.mnemonic ? (
             <button className="am-item" type="button" onClick={() => { setReveal(true); setOpen(false); }}>
               <Icon name="key" size={16} /> Recovery phrase
             </button>
@@ -212,6 +217,7 @@ export function AccountMenu({
       ) : null}
       {csvOpen ? (
         <ImportExportModal
+          accountAddress={account.address}
           expenses={expenses}
           events={events}
           todoLists={todoLists}
@@ -221,6 +227,7 @@ export function AccountMenu({
           onImportExpenses={onImportExpenses}
           onImportEvents={onImportEvents}
           onImportTodos={onImportTodos}
+          onRestoreBackup={onRestoreBackup}
           onClose={() => setCsvOpen(false)}
         />
       ) : null}

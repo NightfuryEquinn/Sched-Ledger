@@ -6,19 +6,22 @@ import { getCollections, getDb } from "@/db";
 import { updateConsentSchema } from "@/schemas/consent";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { ObjectId } from "mongodb";
 
 export const consentRoutes = new Hono<{ Variables: SessionVariables }>();
 
 consentRoutes.use("*", sessionAuth);
 
-async function getOrCreateConsent(walletAddress: string) {
+/** Load or create the third-party consent record for an account. */
+async function getOrCreateConsent(accountId: string) {
   const { consent } = getCollections(getDb());
-  const existing = await consent.findOne({ userAddress: walletAddress });
+  const existing = await consent.findOne({ accountId });
   if (existing) return existing;
 
   const now = new Date();
   const result = await consent.insertOne({
-    userAddress: walletAddress,
+    _id: new ObjectId(),
+    accountId,
     optedIn: false,
     createdAt: now,
     updatedAt: now,
@@ -30,20 +33,20 @@ async function getOrCreateConsent(walletAddress: string) {
 }
 
 consentRoutes.get("/", async (c) => {
-  const walletAddress = c.get("walletAddress");
-  const record = await getOrCreateConsent(walletAddress);
+  const accountId = c.get("accountId");
+  const record = await getOrCreateConsent(accountId);
   return c.json({ consent: serializeDoc(record) });
 });
 
 consentRoutes.patch("/", zValidator("json", updateConsentSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const { optedIn } = c.req.valid("json");
   const { consent } = getCollections(getDb());
 
-  await getOrCreateConsent(walletAddress);
+  await getOrCreateConsent(accountId);
 
   const updated = await consent.findOneAndUpdate(
-    { userAddress: walletAddress },
+    { accountId },
     { $set: { optedIn, updatedAt: new Date() } },
     { returnDocument: "after" },
   );

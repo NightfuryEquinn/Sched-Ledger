@@ -15,13 +15,13 @@ export const budgetAlertsRoutes = new Hono<{ Variables: SessionVariables }>();
  * email using the posted alert summaries and dedupes per category/month/level.
  */
 budgetAlertsRoutes.post("/", sessionAuth, zValidator("json", createBudgetAlertsSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const body = c.req.valid("json");
   const { financialWallets } = getCollections(getDb());
 
   const wallet = await financialWallets.findOne({
     _id: new ObjectId(body.walletId),
-    userAddress: walletAddress,
+    accountId,
   });
   if (!wallet) notFound("Wallet not found");
 
@@ -37,9 +37,9 @@ budgetAlertsRoutes.post("/", sessionAuth, zValidator("json", createBudgetAlertsS
   }
 
   const result = await sendBudgetAlerts({
-    userAddress: walletAddress,
+    accountId,
     walletId: body.walletId,
-    walletName: wallet.name,
+    walletName: body.walletName,
     month: body.month,
     alerts: body.alerts,
   });

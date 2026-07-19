@@ -28,17 +28,23 @@ export type ExpenseWire = {
   enc?: 1;
   payload?: string;
   seriesKey?: string;
+  eventId?: string;
   /** Legacy plaintext fields (pre-E2EE or migration). */
   sub?: string;
   amount?: number;
   note?: string;
 };
 
-export type WalletWire = FinancialWallet & {
+export type WalletWire = Omit<FinancialWallet, "name" | "income" | "startingBalance" | "budgets"> & {
+  name?: string;
+  income?: number;
+  startingBalance?: number;
+  budgets?: Budgets;
   enc?: 1;
   payload?: string;
 };
 
+/** Decrypt expense secrets and merge with plaintext metadata. */
 export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<Expense> {
   if (wire.enc === 1 && wire.payload) {
     const secrets = await decryptJson<ExpenseSecrets>(key, wire.payload);
@@ -48,6 +54,7 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
       kind: wire.kind ?? "expense",
       date: wire.date,
       recurring: normalizeRecurring(wire.recurring),
+      ...(wire.eventId ? { eventId: wire.eventId } : {}),
       ...secrets,
     };
   }
@@ -63,11 +70,12 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
     amount: wire.amount,
     note: wire.note ?? "",
     recurring: normalizeRecurring(wire.recurring),
+    ...(wire.eventId ? { eventId: wire.eventId } : {}),
   };
 }
 
 export async function encodeExpenseCreate(
-  expense: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring">,
+  expense: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring" | "eventId">,
   key: CryptoKey,
 ) {
   const payload = await encryptJson(key, {
@@ -93,6 +101,7 @@ export async function encodeExpenseCreate(
     enc: 1 as const,
     payload,
     ...(seriesKey ? { seriesKey } : {}),
+    ...(expense.eventId ? { eventId: expense.eventId } : {}),
   };
 }
 
@@ -109,38 +118,45 @@ export async function encodeExpenseUpdate(
   if (expense.walletId) patch.walletId = expense.walletId;
   if (expense.kind) patch.kind = expense.kind;
   if (expense.date) patch.date = expense.date;
+  if (expense.eventId !== undefined) patch.eventId = expense.eventId || null;
   if (expense.recurring !== undefined) {
     patch.recurring = normalizeRecurring(expense.recurring);
     const recurring = patch.recurring as RecurringField | false;
-    if (recurring !== false && expense.walletId) {
+    if (recurring === false) {
+      patch.seriesKey = null;
+    } else if (expense.walletId) {
       patch.seriesKey = await expenseSeriesKey({
         walletId: expense.walletId,
         sub: expense.sub,
         note: expense.note ?? "",
         recurring,
       });
-    } else {
-      patch.seriesKey = null;
     }
+    /* If walletId is omitted, leave seriesKey untouched so we do not wipe/fork the series. */
   }
   return patch;
 }
 
+/** Decrypt wallet secrets (name + financials), with legacy plaintext fallback. */
 export async function decodeWallet(wire: WalletWire, key: CryptoKey): Promise<FinancialWallet> {
   if (wire.enc === 1 && wire.payload) {
-    const secrets = await decryptJson<WalletSecrets>(key, wire.payload);
+    const secrets = await decryptJson<Partial<WalletSecrets> & { income?: number }>(key, wire.payload);
+
     return {
       id: wire.id,
-      name: wire.name,
+      name: secrets.name ?? wire.name ?? "Wallet",
       currency: wire.currency,
       fundingMode: wire.fundingMode ?? "monthly",
       isDefault: wire.isDefault,
-      ...secrets,
+      income: secrets.income ?? 0,
+      startingBalance: secrets.startingBalance ?? 0,
+      budgets: secrets.budgets ?? {},
     };
   }
+
   return {
     id: wire.id,
-    name: wire.name,
+    name: wire.name ?? "Wallet",
     currency: wire.currency,
     fundingMode: wire.fundingMode ?? "monthly",
     income: wire.income ?? 0,
@@ -150,13 +166,15 @@ export async function decodeWallet(wire: WalletWire, key: CryptoKey): Promise<Fi
   };
 }
 
+/** Encrypt wallet name and financial fields for create/update. */
 export async function encodeWalletFinancials(
-  data: { income?: number; startingBalance?: number; budgets?: Budgets },
+  data: { name: string; income?: number; startingBalance?: number; budgets?: Budgets },
   key: CryptoKey,
 ) {
   return {
     enc: 1 as const,
     payload: await encryptJson(key, {
+      name: data.name,
       income: data.income ?? 0,
       startingBalance: data.startingBalance ?? 0,
       budgets: data.budgets ?? {},
@@ -196,16 +214,17 @@ export async function encodeCategories(categories: Category[], key: CryptoKey) {
 
 export type EventWire = {
   id: string;
-  catId: string;
+  catId: LedgerEvent["catId"];
   date: string;
   allDay: boolean;
   time: string | null;
-  repeat: string;
+  repeat: LedgerEvent["repeat"];
   exceptDates?: string[];
   until?: string | null;
   notify: boolean;
-  lead: string;
+  lead: LedgerEvent["lead"];
   email?: string;
+  expenseId?: string;
   enc?: 1;
   payload?: string;
   /** Legacy plaintext secrets. */
@@ -232,6 +251,7 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
       notify: wire.notify,
       lead: wire.lead,
       email: wire.email ?? "",
+      ...(wire.expenseId ? { expenseId: wire.expenseId } : {}),
       title: secrets.title,
       comments: secrets.comments ?? [],
       ...(secrets.customLabel ? { customLabel: secrets.customLabel } : {}),
@@ -259,6 +279,7 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
     lead: wire.lead,
     email: wire.email ?? "",
     comments: wire.comments ?? [],
+    ...(wire.expenseId ? { expenseId: wire.expenseId } : {}),
   };
 }
 
@@ -285,6 +306,7 @@ export async function encodeEventCreate(
     notify: event.notify,
     lead: event.lead,
     email: event.email ?? "",
+    ...(event.expenseId ? { expenseId: event.expenseId } : {}),
     enc: 1 as const,
     payload: await encryptJson(key, secrets),
   };
@@ -319,6 +341,7 @@ export async function encodeEventUpdate(
   if (event.notify !== undefined) patch.notify = event.notify;
   if (event.lead !== undefined) patch.lead = event.lead;
   if (event.email !== undefined) patch.email = event.email;
+  if (event.expenseId !== undefined) patch.expenseId = event.expenseId || null;
 
   return patch;
 }

@@ -5,6 +5,7 @@ import { api } from "@/frontend/lib/api";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { unlockLedgerKey } from "@/frontend/lib/crypto/unlock";
 import { identityStorage } from "@/frontend/auth/lib/identity-storage";
+import { sessionSecrets } from "@/frontend/auth/lib/session-secrets";
 import { ThemeProvider } from "@/frontend/lib/hooks/useTheme";
 import type { Account } from "@/frontend/lib/types";
 import { useEffect, useState } from "react";
@@ -30,9 +31,15 @@ export function Root() {
             : remote;
         setAccount(merged);
         const idn = identityStorage.find(merged.address);
-        if (idn?.privateKey && !idn.injected) {
+        const session = sessionSecrets.get(merged.address);
+        const privateKey = session?.privateKey ?? idn?.privateKey;
+        if (privateKey && !idn?.injected) {
           try {
-            await unlockLedgerKey(idn);
+            await unlockLedgerKey({
+              ...idn!,
+              privateKey,
+              mnemonic: session?.mnemonic ?? idn?.mnemonic,
+            });
             setCryptoReady(true);
           } catch {
             setCryptoReady(false);
@@ -45,6 +52,7 @@ export function Root() {
 
   const signOut = async () => {
     ledgerKeyStore.clear();
+    sessionSecrets.clearAll();
     await logoutSession();
     setAccount(null);
     setCryptoReady(false);

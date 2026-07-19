@@ -1,11 +1,12 @@
 import { badRequest, notFound } from "@/api/lib/errors";
+import { randomObjectId } from "@/api/lib/ids";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { objectIdSchema } from "@/schemas/common";
 import { e2eeVersionSchema, encryptedPayloadSchema } from "@/schemas/encryption";
-import { createWalletSchema, updateWalletSchema } from "@/schemas/wallet";
+import { createWalletSchema, updateWalletSchema, type CreateWalletInput } from "@/schemas/wallet";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { ObjectId } from "mongodb";
@@ -20,40 +21,46 @@ export const walletsRoutes = new Hono<{ Variables: SessionVariables }>();
 
 walletsRoutes.use("*", sessionAuth);
 
-function walletSeed(userAddress: string, name = "Main", currency = "MYR", isDefault = true) {
+/** Seed fields for a new financial wallet (name lives in E2EE payload). */
+function walletSeed(
+  accountId: string,
+  currency: CreateWalletInput["currency"] = "MYR",
+  isDefault = true,
+) {
   return {
-    userAddress,
-    name,
+    accountId,
+    name: "Main",
     currency,
     fundingMode: "monthly" as const,
     isDefault,
   };
 }
 
-async function migrateLegacyData(walletAddress: string) {
+async function migrateLegacyData(accountId: string) {
   const { financialWallets, expenses } = getCollections(getDb());
-  const existing = await financialWallets.find({ userAddress: walletAddress }).toArray();
+  const existing = await financialWallets.find({ accountId }).toArray();
   if (existing.length > 0) return existing;
 
   const now = new Date();
   const result = await financialWallets.insertOne({
-    ...walletSeed(walletAddress),
+    _id: randomObjectId(),
+    ...walletSeed(accountId),
     createdAt: now,
     updatedAt: now,
   });
 
   await expenses.updateMany(
-    { userAddress: walletAddress, walletId: { $exists: false } },
+    { accountId, walletId: { $exists: false } },
     { $set: { walletId: result.insertedId } },
   );
 
   await financialWallets.updateMany(
-    { userAddress: walletAddress, fundingMode: { $exists: false } },
+    { accountId, fundingMode: { $exists: false } },
     { $set: { fundingMode: "monthly" } },
   );
 
   await expenses.updateMany(
-    { userAddress: walletAddress, kind: { $exists: false } },
+    { accountId, kind: { $exists: false } },
     { $set: { kind: "expense" } },
   );
 
@@ -61,65 +68,67 @@ async function migrateLegacyData(walletAddress: string) {
   return created ? [created] : [];
 }
 
-async function getUserWallets(walletAddress: string) {
-  const wallets = await migrateLegacyData(walletAddress);
+async function getUserWallets(accountId: string) {
+  const wallets = await migrateLegacyData(accountId);
   const { financialWallets, expenses } = getCollections(getDb());
   await financialWallets.updateMany(
-    { userAddress: walletAddress, fundingMode: { $exists: false } },
+    { accountId, fundingMode: { $exists: false } },
     { $set: { fundingMode: "monthly" } },
   );
   await expenses.updateMany(
-    { userAddress: walletAddress, kind: { $exists: false } },
+    { accountId, kind: { $exists: false } },
     { $set: { kind: "expense" } },
   );
   if (wallets.length > 0) {
-    return financialWallets.find({ userAddress: walletAddress }).sort({ createdAt: 1 }).toArray();
+    return financialWallets.find({ accountId }).sort({ createdAt: 1 }).toArray();
   }
 
-  return financialWallets.find({ userAddress: walletAddress }).sort({ createdAt: 1 }).toArray();
+  return financialWallets.find({ accountId }).sort({ createdAt: 1 }).toArray();
 }
 
-async function findOwnedWallet(walletAddress: string, walletId: string) {
+async function findOwnedWallet(accountId: string, walletId: string) {
   const { financialWallets } = getCollections(getDb());
   return financialWallets.findOne({
     _id: new ObjectId(walletId),
-    userAddress: walletAddress,
+    accountId,
   });
 }
 
 walletsRoutes.get("/", async (c) => {
-  const walletAddress = c.get("walletAddress");
-  const wallets = await getUserWallets(walletAddress);
+  const accountId = c.get("accountId");
+  const wallets = await getUserWallets(accountId);
   return c.json({ wallets: serializeDocs(wallets) });
 });
 
 walletsRoutes.get("/:id", async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Wallet not found");
 
-  await migrateLegacyData(walletAddress);
-  const doc = await findOwnedWallet(walletAddress, id.data);
+  await migrateLegacyData(accountId);
+  const doc = await findOwnedWallet(accountId, id.data);
   if (!doc) notFound("Wallet not found");
 
   return c.json({ wallet: serializeDoc(doc) });
 });
 
 walletsRoutes.post("/", zValidator("json", createWalletSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const body = c.req.valid("json");
   const { financialWallets } = getCollections(getDb());
 
-  await migrateLegacyData(walletAddress);
+  await migrateLegacyData(accountId);
 
-  const count = await financialWallets.countDocuments({ userAddress: walletAddress });
+  const count = await financialWallets.countDocuments({ accountId });
   const now = new Date();
 
   const result = await financialWallets.insertOne({
-    userAddress: walletAddress,
-    name: body.name,
+    _id: randomObjectId(),
+    accountId,
     currency: body.currency,
     fundingMode: body.fundingMode,
+    enc: body.enc,
+    payload: body.payload,
     isDefault: count === 0,
     createdAt: now,
     updatedAt: now,
@@ -132,17 +141,17 @@ walletsRoutes.post("/", zValidator("json", createWalletSchema), async (c) => {
 });
 
 walletsRoutes.patch("/:id", zValidator("json", updateWalletSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Wallet not found");
 
   const body = c.req.valid("json");
   const { financialWallets } = getCollections(getDb());
 
-  await migrateLegacyData(walletAddress);
+  await migrateLegacyData(accountId);
 
   if (body.isDefault === false) {
-    const target = await findOwnedWallet(walletAddress, id.data);
+    const target = await findOwnedWallet(accountId, id.data);
     if (target?.isDefault) {
       badRequest("Cannot unset the default wallet. Set another wallet as default instead.");
     }
@@ -150,13 +159,12 @@ walletsRoutes.patch("/:id", zValidator("json", updateWalletSchema), async (c) =>
 
   if (body.isDefault === true) {
     await financialWallets.updateMany(
-      { userAddress: walletAddress, isDefault: true },
+      { accountId, isDefault: true },
       { $set: { isDefault: false, updatedAt: new Date() } },
     );
   }
 
   const patch: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.name !== undefined) patch.name = body.name;
   if (body.currency !== undefined) patch.currency = body.currency;
   if (body.fundingMode !== undefined) patch.fundingMode = body.fundingMode;
   if (body.isDefault !== undefined) patch.isDefault = body.isDefault;
@@ -167,11 +175,14 @@ walletsRoutes.patch("/:id", zValidator("json", updateWalletSchema), async (c) =>
 
   const update =
     "enc" in body && body.enc === 1
-      ? { $set: patch, $unset: { income: "", startingBalance: "", budgets: "" } }
+      ? {
+          $set: patch,
+          $unset: { name: "" as const, income: "" as const, startingBalance: "" as const, budgets: "" as const },
+        }
       : { $set: patch };
 
   const updated = await financialWallets.findOneAndUpdate(
-    { _id: new ObjectId(id.data), userAddress: walletAddress },
+    { _id: new ObjectId(id.data), accountId },
     update,
     { returnDocument: "after" },
   );
@@ -181,20 +192,20 @@ walletsRoutes.patch("/:id", zValidator("json", updateWalletSchema), async (c) =>
 });
 
 walletsRoutes.put("/:id/budgets", zValidator("json", encryptedBudgetsSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Wallet not found");
 
   const body = c.req.valid("json");
 
   const { financialWallets } = getCollections(getDb());
-  await migrateLegacyData(walletAddress);
+  await migrateLegacyData(accountId);
 
   const updated = await financialWallets.findOneAndUpdate(
-    { _id: new ObjectId(id.data), userAddress: walletAddress },
+    { _id: new ObjectId(id.data), accountId },
     {
       $set: { enc: 1, payload: body.payload, updatedAt: new Date() },
-      $unset: { income: "", startingBalance: "", budgets: "" },
+      $unset: { name: "" as const, income: "" as const, startingBalance: "" as const, budgets: "" as const },
     },
     { returnDocument: "after" },
   );
@@ -204,31 +215,31 @@ walletsRoutes.put("/:id/budgets", zValidator("json", encryptedBudgetsSchema), as
 });
 
 walletsRoutes.delete("/:id", async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Wallet not found");
 
   const { financialWallets, expenses } = getCollections(getDb());
-  await migrateLegacyData(walletAddress);
+  await migrateLegacyData(accountId);
 
-  const doc = await findOwnedWallet(walletAddress, id.data);
+  const doc = await findOwnedWallet(accountId, id.data);
   if (!doc) notFound("Wallet not found");
 
-  const walletCount = await financialWallets.countDocuments({ userAddress: walletAddress });
+  const walletCount = await financialWallets.countDocuments({ accountId });
   if (walletCount <= 1) badRequest("Cannot delete your only wallet");
 
   const expenseCount = await expenses.countDocuments({
-    userAddress: walletAddress,
+    accountId,
     walletId: new ObjectId(id.data),
   });
   if (expenseCount > 0) {
     badRequest("Cannot delete a wallet that has transactions. Move or delete them first.");
   }
 
-  await financialWallets.deleteOne({ _id: new ObjectId(id.data), userAddress: walletAddress });
+  await financialWallets.deleteOne({ _id: new ObjectId(id.data), accountId });
 
   if (doc.isDefault) {
-    const fallback = await financialWallets.findOne({ userAddress: walletAddress });
+    const fallback = await financialWallets.findOne({ accountId });
     if (fallback) {
       await financialWallets.updateOne(
         { _id: fallback._id },

@@ -1,7 +1,7 @@
 import { RECURRING_INTERVALS } from "@/lib/recurring";
 import { z } from "zod";
 import { encryptedPayloadSchema, e2eeVersionSchema, seriesKeySchema } from "./encryption";
-import { isoDateSchema, objectIdSchema, subcategoryIdSchema, walletAddressSchema } from "./common";
+import { accountIdSchema, isoDateSchema, objectIdSchema, subcategoryIdSchema } from "./common";
 
 export const txnKindSchema = z.enum(["expense", "income"]);
 
@@ -28,6 +28,8 @@ const expenseMetaSchema = z.object({
   enc: e2eeVersionSchema,
   payload: encryptedPayloadSchema,
   seriesKey: seriesKeySchema.optional(),
+  /** Optional schedule event this expense was logged from. */
+  eventId: objectIdSchema.optional(),
 });
 
 export const createExpenseSchema = expenseMetaSchema;
@@ -41,13 +43,14 @@ export const updateExpenseSchema = z
     enc: e2eeVersionSchema,
     payload: encryptedPayloadSchema,
     seriesKey: seriesKeySchema.nullable().optional(),
+    eventId: objectIdSchema.nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
   });
 
 export const expenseSchema = z.object({
-  userAddress: walletAddressSchema,
+  accountId: accountIdSchema,
   walletId: objectIdSchema.optional(),
   kind: txnKindSchema.default("expense"),
   date: isoDateSchema,
@@ -55,6 +58,7 @@ export const expenseSchema = z.object({
   enc: e2eeVersionSchema.optional(),
   payload: encryptedPayloadSchema.optional(),
   seriesKey: seriesKeySchema.optional(),
+  eventId: objectIdSchema.optional(),
   /** Soft-deleted occurrence kept so cron does not rematerialize it. */
   skipped: z.boolean().optional().default(false),
   /** Legacy plaintext fields. */

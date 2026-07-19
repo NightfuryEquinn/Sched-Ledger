@@ -62,3 +62,13 @@ const apiBundle = path.join(apiDir, "index.js");
 const { size } = await Bun.file(apiBundle).stat();
 console.log(` ${path.relative(root, apiBundle)}  ${(size / 1024).toFixed(1)} KB`);
 console.log(` embedded email logo  ${(logoBytes.byteLength / 1024).toFixed(1)} KB`);
+
+/* Copy PWA assets (manifest + service worker) into dist. */
+const publicDir = path.join(root, "public");
+for await (const entry of new Bun.Glob("*").scan({ cwd: publicDir })) {
+  const src = path.join(publicDir, entry);
+  const dest = path.join(outdir, entry);
+  await Bun.write(dest, Bun.file(src));
+  const st = await Bun.file(dest).stat();
+  console.log(` ${path.relative(root, dest)}  ${(st.size / 1024).toFixed(1)} KB`);
+}

@@ -4,9 +4,9 @@ import { normalizeRecurring } from "@/lib/recurring";
 import type { ObjectId } from "mongodb";
 
 /** Build a Mongo filter that matches every member of an expense's recurring series. */
-export function expenseSeriesFilter(doc: ExpenseDocument, userAddress: string) {
+export function expenseSeriesFilter(doc: ExpenseDocument, accountId: string) {
   const base: Record<string, unknown> = {
-    userAddress,
+    accountId,
     walletId: doc.walletId,
   };
 
@@ -80,12 +80,12 @@ export function shouldRetireOldExpenseSeries(
 export async function retireOldExpenseSeries(opts: {
   expenses: ExpenseCollection;
   doc: ExpenseDocument;
-  userAddress: string;
+  accountId: string;
   /** Pivot date — typically the edited occurrence's date. */
   pivotDate: string;
 }): Promise<ExpenseSeriesRetireResult> {
-  const { expenses, doc, userAddress, pivotDate } = opts;
-  const series = expenseSeriesFilter(doc, userAddress);
+  const { expenses, doc, accountId, pivotDate } = opts;
+  const series = expenseSeriesFilter(doc, accountId);
   const now = new Date();
   const others = { ...series, _id: { $ne: doc._id } };
 
@@ -128,17 +128,17 @@ export async function retireOldExpenseSeries(opts: {
 export async function applyExpenseDeleteScope(opts: {
   expenses: ExpenseCollection;
   doc: ExpenseDocument;
-  userAddress: string;
+  accountId: string;
   scope: DeleteScope;
   fromDate: string;
 }): Promise<ExpenseDeleteResult> {
-  const { expenses, doc, userAddress, scope, fromDate } = opts;
-  const series = expenseSeriesFilter(doc, userAddress);
+  const { expenses, doc, accountId, scope, fromDate } = opts;
+  const series = expenseSeriesFilter(doc, accountId);
   const now = new Date();
 
   if (scope === "this") {
     await expenses.updateOne(
-      { _id: doc._id, userAddress },
+      { _id: doc._id, accountId },
       { $set: { skipped: true, updatedAt: now } },
     );
     return { deletedIds: [], skippedId: doc._id.toString() };

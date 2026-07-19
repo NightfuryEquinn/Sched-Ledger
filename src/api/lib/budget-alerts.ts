@@ -37,7 +37,7 @@ function monthLabel(month: string): string {
  * category/level/month notifies once.
  */
 export async function sendBudgetAlerts(opts: {
-  userAddress: string;
+  accountId: string;
   walletId: string;
   walletName?: string;
   month: string;
@@ -50,8 +50,8 @@ export async function sendBudgetAlerts(opts: {
     return result;
   }
 
-  const { users, budgetAlertLogs, financialWallets } = getCollections(getDb());
-  const user = await users.findOne({ address: opts.userAddress });
+  const { users, budgetAlertLogs } = getCollections(getDb());
+  const user = await users.findOne({ _id: new ObjectId(opts.accountId) });
   if (!user) {
     result.errors.push("User not found");
     return result;
@@ -65,24 +65,12 @@ export async function sendBudgetAlerts(opts: {
     return result;
   }
 
-  let walletName = opts.walletName;
-  if (!walletName) {
-    try {
-      const wallet = await financialWallets.findOne({
-        _id: new ObjectId(opts.walletId),
-        userAddress: opts.userAddress,
-      });
-      walletName = wallet?.name;
-    } catch {
-      /* ignore invalid wallet id */
-    }
-  }
-
+  const walletName = opts.walletName;
   const label = monthLabel(opts.month);
 
   for (const alert of opts.alerts) {
     const logKey = {
-      userAddress: opts.userAddress,
+      accountId: opts.accountId,
       walletId: opts.walletId,
       categoryId: alert.categoryId,
       month: opts.month,
@@ -117,6 +105,7 @@ export async function sendBudgetAlerts(opts: {
 
     try {
       await budgetAlertLogs.insertOne({
+        _id: new ObjectId(),
         ...logKey,
         email,
         channels: ["email"],

@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 
 type CategoriesViewProps = {
   categoryIndex: CategoryIndex;
-  onSave: (categories: Category[]) => Promise<void>;
+  onSave: (categories: Category[]) => Promise<unknown>;
 };
 
 type EditorMode =

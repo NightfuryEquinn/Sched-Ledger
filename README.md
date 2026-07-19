@@ -11,34 +11,40 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 ### Ledger
 
 - **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress
-- **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation
+- **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation; includes Malaysia-oriented presets (EPF / SOCSO / EIS / PCB ballpark / SST) that never leave the browser
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable expense and income category/subcategory taxonomy with glyphs and colors
-- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron
+- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron-job.org
 - **Insights** — FX conversion, month-over-month charts (daily/monthly/quarterly/yearly), and spending habits (unlock after five active transaction days)
 
 ### Schedule & tasks
 
 - **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence (daily/weekly/monthly/yearly)
+- **Log payment** — from a bill/renewal event, open a prefilled expense and link `eventId` ↔ `expenseId` (plaintext metadata only)
 - **Email reminders** — optional Resend emails with per-event lead times and user timezone; confirmation when you enable notify; titles stay encrypted (emails use a generic subject)
 - **TO-DO lists** — multiple named lists with inline task management
 
 ### Identity & privacy
 
-- **Web3 identity** — create or restore an in-browser wallet (12- or 24-word recovery phrase); sign in with a cryptographic challenge (SIWE-style)
+- **Web3 identity** — create or restore an in-browser wallet (12- or 24-word recovery phrase); sign in with a cryptographic challenge (SIWE-style). Prefer a **ledger-only** key so the auth address is not correlated with on-chain activity
+- **Device passphrase vault** — recovery phrase quiz on create; in-app keys wrapped with a local passphrase (PBKDF2 + AES-GCM) instead of plaintext `localStorage`; WebAuthn wrapping can come later
 - **Dark mode** — system-aware theme toggle, persisted locally
-- **Sessions & privacy** — HttpOnly session cookies, revoke devices, clear local data, and third-party data-sharing consent under **Account → Data & privacy**
-- **CSV export & import** — transactions (with categories), schedule events, and to-do lists via **Account → Exports & imports**
-- **Encrypted ledger** — amounts, categories, notes, schedule titles, and to-dos encrypted client-side; unlock with your wallet key each session
+- **Sessions & privacy** — HttpOnly session cookies with sliding token rotation, revoke devices, clear local data, and third-party data-sharing consent under **Account → Data & privacy**
+- **Encrypted backup** — download/restore a full ledger pack encrypted with your ledger key (client-only; not stored on the server) via **Account → Exports & imports**
+- **CSV export & import** — transactions (with categories), schedule events, and to-do lists (plaintext spreadsheet portability)
+- **Encrypted ledger** — amounts, wallet names, categories, notes, schedule titles, and to-dos encrypted client-side; unlock with your wallet key each session
+- **PWA read cache** — installable app shell + IndexedDB ciphertext cache for offline reads (writes still require the network)
 - **Budget alerts** — email when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates and sends names/amounts; server only delivers)
-- **Transparency** — read-only in-app map of MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagram)
+- **Transparency** — in-app map of hosting roles, what the server can infer, MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagrams)
 - **Guided tour** — Shepherd.js walkthrough for each main view
 
 ### Security
 
-- **End-to-end encryption** — ledger content (transactions, category trees, event titles/comments, to-do lists, and wallet budgets) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for reminder cron)
+- **End-to-end encryption** — ledger content (transactions, wallet names/budgets, category trees, event titles/comments, and to-do lists) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for accurate reminder cron — day-level dates are intentional)
+- Ownership uses opaque `accountId` (`users._id`); the SIWE address stays on `users` for login only
+- New document ids are random ObjectIds (no embedded creation timestamp)
 - Signature verification, rate limiting, security headers, in-memory profile cache
-- Automated tests for crypto unlock/codec, reminder email privacy, calculator, spending habits, session auth, and budget-alert evaluation (`bun test`)
+- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, and budget-alert evaluation (`bun test`)
 
 ## Tech stack
 
@@ -51,7 +57,8 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 | Styling | Custom theme CSS (`ledger.css`) |
 | Tours | [Shepherd.js](https://shepherdjs.dev) |
 | Diagrams | [Mermaid](https://mermaid.js.org) (Transparency view) |
-| Deploy | [Vercel](https://vercel.com) (Analytics, Speed Insights); scheduled jobs via [cron-job.org](https://cron-job.org) |
+| Deploy | [Vercel](https://vercel.com) **hosting + Analytics / Speed Insights only** (no Vercel Cron); scheduled jobs via [cron-job.org](https://cron-job.org) |
+| PWA | `public/manifest.webmanifest` + `public/sw.js` (copied into `dist/` on build) |
 
 ## Project structure
 
@@ -64,7 +71,7 @@ src/
 ├── api/
 │   ├── app.ts            # Hono app + error handler
 │   ├── lib/              # auth, cache, email, reminders, recurring-expenses,
-│   │                     # budget-alerts, expense-delete-scope, serialize, errors
+│   │                     # budget-alerts, expense-delete-scope, ids, serialize, errors
 │   ├── middleware/       # session, rate-limit, security, db
 │   └── routes/           # auth, users, profile, wallets, categories,
 │                         # expenses, events, todo-lists, consent,
@@ -74,15 +81,16 @@ src/
 ├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts (shared)
 └── frontend/
     ├── app/              # Root, LedgerApp
-    ├── auth/             # wallet sign-in, account menu (CSV + data privacy), session UI
+    ├── auth/             # wallet sign-in, device vault, backups, account menu, session UI
     ├── assets/           # logo
     ├── charts/           # SVG charts (donut, trend, MoM bars)
     ├── components/       # Brand, ThemeToggle, Wallets, pickers, shared UI
     ├── lib/
     │   ├── budget/         # in-tab budget-alert notifications
-    │   ├── crypto/         # E2EE codec, key derivation, unlock flow
-    │   ├── hooks/          # useLedger, useTheme
-    │   └── tour/           # guided tour steps and runner
+│   ├── crypto/         # E2EE codec, key derivation, unlock flow
+│   ├── pwa/            # service worker registration + IndexedDB cipher cache
+│   ├── hooks/          # useLedger, useTheme
+│   └── tour/           # guided tour steps and runner
     ├── styles/           # ledger.css (theme tokens + layout)
     ├── views/            # Overview, Transactions, Budgets, Calculator, Categories,
     │                     # Recurring, Insights, Schedule, TodoList, Transparency
@@ -130,7 +138,7 @@ Connectivity check: `curl http://localhost:3000/api/health`
 
 ## Database schema
 
-MongoDB database name defaults to `ledger` (`MONGODB_DB`). All user-owned documents are keyed by lowercase Ethereum `address` / `userAddress`. Every collection also has `_id` (`ObjectId`) and, where noted, `createdAt` / `updatedAt`.
+MongoDB database name defaults to `ledger` (`MONGODB_DB`). User-owned documents are keyed by opaque `accountId` (`users._id` hex). The SIWE wallet `address` lives on `users` (and `auth_nonces`) for login only. Every collection also has `_id` (`ObjectId`) and, where noted, `createdAt` / `updatedAt`.
 
 Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Indexes are created on connect via `src/db/indexes.ts`.
 
@@ -155,14 +163,17 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 
 | Collection | Encrypted (client-side) | Plaintext (needed for queries / cron) |
 |------------|-------------------------|----------------------------------------|
-| `expenses` | `payload` (amount, subcategory, note) via `enc` | `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped` |
-| `financial_wallets` | `payload` (income, starting balance, budgets) via `enc` | `name`, `currency`, `fundingMode`, `isDefault` |
-| `category_taxonomies` | `payload` (full `categories[]` tree) via `enc` | `userAddress` |
-| `events` | `payload` (title, comments, customLabel/Glyph) via `enc` | `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email` |
-| `todo_lists` | `payload` (name, icon, tasks) via `enc` | `userAddress` |
-| `users`, `sessions`, … | — | Stored in plaintext |
+| `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId` |
+| `financial_wallets` | `payload` (name, income, starting balance, budgets) via `enc` | `accountId`, `currency`, `fundingMode`, `isDefault` |
+| `category_taxonomies` | `payload` (full `categories[]` tree) via `enc` | `accountId` |
+| `events` | `payload` (title, comments, customLabel/Glyph) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId` |
+| `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
+| `users` | — | `address` (SIWE login), notify prefs |
+| `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |
 
-The in-app **Transparency** view documents the same collections with example field shapes.
+Owned collections use opaque `accountId` (`users._id` hex). Run `bun scripts/backfill-account-id.ts` once after upgrading an existing database.
+
+The in-app **Transparency** view documents hosting roles, what the server can infer, and the same collections with example field shapes.
 
 ## Development
 
@@ -190,13 +201,15 @@ Sign-in is wallet-based and verified on the server:
 3. `POST /api/auth/verify` — server verifies the signature and sets an **HttpOnly** `ledger_session` cookie
 4. Authenticated requests use `credentials: include` (no spoofable address header)
 
-Manage sessions under **Account → Data & privacy** (revoke devices, sign out everywhere, clear cookies and local storage). Restore access on a new device with your **12- or 24-word recovery phrase**.
+Manage sessions under **Account → Data & privacy** (revoke devices, sign out everywhere, clear cookies and local storage). Restore access on a new device with your **12- or 24-word recovery phrase**, then set a **device passphrase** so the key is encrypted on that browser.
 
 ### Encryption
 
 Ledger data (transaction amounts, categories, notes, schedule titles, to-do lists, and per-wallet budgets/income) is encrypted in your browser with **AES-256-GCM**. The encryption key is derived from a wallet signature over a fixed message — it never leaves your device and is held in memory for the session only.
 
-On each visit you may be prompted to **unlock** your ledger (one signature for browser wallets; silent for in-app wallets with a stored key). MongoDB stores ciphertext plus plaintext metadata needed for queries and cron — see [Encryption vs plaintext](#encryption-vs-plaintext).
+In-app wallet secrets (mnemonic / private key) are wrapped with a **device passphrase** (PBKDF2 + AES-GCM) in `localStorage` — not stored as plaintext. Injected browser wallets never store a private key locally.
+
+On each visit you may be prompted to **unlock** your ledger (device passphrase and/or a wallet signature). MongoDB stores ciphertext plus plaintext metadata needed for queries and cron — see [Encryption vs plaintext](#encryption-vs-plaintext). Prefer the honest framing **encrypted cloud sync**, not “data stays on your device.”
 
 ## API overview
 
@@ -280,9 +293,9 @@ Optional: run `bunx vercel dev` locally to test Vercel routing before deploying.
 
 ### Scheduled tasks (cron-job.org)
 
-Vercel Hobby allows only one built-in cron job, so reminders and recurring expenses are triggered by [cron-job.org](https://cron-job.org) instead.
+Vercel is used for **hosting and Analytics / Speed Insights only** — it does not schedule jobs. Reminders and recurring expenses are triggered solely by [cron-job.org](https://cron-job.org) calling the hosted API.
 
-The reminder handler does not use a fixed daily schedule. It polls the database on each run and delivers email when the current time falls in each event's window: **remind-at − 5 min ≤ now ≤ remind-at + 5 min** (so a reminder can fire slightly early). Set the external job to run **every 5 minutes**.
+The reminder handler does not use a fixed daily schedule. It polls the database on each run and delivers email when the current time falls in each event's window: **remind-at − 5 min ≤ now ≤ remind-at + 5 min** (so a reminder can fire slightly early). Set the external job to run **every 5 minutes**. Each poll is **batched** (document limits + ~22s time budget) so it stays under the ~30s cron-job.org / Vercel function timeout.
 
 1. Create a free account at [cron-job.org](https://console.cron-job.org/signup).
 2. **Create cronjob** with:
@@ -309,8 +322,9 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 3. **CRUD** — add an expense and a schedule event; refresh the page and confirm data persists.
 4. **Wallets** — create a second wallet, switch between them, and confirm transactions stay scoped.
 5. **Sessions** — open **Account → Data & privacy**, confirm your device appears in the session list, and test revoke / sign out.
-6. **CSV** — open **Account → Exports & imports** to export transactions, then re-import a row.
-7. **Transparency** — open the Transparency view and confirm the collection map renders.
+6. **Exports** — open **Account → Exports & imports** to download an encrypted backup and/or CSV, then re-import.
+7. **Transparency** — open the Transparency view and confirm hosting, inference, and collection maps render.
+8. **Log payment** — create a bill event, use **Log payment**, and confirm the expense links back to the event.
 
 ### Serverless notes
 

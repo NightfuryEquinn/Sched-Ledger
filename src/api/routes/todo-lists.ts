@@ -1,4 +1,5 @@
 import { notFound } from "@/api/lib/errors";
+import { randomObjectId } from "@/api/lib/ids";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -14,40 +15,41 @@ export const todoListsRoutes = new Hono<{ Variables: SessionVariables }>();
 todoListsRoutes.use("*", sessionAuth);
 
 /** Find a todo list owned by the session user. */
-async function findOwnedList(userAddress: string, listId: string) {
+async function findOwnedList(accountId: string, listId: string) {
   const { todoLists } = getCollections(getDb());
   return todoLists.findOne({
     _id: new ObjectId(listId),
-    userAddress,
+    accountId,
   });
 }
 
 todoListsRoutes.get("/", async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const { todoLists } = getCollections(getDb());
-  const docs = await todoLists.find({ userAddress: walletAddress }).sort({ createdAt: 1 }).toArray();
+  const docs = await todoLists.find({ accountId }).sort({ createdAt: 1 }).toArray();
   return c.json({ todoLists: serializeDocs(docs) });
 });
 
 todoListsRoutes.get("/:id", async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("List not found");
 
-  const doc = await findOwnedList(walletAddress, id.data);
+  const doc = await findOwnedList(accountId, id.data);
   if (!doc) notFound("List not found");
 
   return c.json({ todoList: serializeDoc(doc) });
 });
 
 todoListsRoutes.post("/", zValidator("json", createTodoListSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const body = c.req.valid("json");
   const { todoLists } = getCollections(getDb());
   const now = new Date();
 
   const result = await todoLists.insertOne({
-    userAddress: walletAddress,
+    _id: randomObjectId(),
+    accountId,
     enc: body.enc,
     payload: body.payload,
     createdAt: now,
@@ -61,7 +63,7 @@ todoListsRoutes.post("/", zValidator("json", createTodoListSchema), async (c) =>
 });
 
 todoListsRoutes.patch("/:id", zValidator("json", updateTodoListSchema), async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("List not found");
 
@@ -69,7 +71,7 @@ todoListsRoutes.patch("/:id", zValidator("json", updateTodoListSchema), async (c
   const { todoLists } = getCollections(getDb());
 
   const updated = await todoLists.findOneAndUpdate(
-    { _id: new ObjectId(id.data), userAddress: walletAddress },
+    { _id: new ObjectId(id.data), accountId },
     {
       $set: { enc: body.enc, payload: body.payload, updatedAt: new Date() },
       $unset: { name: "", icon: "", tasks: "" },
@@ -82,14 +84,14 @@ todoListsRoutes.patch("/:id", zValidator("json", updateTodoListSchema), async (c
 });
 
 todoListsRoutes.delete("/:id", async (c) => {
-  const walletAddress = c.get("walletAddress");
+  const accountId = c.get("accountId");
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("List not found");
 
   const { todoLists } = getCollections(getDb());
   const result = await todoLists.deleteOne({
     _id: new ObjectId(id.data),
-    userAddress: walletAddress,
+    accountId,
   });
 
   if (result.deletedCount === 0) notFound("List not found");

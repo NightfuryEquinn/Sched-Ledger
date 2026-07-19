@@ -21,6 +21,8 @@ export function TermsModal({ onClose }: LegalModalProps) {
             <p className="legal-p">
               Sched Ledger is a private expense ledger and schedule app. You sign in with a Web3 wallet identity.
               We do not require an email or password. You are responsible for safeguarding your wallet keys and recovery phrase.
+              Prefer creating a ledger-only identity in the app rather than reconnecting a funded exchange or hot wallet, so the
+              login address is less likely to be correlated with on-chain activity.
             </p>
           </div>
 
