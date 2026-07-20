@@ -336,6 +336,7 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
 
   const leadOptions = useMemo(() => leadTimesForEvent(allDay), [allDay]);
   const deleteFromDate = occurrenceIso || initial?.date || date;
+  const showLogPayment = !!(editing && onLogPayment && (catId === "bill" || catId === "renewal"));
 
   const titleRef = useRef(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
@@ -527,10 +528,10 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
           </div>
         </div>
 
-        <div className="modal-foot">
-          {editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />}
-          <div className="mf-right">
-            {editing && onLogPayment && (catId === "bill" || catId === "renewal") ? (
+        <div className={"modal-foot" + (showLogPayment ? " modal-foot-stacked" : "")}>
+          {showLogPayment ? (
+            <div className="mf-row mf-row-full">
+              <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button>
               <button
                 className="ghost-btn"
                 type="button"
@@ -543,7 +544,11 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
               >
                 {initial.expenseId ? "View Linked Payment" : "Log Payment"}
               </button>
-            ) : null}
+            </div>
+          ) : (
+            editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />
+          )}
+          <div className="mf-right">
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>{editing ? "Save Changes" : "Add Event"}</button>
           </div>
