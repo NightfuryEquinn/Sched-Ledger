@@ -89,7 +89,7 @@ const COLLECTIONS: CollectionDoc[] = [
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
-      { key: "payload", value: "base64 AES-GCM", note: "title, comments, customLabel/Glyph" },
+      { key: "payload", value: "base64 AES-GCM", note: "title, comments, customLabel/Glyph, budget hold fields" },
       { key: "catId", value: '"bill" | "custom" | …' },
       { key: "date", value: '"2026-07-20"' },
       { key: "allDay / time / repeat", value: "schedule metadata" },
@@ -163,6 +163,15 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "month", value: '"2026-07"' },
       { key: "level", value: '"warning" | "exceeded"' },
       { key: "email / channels? / sentAt", value: "delivery record" },
+    ],
+  },
+  {
+    name: "rate_limits",
+    purpose: "Shared API rate-limit buckets across serverless instances",
+    fields: [
+      { key: "_id", value: '"global:1.2.3.4"', note: "prefix + client key" },
+      { key: "count", value: "12" },
+      { key: "resetAt", value: "Date", note: "TTL index expires the bucket" },
     ],
   },
 ];

@@ -10,17 +10,18 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ### Ledger
 
-- **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress
+- **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress (including **Held** amounts reserved by schedule envelope holds)
 - **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation; includes Malaysia-oriented presets (EPF / SOCSO / EIS / PCB ballpark / SST) that never leave the browser
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable expense and income category/subcategory taxonomy with glyphs and colors
-- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron-job.org
+- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron-job.org; delete scopes for one occurrence, this-and-future, or the whole series
 - **Insights** — FX conversion, month-over-month charts (daily/monthly/quarterly/yearly), and spending habits (unlock after five active transaction days)
 
 ### Schedule & tasks
 
 - **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence (daily/weekly/monthly/yearly)
-- **Log payment** — from a bill/renewal event, open a prefilled expense and link `eventId` ↔ `expenseId` (plaintext metadata only)
+- **Budget holds** — optional encrypted envelope holds on any schedule event (amount + category); active holds reserve budget until you log payment or release the occurrence; amounts never leave the E2EE payload
+- **Log payment** — from a bill/renewal event, open a prefilled expense and link `eventId` ↔ `expenseId` (plaintext metadata only); also releases that occurrence's budget hold when present
 - **Email reminders** — optional Resend emails with per-event lead times and user timezone; confirmation when you enable notify; titles stay encrypted (emails use a generic subject)
 - **TO-DO lists** — multiple named lists with inline task management
 
@@ -32,7 +33,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Sessions & privacy** — HttpOnly session cookies with sliding token rotation, revoke devices, clear local data, and third-party data-sharing consent under **Account → Data & privacy**
 - **Encrypted backup** — download/restore a full ledger pack encrypted with your ledger key (client-only; not stored on the server) via **Account → Exports & imports**
 - **CSV export & import** — transactions (with categories), schedule events, and to-do lists (plaintext spreadsheet portability)
-- **Encrypted ledger** — amounts, wallet names, categories, notes, schedule titles, and to-dos encrypted client-side; unlock with your wallet key each session
+- **Encrypted ledger** — amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos encrypted client-side; unlock with your wallet key each session
 - **PWA read cache** — installable app shell + IndexedDB ciphertext cache for offline reads (writes still require the network)
 - **Budget alerts** — email when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates and sends names/amounts; server only delivers)
 - **Transparency** — in-app map of hosting roles, what the server can infer, MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagrams)
@@ -40,11 +41,11 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ### Security
 
-- **End-to-end encryption** — ledger content (transactions, wallet names/budgets, category trees, event titles/comments, and to-do lists) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for accurate reminder cron — day-level dates are intentional)
+- **End-to-end encryption** — ledger content (transactions, wallet names/budgets, category trees, event titles/comments/budget holds, and to-do lists) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for accurate reminder cron — day-level dates are intentional)
 - Ownership uses opaque `accountId` (`users._id`); the SIWE address stays on `users` for login only
 - New document ids are random ObjectIds (no embedded creation timestamp)
-- Signature verification, rate limiting, security headers, in-memory profile cache
-- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, and budget-alert evaluation (`bun test`)
+- Signature verification, Mongo-backed rate limiting (in-memory fallback), security headers, in-memory profile cache
+- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, budget-alert evaluation, and envelope holds (`bun test`)
 
 ## Tech stack
 
@@ -72,13 +73,14 @@ src/
 │   ├── app.ts            # Hono app + error handler
 │   ├── lib/              # auth, cache, email, reminders, recurring-expenses,
 │   │                     # budget-alerts, expense-delete-scope, ids, serialize, errors
-│   ├── middleware/       # session, rate-limit, security, db
+│   ├── middleware/       # session, rate-limit (Mongo + memory fallback), security, db
 │   └── routes/           # auth, users, profile, wallets, categories,
 │                         # expenses, events, todo-lists, consent,
 │                         # budget-alerts, fx, cron
 ├── db/                   # MongoDB client, collections, indexes, URI resolver
 ├── schemas/              # Zod schemas (shared API validation)
-├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts (shared)
+├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts,
+│                         # delete-scope (shared)
 └── frontend/
     ├── app/              # Root, LedgerApp
     ├── auth/             # wallet sign-in, device vault, backups, account menu, session UI
@@ -87,16 +89,18 @@ src/
     ├── components/       # Brand, ThemeToggle, Wallets, pickers, shared UI
     ├── lib/
     │   ├── budget/         # in-tab budget-alert notifications
-│   ├── crypto/         # E2EE codec, key derivation, unlock flow
-│   ├── pwa/            # service worker registration + IndexedDB cipher cache
-│   ├── hooks/          # useLedger, useTheme
-│   └── tour/           # guided tour steps and runner
+    │   ├── crypto/         # E2EE codec, key derivation, unlock flow
+    │   ├── pwa/            # service worker registration + IndexedDB cipher cache
+    │   ├── hooks/          # useLedger, useTheme
+    │   ├── tour/           # guided tour steps and runner
+    │   └── envelope-holds.ts  # schedule ↔ budget hold math
     ├── styles/           # ledger.css (theme tokens + layout)
     ├── views/            # Overview, Transactions, Budgets, Calculator, Categories,
     │                     # Recurring, Insights, Schedule, TodoList, Transparency
     └── main.tsx
-scripts/                  # MongoDB collection maintenance (drop/list)
-tests/                    # auth, crypto, calculator, spending habits, schedule tests
+public/                   # PWA manifest + service worker (copied into dist/ on build)
+scripts/                  # MongoDB collection maintenance (drop/list) + accountId backfill
+tests/                    # auth, crypto, calculator, spending, schedule, budget/holds
 build.ts                  # Production build (dist/ + api/index.js)
 ```
 
@@ -112,7 +116,7 @@ Create a `.env` file in the project root (see `.env.example`):
 |----------|----------|-------------|
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `MONGODB_DB` | No | Database name (default: `ledger`) |
-| `APP_ORIGIN` | No | Origin embedded in sign-in messages (default: request origin) |
+| `APP_ORIGIN` | Production | Public origin embedded in sign-in messages (required when `NODE_ENV=production` / on Vercel; otherwise falls back to the request origin) |
 | `APP_TIMEZONE` | No | Server default IANA timezone for cron/reminders (fallback: `Asia/Kuala_Lumpur`) |
 | `CRON_SECRET` | For cron | Bearer token for `GET /api/cron/reminders` |
 | `RESEND_API_KEY` | For email | Resend API key for schedule reminders and budget alerts |
@@ -151,13 +155,14 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `financial_wallets` | `financialWallets` | Wallets (currency, funding mode; E2EE financials) |
 | `category_taxonomies` | `categoryTaxonomies` | One document per user — E2EE category tree |
 | `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
-| `events` | `events` | Schedule events (E2EE title/comments; plaintext schedule + email for reminders) |
+| `events` | `events` | Schedule events (E2EE title/comments/holds; plaintext schedule + email for reminders) |
 | `todo_lists` | `todoLists` | Named to-do lists (E2EE name/icon/tasks) |
 | `consent` | `consent` | Data-sharing opt-in flag |
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
 | `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminder emails |
 | `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit email delivery |
+| `rate_limits` | `rateLimits` | Shared API rate-limit buckets (TTL on `resetAt`; multi-instance) |
 
 ### Encryption vs plaintext
 
@@ -166,10 +171,11 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId` |
 | `financial_wallets` | `payload` (name, income, starting balance, budgets) via `enc` | `accountId`, `currency`, `fundingMode`, `isDefault` |
 | `category_taxonomies` | `payload` (full `categories[]` tree) via `enc` | `accountId` |
-| `events` | `payload` (title, comments, customLabel/Glyph) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId` |
+| `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId` |
 | `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
 | `users` | — | `address` (SIWE login), notify prefs |
 | `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |
+| `rate_limits` | — | `_id` (limit key), `count`, `resetAt` |
 
 Owned collections use opaque `accountId` (`users._id` hex). Run `bun scripts/backfill-account-id.ts` once after upgrading an existing database.
 
@@ -179,7 +185,7 @@ The in-app **Transparency** view documents hosting roles, what the server can in
 
 ```bash
 bun dev
-bun test   # crypto, reminders, calculator, spending habits, session auth, budget alerts
+bun test   # crypto, reminders, calculator, spending habits, session auth, budget alerts, envelope holds
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
@@ -205,7 +211,7 @@ Manage sessions under **Account → Data & privacy** (revoke devices, sign out e
 
 ### Encryption
 
-Ledger data (transaction amounts, categories, notes, schedule titles, to-do lists, and per-wallet budgets/income) is encrypted in your browser with **AES-256-GCM**. The encryption key is derived from a wallet signature over a fixed message — it never leaves your device and is held in memory for the session only.
+Ledger data (transaction amounts, categories, notes, schedule titles, budget holds, to-do lists, and per-wallet budgets/income) is encrypted in your browser with **AES-256-GCM**. The encryption key is derived from a wallet signature over a fixed message — it never leaves your device and is held in memory for the session only.
 
 In-app wallet secrets (mnemonic / private key) are wrapped with a **device passphrase** (PBKDF2 + AES-GCM) in `localStorage` — not stored as plaintext. Injected browser wallets never store a private key locally.
 
@@ -232,8 +238,8 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 | `CRUD /api/wallets` | Financial wallets (metadata + E2EE `enc`/`payload` via PATCH) |
 | `PUT /api/wallets/:id/budgets` | Update encrypted wallet financials (`enc`/`payload`) |
 | `GET/PUT /api/categories` | Category taxonomy |
-| `CRUD /api/expenses` | Transactions (scoped by wallet; optional series delete scopes) |
-| `CRUD /api/events` | Schedule events (comments live in the E2EE payload on create/update) |
+| `CRUD /api/expenses` | Transactions (scoped by wallet; cursor list via `limit`/`before`; optional series delete scopes) |
+| `CRUD /api/events` | Schedule events (comments + budget holds live in the E2EE payload; cursor list via `limit`/`before`) |
 | `CRUD /api/todo-lists` | TO-DO lists and tasks |
 | `GET/PATCH /api/consent` | Data-sharing consent |
 | `POST /api/budget-alerts` | Deliver client-evaluated budget alerts (email; deduped) |
@@ -263,7 +269,7 @@ Set these in **Vercel → Project → Settings → Environment Variables** for P
 |----------|-------------|
 | `MONGODB_URI` | Atlas `mongodb+srv://…` connection string |
 | `MONGODB_DB` | Database name (default: `ledger`) |
-| `APP_ORIGIN` | Public app URL, e.g. `https://your-project.vercel.app` (used in sign-in messages) |
+| `APP_ORIGIN` | **Required** public app URL, e.g. `https://your-project.vercel.app` (embedded in sign-in messages) |
 | `APP_TIMEZONE` | Optional — server default IANA timezone for cron/reminders (fallback: `Asia/Kuala_Lumpur`) |
 | `NODE_ENV` | `production` (Vercel usually sets this; enables `Secure` session cookies) |
 | `CRON_SECRET` | Secret for the cron handler (used by cron-job.org) |
@@ -325,10 +331,11 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 6. **Exports** — open **Account → Exports & imports** to download an encrypted backup and/or CSV, then re-import.
 7. **Transparency** — open the Transparency view and confirm hosting, inference, and collection maps render.
 8. **Log payment** — create a bill event, use **Log payment**, and confirm the expense links back to the event.
+9. **Budget hold** — enable a hold on a schedule event, confirm Budgets shows **Held**, then log payment and confirm the hold releases for that occurrence.
 
 ### Serverless notes
 
-- Rate limiting, profile cache, and FX cache are in-memory per function instance (acceptable for v1).
+- Rate limiting uses the shared Mongo `rate_limits` collection across function instances (in-memory fallback if the DB is unavailable). Profile cache and FX cache remain in-memory per instance.
 - Cold starts may add latency on the first request while MongoDB connects; warm instances reuse the cached client.
 
 ## License
