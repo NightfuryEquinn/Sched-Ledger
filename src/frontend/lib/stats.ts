@@ -197,11 +197,19 @@ export function isSavings(e: Expense, index?: CategoryIndex) {
 export type WalletFunding = Pick<FinancialWallet, "fundingMode" | "income" | "startingBalance">;
 
 export function walletBalance(expenses: Expense[], wallet: WalletFunding, index?: CategoryIndex) {
-  const outgoing = expenses.filter(isOutgoing);
-  const incomeTx = expenses.filter(isIncome);
-  const spent = outgoing.filter((e) => !isSavings(e, index)).reduce((s, e) => s + e.amount, 0);
-  const saved = outgoing.filter((e) => isSavings(e, index)).reduce((s, e) => s + e.amount, 0);
-  const earned = incomeTx.reduce((s, e) => s + e.amount, 0);
+  let spent = 0;
+  let saved = 0;
+  let earned = 0;
+
+  for (const e of expenses) {
+    if (isIncome(e)) {
+      earned += e.amount;
+      continue;
+    }
+    if (isSavings(e, index)) saved += e.amount;
+    else spent += e.amount;
+  }
+
   return wallet.startingBalance + earned - spent - saved;
 }
 
@@ -213,16 +221,28 @@ export function monthStats(
   index?: CategoryIndex,
   events?: LedgerEvent[],
 ) {
-  const list = monthExpenses(expenses, key);
-  const outgoing = list.filter(isOutgoing);
-  const incomeList = list.filter(isIncome);
-  const spent = outgoing.filter((e) => !isSavings(e, index)).reduce((s, e) => s + e.amount, 0);
-  const saved = outgoing.filter((e) => isSavings(e, index)).reduce((s, e) => s + e.amount, 0);
-  const earned = incomeList.reduce((s, e) => s + e.amount, 0);
-  const byCat = sumBy(
-    outgoing.filter((e) => !isSavings(e, index)),
-    (e) => catOf(e.sub, index),
-  );
+  const list: Expense[] = [];
+  let spent = 0;
+  let saved = 0;
+  let earned = 0;
+  const byCat: Record<string, number> = {};
+
+  for (const e of expenses) {
+    if (!inMonth(e.date, key)) continue;
+    list.push(e);
+    if (isIncome(e)) {
+      earned += e.amount;
+      continue;
+    }
+    if (isSavings(e, index)) {
+      saved += e.amount;
+      continue;
+    }
+    spent += e.amount;
+    const cat = catOf(e.sub, index);
+    byCat[cat] = (byCat[cat] || 0) + e.amount;
+  }
+
   const spendingBudgets = Object.fromEntries(
     Object.entries(budgets).filter(([id]) => {
       const cat = index?.catById[id];

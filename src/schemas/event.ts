@@ -56,7 +56,7 @@ const eventScheduleShape = {
   expenseId: objectIdSchema.optional(),
 };
 
-export const eventSchema = z.object({
+const eventSchema = z.object({
   accountId: accountIdSchema,
   ...eventScheduleShape,
   enc: e2eeVersionSchema.optional(),
@@ -121,6 +121,10 @@ export const listEventsQuerySchema = z.object({
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
     .optional(),
+  from: isoDateSchema.optional(),
+  to: isoDateSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(5000).optional().default(2000),
+  before: isoDateSchema.optional(),
 });
 
 export type EventComment = z.infer<typeof eventCommentSchema>;

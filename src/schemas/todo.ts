@@ -3,9 +3,9 @@ import { z } from "zod";
 import { accountIdSchema } from "./ids";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
-export const TODO_ICONS = TODO_ICON_OPTIONS;
+const TODO_ICONS = TODO_ICON_OPTIONS;
 
-export const todoIconSchema = z.enum(TODO_ICONS);
+const todoIconSchema = z.enum(TODO_ICONS);
 
 export const todoTaskIdSchema = z
   .string()
@@ -20,7 +20,7 @@ export const todoTaskSchema = z.object({
   done: z.boolean().default(false),
 });
 
-export const todoListSchema = z.object({
+const todoListSchema = z.object({
   accountId: accountIdSchema,
   enc: e2eeVersionSchema.optional(),
   payload: encryptedPayloadSchema.optional(),

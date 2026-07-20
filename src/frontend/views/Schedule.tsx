@@ -12,10 +12,9 @@ import {
   REPEATS,
   TODAY_ISO,
   dayLabel,
-  compareEventsByEarliest,
   eventCatMeta,
   eventTimeLabel,
-  eventsForDay,
+  eventsByDayForMonth,
   fmtCommentTime,
   fmtMoney,
   fmtTime,
@@ -24,7 +23,6 @@ import {
   leadTimesForEvent,
   monthLabel,
   repeatLabel,
-  scheduleForMonth,
   weekdayLabel,
 } from "@/frontend/lib/data";
 import { isActiveHoldOccurrence } from "@/frontend/lib/envelope-holds";
@@ -127,26 +125,31 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
   while (cells.length % 7) cells.push(null);
 
   const isCurrent = month === CURRENT_MONTH_KEY;
-  const occ = useMemo(() => scheduleForMonth(events, month), [events, month]);
+  const byDay = useMemo(() => eventsByDayForMonth(events, month), [events, month]);
+  const occ = useMemo(() => {
+    const out: Array<{ iso: string; ev: LedgerEvent }> = [];
+    for (const [iso, list] of byDay) {
+      for (const ev of list) out.push({ iso, ev });
+    }
+    return out;
+  }, [byDay]);
   const agenda = isCurrent ? occ.filter((o) => o.iso >= TODAY_ISO) : occ;
 
   const upcomingByDay = useMemo(() => {
     if (!isCurrent) return [];
-    const byDay = new Map<string, LedgerEvent[]>();
+    const groups = new Map<string, LedgerEvent[]>();
     for (const { iso, ev } of agenda) {
-      const list = byDay.get(iso);
+      const list = groups.get(iso);
       if (list) list.push(ev);
-      else byDay.set(iso, [ev]);
+      else groups.set(iso, [ev]);
     }
-    return [...byDay.entries()]
+    return [...groups.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([iso, dayEvents]) => ({ iso, events: [...dayEvents].sort(compareEventsByEarliest) }));
+      .map(([iso, dayEvents]) => ({ iso, events: dayEvents }));
   }, [agenda, isCurrent]);
 
   const nextRem = agenda.find((o) => o.ev.notify);
   const alertsCount = occ.filter((o) => o.ev.notify).length;
-
-  const eventsOn = (d: number) => eventsForDay(events, `${month}-${String(d).padStart(2, "0")}`);
 
   const defaultFocusDay =
     isCurrent && TODAY_ISO >= monthStart && TODAY_ISO <= monthEnd ? TODAY_ISO : monthStart;
@@ -172,7 +175,7 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
   };
 
   const showFullUpcoming = isCurrent && !selectedDay;
-  const focusedEvents = showFullUpcoming ? [] : eventsForDay(events, viewDay);
+  const focusedEvents = showFullUpcoming ? [] : (byDay.get(viewDay) ?? []);
   const canPrevDay = !showFullUpcoming && navAnchor > monthStart;
   const canNextDay = !showFullUpcoming && navAnchor < monthEnd;
   const upcomingTitle = isCurrent ? "Upcoming" : "Agenda";
@@ -280,7 +283,7 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
             {cells.map((d, i) => {
               if (d === null) return <div key={i} className="cal-cell empty" />;
               const iso = `${month}-${String(d).padStart(2, "0")}`;
-              const list = eventsOn(d);
+              const list = byDay.get(iso) ?? [];
               const today = iso === TODAY_ISO;
               const past = isCurrent && iso < TODAY_ISO;
               return (
@@ -366,6 +369,7 @@ export function EventModal({
 
   const leadOptions = useMemo(() => leadTimesForEvent(allDay), [allDay]);
   const deleteFromDate = occurrenceIso || initial?.date || date;
+  const showLogPayment = !!(editing && onLogPayment && (catId === "bill" || catId === "renewal"));
 
   const titleRef = useRef(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
@@ -627,10 +631,10 @@ export function EventModal({
           </div>
         </div>
 
-        <div className="modal-foot">
-          {editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />}
-          <div className="mf-right">
-            {editing && onLogPayment && (catId === "bill" || catId === "renewal") ? (
+        <div className={"modal-foot" + (showLogPayment ? " modal-foot-stacked" : "")}>
+          {showLogPayment ? (
+            <div className="mf-row mf-row-full">
+              <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button>
               <button
                 className="ghost-btn"
                 type="button"
@@ -643,7 +647,11 @@ export function EventModal({
               >
                 {initial.expenseId ? "View Linked Payment" : "Log Payment"}
               </button>
-            ) : null}
+            </div>
+          ) : (
+            editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />
+          )}
+          <div className="mf-right">
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>{editing ? "Save Changes" : "Add Event"}</button>
           </div>

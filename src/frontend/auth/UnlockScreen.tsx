@@ -13,7 +13,7 @@ type UnlockScreenProps = {
   onSignOut: () => void;
 };
 
-/** Resolve signing material for unlock (session, vault, or legacy plaintext). */
+/** Resolve signing material for unlock (session, vault, or one-shot legacy migration). */
 async function materializeIdentity(
   idn: IdentityRecord,
   passphrase: string,
@@ -27,13 +27,14 @@ async function materializeIdentity(
     if (!passphrase) throw new Error("Enter your device passphrase.");
     const secrets = await unwrapSecrets(passphrase, idn.vault);
     sessionSecrets.set(idn.address, secrets);
+
     return { ...idn, ...secrets };
   }
 
+  /* Legacy plaintext in memory only — require passphrase to vault before unlock. */
   if (idn.privateKey && idn.mnemonic) {
     if (!passphrase) {
-      /* Allow one-shot unlock for legacy plaintext, then require migration. */
-      return idn;
+      throw new Error("Set a device passphrase to encrypt your local key.");
     }
     if (!isValidPassphrase(passphrase)) {
       throw new Error("Passphrase must be at least 8 characters.");
@@ -53,7 +54,8 @@ async function materializeIdentity(
       mnemonic: idn.mnemonic,
       privateKey: idn.privateKey,
     });
-    return { ...idn, vault };
+
+    return { ...idn, vault, mnemonic: idn.mnemonic, privateKey: idn.privateKey };
   }
 
   return idn;

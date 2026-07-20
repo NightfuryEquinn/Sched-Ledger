@@ -2,7 +2,7 @@ import { z } from "zod";
 import { accountIdSchema, monthKeySchema } from "./common";
 
 /** Per-user ledger UI state. Budgets/income live on financial_wallets (E2EE). */
-export const ledgerProfileSchema = z.object({
+const ledgerProfileSchema = z.object({
   accountId: accountIdSchema,
   currentMonth: monthKeySchema,
   createdAt: z.coerce.date(),

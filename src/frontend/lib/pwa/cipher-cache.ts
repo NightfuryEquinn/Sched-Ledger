@@ -16,20 +16,38 @@ type CacheEntry = {
   updatedAt: number;
 };
 
-/** Open (or create) the cache database. */
+let sharedDb: Promise<IDBDatabase> | null = null;
+
+/** Open (or reuse) the cache database connection. */
 function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        const store = db.createObjectStore(STORE, { keyPath: "key" });
-        store.createIndex("address", "address", { unique: false });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error("IndexedDB open failed"));
-  });
+  if (typeof indexedDB === "undefined") {
+    return Promise.reject(new Error("IndexedDB unavailable"));
+  }
+  if (!sharedDb) {
+    sharedDb = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          const store = db.createObjectStore(STORE, { keyPath: "key" });
+          store.createIndex("address", "address", { unique: false });
+        }
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        db.onclose = () => {
+          sharedDb = null;
+        };
+        resolve(db);
+      };
+      req.onerror = () => {
+        sharedDb = null;
+        reject(req.error ?? new Error("IndexedDB open failed"));
+      };
+    });
+  }
+
+  return sharedDb;
 }
 
 /** Build a cache key scoped to the signed-in address and API path. */
@@ -60,7 +78,6 @@ export async function putCipherCache(
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error ?? new Error("cache put failed"));
     });
-    db.close();
   } catch {
     /* Cache is best-effort — never break the live request path. */
   }
@@ -81,7 +98,6 @@ export async function getCipherCache<T>(
       req.onsuccess = () => resolve(req.result as CacheEntry | undefined);
       req.onerror = () => reject(req.error ?? new Error("cache get failed"));
     });
-    db.close();
     if (!entry?.body) return null;
 
     return JSON.parse(entry.body) as T;
@@ -111,7 +127,6 @@ export async function clearCipherCacheForAddress(address: string): Promise<void>
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error ?? new Error("cache clear failed"));
     });
-    db.close();
   } catch {
     /* ignore */
   }

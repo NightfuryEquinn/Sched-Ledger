@@ -10,7 +10,7 @@ import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { deleteScopeQuerySchema, resolveEventDeleteAction } from "@/lib/delete-scope";
-import { objectIdSchema, isLeadAllowedForEvent, type LeadId } from "@/schemas/common";
+import { monthDateBounds, objectIdSchema, isLeadAllowedForEvent, type LeadId } from "@/schemas/common";
 import { createEventSchema, listEventsQuerySchema, updateEventSchema } from "@/schemas/event";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
@@ -23,14 +23,53 @@ eventsRoutes.use("*", sessionAuth);
 
 eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
   const accountId = c.get("accountId");
-  const { month } = c.req.valid("query");
+  const { month, from, to, limit, before } = c.req.valid("query");
   const { events } = getCollections(getDb());
 
   const filter: Record<string, unknown> = { accountId };
-  if (month) filter.date = { $regex: `^${month}` };
 
-  const docs = await events.find(filter).sort({ date: 1 }).toArray();
-  return c.json({ events: serializeDocs(docs) });
+  /*
+   * Recurring events may start before the window but still occur inside it.
+   * Include non-once rows that have not ended before the window start, plus
+   * once rows whose date falls in range.
+   */
+  if (month || from || to || before) {
+    const bounds = month ? monthDateBounds(month) : null;
+    const rangeStart = bounds?.$gte ?? from;
+    const rangeEnd = bounds?.$lte ?? to;
+    const onceDate: Record<string, string> = {};
+    if (rangeStart) onceDate.$gte = rangeStart;
+    if (rangeEnd) onceDate.$lte = rangeEnd;
+    if (before) onceDate.$lt = before;
+
+    const clauses: Record<string, unknown>[] = [{ repeat: "once", date: onceDate }];
+
+    if (rangeStart) {
+      clauses.push(
+        { repeat: { $ne: "once" }, until: { $gte: rangeStart } },
+        { repeat: { $ne: "once" }, until: null },
+        { repeat: { $ne: "once" }, until: { $exists: false } },
+      );
+    } else {
+      clauses.push({ repeat: { $ne: "once" } });
+    }
+
+    if (before) {
+      filter.$and = [{ $or: clauses }, { date: { $lt: before } }];
+    } else {
+      filter.$or = clauses;
+    }
+  }
+
+  const docs = await events.find(filter).sort({ date: 1 }).limit(limit).toArray();
+  const hasMore = docs.length === limit;
+  const nextBefore = hasMore ? docs[docs.length - 1]?.date : undefined;
+
+  return c.json({
+    events: serializeDocs(docs),
+    hasMore,
+    nextBefore: nextBefore ?? null,
+  });
 });
 
 eventsRoutes.get("/:id", async (c) => {

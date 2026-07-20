@@ -4303,7 +4303,38 @@ h1, h2, h3 {
   margin-left: auto;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
   min-width: 0;
+}
+
+.modal-foot-stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mf-row-full {
+  width: 100%;
+}
+
+.mf-row-full > .ghost-btn,
+.mf-row-full > .primary-btn {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+}
+
+.modal-foot-stacked .mf-right {
+  width: 100%;
+  margin-left: 0;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 /* Amount input */
@@ -5704,6 +5735,18 @@ h1, h2, h3 {
     justify-content: flex-end;
     gap: 8px;
     min-width: min(100%, 180px);
+  }
+
+  .modal-foot-stacked .mf-right {
+    flex: none;
+    width: 100%;
+    margin-left: 0;
+    min-width: 0;
+  }
+
+  .mf-row-full > .ghost-btn,
+  .mf-row-full > .primary-btn {
+    min-height: 44px;
   }
 
   .mf-right .ghost-btn,

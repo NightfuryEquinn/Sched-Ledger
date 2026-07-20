@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { accountIdSchema } from "./common";
 
-export const consentSchema = z.object({
+const consentSchema = z.object({
   accountId: accountIdSchema,
   optedIn: z.boolean().default(false),
   createdAt: z.coerce.date(),

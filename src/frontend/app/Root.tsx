@@ -32,13 +32,14 @@ export function Root() {
         setAccount(merged);
         const idn = identityStorage.find(merged.address);
         const session = sessionSecrets.get(merged.address);
-        const privateKey = session?.privateKey ?? idn?.privateKey;
+        /* Only auto-unlock from in-memory sessionSecrets — never from localStorage plaintext. */
+        const privateKey = session?.privateKey;
         if (privateKey && !idn?.injected) {
           try {
             await unlockLedgerKey({
               ...idn!,
               privateKey,
-              mnemonic: session?.mnemonic ?? idn?.mnemonic,
+              mnemonic: session.mnemonic,
             });
             setCryptoReady(true);
           } catch {

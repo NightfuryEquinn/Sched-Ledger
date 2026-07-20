@@ -1,14 +1,16 @@
 import { getClientIp } from "@/api/lib/auth";
 import { tooManyRequests } from "@/api/lib/errors";
+import { COLLECTIONS, getDb, isDbConnected } from "@/db";
+import type { RateLimitDocument } from "@/db/collections";
 import { createMiddleware } from "hono/factory";
 
 type Bucket = { count: number; resetAt: number };
 
-const buckets = new Map<string, Bucket>();
+const memoryBuckets = new Map<string, Bucket>();
 
 /** Test helper: clear in-memory rate-limit state between cases. */
 export function resetRateLimitsForTests(): void {
-  buckets.clear();
+  memoryBuckets.clear();
   lastPruneAt = Date.now();
 }
 
@@ -16,27 +18,78 @@ export function resetRateLimitsForTests(): void {
 const PRUNE_INTERVAL_MS = 60_000;
 let lastPruneAt = Date.now();
 
+/** Evict expired in-memory rate-limit buckets. */
 function pruneExpired(now: number): void {
   if (now - lastPruneAt < PRUNE_INTERVAL_MS) return;
   lastPruneAt = now;
-  for (const [key, bucket] of buckets) {
-    if (now >= bucket.resetAt) buckets.delete(key);
+  for (const [key, bucket] of memoryBuckets) {
+    if (now >= bucket.resetAt) memoryBuckets.delete(key);
   }
 }
 
-function checkLimit(key: string, limit: number, windowMs: number): number | null {
+/** In-process rate-limit check (dev / DB-unavailable fallback). */
+function checkLimitMemory(key: string, limit: number, windowMs: number): number | null {
   const now = Date.now();
   pruneExpired(now);
-  const bucket = buckets.get(key);
+  const bucket = memoryBuckets.get(key);
   if (!bucket || now >= bucket.resetAt) {
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    memoryBuckets.set(key, { count: 1, resetAt: now + windowMs });
+
     return null;
   }
   if (bucket.count >= limit) {
     return Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
   }
   bucket.count += 1;
+
   return null;
+}
+
+/**
+ * Shared Mongo-backed rate-limit check for multi-instance (Vercel) deploys.
+ * Falls back to memory when the DB is not connected yet.
+ */
+async function checkLimitMongo(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<number | null> {
+  const now = Date.now();
+  const col = getDb().collection<RateLimitDocument>(COLLECTIONS.rateLimits);
+  const existing = await col.findOne({ _id: key });
+
+  if (!existing || now >= existing.resetAt.getTime()) {
+    await col.findOneAndUpdate(
+      { _id: key },
+      { $set: { count: 1, resetAt: new Date(now + windowMs) } },
+      { upsert: true },
+    );
+
+    return null;
+  }
+  if (existing.count >= limit) {
+    return Math.max(1, Math.ceil((existing.resetAt.getTime() - now) / 1000));
+  }
+  await col.updateOne({ _id: key }, { $inc: { count: 1 } });
+
+  return null;
+}
+
+/** Prefer Mongo when connected so limits hold across serverless isolates. */
+async function checkLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<number | null> {
+  if (isDbConnected()) {
+    try {
+      return await checkLimitMongo(key, limit, windowMs);
+    } catch {
+      /* Fall through to memory if the shared store is unavailable. */
+    }
+  }
+
+  return checkLimitMemory(key, limit, windowMs);
 }
 
 type RateLimitOptions = {
@@ -46,11 +99,12 @@ type RateLimitOptions = {
   keyFn?: (c: Parameters<Parameters<typeof createMiddleware>[0]>[0]) => string;
 };
 
+/** Build a rate-limit middleware with a fixed window and key prefix. */
 export function rateLimit(opts: RateLimitOptions) {
   return createMiddleware(async (c, next) => {
     const suffix = opts.keyFn ? opts.keyFn(c) : getClientIp(c);
     const key = `${opts.keyPrefix}:${suffix}`;
-    const retryAfter = checkLimit(key, opts.limit, opts.windowMs);
+    const retryAfter = await checkLimit(key, opts.limit, opts.windowMs);
     if (retryAfter !== null) tooManyRequests("Too many requests. Please try again later.");
     await next();
   });
