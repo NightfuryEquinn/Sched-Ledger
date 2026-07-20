@@ -1,25 +1,29 @@
-import { buildCategoryIndex, nextCategoryColor, slugId } from "@/frontend/lib/categories";
+import { buildCategoryIndex, isIncomeCategory, nextCategoryColor, slugId } from "@/frontend/lib/categories";
 import type { Category } from "@/frontend/lib/types";
 import { DEFAULT_GLYPH } from "@/lib/glyphs";
 
 const TAXONOMY_ID = /^[a-z0-9_]+$/;
 
+/** True when an id matches taxonomy slug rules. */
 function isValidTaxonomyId(id: string): boolean {
   return TAXONOMY_ID.test(id);
 }
 
+/** Expense/savings vs income kind for import matching. */
 function categoryKind(cat: Category): "expense" | "income" {
-  return cat.type === "income" || cat.id === "income" ? "income" : "expense";
+  return isIncomeCategory(cat) ? "income" : "expense";
 }
 
+/** Primary income category used when importing income rows. */
 function incomeCategory(categories: Category[]): Category {
   return (
-    categories.find((c) => c.type === "income") ??
+    categories.find((c) => isIncomeCategory(c)) ??
     categories.find((c) => c.id === "income") ??
     categories[0]
   );
 }
 
+/** Non-income categories (spending + savings) for expense imports. */
 function expenseCategories(categories: Category[]): Category[] {
   return categories.filter((c) => categoryKind(c) !== "income");
 }

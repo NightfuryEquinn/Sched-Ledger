@@ -9,7 +9,7 @@ import {
   type RecurringInterval,
 } from "@/lib/recurring";
 import type { CategoryIndex } from "./categories";
-import { catOfSub, isSavingsSub } from "./categories";
+import { catOfSub, isIncomeCategory, isSavingsSub, isSpendingCategory } from "./categories";
 import { CURRENT_MONTH_KEY, SUB_BY_ID, TODAY_ISO, monthLabel, monthsWindow } from "./data";
 import type { Budgets, Expense, FinancialWallet, LedgerEvent } from "./types";
 import { holdsByCategory, totalActiveHolds } from "./envelope-holds";
@@ -185,12 +185,14 @@ export function recurringSchedulesForMonth(expenses: Expense[], monthKey: string
 
 export function catOf(sub: string, index?: CategoryIndex) {
   if (index) return catOfSub(sub, index.subById);
-  return SUB_BY_ID[sub]?.catId ?? "food";
+
+  return SUB_BY_ID[sub]?.catId ?? "";
 }
 
 export function isSavings(e: Expense, index?: CategoryIndex) {
   if (isIncome(e)) return false;
-  if (index) return isSavingsSub(e.sub, index.subById);
+  if (index) return isSavingsSub(e.sub, index.subById, index.catById);
+
   return catOf(e.sub) === "savings";
 }
 
@@ -234,22 +236,37 @@ export function monthStats(
       earned += e.amount;
       continue;
     }
+
+    const cat = catOf(e.sub, index);
+
     if (isSavings(e, index)) {
       saved += e.amount;
+      if (cat) byCat[cat] = (byCat[cat] || 0) + e.amount;
       continue;
     }
+
     spent += e.amount;
-    const cat = catOf(e.sub, index);
-    byCat[cat] = (byCat[cat] || 0) + e.amount;
+    if (cat) byCat[cat] = (byCat[cat] || 0) + e.amount;
   }
 
-  const spendingBudgets = Object.fromEntries(
+  const envelopeBudgets = Object.fromEntries(
     Object.entries(budgets).filter(([id]) => {
       const cat = index?.catById[id];
-      return cat ? cat.type !== "income" : id !== "income";
+      if (cat) return !isIncomeCategory(cat);
+
+      return id !== "income";
     }),
   );
-  const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
+  const spendingBudgets = Object.fromEntries(
+    Object.entries(envelopeBudgets).filter(([id]) => {
+      const cat = index?.catById[id];
+      if (cat) return isSpendingCategory(cat);
+
+      return id !== "savings";
+    }),
+  );
+  const totalBudget = Object.values(envelopeBudgets).reduce((s, v) => s + v, 0);
+  const spendingBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
   const byCatHeld = events ? holdsByCategory(events, key) : {};
   const totalHeld = events ? totalActiveHolds(events, key) : 0;
   const balance = walletBalance(expenses, wallet, index);
@@ -268,6 +285,7 @@ export function monthStats(
     byCatHeld,
     totalHeld,
     totalBudget,
+    spendingBudget,
     remaining,
     balance,
     fundingMode: wallet.fundingMode,

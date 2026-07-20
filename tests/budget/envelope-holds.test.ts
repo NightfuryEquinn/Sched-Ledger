@@ -4,6 +4,7 @@ import {
   isActiveHoldOccurrence,
   isHoldReleased,
   releaseHoldForOccurrence,
+  restoreHoldForOccurrence,
   totalActiveHolds,
 } from "@/frontend/lib/envelope-holds";
 import type { LedgerEvent } from "@/frontend/lib/types";
@@ -77,5 +78,51 @@ describe("envelope holds", () => {
 
     expect(next.budgetHoldReleasedDates).toEqual(["2026-07-15"]);
     expect(isActiveHoldOccurrence(next, "2026-07-15")).toBe(false);
+  });
+
+  test("restoreHoldForOccurrence clears release and expense link", () => {
+    const ev = billEvent({
+      expenseId: "exp1",
+      budgetHoldReleasedDates: ["2026-07-15"],
+    });
+    const next = restoreHoldForOccurrence(ev, "2026-07-15");
+
+    expect(next.expenseId).toBe("");
+    expect(next.budgetHoldReleasedDates).toBeUndefined();
+    expect(isActiveHoldOccurrence(next, "2026-07-15")).toBe(true);
+  });
+
+  test("accepts numeric string hold amounts", () => {
+    const ev = billEvent({
+      budgetHoldAmount: "70" as unknown as number,
+      budgetHoldCategoryId: "utilities",
+      date: "2026-07-26",
+    });
+
+    expect(isActiveHoldOccurrence(ev, "2026-07-26")).toBe(true);
+    expect(totalActiveHolds([ev], "2026-07")).toBe(70);
+  });
+
+  test("counts future occurrences in the same month, not only past ones", () => {
+    const events = [
+      billEvent({
+        id: "past",
+        date: "2026-07-10",
+        budgetHoldAmount: 40,
+        budgetHoldCategoryId: "food",
+      }),
+      billEvent({
+        id: "future",
+        date: "2026-07-26",
+        budgetHoldAmount: 70,
+        budgetHoldCategoryId: "utilities",
+      }),
+    ];
+
+    expect(holdsByCategory(events, "2026-07")).toEqual({
+      food: 40,
+      utilities: 70,
+    });
+    expect(totalActiveHolds(events, "2026-07")).toBe(110);
   });
 });

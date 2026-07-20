@@ -113,7 +113,7 @@ export async function maybeNotifyBudgetAlerts(opts: {
     byCat: st.byCat,
     byCatHeld: st.byCatHeld,
     budgets: opts.budgets,
-    categories: opts.categoryIndex.expenseCategories,
+    categories: opts.categoryIndex.spendingCategories,
     month: opts.month,
   });
   if (!alerts.length) return [];

@@ -1,4 +1,5 @@
 import { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
+import { CategoryPicker } from "@/frontend/components/CategoryPicker";
 import {
   DeleteScopeDialog,
   EmptyState,
@@ -31,6 +32,7 @@ import type { CategoryIndex, LedgerEvent } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /*
  * Schedule view
@@ -53,6 +55,111 @@ function shiftIso(iso: string, delta: number): string {
   const mo = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${mo}-${day}`;
+}
+
+function ChevDown({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+type LeadPickerProps = {
+  options: ReadonlyArray<{ id: string; label: string }>;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+/** Custom dropdown for the email reminder lead time. */
+function LeadPicker({ options, value, onChange }: LeadPickerProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+  const selected = options.find((option) => option.id === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown, true);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
+
+  if (!selected) return null;
+
+  const menu = open ? (
+    <div
+      className="picker-scrim"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) setOpen(false);
+      }}
+    >
+      <div className="picker-menu picker-menu--lead" role="listbox" aria-label="Reminder lead time">
+        <div className="picker-timezone-list">
+          {options.map((option) => {
+            const active = option.id === selected.id;
+
+            return (
+              <button
+                key={option.id}
+                ref={active ? activeRef : undefined}
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={"picker-timezone-item" + (active ? " active" : "")}
+                onClick={() => {
+                  onChange(option.id);
+                  setOpen(false);
+                }}
+              >
+                <span className="pti-label">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <div className="picker-wrap" ref={rootRef}>
+      <button
+        type="button"
+        className="picker-trigger"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span className="picker-trigger-label">{selected.label}</span>
+        <ChevDown />
+      </button>
+      {menu ? createPortal(menu, document.body) : null}
+    </div>
+  );
 }
 
 function AgendaEventRow({
@@ -327,6 +434,7 @@ export function EventModal({
   initial,
   defaultDate,
   occurrenceIso,
+  hasLinkedPayment = false,
   categoryIndex,
   currency,
   onSave,
@@ -364,12 +472,11 @@ export function EventModal({
     initial?.budgetHoldCategoryId ?? categoryIndex?.expenseCategories[0]?.id ?? "",
   );
 
-  const holdEligible = catId === "bill" || catId === "renewal";
   const paymentOccurrenceIso = occurrenceIso || initial?.date || date;
 
   const leadOptions = useMemo(() => leadTimesForEvent(allDay), [allDay]);
   const deleteFromDate = occurrenceIso || initial?.date || date;
-  const showLogPayment = !!(editing && onLogPayment && (catId === "bill" || catId === "renewal"));
+  const showLogPayment = !!(editing && onLogPayment);
 
   const titleRef = useRef(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
@@ -388,7 +495,6 @@ export function EventModal({
   const chooseCat = (id: string) => {
     setCatId(id);
     if (id === "custom" && !customGlyph) setCustomGlyph(customMeta.glyph);
-    if (id !== "bill" && id !== "renewal") setHoldEnabled(false);
   };
 
   const addComment = () => {
@@ -400,16 +506,17 @@ export function EventModal({
 
   const customOk = catId !== "custom" || (customLabel.trim() && customGlyph);
   const holdAmountNum = Math.max(0, Math.round(parseFloat(holdAmount) || 0));
-  const holdValid = !holdEnabled || (holdAmountNum > 0 && holdCategoryId);
+  const resolvedHoldCategoryId = holdCategoryId || categoryIndex?.expenseCategories[0]?.id || "";
+  const holdValid = !holdEnabled || (holdAmountNum > 0 && resolvedHoldCategoryId);
   const valid = title.trim() && date && (allDay || time) && customOk && holdValid;
   const submit = () => {
     if (!valid) return;
     if (notify && email.trim()) { try { localStorage.setItem("ledger:notifyEmail", email.trim()); } catch (e) {} }
-    const holdFields = holdEligible && holdEnabled && holdAmountNum > 0 && holdCategoryId
+    const holdFields = holdEnabled && holdAmountNum > 0 && resolvedHoldCategoryId
       ? {
           budgetHoldEnabled: true,
           budgetHoldAmount: holdAmountNum,
-          budgetHoldCategoryId: holdCategoryId,
+          budgetHoldCategoryId: resolvedHoldCategoryId,
           budgetHoldReleasedDates: initial?.budgetHoldReleasedDates,
         }
       : {
@@ -455,6 +562,7 @@ export function EventModal({
             value={title} onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
 
+          <div className="event-div" />
           <label className="fld-label">Type</label>
           <div className="cat-grid">
             {EVENT_CATS.filter((c) => c.id !== "custom").map((c) => (
@@ -506,6 +614,7 @@ export function EventModal({
               </div>
             </div>
           ) : null}
+          <div className="event-div" />
 
           <div className="fld-2col">
             <div>
@@ -525,13 +634,14 @@ export function EventModal({
             <span className="toggle-ui" /> <span>All-day event</span>
           </label>
 
+          <div className="event-div" />
           <label className="fld-label">Repeats</label>
           <div className="sub-row">
             {REPEATS.map((r) => (
               <button key={r.id} type="button" className={"sub-chip" + (repeat === r.id ? " active" : "")} onClick={() => setRepeat(r.id)}>{r.label}</button>
             ))}
           </div>
-
+          <div className="event-div" />
           <div className="notify-head">
             <label className="toggle-line tight">
               <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
@@ -543,12 +653,7 @@ export function EventModal({
               <div className="fld-2col tight">
                 <div>
                   <label className="fld-label">Send</label>
-                  <div className="select-wrap">
-                    <select className="text-in" value={lead} onChange={(e) => setLead(e.target.value)}>
-                      {leadOptions.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
-                    </select>
-                    <span className="select-caret"><Icon name="chevD" size={16} /></span>
-                  </div>
+                  <LeadPicker options={leadOptions} value={lead} onChange={setLead} />
                 </div>
                 <div>
                   <label className="fld-label">Send to</label>
@@ -557,62 +662,51 @@ export function EventModal({
               </div>
             </div>
           )}
+          <div className="event-div" />
 
-          {holdEligible ? (
-            <div className="hold-card">
-              <label className="toggle-line tight">
-                <input
-                  type="checkbox"
-                  checked={holdEnabled}
-                  onChange={(e) => setHoldEnabled(e.target.checked)}
-                />
-                <span className="toggle-ui" />
-                <span><Icon name="lock" size={15} /> Hold from budget</span>
-              </label>
-              {holdEnabled ? (
-                <div className="hold-fields">
-                  <div className="fld-2col tight">
-                    <div>
-                      <label className="fld-label">Hold amount</label>
-                      <div className="hold-amt-row">
-                        <span className="hold-cur">{getCurrency(currency).symbol}</span>
-                        <input
-                          className="text-in"
-                          type="number"
-                          min="0"
-                          step="1"
-                          placeholder="0"
-                          value={holdAmount}
-                          onChange={(e) => setHoldAmount(stripNegativeInput(e.target.value))}
-                          onKeyDown={preventNegativeKeys}
-                          onWheel={preventWheelChange}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="fld-label">Category envelope</label>
-                      <div className="select-wrap">
-                        <select
-                          className="text-in"
-                          value={holdCategoryId}
-                          onChange={(e) => setHoldCategoryId(e.target.value)}
-                        >
-                          {categoryIndex.expenseCategories.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                        <span className="select-caret"><Icon name="chevD" size={16} /></span>
-                      </div>
-                    </div>
+          <div className="notify-head">
+            <label className="toggle-line tight">
+              <input
+                type="checkbox"
+                checked={holdEnabled}
+                onChange={(e) => setHoldEnabled(e.target.checked)}
+              />
+              <span className="toggle-ui" />
+              <span><Icon name="lock" size={15} /> Hold from budget</span>
+            </label>
+          </div>
+          {holdEnabled ? (
+            <div className="notify-card">
+              <div className="fld-2col tight hold-fields-grid">
+                <div className="hold-fields-grid__amount">
+                  <label className="fld-label">Amount</label>
+                  <div className="hold-amt-row">
+                    <span className="hold-cur">{getCurrency(currency).symbol}</span>
+                    <input
+                      className="text-in"
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="0"
+                      value={holdAmount}
+                      onChange={(e) => setHoldAmount(stripNegativeInput(e.target.value))}
+                      onKeyDown={preventNegativeKeys}
+                      onWheel={preventWheelChange}
+                    />
                   </div>
-                  <p className="hold-hint">
-                    Reserves this amount against your category budget until you log payment.
-                    Hold details stay encrypted — only dates are visible to the server.
-                  </p>
                 </div>
-              ) : null}
+                <div className="hold-fields-grid__category">
+                  <label className="fld-label">Category</label>
+                  <CategoryPicker
+                    categories={categoryIndex.expenseCategories}
+                    value={resolvedHoldCategoryId}
+                    onChange={setHoldCategoryId}
+                  />
+                </div>
+              </div>
             </div>
           ) : null}
+          <div className="event-div" />
 
           <label className="fld-label">Comments</label>
           <div className="cmt-thread">
@@ -642,10 +736,10 @@ export function EventModal({
                   id: initial.id,
                   title: title.trim() || initial.title,
                   date: paymentOccurrenceIso,
-                  expenseId: initial.expenseId,
+                  expenseId: hasLinkedPayment ? initial.expenseId : undefined,
                 })}
               >
-                {initial.expenseId ? "View Linked Payment" : "Log Payment"}
+                {hasLinkedPayment ? "View Linked Payment" : "Log Payment"}
               </button>
             </div>
           ) : (

@@ -17,7 +17,7 @@ export const subcategoryIdSchema = z
   .max(48)
   .regex(/^[a-z0-9_]+$/, "Invalid subcategory id");
 
-export const categoryTypeSchema = z.enum(["expense", "income"]);
+export const categoryTypeSchema = z.enum(["expense", "income", "savings"]);
 
 export const subcategorySchema = z.object({
   id: subcategoryIdSchema,
@@ -91,7 +91,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
   },
   {
-    id: "savings", name: "Savings", color: "#7a6fa5", glyph: "🐷", type: "expense", builtin: true,
+    id: "savings", name: "Savings", color: "#7a6fa5", glyph: "🐷", type: "savings", builtin: true,
     subs: [{ id: "saving", name: "Saving" }],
   },
   {
@@ -113,7 +113,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
 export function validateTaxonomy(
   categories: Array<{
     id: string;
-    type?: "expense" | "income";
+    type?: "expense" | "income" | "savings";
     subs: Array<{ id: string }>;
   }>,
 ): string | null {
@@ -125,8 +125,17 @@ export function validateTaxonomy(
   for (const cat of categories) {
     if (catIds.has(cat.id)) return `Duplicate category id: ${cat.id}`;
     catIds.add(cat.id);
-    if (cat.type === "income") hasIncome = true;
-    else hasExpense = true;
+
+    const type =
+      cat.type === "income" || cat.id === "income"
+        ? "income"
+        : cat.type === "savings" || cat.id === "savings"
+          ? "savings"
+          : "expense";
+
+    if (type === "income") hasIncome = true;
+    else if (type === "expense") hasExpense = true;
+
     for (const sub of cat.subs) {
       if (subIds.has(sub.id)) return `Duplicate subcategory id: ${sub.id}`;
       subIds.add(sub.id);

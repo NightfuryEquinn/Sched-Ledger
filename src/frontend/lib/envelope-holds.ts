@@ -1,17 +1,23 @@
 import { scheduleForMonth } from "@/frontend/lib/data";
 import type { LedgerEvent } from "@/frontend/lib/types";
 
-/** Bill/renewal events can reserve budget envelope holds. */
-export function isHoldEligibleEvent(ev: Pick<LedgerEvent, "catId">): boolean {
-  return ev.catId === "bill" || ev.catId === "renewal";
+/** Any schedule event can reserve a budget envelope hold. */
+export function isHoldEligibleEvent(_ev: Pick<LedgerEvent, "catId">): boolean {
+  return true;
+}
+
+/** Coerce a hold amount to a finite positive number, or 0. */
+export function holdAmountValue(amount: unknown): number {
+  const n = typeof amount === "number" ? amount : Number(amount);
+
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 /** Whether the event has an active encrypted hold configuration. */
 export function hasBudgetHoldConfig(ev: LedgerEvent): boolean {
   return Boolean(
     ev.budgetHoldEnabled &&
-      typeof ev.budgetHoldAmount === "number" &&
-      ev.budgetHoldAmount > 0 &&
+      holdAmountValue(ev.budgetHoldAmount) > 0 &&
       ev.budgetHoldCategoryId,
   );
 }
@@ -34,7 +40,7 @@ export function isActiveHoldOccurrence(ev: LedgerEvent, occurrenceIso: string): 
   return !isHoldReleased(ev, occurrenceIso);
 }
 
-/** Sum active holds per category for a month (client-decrypted only). */
+/** Sum active holds per category for every occurrence in the month (past + upcoming). */
 export function holdsByCategory(events: LedgerEvent[], monthKey: string): Record<string, number> {
   const holds: Record<string, number> = {};
 
@@ -42,13 +48,13 @@ export function holdsByCategory(events: LedgerEvent[], monthKey: string): Record
     if (!isActiveHoldOccurrence(ev, iso)) continue;
 
     const catId = ev.budgetHoldCategoryId!;
-    holds[catId] = (holds[catId] || 0) + ev.budgetHoldAmount!;
+    holds[catId] = (holds[catId] || 0) + holdAmountValue(ev.budgetHoldAmount);
   }
 
   return holds;
 }
 
-/** Total active holds across all categories for a month. */
+/** Total active holds across all categories for the full calendar month. */
 export function totalActiveHolds(events: LedgerEvent[], monthKey: string): number {
   const byCat = holdsByCategory(events, monthKey);
 
@@ -66,4 +72,21 @@ export function releaseHoldForOccurrence(ev: LedgerEvent, occurrenceIso: string)
     ...ev,
     budgetHoldReleasedDates: [...released, occurrenceIso],
   };
+}
+
+/** Re-open a hold after a linked payment is deleted. */
+export function restoreHoldForOccurrence(ev: LedgerEvent, occurrenceIso: string): LedgerEvent {
+  const released = (ev.budgetHoldReleasedDates ?? []).filter((d) => d !== occurrenceIso);
+  const next: LedgerEvent = {
+    ...ev,
+    expenseId: "",
+  };
+
+  if (released.length) {
+    next.budgetHoldReleasedDates = released;
+  } else {
+    delete next.budgetHoldReleasedDates;
+  }
+
+  return next;
 }

@@ -239,8 +239,9 @@ function mergeEventHoldSecrets(event: LedgerEvent, secrets: EventSecrets): Ledge
   const next = { ...event };
 
   if (secrets.budgetHoldEnabled) {
+    const amount = Number(secrets.budgetHoldAmount);
     next.budgetHoldEnabled = true;
-    next.budgetHoldAmount = secrets.budgetHoldAmount;
+    next.budgetHoldAmount = Number.isFinite(amount) ? amount : undefined;
     next.budgetHoldCategoryId = secrets.budgetHoldCategoryId;
     next.budgetHoldReleasedDates = secrets.budgetHoldReleasedDates;
   } else {
@@ -257,11 +258,15 @@ function mergeEventHoldSecrets(event: LedgerEvent, secrets: EventSecrets): Ledge
 function eventHoldSecrets(event: Partial<LedgerEvent>): Partial<EventSecrets> {
   if (!event.budgetHoldEnabled) return { budgetHoldEnabled: false };
 
+  const amount = Number(event.budgetHoldAmount);
   const secrets: Partial<EventSecrets> = {
     budgetHoldEnabled: true,
-    budgetHoldAmount: event.budgetHoldAmount,
     budgetHoldCategoryId: event.budgetHoldCategoryId,
   };
+
+  if (Number.isFinite(amount) && amount > 0) {
+    secrets.budgetHoldAmount = amount;
+  }
 
   if (event.budgetHoldReleasedDates?.length) {
     secrets.budgetHoldReleasedDates = event.budgetHoldReleasedDates;

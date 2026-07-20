@@ -1,5 +1,10 @@
 import { EmptyState, Icon, Segmented, glyphTint } from "@/frontend/components/ui";
-import { nextCategoryColor, slugId } from "@/frontend/lib/categories";
+import {
+  nextCategoryColor,
+  resolveCategoryType,
+  slugId,
+  type CategoryType,
+} from "@/frontend/lib/categories";
 import type { Category, CategoryIndex } from "@/frontend/lib/types";
 import { CATEGORY_GLYPH_OPTIONS, DEFAULT_GLYPH, displayGlyph } from "@/lib/glyphs";
 import { useEffect, useState } from "react";
@@ -18,7 +23,7 @@ type CategoriesViewProps = {
 };
 
 type EditorMode =
-  | { type: "add-cat"; catType: "expense" | "income" }
+  | { type: "add-cat"; catType: CategoryType }
   | { type: "add-sub"; catId: string }
   | { type: "edit-cat"; catId: string }
   | { type: "edit-sub"; catId: string; subId: string }
@@ -26,9 +31,17 @@ type EditorMode =
 
 const GLYPHS = CATEGORY_GLYPH_OPTIONS;
 
+/** Human label for a category type badge. */
+function typeLabel(type: CategoryType) {
+  if (type === "income") return "Income";
+  if (type === "savings") return "Savings";
+
+  return "Expense";
+}
+
 export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
   const [categories, setCategories] = useState(categoryIndex.categories);
-  const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
+  const [filter, setFilter] = useState<"all" | CategoryType>("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [editor, setEditor] = useState<EditorMode>(null);
   const [name, setName] = useState("");
@@ -41,13 +54,15 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
     setCategories(categoryIndex.categories);
   }, [categoryIndex.categories]);
 
+  /** Whether a category matches the active type filter. */
   const catMatches = (cat: Category) => {
     if (filter === "all") return true;
-    const type = cat.type ?? (cat.id === "income" ? "income" : "expense");
-    return type === filter;
+
+    return resolveCategoryType(cat) === filter;
   };
   const visibleCount = categories.reduce((n, c) => n + (catMatches(c) ? 1 : 0), 0);
 
+  /** Persist taxonomy changes through the parent save handler. */
   const persist = async (next: Category[]) => {
     setBusy(true);
     setError("");
@@ -62,7 +77,8 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
     }
   };
 
-  const openAddCat = (catType: "expense" | "income") => {
+  /** Open the add-category editor for the given type. */
+  const openAddCat = (catType: CategoryType) => {
     setEditor({ type: "add-cat", catType });
     setName("");
     setGlyph(DEFAULT_GLYPH);
@@ -70,12 +86,14 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
     setError("");
   };
 
+  /** Open the add-subcategory editor. */
   const openAddSub = (catId: string) => {
     setEditor({ type: "add-sub", catId });
     setName("");
     setError("");
   };
 
+  /** Open the edit-category editor. */
   const openEditCat = (cat: Category) => {
     setEditor({ type: "edit-cat", catId: cat.id });
     setName(cat.name);
@@ -84,30 +102,36 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
     setError("");
   };
 
+  /** Open the rename-subcategory editor. */
   const openEditSub = (catId: string, sub: { id: string; name: string }) => {
     setEditor({ type: "edit-sub", catId, subId: sub.id });
     setName(sub.name);
     setError("");
   };
 
+  /** Delete a non-builtin category. */
   const removeCategory = async (catId: string) => {
     const cat = categories.find((c) => c.id === catId);
     if (!cat || cat.builtin) return;
     await persist(categories.filter((c) => c.id !== catId));
   };
 
+  /** Remove a subcategory when more than one remains. */
   const removeSub = async (catId: string, subId: string) => {
     const next = categories.map((c) => {
       if (c.id !== catId) return c;
       if (c.subs.length <= 1) return c;
+
       return { ...c, subs: c.subs.filter((s) => s.id !== subId) };
     });
     await persist(next);
   };
 
+  /** Commit the active editor mode. */
   const submitEditor = async () => {
     if (!name.trim()) {
       setError("Name is required");
+
       return;
     }
     if (!editor) return;
@@ -125,6 +149,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
       };
       await persist([...categories, cat]);
       setExpanded((e) => ({ ...e, [id]: true }));
+
       return;
     }
 
@@ -134,6 +159,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
         c.id === editor.catId ? { ...c, subs: [...c.subs, sub] } : c,
       );
       await persist(next);
+
       return;
     }
 
@@ -142,6 +168,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
         c.id === editor.catId ? { ...c, name: name.trim(), color, glyph } : c,
       );
       await persist(next);
+
       return;
     }
 
@@ -162,9 +189,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
 
   const editorTitle =
     editor?.type === "add-cat"
-      ? editor.catType === "income"
-        ? "Add Income Category"
-        : "Add Expense Category"
+      ? `Add ${typeLabel(editor.catType)} Category`
       : editor?.type === "add-sub"
         ? "Add Subcategory"
         : editor?.type === "edit-cat"
@@ -180,6 +205,7 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
           options={[
             { v: "all", label: "All" },
             { v: "expense", label: "Expense" },
+            { v: "savings", label: "Savings" },
             { v: "income", label: "Income" },
           ]}
           value={filter}
@@ -188,6 +214,9 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
         <div className="cat-toolbar-actions">
           <button className="primary-btn" type="button" onClick={() => openAddCat("expense")}>
             <Icon name="plus" size={15} /> Expense
+          </button>
+          <button className="primary-btn" type="button" onClick={() => openAddCat("savings")}>
+            <Icon name="plus" size={15} /> Savings
           </button>
           <button className="primary-btn" type="button" onClick={() => openAddCat("income")}>
             <Icon name="plus" size={15} /> Income
@@ -207,9 +236,10 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
 
         <div className="cat-tree" data-tour="tour-categories-tree">
           {categories.length ? categories.map((cat) => {
-            const isIncome = (cat.type ?? (cat.id === "income" ? "income" : "expense")) === "income";
+            const catType = resolveCategoryType(cat);
             const open = expanded[cat.id] ?? true;
             const filteredOut = !catMatches(cat);
+
             return (
               <div
                 key={cat.id}
@@ -235,12 +265,10 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                   </span>
                   <div className="cat-block-main">
                     <div className="cat-block-name">{cat.name}</div>
-                    {(cat.builtin || isIncome) ? (
-                      <div className="cat-block-tags">
-                        {cat.builtin ? <span className="wallet-badge">Built-in</span> : null}
-                        {isIncome ? <span className="wallet-badge">Income</span> : null}
-                      </div>
-                    ) : null}
+                    <div className="cat-block-tags">
+                      {cat.builtin ? <span className="wallet-badge">Built-in</span> : null}
+                      <span className="wallet-badge">{typeLabel(catType)}</span>
+                    </div>
                     <div className="cat-block-meta">{cat.subs.length} subcategories</div>
                   </div>
                   <div className="cat-block-actions">

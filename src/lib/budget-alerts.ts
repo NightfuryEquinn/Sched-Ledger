@@ -6,7 +6,7 @@ export type BudgetAlertLevel = "warning" | "exceeded";
 export type BudgetAlertCategory = {
   id: string;
   name: string;
-  type?: "expense" | "income";
+  type?: "expense" | "income" | "savings";
 };
 
 export type BudgetAlert = {
@@ -41,6 +41,7 @@ export function evaluateBudgetAlerts(opts: {
 
   for (const cat of opts.categories) {
     if (cat.type === "income" || cat.id === "income") continue;
+    if (cat.type === "savings" || cat.id === "savings") continue;
     const budget = opts.budgets[cat.id];
     if (!isPositiveBudget(budget)) continue;
 

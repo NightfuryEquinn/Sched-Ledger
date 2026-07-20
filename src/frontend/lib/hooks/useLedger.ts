@@ -16,7 +16,7 @@ import {
   encodeWalletFinancials,
 } from "@/frontend/lib/crypto/codec";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
-import { buildCategoryIndex } from "@/frontend/lib/categories";
+import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
 import { normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
 import type { Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
@@ -77,7 +77,7 @@ const keys = {
   wallets: (wallet: string) => ["wallets", wallet] as const,
   categories: (wallet: string) => ["categories", wallet] as const,
   expenses: (wallet: string) => ["expenses", wallet] as const,
-  events: (wallet: string) => ["events", wallet] as const,
+  events: (wallet: string, month: string) => ["events", wallet, month] as const,
   todoLists: (wallet: string) => ["todoLists", wallet] as const,
 };
 
@@ -158,6 +158,8 @@ export function useLedger(walletAddress: string) {
     [categoriesQuery.data],
   );
 
+  const month = clampMonthKey(profileQuery.data?.currentMonth ?? CURRENT_MONTH_KEY);
+
   const wallets = (walletsQuery.data ?? []).map((w) => ({
     ...w,
     fundingMode: w.fundingMode ?? "monthly",
@@ -226,41 +228,53 @@ export function useLedger(walletAddress: string) {
   );
 
   const eventsQuery = useQuery({
-    queryKey: keys.events(wallet),
+    queryKey: keys.events(wallet, month),
     queryFn: async () => {
-      /* Load active recurring series + recent once events (36-month lookback). */
-      const from = monthStartIso(shiftMonthKey(CURRENT_MONTH_KEY, -EXPENSE_LOOKBACK_MONTHS));
+      /*
+       * Load by viewed month so once-events on future days (and recurring
+       * series that still occur this month) are included for holds/agenda.
+       */
       const cryptoKey = requireKey(wallet);
-      const { events } = await api.events.list({ from, limit: LIST_PAGE_LIMIT });
+      const collected: Awaited<ReturnType<typeof decodeEvent>>[] = [];
+      let before: string | undefined;
 
-      return Promise.all(
-        events.map(async (wire) => {
-          if (!wire.enc && wire.title) {
-            const body = await encodeEventUpdate(
-              {
-                title: wire.title,
-                comments: wire.comments ?? [],
-                customLabel: wire.customLabel,
-                customGlyph: wire.customGlyph,
-                catId: wire.catId,
-                date: wire.date,
-                allDay: wire.allDay,
-                time: wire.time,
-                repeat: wire.repeat,
-                exceptDates: wire.exceptDates,
-                until: wire.until,
-                notify: wire.notify,
-                lead: wire.lead,
-                email: wire.email ?? "",
-              },
-              cryptoKey,
-            );
-            const { event } = await api.events.update(wire.id, body);
-            return decodeEvent(event, cryptoKey);
-          }
-          return decodeEvent(wire, cryptoKey);
-        }),
-      );
+      for (;;) {
+        const page = await api.events.list({ month, limit: LIST_PAGE_LIMIT, before });
+        const decoded = await Promise.all(
+          page.events.map(async (wire) => {
+            if (!wire.enc && wire.title) {
+              const body = await encodeEventUpdate(
+                {
+                  title: wire.title,
+                  comments: wire.comments ?? [],
+                  customLabel: wire.customLabel,
+                  customGlyph: wire.customGlyph,
+                  catId: wire.catId,
+                  date: wire.date,
+                  allDay: wire.allDay,
+                  time: wire.time,
+                  repeat: wire.repeat,
+                  exceptDates: wire.exceptDates,
+                  until: wire.until,
+                  notify: wire.notify,
+                  lead: wire.lead,
+                  email: wire.email ?? "",
+                },
+                cryptoKey,
+              );
+              const { event } = await api.events.update(wire.id, body);
+              return decodeEvent(event, cryptoKey);
+            }
+            return decodeEvent(wire, cryptoKey);
+          }),
+        );
+        collected.push(...decoded);
+        if (!page.hasMore || !page.nextBefore) break;
+        before = page.nextBefore;
+        if (collected.length >= LIST_PAGE_LIMIT * 5) break;
+      }
+
+      return collected;
     },
     enabled: cryptoReady && !!profileQuery.data,
   });
@@ -449,7 +463,7 @@ export function useLedger(walletAddress: string) {
           month: monthKey,
           currency: walletDoc.currency,
           categoryIndex,
-          events: queryClient.getQueryData<LedgerEvent[]>(keys.events(wallet)) ?? [],
+          events: queryClient.getQueryData<LedgerEvent[]>(keys.events(wallet, month)) ?? [],
         });
       }
     },
@@ -506,14 +520,26 @@ export function useLedger(walletAddress: string) {
       return decodeEvent(event, cryptoKey);
     },
     onSuccess: (event, variables) => {
-      queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet), (prev = []) => {
-        if (variables.id) {
-          return prev.map((e) => (e.id === event.id ? event : e));
-        }
-        return [...prev, event];
-      });
+      const eventMonth = clampMonthKey(event.date.slice(0, 7));
+      const cacheMonths = new Set([month, eventMonth]);
+
+      for (const cacheMonth of cacheMonths) {
+        queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet, cacheMonth), (prev = []) => {
+          if (variables.id) {
+            const mapped = prev.map((e) => (e.id === event.id ? event : e));
+            /* Drop from this month's cache when the event no longer occurs here as a once row. */
+            if (event.repeat === "once" && eventMonth !== cacheMonth) {
+              return mapped.filter((e) => e.id !== event.id);
+            }
+            return mapped;
+          }
+          if (prev.some((e) => e.id === event.id)) return prev;
+          return [...prev, event];
+        });
+      }
+
       if (!variables.id) {
-        setMonthMutation.mutate(event.date.slice(0, 7));
+        setMonthMutation.mutate(eventMonth);
       }
     },
   });
@@ -533,7 +559,7 @@ export function useLedger(walletAddress: string) {
       const merged = { ...activeWallet.budgets };
       let changed = false;
       for (const cat of categories) {
-        if (cat.type !== "income" && !(cat.id in merged)) {
+        if (!isIncomeCategory(cat) && !(cat.id in merged)) {
           merged[cat.id] = 0;
           changed = true;
         }
@@ -577,7 +603,7 @@ export function useLedger(walletAddress: string) {
       return { ok: res.ok, deleted: res.deleted };
     },
     onSuccess: (res, { id }) => {
-      queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet), (prev = []) => {
+      queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet, month), (prev = []) => {
         if (res.deleted || !res.event) {
           return prev.filter((e) => e.id !== id);
         }
@@ -669,7 +695,7 @@ export function useLedger(walletAddress: string) {
     wallet: activeWallet,
     currency: activeWallet?.currency ?? "MYR",
     categoryIndex,
-    month: clampMonthKey(profileQuery.data?.currentMonth ?? CURRENT_MONTH_KEY),
+    month,
     cryptoReady,
     isLoading,
     error,

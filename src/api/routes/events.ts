@@ -61,7 +61,7 @@ eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
     }
   }
 
-  const docs = await events.find(filter).sort({ date: 1 }).limit(limit).toArray();
+  const docs = await events.find(filter).sort({ date: -1 }).limit(limit).toArray();
   const hasMore = docs.length === limit;
   const nextBefore = hasMore ? docs[docs.length - 1]?.date : undefined;
 

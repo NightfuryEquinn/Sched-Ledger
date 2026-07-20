@@ -117,20 +117,20 @@ export function UnlockScreen({ account, onUnlocked, onSignOut }: UnlockScreenPro
           </label>
         ) : null}
         {error && <p className="auth-error">{error}</p>}
-        <button type="button" className="btn btn--primary btn--block" disabled={busy || (needsPassphrase && !passphrase)} onClick={() => void unlock()}>
+        <button type="button" className="primary-btn lg full" disabled={busy || (needsPassphrase && !passphrase)} onClick={() => void unlock()}>
           {busy ? "Unlocking…" : needsWalletSign ? "Sign to Unlock" : "Unlock"}
         </button>
         {!idn && walletClient.hasInjected() && (
           <button
             type="button"
-            className="btn btn--ghost btn--block"
+            className="ghost-btn full u-gap-top"
             disabled={busy}
             onClick={() => void unlock()}
           >
             Connect Wallet
           </button>
         )}
-        <button type="button" className="btn btn--ghost btn--block" disabled={busy} onClick={onSignOut}>
+        <button type="button" className="ghost-btn full u-gap-top" disabled={busy} onClick={onSignOut}>
           Sign Out
         </button>
       </div>

@@ -23,7 +23,7 @@ export type CategorySecrets = {
     name: string;
     color: string;
     glyph: string;
-    type?: "expense" | "income";
+    type?: "expense" | "income" | "savings";
     builtin?: boolean;
     subs: Array<{ id: string; name: string }>;
   }>;

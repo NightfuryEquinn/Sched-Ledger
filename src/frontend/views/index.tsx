@@ -9,6 +9,7 @@ import {
   TransactionRow,
   glyphTint,
 } from "@/frontend/components/ui";
+import { isSavingsCategory, isSpendingCategory } from "@/frontend/lib/categories";
 import {
   CURRENT_DAY,
   CURRENT_MONTH_KEY,
@@ -136,7 +137,7 @@ export function Overview({
 
   const donutData = useMemo(
     () =>
-      categoryIndex.expenseCategories
+      categoryIndex.spendingCategories
         .map((c) => ({
           id: c.id,
           label: c.name,
@@ -146,7 +147,7 @@ export function Overview({
         }))
         .filter((d) => d.value > 0)
         .sort((a, b) => b.value - a.value),
-    [categoryIndex.expenseCategories, st.byCat],
+    [categoryIndex.spendingCategories, st.byCat],
   );
   const totalAll = useMemo(() => donutData.reduce((s, d) => s + d.value, 0), [donutData]);
 
@@ -170,7 +171,7 @@ export function Overview({
   }, [st.list, month, todayCap, categoryIndex]);
 
   const recent = st.list.slice(0, 3);
-  const spentPct = st.totalBudget ? st.spent / st.totalBudget : 0;
+  const spentPct = st.spendingBudget ? st.spent / st.spendingBudget : 0;
   const activeCat = hoverCat;
   const isStarting = wallet?.fundingMode === "starting";
   const poolLabel = isStarting ? "Balance" : "Income";
@@ -417,9 +418,9 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
   const [editId, setEditId] = useState(null);
   const [draft, setDraft] = useState("");
   const totalBudget = st.totalBudget;
-  const totalSpent = Object.values(st.byCat).reduce((s, v) => s + v, 0);
+  const totalSpent = st.spent;
   const totalHeld = st.totalHeld;
-  const totalAvailable = totalBudget - totalSpent - totalHeld;
+  const totalAvailable = totalBudget - totalSpent - st.saved - totalHeld;
 
   const startEdit = (id) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
   const commit = () => {
@@ -430,12 +431,16 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 
   return (
     <div className="view">
-      <div className={"summary-grid" + (totalHeld > 0 ? " sg-4" : " sg-3")} data-tour="tour-budgets-summary">
+      <div className="summary-grid sg-5" data-tour="tour-budgets-summary">
         <SummaryCard label="Total Budget" value={fmtMoney(totalBudget, { cents: false, currency })} sub="across all categories" />
         <SummaryCard label="Spent so Far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
-        {totalHeld > 0 ? (
-          <SummaryCard label="Held" tone="saved" value={fmtMoney(totalHeld, { cents: false, currency })} sub="scheduled bill reserves" />
-        ) : null}
+        <SummaryCard
+          label="Saved"
+          tone="saved"
+          value={fmtMoney(st.saved, { cents: false, currency })}
+          sub={st.monthlyPool ? `${Math.round((st.saved / st.monthlyPool) * 100)}% of pool` : ""}
+        />
+        <SummaryCard label="Held" tone="saved" value={fmtMoney(totalHeld, { cents: false, currency })} sub="all scheduled reserves this month" />
         <SummaryCard label="Available" tone={totalAvailable < 0 ? "danger" : "ok"} value={fmtMoney(totalAvailable, { cents: false, currency })} sub={monthLabel(month, true)} />
       </div>
 
@@ -447,14 +452,22 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
             const held = st.byCatHeld[c.id] || 0;
             const budget = budgets[c.id];
             const budgetSet = isBudgetSet(budget);
+            const spentPct = budgetSet ? spent / budget : 0;
             const committed = spent + held;
-            const pct = budgetSet ? committed / budget : 0;
-            const over = pct > 1;
+            const over = budgetSet && committed > budget;
             const available = budgetSet ? budget - committed : 0;
             return (
               <div key={c.id} className="bedit">
                 <div className="be-top">
-                  <div className="be-name"><CatGlyph glyph={c.glyph} id={c.id} /> {c.name}</div>
+                  <div className="be-name">
+                    <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
+                    {held > 0 ? (
+                      <span className="budget-hold" title="Budget hold active">
+                        <Icon name="lock" size={11} />
+                        {fmtMoney(held, { cents: false, currency })}
+                      </span>
+                    ) : null}
+                  </div>
                   {editId === c.id ? (
                     <div className="be-edit">
                       <span className="be-cur">{getCurrency(currency).symbol}</span>
@@ -481,14 +494,14 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                   )}
                 </div>
                 <div className="br-track tall">
-                  <div className="br-fill" style={{ width: Math.min(pct, 1) * 100 + "%", background: over ? "var(--danger)" : c.color }} />
+                  <div className="br-fill" style={{ width: Math.min(spentPct, 1) * 100 + "%", background: over ? "var(--danger)" : c.color }} />
                 </div>
                 <div className="be-meta">
                   {!budgetSet ? <span>Unset</span>
                     : over ? <span className="br-over-txt">Over budget by {fmtMoney(committed - budget, { cents: false, currency })}</span>
                         : held > 0
-                          ? <span>{fmtMoney(available, { cents: false, currency })} available · {fmtMoney(spent, { cents: false, currency })} spent · {fmtMoney(held, { cents: false, currency })} held</span>
-                          : <span>{fmtMoney(budget - spent, { cents: false, currency })} remaining · {Math.round(pct * 100)}% used</span>}
+                          ? <span>{fmtMoney(available, { cents: false, currency })} available · {fmtMoney(spent, { cents: false, currency })} {isSavingsCategory(c) ? "saved" : "spent"} · {fmtMoney(held, { cents: false, currency })} held</span>
+                          : <span>{fmtMoney(budget - spent, { cents: false, currency })} remaining · {Math.round(spentPct * 100)}% used</span>}
                   <span className="be-subs">{c.subs.map((s) => s.name).join(" · ")}</span>
                 </div>
               </div>
@@ -544,7 +557,12 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       currency: displayCurrency,
     });
 
-  const spendingBudgets = Object.fromEntries(Object.entries(budgets).filter(([id]) => id !== "income"));
+  const spendingBudgets = Object.fromEntries(
+    Object.entries(budgets).filter(([id]) => {
+      const cat = categoryIndex.catById[id];
+      return cat ? isSpendingCategory(cat) : id !== "income" && id !== "savings";
+    }),
+  );
   const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
   const chartMonths = useMemo(() => monthsWindow(month), [month]);
 
@@ -594,7 +612,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
   const catRows = useMemo(
     () =>
-      categoryIndex.expenseCategories
+      categoryIndex.spendingCategories
         .map((c) => {
           const now = cur.byCat[c.id] || 0;
           const was = prev ? prev.byCat[c.id] || 0 : 0;
@@ -614,7 +632,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         })
         .sort((a, b) => b.now - a.now),
     [
-      categoryIndex.expenseCategories,
+      categoryIndex.spendingCategories,
       cur.byCat,
       prev,
       chartMonths,
@@ -627,7 +645,9 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
   // top subcategories this month
   const subTotals = {};
-  cur.list.filter(isOutgoing).forEach((e) => { subTotals[e.sub] = (subTotals[e.sub] || 0) + e.amount; });
+  cur.list.filter((e) => isOutgoing(e) && !isSavings(e, categoryIndex)).forEach((e) => {
+    subTotals[e.sub] = (subTotals[e.sub] || 0) + e.amount;
+  });
   const topSubs = Object.entries(subTotals).map(([sub, v]) => ({ sub, v })).sort((a, b) => b.v - a.v).slice(0, 6);
   const maxSub = topSubs.length ? topSubs[0].v : 1;
 

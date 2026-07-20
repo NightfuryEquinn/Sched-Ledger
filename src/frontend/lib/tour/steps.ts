@@ -123,7 +123,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
   ],
   categories: [
     step("categories-nav", "Categories", "Your expense and income taxonomy — categories and subcategories.", navTarget("categories"), "right"),
-    step("categories-toolbar", "Filter & Add", "Filter by type or add new expense and income categories.", '[data-tour="tour-categories-toolbar"]'),
+    step("categories-toolbar", "Filter & Add", "Filter by type or add new expense, savings, and income categories.", '[data-tour="tour-categories-toolbar"]'),
     lastStep("categories-tree", "Category Tree", "Expand categories to manage subcategories, colors, and icons.", '[data-tour="tour-categories-tree"]'),
   ],
   recurring: [

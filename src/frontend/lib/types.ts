@@ -50,7 +50,7 @@ export type LedgerEvent = {
   comments: EventComment[];
   /** Optional link to a ledger expense created from this event. */
   expenseId?: string;
-  /** Encrypted envelope hold — bill/renewal only (amounts stay in E2EE payload). */
+  /** Encrypted envelope hold (amounts stay in E2EE payload). */
   budgetHoldEnabled?: boolean;
   budgetHoldAmount?: number;
   budgetHoldCategoryId?: string;
@@ -89,7 +89,7 @@ export type Category = {
   name: string;
   color: string;
   glyph: string;
-  type?: "expense" | "income";
+  type?: "expense" | "income" | "savings";
   builtin?: boolean;
   subs: { id: string; name: string }[];
 };

@@ -516,13 +516,21 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
 function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onSave, onClose, onDelete }) {
   const editing = !!(initial && initial.id);
   const initKind = initial?.kind ?? "expense";
-  const { expenseCategories, incomeCategory, subById, catById } = categoryIndex;
+  const { expenseCategories, incomeCategories, subById, catById } = categoryIndex;
   const firstSub = (catId) => catById[catId]?.subs[0]?.id ?? catId;
-  const initCat = initial?.sub && subById[initial.sub] ? subById[initial.sub].catId : "food";
+  const defaultExpenseCat = expenseCategories[0]?.id ?? "";
+  const initCat =
+    initial?.sub && subById[initial.sub] ? subById[initial.sub].catId : defaultExpenseCat;
   const [kind, setKind] = useState(initKind);
   const [walletId, setWalletId] = useState(initial?.walletId ?? defaultWalletId);
-  const [catId, setCatId] = useState(initKind === "income" ? "income" : initCat);
-  const [sub, setSub] = useState(initial?.sub ? initial.sub : firstSub("food"));
+  const [catId, setCatId] = useState(
+    initKind === "income" ? (incomeCategories[0]?.id ?? "income") : initCat,
+  );
+  const [sub, setSub] = useState(
+    initial?.sub
+      ? initial.sub
+      : firstSub(initKind === "income" ? (incomeCategories[0]?.id ?? "income") : defaultExpenseCat),
+  );
   const [amount, setAmount] = useState(initial?.amount != null ? String(initial.amount) : "");
   const [date, setDate] = useState(initial?.date ? initial.date : TODAY_ISO);
   const [note, setNote] = useState(initial?.note ? initial.note : "");
@@ -534,7 +542,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
   const [scopeOpen, setScopeOpen] = useState(false);
   const selectedWallet = wallets.find((w) => w.id === walletId) ?? wallets[0];
   const cur = getCurrency(selectedWallet?.currency);
-  const visibleCategories = kind === "income" ? [incomeCategory] : expenseCategories;
+  const visibleCategories = kind === "income" ? incomeCategories : expenseCategories;
   const amtRef = useRef(null);
 
   useEffect(() => { if (amtRef.current) amtRef.current.focus(); }, []);
@@ -546,12 +554,13 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
   const switchKind = (next) => {
     setKind(next);
     if (next === "income") {
-      setCatId(incomeCategory.id);
-      setSub(firstSub(incomeCategory.id));
+      const first = incomeCategories[0];
+      setCatId(first?.id ?? "income");
+      setSub(firstSub(first?.id ?? "income"));
     } else {
       const first = expenseCategories[0];
-      setCatId(first?.id ?? "food");
-      setSub(firstSub(first?.id ?? "food"));
+      setCatId(first?.id ?? "");
+      setSub(firstSub(first?.id ?? ""));
     }
   };
 
@@ -629,6 +638,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
             />
           </div>
 
+          <div className="event-div" />
           <label className="fld-label">{kind === "income" ? "Source" : "Category"}</label>
           <div className="cat-grid">
             {visibleCategories.map((c) => (
@@ -641,12 +651,14 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
             ))}
           </div>
 
+          <div className="event-div" />
           <label className="fld-label">Subcategory</label>
           <div className="sub-row">
             {catById[catId]?.subs.map((s) => (
               <button key={s.id} type="button" className={"sub-chip" + (sub === s.id ? " active" : "")} onClick={() => setSub(s.id)}>{s.name}</button>
             ))}
           </div>
+          <div className="event-div" />
 
           <div className="fld-2col">
             <div>

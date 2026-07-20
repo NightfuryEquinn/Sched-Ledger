@@ -12,7 +12,8 @@ import {
   NAV_ITEMS,
   Sidebar,
 } from "@/frontend/components/ui";
-import { releaseHoldForOccurrence } from "@/frontend/lib/envelope-holds";
+import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
+import { releaseHoldForOccurrence, restoreHoldForOccurrence } from "@/frontend/lib/envelope-holds";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour } from "@/frontend/lib/tour";
 import type { Account, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
@@ -134,7 +135,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     setModal(null);
   };
 
-  /** Open expense modal prefilled from a bill/renewal schedule event. */
+  /** Open expense modal prefilled from a schedule event. */
   const logPaymentFromEvent = (ev: { id: string; title: string; date: string; expenseId?: string }) => {
     if (ev.expenseId) {
       const linked = allExpenses.find((e) => e.id === ev.expenseId);
@@ -266,7 +267,16 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   };
 
   const deleteExpense = async (id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) => {
+    const linkedEvent = events.find((ev) => ev.expenseId === id);
+    const linkedExpense = allExpenses.find((expense) => expense.id === id);
+
     await ledger.deleteExpense(id, opts);
+
+    if (linkedEvent) {
+      const occurrenceIso = linkedExpense?.date ?? linkedEvent.date;
+      await ledger.saveEvent(restoreHoldForOccurrence(linkedEvent, occurrenceIso));
+    }
+
     setModal(null);
   };
 
@@ -489,6 +499,11 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           initial={"add" in evModal ? null : evModal}
           defaultDate={"add" in evModal ? evModal.date : undefined}
           occurrenceIso={"add" in evModal ? undefined : evOccurrenceIso}
+          hasLinkedPayment={
+            !("add" in evModal)
+            && !!evModal.expenseId
+            && allExpenses.some((expense) => expense.id === evModal.expenseId)
+          }
           categoryIndex={ledger.categoryIndex}
           currency={currency}
           onSave={saveEvent}
