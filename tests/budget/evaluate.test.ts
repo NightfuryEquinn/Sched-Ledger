@@ -74,6 +74,23 @@ describe("evaluateBudgetAlerts", () => {
     expect(alerts[0]!.level).toBe("warning");
   });
 
+  test("includes envelope holds in effective spend", () => {
+    const alerts = evaluateBudgetAlerts({
+      byCat: { food: 500 },
+      byCatHeld: { food: 350 },
+      budgets: { food: 1000 },
+      categories: cats,
+      month: "2026-07",
+    });
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({
+      categoryId: "food",
+      spent: 850,
+      level: "warning",
+    });
+  });
+
   test("budgetAlertDedupeKey is stable", () => {
     expect(
       budgetAlertDedupeKey({

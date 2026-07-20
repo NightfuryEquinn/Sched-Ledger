@@ -266,6 +266,35 @@ describe("crypto codec", () => {
     expect(decoded.email).toBe("you@mail.com");
   });
 
+  test("encodeEventCreate encrypts budget hold fields in the payload", async () => {
+    const key = await testKey();
+    const wire = await encodeEventCreate(
+      {
+        title: "Rent",
+        catId: "bill",
+        date: "2026-07-01",
+        allDay: true,
+        time: null,
+        repeat: "monthly",
+        notify: false,
+        lead: "1d",
+        email: "",
+        comments: [],
+        budgetHoldEnabled: true,
+        budgetHoldAmount: 1200,
+        budgetHoldCategoryId: "housing",
+      },
+      key,
+    );
+
+    expect(wire).not.toHaveProperty("budgetHoldAmount");
+
+    const decoded = await decodeEvent({ id: "ev-hold", ...wire }, key);
+    expect(decoded.budgetHoldEnabled).toBe(true);
+    expect(decoded.budgetHoldAmount).toBe(1200);
+    expect(decoded.budgetHoldCategoryId).toBe("housing");
+  });
+
   test("decodeEvent supports legacy plaintext events", async () => {
     const key = await testKey();
     const decoded = await decodeEvent(

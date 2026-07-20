@@ -12,7 +12,7 @@ import {
   NAV_ITEMS,
   Sidebar,
 } from "@/frontend/components/ui";
-import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
+import { releaseHoldForOccurrence } from "@/frontend/lib/envelope-holds";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour } from "@/frontend/lib/tour";
 import type { Account, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
@@ -117,13 +117,17 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     const walletId = data.walletId || activeWallet?.id;
     if (!walletId) return;
     const saved = await ledger.saveExpense({ ...data, walletId });
-    if (!data.id && data.eventId && saved?.expense?.id) {
+    if (data.eventId) {
       const ev = events.find((e) => e.id === data.eventId);
       if (ev) {
         try {
-          await ledger.saveEvent({ ...ev, expenseId: saved.expense.id });
+          let patch = releaseHoldForOccurrence(ev, data.date);
+          if (!data.id && saved?.expense?.id) {
+            patch = { ...patch, expenseId: saved.expense.id };
+          }
+          await ledger.saveEvent(patch);
         } catch {
-          /* Link-back is best-effort; expense already saved with eventId. */
+          /* Link-back / hold release is best-effort; expense already saved. */
         }
       }
     }
@@ -352,6 +356,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
             <Schedule
               events={events}
               month={month}
+              currency={currency}
               onAddEvent={(iso: string) => {
                 setEvOccurrenceIso(undefined);
                 setEvModal({ add: true, date: iso });
@@ -369,7 +374,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           {view === "transactions" && (
             <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
           )}
-          {view === "budgets" && <BudgetsView {...viewProps} setBudgets={setBudgets} />}
+          {view === "budgets" && <BudgetsView {...viewProps} events={events} setBudgets={setBudgets} />}
           {view === "calculator" && (
             <Calculator
               wallet={wallet}
@@ -484,6 +489,8 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           initial={"add" in evModal ? null : evModal}
           defaultDate={"add" in evModal ? evModal.date : undefined}
           occurrenceIso={"add" in evModal ? undefined : evOccurrenceIso}
+          categoryIndex={ledger.categoryIndex}
+          currency={currency}
           onSave={saveEvent}
           onLogPayment={logPaymentFromEvent}
           onClose={() => {

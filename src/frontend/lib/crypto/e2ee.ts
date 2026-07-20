@@ -34,6 +34,10 @@ export type EventSecrets = {
   comments: Array<{ id: string; text: string; at: string }>;
   customLabel?: string;
   customGlyph?: string;
+  budgetHoldEnabled?: boolean;
+  budgetHoldAmount?: number;
+  budgetHoldCategoryId?: string;
+  budgetHoldReleasedDates?: string[];
 };
 
 export type TodoListSecrets = {

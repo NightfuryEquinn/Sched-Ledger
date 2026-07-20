@@ -234,29 +234,68 @@ export type EventWire = {
   customGlyph?: string;
 };
 
+/** Merge encrypted hold fields onto a decoded event. */
+function mergeEventHoldSecrets(event: LedgerEvent, secrets: EventSecrets): LedgerEvent {
+  const next = { ...event };
+
+  if (secrets.budgetHoldEnabled) {
+    next.budgetHoldEnabled = true;
+    next.budgetHoldAmount = secrets.budgetHoldAmount;
+    next.budgetHoldCategoryId = secrets.budgetHoldCategoryId;
+    next.budgetHoldReleasedDates = secrets.budgetHoldReleasedDates;
+  } else {
+    delete next.budgetHoldEnabled;
+    delete next.budgetHoldAmount;
+    delete next.budgetHoldCategoryId;
+    delete next.budgetHoldReleasedDates;
+  }
+
+  return next;
+}
+
+/** Copy hold fields from a ledger event into encrypted secrets. */
+function eventHoldSecrets(event: Partial<LedgerEvent>): Partial<EventSecrets> {
+  if (!event.budgetHoldEnabled) return { budgetHoldEnabled: false };
+
+  const secrets: Partial<EventSecrets> = {
+    budgetHoldEnabled: true,
+    budgetHoldAmount: event.budgetHoldAmount,
+    budgetHoldCategoryId: event.budgetHoldCategoryId,
+  };
+
+  if (event.budgetHoldReleasedDates?.length) {
+    secrets.budgetHoldReleasedDates = event.budgetHoldReleasedDates;
+  }
+
+  return secrets;
+}
+
 /** Decrypt event secrets and merge with plaintext schedule metadata. */
 export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<LedgerEvent> {
   if (wire.enc === 1 && wire.payload) {
     const secrets = await decryptJson<EventSecrets>(key, wire.payload);
 
-    return {
-      id: wire.id,
-      catId: wire.catId,
-      date: wire.date,
-      allDay: wire.allDay,
-      time: wire.time,
-      repeat: wire.repeat,
-      exceptDates: wire.exceptDates,
-      until: wire.until,
-      notify: wire.notify,
-      lead: wire.lead,
-      email: wire.email ?? "",
-      ...(wire.expenseId ? { expenseId: wire.expenseId } : {}),
-      title: secrets.title,
-      comments: secrets.comments ?? [],
-      ...(secrets.customLabel ? { customLabel: secrets.customLabel } : {}),
-      ...(secrets.customGlyph ? { customGlyph: secrets.customGlyph } : {}),
-    };
+    return mergeEventHoldSecrets(
+      {
+        id: wire.id,
+        catId: wire.catId,
+        date: wire.date,
+        allDay: wire.allDay,
+        time: wire.time,
+        repeat: wire.repeat,
+        exceptDates: wire.exceptDates,
+        until: wire.until,
+        notify: wire.notify,
+        lead: wire.lead,
+        email: wire.email ?? "",
+        ...(wire.expenseId ? { expenseId: wire.expenseId } : {}),
+        title: secrets.title,
+        comments: secrets.comments ?? [],
+        ...(secrets.customLabel ? { customLabel: secrets.customLabel } : {}),
+        ...(secrets.customGlyph ? { customGlyph: secrets.customGlyph } : {}),
+      },
+      secrets,
+    );
   }
 
   if (wire.title == null) {
@@ -291,6 +330,7 @@ export async function encodeEventCreate(
   const secrets: EventSecrets = {
     title: event.title,
     comments: event.comments ?? [],
+    ...eventHoldSecrets(event),
   };
   if (event.catId === "custom") {
     if (event.customLabel) secrets.customLabel = event.customLabel;
@@ -320,6 +360,7 @@ export async function encodeEventUpdate(
   const secrets: EventSecrets = {
     title: event.title,
     comments: event.comments ?? [],
+    ...eventHoldSecrets(event),
   };
   if (event.catId === "custom") {
     if (event.customLabel) secrets.customLabel = event.customLabel;

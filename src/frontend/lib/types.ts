@@ -50,6 +50,12 @@ export type LedgerEvent = {
   comments: EventComment[];
   /** Optional link to a ledger expense created from this event. */
   expenseId?: string;
+  /** Encrypted envelope hold — bill/renewal only (amounts stay in E2EE payload). */
+  budgetHoldEnabled?: boolean;
+  budgetHoldAmount?: number;
+  budgetHoldCategoryId?: string;
+  /** Occurrence dates where a hold was released after payment. */
+  budgetHoldReleasedDates?: string[];
 };
 
 export type Budgets = Record<string, number>;

@@ -1,7 +1,7 @@
 import { api } from "@/frontend/lib/api";
 import { fmtMoney, monthLabel } from "@/frontend/lib/data";
 import type { CategoryIndex } from "@/frontend/lib/categories";
-import type { Budgets, Expense, FinancialWallet } from "@/frontend/lib/types";
+import type { Budgets, Expense, FinancialWallet, LedgerEvent } from "@/frontend/lib/types";
 import {
   budgetAlertDedupeKey,
   evaluateBudgetAlerts,
@@ -99,10 +99,19 @@ export async function maybeNotifyBudgetAlerts(opts: {
   month: string;
   currency: string;
   categoryIndex: CategoryIndex;
+  events?: LedgerEvent[];
 }): Promise<BudgetAlert[]> {
-  const st = monthStats(opts.expenses, opts.budgets, opts.wallet, opts.month, opts.categoryIndex);
+  const st = monthStats(
+    opts.expenses,
+    opts.budgets,
+    opts.wallet,
+    opts.month,
+    opts.categoryIndex,
+    opts.events,
+  );
   const alerts = evaluateBudgetAlerts({
     byCat: st.byCat,
+    byCatHeld: st.byCatHeld,
     budgets: opts.budgets,
     categories: opts.categoryIndex.expenseCategories,
     month: opts.month,

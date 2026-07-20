@@ -1730,6 +1730,10 @@ h1, h2, h3 {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.summary-grid.sg-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .summary-grid.sg-2 {
   grid-template-columns: repeat(2, 1fr);
 }
@@ -3959,6 +3963,58 @@ h1, h2, h3 {
   margin-bottom: var(--sp-5);
 }
 
+.hold-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 15px;
+  margin-bottom: var(--sp-5);
+}
+
+.hold-fields {
+  margin-top: 12px;
+}
+
+.hold-amt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hold-cur {
+  font-family: var(--font-num);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.hold-hint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+}
+
+.ag-hold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-family: var(--font-num);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  flex: none;
+  line-height: 1;
+}
+
+.ag-hold svg {
+  flex: none;
+  display: block;
+}
+
 .cmt-thread {
   display: flex;
   flex-direction: column;
@@ -5120,6 +5176,9 @@ h1, h2, h3 {
   .summary-grid.sg-3 {
     grid-template-columns: repeat(3, 1fr);
   }
+  .summary-grid.sg-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 
   /* Panel subheaders */
   .panel-head {
@@ -5510,7 +5569,7 @@ h1, h2, h3 {
     --vgap: var(--sp-5);
     --card-pad: var(--sp-4);
   }
-  .summary-grid, .summary-grid.sg-3 {
+  .summary-grid, .summary-grid.sg-3, .summary-grid.sg-4 {
     grid-template-columns: repeat(2, 1fr);
   }
   .summary-grid.sg-2 {

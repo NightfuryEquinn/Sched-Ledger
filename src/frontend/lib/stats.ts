@@ -11,7 +11,8 @@ import {
 import type { CategoryIndex } from "./categories";
 import { catOfSub, isSavingsSub } from "./categories";
 import { CURRENT_MONTH_KEY, SUB_BY_ID, TODAY_ISO, monthLabel, monthsWindow } from "./data";
-import type { Budgets, Expense, FinancialWallet } from "./types";
+import type { Budgets, Expense, FinancialWallet, LedgerEvent } from "./types";
+import { holdsByCategory, totalActiveHolds } from "./envelope-holds";
 
 export {
   normalizeRecurring,
@@ -210,6 +211,7 @@ export function monthStats(
   wallet: WalletFunding,
   key: string,
   index?: CategoryIndex,
+  events?: LedgerEvent[],
 ) {
   const list = monthExpenses(expenses, key);
   const outgoing = list.filter(isOutgoing);
@@ -228,6 +230,8 @@ export function monthStats(
     }),
   );
   const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
+  const byCatHeld = events ? holdsByCategory(events, key) : {};
+  const totalHeld = events ? totalActiveHolds(events, key) : 0;
   const balance = walletBalance(expenses, wallet, index);
   const monthlyPool = wallet.fundingMode === "monthly" ? wallet.income + earned : earned;
   const remaining =
@@ -241,6 +245,8 @@ export function monthStats(
     saved,
     earned,
     byCat,
+    byCatHeld,
+    totalHeld,
     totalBudget,
     remaining,
     balance,

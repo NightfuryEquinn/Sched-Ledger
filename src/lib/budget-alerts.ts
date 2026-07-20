@@ -30,6 +30,7 @@ export function isPositiveBudget(n: unknown): n is number {
  */
 export function evaluateBudgetAlerts(opts: {
   byCat: Record<string, number>;
+  byCatHeld?: Record<string, number>;
   budgets: Record<string, number>;
   categories: BudgetAlertCategory[];
   month: string;
@@ -43,7 +44,7 @@ export function evaluateBudgetAlerts(opts: {
     const budget = opts.budgets[cat.id];
     if (!isPositiveBudget(budget)) continue;
 
-    const spent = opts.byCat[cat.id] ?? 0;
+    const spent = (opts.byCat[cat.id] ?? 0) + (opts.byCatHeld?.[cat.id] ?? 0);
     if (spent <= 0) continue;
 
     const ratio = spent / budget;

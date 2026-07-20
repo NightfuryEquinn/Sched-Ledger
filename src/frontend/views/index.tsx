@@ -386,15 +386,17 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
 }
 
 // ── Budgets ─────────────────────────────────────────────────────────
-export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency, categoryIndex }) {
+export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency, categoryIndex, events = [] }) {
   const st = useMemo(
-    () => monthStats(expenses, budgets, wallet, month, categoryIndex),
-    [expenses, budgets, wallet, month, categoryIndex],
+    () => monthStats(expenses, budgets, wallet, month, categoryIndex, events),
+    [expenses, budgets, wallet, month, categoryIndex, events],
   );
   const [editId, setEditId] = useState(null);
   const [draft, setDraft] = useState("");
   const totalBudget = st.totalBudget;
   const totalSpent = Object.values(st.byCat).reduce((s, v) => s + v, 0);
+  const totalHeld = st.totalHeld;
+  const totalAvailable = totalBudget - totalSpent - totalHeld;
 
   const startEdit = (id) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
   const commit = () => {
@@ -405,10 +407,13 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 
   return (
     <div className="view">
-      <div className="summary-grid sg-3" data-tour="tour-budgets-summary">
+      <div className={"summary-grid" + (totalHeld > 0 ? " sg-4" : " sg-3")} data-tour="tour-budgets-summary">
         <SummaryCard label="Total Budget" value={fmtMoney(totalBudget, { cents: false, currency })} sub="across all categories" />
         <SummaryCard label="Spent so Far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
-        <SummaryCard label="Left to Spend" tone={totalBudget - totalSpent < 0 ? "danger" : "ok"} value={fmtMoney(totalBudget - totalSpent, { cents: false, currency })} sub={monthLabel(month, true)} />
+        {totalHeld > 0 ? (
+          <SummaryCard label="Held" tone="saved" value={fmtMoney(totalHeld, { cents: false, currency })} sub="scheduled bill reserves" />
+        ) : null}
+        <SummaryCard label="Available" tone={totalAvailable < 0 ? "danger" : "ok"} value={fmtMoney(totalAvailable, { cents: false, currency })} sub={monthLabel(month, true)} />
       </div>
 
       <section className="panel">
@@ -416,10 +421,13 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
         <div className="budget-edit-list" data-tour="tour-budgets-list">
           {categoryIndex.expenseCategories.map((c) => {
             const spent = st.byCat[c.id] || 0;
+            const held = st.byCatHeld[c.id] || 0;
             const budget = budgets[c.id];
             const budgetSet = isBudgetSet(budget);
-            const pct = budgetSet ? spent / budget : 0;
+            const committed = spent + held;
+            const pct = budgetSet ? committed / budget : 0;
             const over = pct > 1;
+            const available = budgetSet ? budget - committed : 0;
             return (
               <div key={c.id} className="bedit">
                 <div className="be-top">
@@ -454,8 +462,10 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                 </div>
                 <div className="be-meta">
                   {!budgetSet ? <span>Unset</span>
-                    : over ? <span className="br-over-txt">Over budget by {fmtMoney(spent - budget, { cents: false, currency })}</span>
-                        : <span>{fmtMoney(budget - spent, { cents: false, currency })} remaining · {Math.round(pct * 100)}% used</span>}
+                    : over ? <span className="br-over-txt">Over budget by {fmtMoney(committed - budget, { cents: false, currency })}</span>
+                        : held > 0
+                          ? <span>{fmtMoney(available, { cents: false, currency })} available · {fmtMoney(spent, { cents: false, currency })} spent · {fmtMoney(held, { cents: false, currency })} held</span>
+                          : <span>{fmtMoney(budget - spent, { cents: false, currency })} remaining · {Math.round(pct * 100)}% used</span>}
                   <span className="be-subs">{c.subs.map((s) => s.name).join(" · ")}</span>
                 </div>
               </div>

@@ -17,7 +17,9 @@ import {
   eventTimeLabel,
   eventsForDay,
   fmtCommentTime,
+  fmtMoney,
   fmtTime,
+  getCurrency,
   leadLabel,
   leadTimesForEvent,
   monthLabel,
@@ -25,7 +27,9 @@ import {
   scheduleForMonth,
   weekdayLabel,
 } from "@/frontend/lib/data";
-import type { LedgerEvent } from "@/frontend/lib/types";
+import { isActiveHoldOccurrence } from "@/frontend/lib/envelope-holds";
+import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import type { CategoryIndex, LedgerEvent } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -56,13 +60,16 @@ function shiftIso(iso: string, delta: number): string {
 function AgendaEventRow({
   ev,
   iso,
+  currency,
   onEditEvent,
 }: {
   ev: LedgerEvent;
   iso: string;
+  currency: string;
   onEditEvent: (ev: LedgerEvent, occurrenceIso: string) => void;
 }) {
   const c = eventCatMeta(ev);
+  const holdActive = isActiveHoldOccurrence(ev, iso);
   return (
     <button type="button" className="agenda-row" onClick={() => onEditEvent(ev, iso)}>
       <span className="ag-glyph" style={glyphTint(c.color)}>{displayGlyph(c.glyph, c.id)}</span>
@@ -74,6 +81,12 @@ function AgendaEventRow({
               <Icon name="repeat" size={12} />
             </span>
           )}
+          {holdActive ? (
+            <span className="ag-hold" title="Budget hold active">
+              <Icon name="lock" size={11} />
+              {fmtMoney(ev.budgetHoldAmount ?? 0, { cents: false, currency })}
+            </span>
+          ) : null}
           {ev.comments && ev.comments.length > 0 && (
             <span className="ag-cmt">
               <Icon name="comment" size={12} /> {ev.comments.length}
@@ -96,7 +109,7 @@ function AgendaEventRow({
 }
 
 // ── Schedule (calendar + agenda) ────────────────────────────────────
-export function Schedule({ events, month, onAddEvent, onEditEvent }) {
+export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [y, m] = month.split("-").map(Number);
   const days = new Date(y, m, 0).getDate();
@@ -216,7 +229,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
                   </div>
                   <div className="agenda-items">
                     {dayEvents.map((ev) => (
-                      <AgendaEventRow key={`${iso}-${ev.id}`} ev={ev} iso={iso} onEditEvent={onEditEvent} />
+                      <AgendaEventRow key={`${iso}-${ev.id}`} ev={ev} iso={iso} currency={currency} onEditEvent={onEditEvent} />
                     ))}
                   </div>
                 </div>
@@ -235,7 +248,7 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
               </div>
               <div className="agenda-items">
                 {focusedEvents.map((ev) => (
-                  <AgendaEventRow key={ev.id} ev={ev} iso={viewDay} onEditEvent={onEditEvent} />
+                  <AgendaEventRow key={ev.id} ev={ev} iso={viewDay} currency={currency} onEditEvent={onEditEvent} />
                 ))}
               </div>
             </div>
@@ -307,7 +320,17 @@ export function Schedule({ events, month, onAddEvent, onEditEvent }) {
 }
 
 // ── EventModal (add / edit event) ───────────────────────────────────
-export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClose, onDelete, onLogPayment }) {
+export function EventModal({
+  initial,
+  defaultDate,
+  occurrenceIso,
+  categoryIndex,
+  currency,
+  onSave,
+  onClose,
+  onDelete,
+  onLogPayment,
+}) {
   const editing = !!(initial && initial.id);
   const lastEmail = (() => { try { return localStorage.getItem("ledger:notifyEmail") || ""; } catch (e) { return ""; } })();
   const customMeta = EVENT_CATS.find((c) => c.id === "custom")!;
@@ -330,6 +353,16 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
   const [comments, setComments] = useState(initial && initial.comments ? initial.comments : []);
   const [draft, setDraft] = useState("");
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [holdEnabled, setHoldEnabled] = useState(Boolean(initial?.budgetHoldEnabled));
+  const [holdAmount, setHoldAmount] = useState(
+    initial?.budgetHoldAmount ? String(initial.budgetHoldAmount) : "",
+  );
+  const [holdCategoryId, setHoldCategoryId] = useState(
+    initial?.budgetHoldCategoryId ?? categoryIndex?.expenseCategories[0]?.id ?? "",
+  );
+
+  const holdEligible = catId === "bill" || catId === "renewal";
+  const paymentOccurrenceIso = occurrenceIso || initial?.date || date;
 
   const leadOptions = useMemo(() => leadTimesForEvent(allDay), [allDay]);
   const deleteFromDate = occurrenceIso || initial?.date || date;
@@ -351,6 +384,7 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
   const chooseCat = (id: string) => {
     setCatId(id);
     if (id === "custom" && !customGlyph) setCustomGlyph(customMeta.glyph);
+    if (id !== "bill" && id !== "renewal") setHoldEnabled(false);
   };
 
   const addComment = () => {
@@ -361,10 +395,22 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
   };
 
   const customOk = catId !== "custom" || (customLabel.trim() && customGlyph);
-  const valid = title.trim() && date && (allDay || time) && customOk;
+  const holdAmountNum = Math.max(0, Math.round(parseFloat(holdAmount) || 0));
+  const holdValid = !holdEnabled || (holdAmountNum > 0 && holdCategoryId);
+  const valid = title.trim() && date && (allDay || time) && customOk && holdValid;
   const submit = () => {
     if (!valid) return;
     if (notify && email.trim()) { try { localStorage.setItem("ledger:notifyEmail", email.trim()); } catch (e) {} }
+    const holdFields = holdEligible && holdEnabled && holdAmountNum > 0 && holdCategoryId
+      ? {
+          budgetHoldEnabled: true,
+          budgetHoldAmount: holdAmountNum,
+          budgetHoldCategoryId: holdCategoryId,
+          budgetHoldReleasedDates: initial?.budgetHoldReleasedDates,
+        }
+      : {
+          budgetHoldEnabled: false,
+        };
     onSave({
       id: initial && initial.id, title: title.trim(), catId,
       customLabel: catId === "custom" ? customLabel.trim() : undefined,
@@ -372,6 +418,7 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
       date,
       allDay, time: allDay ? null : time, repeat,
       notify, lead, email: email.trim(), comments,
+      ...holdFields,
     });
   };
 
@@ -507,6 +554,62 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
             </div>
           )}
 
+          {holdEligible ? (
+            <div className="hold-card">
+              <label className="toggle-line tight">
+                <input
+                  type="checkbox"
+                  checked={holdEnabled}
+                  onChange={(e) => setHoldEnabled(e.target.checked)}
+                />
+                <span className="toggle-ui" />
+                <span><Icon name="lock" size={15} /> Hold from budget</span>
+              </label>
+              {holdEnabled ? (
+                <div className="hold-fields">
+                  <div className="fld-2col tight">
+                    <div>
+                      <label className="fld-label">Hold amount</label>
+                      <div className="hold-amt-row">
+                        <span className="hold-cur">{getCurrency(currency).symbol}</span>
+                        <input
+                          className="text-in"
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="0"
+                          value={holdAmount}
+                          onChange={(e) => setHoldAmount(stripNegativeInput(e.target.value))}
+                          onKeyDown={preventNegativeKeys}
+                          onWheel={preventWheelChange}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="fld-label">Category envelope</label>
+                      <div className="select-wrap">
+                        <select
+                          className="text-in"
+                          value={holdCategoryId}
+                          onChange={(e) => setHoldCategoryId(e.target.value)}
+                        >
+                          {categoryIndex.expenseCategories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <span className="select-caret"><Icon name="chevD" size={16} /></span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="hold-hint">
+                    Reserves this amount against your category budget until you log payment.
+                    Hold details stay encrypted — only dates are visible to the server.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <label className="fld-label">Comments</label>
           <div className="cmt-thread">
             {comments.length ? comments.map((c) => (
@@ -534,7 +637,7 @@ export function EventModal({ initial, defaultDate, occurrenceIso, onSave, onClos
                 onClick={() => onLogPayment({
                   id: initial.id,
                   title: title.trim() || initial.title,
-                  date,
+                  date: paymentOccurrenceIso,
                   expenseId: initial.expenseId,
                 })}
               >

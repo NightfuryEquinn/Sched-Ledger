@@ -414,6 +414,7 @@ export function useLedger(walletAddress: string) {
           month: monthKey,
           currency: walletDoc.currency,
           categoryIndex,
+          events: queryClient.getQueryData<LedgerEvent[]>(keys.events(wallet)) ?? [],
         });
       }
     },
