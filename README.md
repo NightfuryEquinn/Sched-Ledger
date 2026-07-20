@@ -340,4 +340,4 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 
 ## License
 
-[GNU General Public License v3.0](LICENSE).
+[Business Source License 1.1](LICENSE).

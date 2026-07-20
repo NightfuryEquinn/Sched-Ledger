@@ -5,6 +5,7 @@ type LegalModalProps = {
   onClose: () => void;
 };
 
+/** Terms & Conditions modal for account menu legal links. */
 export function TermsModal({ onClose }: LegalModalProps) {
   return createPortal(
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -14,7 +15,7 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
         <div className="modal-body modal-scroll">
-          <p className="dm-lead">Last updated July 8, 2026. By using Sched Ledger you agree to these terms.</p>
+          <p className="dm-lead">Last updated July 20, 2026. By using Sched Ledger you agree to these terms.</p>
 
           <div className="dm-sec">
             <span className="fld-label">Service</span>
@@ -42,8 +43,22 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <div className="dm-sec">
             <span className="fld-label">Acceptable use</span>
             <p className="legal-p">
-              Use the service only for lawful personal or household expense tracking and scheduling.
+              Use the service only for lawful expense tracking and scheduling.
               Do not attempt to disrupt the service, circumvent security controls, or access another person&apos;s account.
+            </p>
+          </div>
+
+          <div className="dm-div" />
+
+          <div className="dm-sec">
+            <span className="fld-label">Software license</span>
+            <p className="legal-p">
+              The Sched Ledger source code is licensed under the Business Source License 1.1 (BSL 1.1).
+              Using this hosted service does not grant you rights to copy, modify, redistribute, self-host,
+              or offer Sched Ledger as a competing commercial product or hosted service except as allowed by
+              that license or a separate commercial agreement with the Licensor.
+              See the project LICENSE file and Copyright notice for full terms, including the Change Date
+              when the work becomes available under the Apache License, Version 2.0.
             </p>
           </div>
 
@@ -73,6 +88,7 @@ export function TermsModal({ onClose }: LegalModalProps) {
   );
 }
 
+/** Copyright and project license modal for account menu legal links. */
 export function CopyrightModal({ onClose }: LegalModalProps) {
   return createPortal(
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -87,14 +103,15 @@ export function CopyrightModal({ onClose }: LegalModalProps) {
               © 2026 Sched Ledger. All rights reserved except where the project license grants otherwise.
             </p>
             <p className="legal-p">
-              Sched Ledger and its accompanying materials are free software licensed under the
-              GNU General Public License version 3 (GPLv3), or (at your option) any later version.
+              Sched Ledger and its accompanying materials are licensed under the
+              Business Source License 1.1 (BSL 1.1). Source is available for use under
+              the terms of that license; production use is allowed except when offering
+              a competing commercial product or hosted service.
             </p>
             <p className="legal-p">
-              You may redistribute and/or modify this software under the terms of that license.
-              This program is distributed in the hope that it will be useful, but without any warranty;
-              without even the implied warranty of merchantability or fitness for a particular purpose.
-              See the GPLv3 for full terms.
+              On the Change Date stated in the LICENSE file (or sooner as required by BSL),
+              the Licensed Work will become available under the Apache License, Version 2.0.
+              The software is provided as-is, without warranty of any kind.
             </p>
             <p className="dm-note">The full license text is available in the project <span className="num">LICENSE</span> file.</p>
           </div>
