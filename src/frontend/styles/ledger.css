@@ -1157,6 +1157,10 @@ h1, h2, h3 {
   margin: 0 0 8px;
 }
 
+.am-tz-hint--warn {
+  color: var(--danger);
+}
+
 .am-tz-note {
   font-size: 11.5px;
   line-height: 1.4;

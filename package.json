@@ -9,7 +9,8 @@
     "test": "bun test tests",
     "db:list": "bun scripts/drop-collections.ts --list",
     "db:drop": "bun scripts/drop-collections.ts",
-    "db:drop:all": "bun scripts/drop-collections.ts --all"
+    "db:drop:all": "bun scripts/drop-collections.ts --all",
+    "db:prune-stale": "bun scripts/prune-stale-users.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.8.0",

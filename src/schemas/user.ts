@@ -12,6 +12,8 @@ const userSchema = z.object({
   emailRemindersEnabled: z.boolean().optional(),
   /* Budget-near-limit emails (default: enabled when notifyEmail is set). */
   budgetAlertsEnabled: z.boolean().optional(),
+  /* Last authenticated activity (login or session renew); used for stale-account purge. */
+  lastSeenAt: z.coerce.date().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });

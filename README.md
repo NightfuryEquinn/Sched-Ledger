@@ -99,7 +99,7 @@ src/
     │                     # Recurring, Insights, Schedule, TodoList, Transparency
     └── main.tsx
 public/                   # PWA manifest + service worker (copied into dist/ on build)
-scripts/                  # MongoDB collection maintenance (drop/list) + accountId backfill
+scripts/                  # MongoDB collection maintenance (drop/list, accountId backfill, stale-user prune)
 tests/                    # auth, crypto, calculator, spending, schedule, budget/holds
 build.ts                  # Production build (dist/ + api/index.js)
 ```
@@ -178,6 +178,13 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `rate_limits` | — | `_id` (limit key), `count`, `resetAt` |
 
 Owned collections use opaque `accountId` (`users._id` hex). Run `bun scripts/backfill-account-id.ts` once after upgrading an existing database.
+
+Inactive accounts (no login / session activity for over 90 days) can be purged with their data:
+
+```bash
+bun scripts/prune-stale-users.ts --dry-run
+bun scripts/prune-stale-users.ts --yes
+```
 
 The in-app **Transparency** view documents hosting roles, what the server can infer, and the same collections with example field shapes.
 

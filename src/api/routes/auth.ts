@@ -85,6 +85,7 @@ authRoutes.post("/verify", authVerifyRateLimit, zValidator("json", authVerifySch
   const user = await users.findOneAndUpdate(
     { address: normalized },
     {
+      $set: { lastSeenAt: now },
       $setOnInsert: {
         address: normalized,
         codename: normalized.slice(0, 6),

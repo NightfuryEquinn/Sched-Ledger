@@ -1,3 +1,4 @@
+import { ACCOUNT_STALE_DAYS } from "@/lib/account-retention";
 import { useEffect, useId, useRef, useState } from "react";
 
 /*
@@ -27,6 +28,7 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "timezone?", value: '"Asia/Kuala_Lumpur"' },
       { key: "emailRemindersEnabled?", value: "true" },
       { key: "budgetAlertsEnabled?", value: "true" },
+      { key: "lastSeenAt?", value: "ISO date", note: `Login / session activity; stale accounts purged after ${ACCOUNT_STALE_DAYS} days` },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },

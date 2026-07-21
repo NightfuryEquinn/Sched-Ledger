@@ -1,3 +1,4 @@
+import { ACCOUNT_STALE_DAYS } from "@/lib/account-retention";
 import { Icon } from "@/frontend/components/ui";
 import { createPortal } from "react-dom";
 
@@ -35,6 +36,7 @@ export function TermsModal({ onClose }: LegalModalProps) {
               Ledger data you create (transactions, budgets, events, categories, and related preferences) is stored with your account.
               You can export a CSV copy and manage sessions, reminder preferences, and third-party sharing from Data &amp; privacy.
               Clearing local browser data does not delete your server-side ledger.
+              Accounts inactive for over {ACCOUNT_STALE_DAYS} days may be deleted along with their associated data.
             </p>
           </div>
 

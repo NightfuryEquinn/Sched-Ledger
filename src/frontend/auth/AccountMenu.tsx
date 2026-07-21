@@ -1,3 +1,4 @@
+import { ACCOUNT_STALE_DAYS } from "@/lib/account-retention";
 import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
@@ -16,6 +17,7 @@ import type { EventImportRow } from "./lib/import-events";
 import type { ExpenseImportRow } from "./lib/import";
 import type { TodoImportList } from "./lib/import-todos";
 
+/** Resolve the browser's IANA timezone, falling back to UTC. */
 function browserTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -147,6 +149,9 @@ export function AccountMenu({
             </div>
           </div>
           <div className="am-tz">
+            <p className="am-tz-hint am-tz-hint--warn">
+              Accounts inactive for over {ACCOUNT_STALE_DAYS} days may be deleted along with their data.
+            </p>
             <label className="am-tz-label" htmlFor="acct-tz">
               Default timezone
             </label>
