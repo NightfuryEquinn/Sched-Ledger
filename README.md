@@ -197,7 +197,7 @@ bun test   # crypto, reminders, calculator, spending habits, session auth, budge
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
 
-When `CRON_SECRET` is set in development, the server also polls every 5 minutes for due reminders and recurring expense rows. Reminder delivery needs `RESEND_API_KEY`; recurring expense materialization runs regardless.
+When `CRON_SECRET` is set in development, the server also polls every 15 minutes for due reminders and recurring expense rows. Reminder delivery needs `RESEND_API_KEY`; recurring expense materialization runs regardless.
 
 ### Health check
 
@@ -308,13 +308,13 @@ Optional: run `bunx vercel dev` locally to test Vercel routing before deploying.
 
 Vercel is used for **hosting and Analytics / Speed Insights only** — it does not schedule jobs. Reminders and recurring expenses are triggered solely by [cron-job.org](https://cron-job.org) calling the hosted API.
 
-The reminder handler does not use a fixed daily schedule. It polls the database on each run and delivers email when the current time falls in each event's window: **remind-at − 5 min ≤ now ≤ remind-at + 5 min** (so a reminder can fire slightly early). Set the external job to run **every 5 minutes**. Each poll is **batched** (document limits + ~22s time budget) so it stays under the ~30s cron-job.org / Vercel function timeout.
+The reminder handler does not use a fixed daily schedule. It polls the database on each run and delivers email when the current time falls in each event's window: **remind-at − 15 min ≤ now ≤ remind-at + 15 min** (so a reminder can fire slightly early). Set the external job to run **every 15 minutes**. Each poll is **batched** (document limits + ~22s time budget) so it stays under the ~30s cron-job.org / Vercel function timeout.
 
 1. Create a free account at [cron-job.org](https://console.cron-job.org/signup).
 2. **Create cronjob** with:
    - **Title:** e.g. `Sched Ledger reminders`
    - **URL:** `https://<your-app>.vercel.app/api/cron/reminders`
-   - **Schedule:** every **5 minutes** (cron expression `*/5 * * * *`)
+   - **Schedule:** every **15 minutes** (cron expression `*/15 * * * *`)
    - **Request method:** `GET`
    - **Request headers:** add `Authorization` with value `Bearer <CRON_SECRET>` (same secret as in Vercel env vars)
 3. Save and enable the job.

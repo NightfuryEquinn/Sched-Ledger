@@ -60,7 +60,7 @@ if (process.env.NODE_ENV !== "production" && process.env.CRON_SECRET?.trim()) {
   if (isDbConnected()) {
     setInterval(poll, REMINDER_POLL_INTERVAL_MS);
     void poll();
-    console.log("[cron] dev poller active (every 5 min) — reminders + recurring expenses");
+    console.log("[cron] dev poller active (every 15 min) — reminders + recurring expenses");
   } else {
     console.log("[cron] dev poller skipped — MongoDB not connected at startup");
   }

@@ -156,7 +156,7 @@ export function AccountMenu({
               Default timezone
             </label>
             <p className="am-tz-hint">
-              Event times and email reminders follow this zone. Reminders are checked every 5 minutes.
+              Event times and email reminders follow this zone. Reminders are checked every 15 minutes.
             </p>
             <TimezonePicker
               id="acct-tz"

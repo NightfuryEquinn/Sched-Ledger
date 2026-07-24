@@ -293,7 +293,7 @@ const SYSTEM_CHART = `flowchart LR
   Browser["Browser<br/>unlock · encrypt · PWA cache"]
   Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
-  Cron["cron-job.org<br/>HTTP poll every ~5 min"]
+  Cron["cron-job.org<br/>HTTP poll every ~15 min"]
   Resend["Resend<br/>reminder / alert email"]
 
   Browser -->|"HTTPS session"| Vercel
@@ -306,7 +306,7 @@ const SYSTEM_CHART_MOBILE = `flowchart TB
   Browser["Browser<br/>unlock · encrypt · PWA cache"]
   Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
-  Cron["cron-job.org<br/>HTTP poll every ~5 min"]
+  Cron["cron-job.org<br/>HTTP poll every ~15 min"]
   Resend["Resend<br/>reminder / alert email"]
 
   Browser --> Vercel --> Atlas
