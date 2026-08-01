@@ -309,7 +309,7 @@ export function isBudgetSet(n: unknown): n is number {
 
 /** Format a budget limit, or "Unset" when none is set. */
 export function fmtBudgetLimit(n: unknown, opts: { currency?: string } = {}) {
-  return isBudgetSet(n) ? fmtMoney(n, { cents: false, ...opts }) : "Unset";
+  return isBudgetSet(n) ? fmtMoney(n, opts) : "Unset";
 }
 
 /** Compact currency format (e.g. RM1.2k). */

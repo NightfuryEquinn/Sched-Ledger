@@ -177,21 +177,21 @@ export function Overview({
   const poolLabel = isStarting ? "Balance" : "Income";
   const poolValue = isStarting ? st.balance : st.monthlyPool;
   const poolSub = isStarting
-    ? `starting ${fmtMoney(wallet?.startingBalance ?? 0, { cents: false, currency })}`
+    ? `starting ${fmtMoney(wallet?.startingBalance ?? 0, { currency })}`
     : st.earned
-      ? `${fmtMoney(wallet?.income ?? 0, { cents: false, currency })} + ${fmtMoney(st.earned, { cents: false, currency })} earned`
+      ? `${fmtMoney(wallet?.income ?? 0, { currency })} + ${fmtMoney(st.earned, { currency })} earned`
       : monthLabel(month, true);
 
   return (
     <div className="view">
       <div className="summary-grid" data-tour="tour-overview-summary">
-        <SummaryCard label={poolLabel} value={fmtMoney(poolValue, { cents: false, currency })} sub={poolSub} />
-        <SummaryCard label="Spent" tone="spent" value={fmtMoney(st.spent, { cents: false, currency })}
+        <SummaryCard label={poolLabel} value={fmtMoney(poolValue, { currency })} sub={poolSub} />
+        <SummaryCard label="Spent" tone="spent" value={fmtMoney(st.spent, { currency })}
           sub={`${Math.round(spentPct * 100)}% of budget`} />
-        <SummaryCard label="Saved" tone="saved" value={fmtMoney(st.saved, { cents: false, currency })}
+        <SummaryCard label="Saved" tone="saved" value={fmtMoney(st.saved, { currency })}
           sub={st.monthlyPool ? `${Math.round((st.saved / st.monthlyPool) * 100)}% of pool` : ""} />
         <SummaryCard label={isStarting ? "Available" : "Remaining"} tone={st.remaining < 0 ? "danger" : "ok"}
-          value={fmtMoney(st.remaining, { cents: false, currency })} sub={isStarting ? "current wallet balance" : "after spend & savings"} />
+          value={fmtMoney(st.remaining, { currency })} sub={isStarting ? "current wallet balance" : "after spend & savings"} />
       </div>
 
       <div className="ov-grid">
@@ -269,7 +269,7 @@ export function Overview({
             <h2>Spending this Month</h2>
             <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}</p>
           </div>
-          <div className="trend-now">{fmtMoney(st.spent, { cents: false, currency })}</div>
+          <div className="trend-now">{fmtMoney(st.spent, { currency })}</div>
         </div>
         <AreaTrend points={cum.length ? cum : [{ x: "1", v: 0 }]} accent={getAccent()} height={210} budgetLine={st.totalBudget} />
       </section>
@@ -282,7 +282,7 @@ export function Overview({
               <Donut data={donutData} size={188} thickness={26} onHover={setHoverCat} activeId={activeCat} />
               <div className="donut-center">
                 <div className="dc-label">{activeCat ? categoryIndex.catById[activeCat].name : "Total"}</div>
-                <div className="dc-value">{fmtMoney(activeCat ? (st.byCat[activeCat] || 0) : totalAll, { cents: false, currency })}</div>
+                <div className="dc-value">{fmtMoney(activeCat ? (st.byCat[activeCat] || 0) : totalAll, { currency })}</div>
               </div>
             </div>
             <ul className="legend">
@@ -367,7 +367,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
           <Icon name="search" size={17} />
           <input placeholder="Search notes & categories" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <div className="txn-count">{list.length} entries · {netTotal >= 0 ? "+" : "−"}{fmtMoney(Math.abs(netTotal), { cents: false, currency })} net</div>
+        <div className="txn-count">{list.length} entries · {netTotal >= 0 ? "+" : "−"}{fmtMoney(Math.abs(netTotal), { currency })} net</div>
       </div>
       <div className="filter-chips" data-tour="tour-txn-filters">
         <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => setFilter("all")}>All</button>
@@ -432,16 +432,16 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
   return (
     <div className="view">
       <div className="summary-grid sg-5" data-tour="tour-budgets-summary">
-        <SummaryCard label="Total Budget" value={fmtMoney(totalBudget, { cents: false, currency })} sub="across all categories" />
-        <SummaryCard label="Spent so Far" tone="spent" value={fmtMoney(totalSpent, { cents: false, currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
+        <SummaryCard label="Total Budget" value={fmtMoney(totalBudget, { currency })} sub="across all categories" />
+        <SummaryCard label="Spent so Far" tone="spent" value={fmtMoney(totalSpent, { currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
         <SummaryCard
           label="Saved"
           tone="saved"
-          value={fmtMoney(st.saved, { cents: false, currency })}
+          value={fmtMoney(st.saved, { currency })}
           sub={st.monthlyPool ? `${Math.round((st.saved / st.monthlyPool) * 100)}% of pool` : ""}
         />
-        <SummaryCard label="Held" tone="saved" value={fmtMoney(totalHeld, { cents: false, currency })} sub="all scheduled reserves this month" />
-        <SummaryCard label="Available" tone={totalAvailable < 0 ? "danger" : "ok"} value={fmtMoney(totalAvailable, { cents: false, currency })} sub={monthLabel(month, true)} />
+        <SummaryCard label="Held" tone="saved" value={fmtMoney(totalHeld, { currency })} sub="all scheduled reserves this month" />
+        <SummaryCard label="Available" tone={totalAvailable < 0 ? "danger" : "ok"} value={fmtMoney(totalAvailable, { currency })} sub={monthLabel(month, true)} />
       </div>
 
       <section className="panel">
@@ -464,7 +464,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                     {held > 0 ? (
                       <span className="budget-hold" title="Budget hold active">
                         <Icon name="lock" size={11} />
-                        {fmtMoney(held, { cents: false, currency })}
+                        {fmtMoney(held, { currency })}
                       </span>
                     ) : null}
                   </div>
@@ -489,7 +489,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                     </div>
                   ) : (
                     <button className={"be-amt" + (over ? " over" : "")} onClick={() => startEdit(c.id)}>
-                      {fmtMoney(spent, { cents: false, currency })} <span className="br-of">/ {fmtBudgetLimit(budget, { currency })}</span>
+                      {fmtMoney(spent, { currency })} <span className="br-of">/ {fmtBudgetLimit(budget, { currency })}</span>
                     </button>
                   )}
                 </div>
@@ -498,10 +498,10 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                 </div>
                 <div className="be-meta">
                   {!budgetSet ? <span>Unset</span>
-                    : over ? <span className="br-over-txt">Over budget by {fmtMoney(committed - budget, { cents: false, currency })}</span>
+                    : over ? <span className="br-over-txt">Over budget by {fmtMoney(committed - budget, { currency })}</span>
                         : held > 0
-                          ? <span>{fmtMoney(available, { cents: false, currency })} available · {fmtMoney(spent, { cents: false, currency })} {isSavingsCategory(c) ? "saved" : "spent"} · {fmtMoney(held, { cents: false, currency })} held</span>
-                          : <span>{fmtMoney(budget - spent, { cents: false, currency })} remaining · {Math.round(spentPct * 100)}% used</span>}
+                          ? <span>{fmtMoney(available, { currency })} available · {fmtMoney(spent, { currency })} {isSavingsCategory(c) ? "saved" : "spent"} · {fmtMoney(held, { currency })} held</span>
+                          : <span>{fmtMoney(budget - spent, { currency })} remaining · {Math.round(spentPct * 100)}% used</span>}
                   <span className="be-subs">{c.subs.map((s) => s.name).join(" · ")}</span>
                 </div>
               </div>
