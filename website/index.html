@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sched Ledger — Your money and schedule, encrypted end-to-end</title>
+<meta name="description" content="Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and currencies, plan events with reminders, and sign in with a Web3 wallet — no email or password required.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0d12;
+    --bg-alt:#12151d;
+    --card:#161a24;
+    --border:#242938;
+    --text:#e8eaf0;
+    --text-dim:#9aa1b4;
+    --accent:#6ee7b7;
+    --accent2:#7c9aff;
+    --accent3:#f0b866;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px;}
+
+  /* Background glow */
+  .glow{
+    position:fixed;top:-200px;left:50%;transform:translateX(-50%);
+    width:900px;height:900px;
+    background:radial-gradient(circle, rgba(110,231,183,0.10), rgba(124,154,255,0.08) 40%, transparent 70%);
+    pointer-events:none;z-index:0;
+  }
+
+  header{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(12px);
+    background:rgba(11,13,18,0.72);
+    border-bottom:1px solid var(--border);
+  }
+  nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 24px;max-width:1120px;margin:0 auto;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.05rem;}
+  .brand img{width:30px;height:30px;border-radius:8px;}
+  .nav-links{display:flex;gap:28px;font-size:0.92rem;color:var(--text-dim);}
+  .nav-links a:hover{color:var(--text);}
+  .nav-cta{
+    display:inline-block;padding:9px 18px;border-radius:999px;
+    background:var(--text);color:var(--bg);font-weight:600;font-size:0.88rem;
+    transition:opacity .15s;
+  }
+  .nav-cta:hover{opacity:0.85;}
+
+  section{position:relative;z-index:1;}
+
+  .hero{padding:96px 24px 80px;text-align:center;position:relative;overflow:hidden;}
+  #hero-canvas{
+    position:absolute;inset:0;width:100%;height:100%;z-index:0;
+    pointer-events:none;
+    -webkit-mask-image:linear-gradient(to bottom, black 55%, transparent 96%);
+    mask-image:linear-gradient(to bottom, black 55%, transparent 96%);
+  }
+  .hero .wrap{position:relative;z-index:2;}
+  .badge{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 14px;border:1px solid var(--border);border-radius:999px;
+    font-size:0.8rem;color:var(--text-dim);background:var(--bg-alt);
+    margin-bottom:28px;
+  }
+  .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .hero h1{
+    font-size:clamp(2.2rem, 5vw, 3.6rem);
+    font-weight:800;letter-spacing:-0.02em;
+    max-width:820px;margin:0 auto 22px;
+  }
+  .hero h1 .grad{
+    background:linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero p{
+    font-size:1.15rem;color:var(--text-dim);
+    max-width:600px;margin:0 auto 36px;
+  }
+  .hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:56px;}
+  .btn-primary{
+    padding:13px 26px;border-radius:10px;background:var(--text);color:var(--bg);
+    font-weight:700;font-size:0.95rem;transition:transform .15s, opacity .15s;
+  }
+  .btn-primary:hover{transform:translateY(-2px);}
+  .btn-secondary{
+    padding:13px 26px;border-radius:10px;border:1px solid var(--border);
+    font-weight:600;font-size:0.95rem;color:var(--text);background:var(--card);
+    transition:border-color .15s;
+  }
+  .btn-secondary:hover{border-color:var(--accent2);}
+
+  .stack-strip{
+    display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
+    color:var(--text-dim);font-size:0.82rem;
+  }
+  .stack-strip span{
+    padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-alt);
+  }
+
+  .section-head{text-align:center;max-width:640px;margin:0 auto 48px;}
+  .eyebrow{
+    text-transform:uppercase;letter-spacing:0.12em;font-size:0.78rem;
+    color:var(--accent);font-weight:700;margin-bottom:12px;
+  }
+  .section-head h2{font-size:clamp(1.6rem,3vw,2.2rem);font-weight:800;letter-spacing:-0.01em;margin-bottom:12px;}
+  .section-head p{color:var(--text-dim);font-size:1rem;}
+
+  .features{padding:80px 24px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:26px;transition:border-color .2s, transform .2s;
+  }
+  .card:hover{border-color:var(--accent2);transform:translateY(-3px);}
+  .card .icon{
+    width:44px;height:44px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.3rem;margin-bottom:16px;
+    background:linear-gradient(135deg, rgba(110,231,183,0.15), rgba(124,154,255,0.15));
+    border:1px solid var(--border);
+  }
+  .card h3{font-size:1.05rem;font-weight:700;margin-bottom:8px;}
+  .card p{color:var(--text-dim);font-size:0.92rem;}
+
+  .split{padding:80px 24px;background:var(--bg-alt);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .split-inner{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
+  .split h2{font-size:clamp(1.5rem,3vw,2rem);font-weight:800;margin-bottom:16px;letter-spacing:-0.01em;}
+  .split p{color:var(--text-dim);margin-bottom:20px;}
+  .checklist{list-style:none;}
+  .checklist li{
+    display:flex;gap:10px;padding:9px 0;font-size:0.94rem;color:var(--text);
+    border-bottom:1px solid var(--border);
+  }
+  .checklist li:last-child{border-bottom:none;}
+  .checklist li::before{content:"✓";color:var(--accent);font-weight:800;flex-shrink:0;}
+  .mock{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.35);
+  }
+  .mock-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px dashed var(--border);font-size:0.88rem;}
+  .mock-row:last-child{border-bottom:none;}
+  .mock-row .amt{font-weight:700;}
+  .amt.pos{color:var(--accent);}
+  .amt.neg{color:#f38ba8;}
+  .mock-head{display:flex;justify-content:space-between;margin-bottom:14px;}
+  .mock-head .tag{font-size:0.75rem;color:var(--text-dim);}
+  .mock-head .total{font-size:1.4rem;font-weight:800;}
+
+  .privacy{padding:80px 24px;}
+  .privacy-inner{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
+  .lock-visual{
+    background:radial-gradient(circle at 30% 20%, rgba(110,231,183,0.12), transparent 60%),var(--card);
+    border:1px solid var(--border);border-radius:var(--radius);
+    padding:40px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.82rem;color:var(--accent);
+    line-height:1.8;overflow-x:auto;
+  }
+  .lock-visual .muted{color:var(--text-dim);}
+  .lock-visual .pink{color:#f38ba8;}
+  .lock-visual .blue{color:var(--accent2);}
+
+  .stats{padding:60px 24px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg-alt);}
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center;}
+  .stat h3{font-size:2rem;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .stat p{color:var(--text-dim);font-size:0.85rem;margin-top:6px;}
+
+  .cta-final{padding:96px 24px;text-align:center;}
+  .cta-final h2{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;margin-bottom:16px;letter-spacing:-0.01em;}
+  .cta-final p{color:var(--text-dim);max-width:520px;margin:0 auto 32px;}
+
+  footer{padding:40px 24px;border-top:1px solid var(--border);}
+  .footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+  .footer-inner .brand{font-size:0.95rem;}
+  .footer-links{display:flex;gap:22px;color:var(--text-dim);font-size:0.85rem;flex-wrap:wrap;}
+  .footer-links a:hover{color:var(--text);}
+  .foot-note{color:var(--text-dim);font-size:0.78rem;margin-top:20px;text-align:center;}
+
+  @media (max-width:860px){
+    .grid3{grid-template-columns:1fr;}
+    .split-inner, .privacy-inner{grid-template-columns:1fr;}
+    .stats-grid{grid-template-columns:repeat(2,1fr);}
+    .nav-links{display:none;}
+    .hero{padding:72px 20px 56px;}
+    .features, .split, .privacy{padding:56px 20px;}
+    .section-head{margin-bottom:36px;}
+  }
+
+  @media (max-width:600px){
+    .wrap{padding:0 18px;}
+    nav{padding:14px 18px;}
+    .brand{font-size:0.95rem;}
+    .brand img{width:26px;height:26px;}
+    .hero{padding:56px 16px 44px;}
+    .hero h1{font-size:clamp(1.8rem, 8vw, 2.4rem);margin-bottom:16px;}
+    .hero p{font-size:1rem;margin-bottom:28px;}
+    .badge{font-size:0.72rem;padding:5px 12px;margin-bottom:20px;text-align:left;}
+    .hero-ctas{flex-direction:column;margin-bottom:40px;}
+    .hero-ctas a{width:100%;text-align:center;}
+    .stack-strip{gap:8px;}
+    .stack-strip span{font-size:0.74rem;padding:5px 10px;}
+    .features, .split, .privacy{padding:48px 16px;}
+    .section-head h2{font-size:1.5rem;}
+    .card{padding:20px;}
+    .split h2, .privacy h2{font-size:1.4rem;}
+    .mock{padding:18px;}
+    .mock-row{font-size:0.84rem;padding:10px 0;}
+    .lock-visual{padding:22px 18px;font-size:0.74rem;overflow-x:auto;white-space:pre;}
+    .stats{padding:40px 16px;}
+    .stats-grid{grid-template-columns:repeat(2,1fr);gap:20px;}
+    .stat h3{font-size:1.6rem;}
+    .cta-final{padding:64px 16px;}
+    .cta-final h2{font-size:1.7rem;}
+    .cta-final .hero-ctas{margin-bottom:0;}
+    footer{padding:32px 16px;}
+    .footer-inner{flex-direction:column;align-items:flex-start;gap:14px;}
+    .footer-links{gap:16px;font-size:0.8rem;}
+  }
+
+  @media (max-width:400px){
+    .stats-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<header>
+  <nav>
+    <div class="brand"><img src="logo.png" alt="Sched Ledger logo">Sched Ledger</div>
+    <div class="nav-links">
+      <a href="#features">Ledger</a>
+      <a href="#schedule">Schedule</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#stack">Stack</a>
+    </div>
+    <a class="nav-cta" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Open app</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <canvas id="hero-canvas" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="badge"><span class="dot"></span> End-to-end encrypted · Web3 sign-in · No email or password</div>
+    <h1>Your money and schedule,<br><span class="grad">encrypted end-to-end.</span></h1>
+    <p>Sched Ledger is a private expense ledger, calendar, and to-do app. Track spending across wallets and currencies, plan bills and events with reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.</p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Get started free</a>
+      <a class="btn-secondary" href="#privacy">See how privacy works</a>
+    </div>
+    <div class="stack-strip">
+      <span>Bun</span><span>Hono</span><span>MongoDB</span><span>React 19</span><span>AES-256-GCM</span><span>PWA</span>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Ledger</div>
+      <h2>Every wallet, every currency, one clear picture</h2>
+      <p>Overview, transactions, budgets, insights, and recurring expenses — all in one encrypted ledger.</p>
+    </div>
+    <div class="grid3">
+      <div class="card">
+        <div class="icon">💰</div>
+        <h3>Multiple wallets, 29 currencies</h3>
+        <p>Create wallets with monthly-income or starting-balance funding modes, and track spending across every currency you actually use.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🧮</div>
+        <h3>Built-in budget calculator</h3>
+        <p>Deduct tax lines from income, allocate net by category %, and apply straight to wallet budgets — with Malaysia-oriented presets (EPF, SOCSO, EIS, PCB, SST) that never leave your browser.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔁</div>
+        <h3>Recurring transactions</h3>
+        <p>Monthly, quarterly, or yearly expenses auto-post on due dates, with flexible delete scopes for one occurrence, this-and-future, or the whole series.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🏷️</div>
+        <h3>Custom categories</h3>
+        <p>Build your own income and expense taxonomy with glyphs and colors — organized the way you actually think about spending.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📊</div>
+        <h3>Insights that go deep</h3>
+        <p>FX conversion, month-over-month charts across daily, monthly, quarterly, and yearly views, plus spending-habit analysis.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔔</div>
+        <h3>Budget alerts</h3>
+        <p>Get emailed when a category nears or exceeds its monthly budget — evaluated client-side, so the server only delivers, never sees.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="split" id="schedule">
+  <div class="wrap split-inner">
+    <div>
+      <div class="eyebrow">Schedule & tasks</div>
+      <h2>Bills and budgets, finally in sync</h2>
+      <p>Sched Ledger connects your calendar directly to your ledger, so nothing falls through the cracks between "I should pay this" and "I paid this."</p>
+      <ul class="checklist">
+        <li>Calendar and agenda views for bills, appointments, and reminders with daily/weekly/monthly/yearly recurrence</li>
+        <li>Budget holds reserve money for a scheduled bill until you log the payment or release it</li>
+        <li>Log payment links an event to an expense in one click, and releases its budget hold automatically</li>
+        <li>Optional email reminders with per-event lead times, in your timezone</li>
+        <li>Multiple named to-do lists with inline task management</li>
+      </ul>
+    </div>
+    <div class="mock">
+      <div class="mock-head">
+        <div>
+          <div class="tag">This month · Held</div>
+          <div class="total">RM 1,240.00</div>
+        </div>
+        <div class="tag">3 active holds</div>
+      </div>
+      <div class="mock-row"><span>🏠 Rent — due in 4 days</span><span class="amt neg">RM 900.00</span></div>
+      <div class="mock-row"><span>📱 Phone plan — due in 9 days</span><span class="amt neg">RM 60.00</span></div>
+      <div class="mock-row"><span>🚗 Car insurance — due in 21 days</span><span class="amt neg">RM 280.00</span></div>
+      <div class="mock-row"><span>💵 Salary — posted</span><span class="amt pos">+ RM 4,500.00</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="privacy" id="privacy">
+  <div class="wrap privacy-inner">
+    <div class="lock-visual">
+<span class="muted">// what MongoDB actually stores</span><br>
+{<br>
+&nbsp;&nbsp;"_id": <span class="blue">ObjectId(...)</span>,<br>
+&nbsp;&nbsp;"accountId": <span class="blue">"7f2a...e91"</span>,<br>
+&nbsp;&nbsp;"ciphertext": <span class="pink">"U2FsdGVkX1..."</span>,<br>
+&nbsp;&nbsp;"iv": <span class="pink">"8x92Ka=="</span>,<br>
+&nbsp;&nbsp;<span class="muted">// amount, title, notes, category —</span><br>
+&nbsp;&nbsp;<span class="muted">// none of it readable server-side</span><br>
+}
+    </div>
+    <div>
+      <div class="eyebrow">Privacy & identity</div>
+      <h2>The server sees ciphertext. That's it.</h2>
+      <p>Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are AES-256-GCM encrypted in your browser before anything reaches the database. Only day-level dates needed for accurate reminders stay in plaintext — everything else is unreadable server-side.</p>
+      <ul class="checklist">
+        <li>Sign in with a Web3 wallet — create or restore with a 12- or 24-word recovery phrase, no email or password</li>
+        <li>Device passphrase vault wraps your keys locally with PBKDF2 + AES-GCM instead of plaintext storage</li>
+        <li>Encrypted backup you can download and restore, encrypted with your own ledger key — never stored server-side</li>
+        <li>Revoke devices, clear local data, and manage third-party data-sharing consent anytime</li>
+        <li>In-app Transparency view maps exactly what the server can and can't infer, with diagrams</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="stats">
+  <div class="wrap stats-grid">
+    <div class="stat"><h3>29</h3><p>supported currencies</p></div>
+    <div class="stat"><h3>AES-256</h3><p>client-side encryption</p></div>
+    <div class="stat"><h3>0</h3><p>emails or passwords required</p></div>
+    <div class="stat"><h3>PWA</h3><p>installable, works offline for reads</p></div>
+  </div>
+</section>
+
+<section class="features" id="stack">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Under the hood</div>
+      <h2>A modern, no-nonsense stack</h2>
+      <p>Built for speed and correctness — no bloat, no unnecessary third-party data access.</p>
+    </div>
+    <div class="grid3">
+      <div class="card"><div class="icon">⚡</div><h3>Bun + Hono</h3><p>Fast runtime and API layer, with Zod validation on every route.</p></div>
+      <div class="card"><div class="icon">🍃</div><h3>MongoDB</h3><p>Stores ciphertext and minimal plaintext metadata only — opaque account IDs, not wallet addresses.</p></div>
+      <div class="card"><div class="icon">⚛️</div><h3>React 19 + TanStack Query</h3><p>Snappy UI backed by ethers v6 for wallet-based identity.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final">
+  <div class="wrap">
+    <h2>Take your ledger back from the cloud.</h2>
+    <p>Free, open-source, and self-hostable. Sign in and start tracking in seconds, or clone it and run your own instance with Bun.</p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Launch Sched Ledger</a>
+      <a class="btn-secondary" href="https://github.com/NightfuryEquinn/Sched-Ledger" target="_blank" rel="noopener">View source on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <div class="brand"><img src="logo.png" alt="Sched Ledger logo" style="width:26px;height:26px;border-radius:7px;">Sched Ledger</div>
+      <div class="footer-links">
+        <a href="https://github.com/NightfuryEquinn/Sched-Ledger" target="_blank" rel="noopener">GitHub</a>
+        <a href="#features">Ledger</a>
+        <a href="#schedule">Schedule</a>
+        <a href="#privacy">Privacy</a>
+      </div>
+    </div>
+    <p class="foot-note">Sched Ledger — private expense ledger, schedule, and to-do app. E2EE by default.</p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  if (typeof THREE === 'undefined') return;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------------- Hero: encrypted network constellation ---------------- */
+  (function heroScene(){
+    var canvas = document.getElementById('hero-canvas');
+    var heroSection = document.querySelector('.hero');
+    if (!canvas || !heroSection) return;
+
+    var w = heroSection.clientWidth, h = heroSection.clientHeight;
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h);
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 1000);
+    camera.position.z = 60;
+
+    var count = window.innerWidth < 700 ? 80 : 170;
+    var positions = new Float32Array(count * 3);
+    var velocities = [];
+    for (var i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 150;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 85;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+      velocities.push({ x: (Math.random() - 0.5) * 0.045, y: (Math.random() - 0.5) * 0.045, z: (Math.random() - 0.5) * 0.045 });
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    var mat = new THREE.PointsMaterial({ color: 0x6ee7b7, size: 1.7, transparent: true, opacity: 0.85 });
+    var points = new THREE.Points(geo, mat);
+    scene.add(points);
+
+    var lineGeo = new THREE.BufferGeometry();
+    var lineMat = new THREE.LineBasicMaterial({ color: 0x7c9aff, transparent: true, opacity: 0.18 });
+    var lineSegments = new THREE.LineSegments(lineGeo, lineMat);
+    scene.add(lineSegments);
+
+    function rebuildLines() {
+      var pos = geo.attributes.position.array;
+      var maxDist = 20, maxDistSq = maxDist * maxDist;
+      var out = [];
+      for (var i = 0; i < count; i++) {
+        for (var j = i + 1; j < count; j++) {
+          var dx = pos[i * 3] - pos[j * 3], dy = pos[i * 3 + 1] - pos[j * 3 + 1], dz = pos[i * 3 + 2] - pos[j * 3 + 2];
+          var d2 = dx * dx + dy * dy + dz * dz;
+          if (d2 < maxDistSq) {
+            out.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2], pos[j * 3], pos[j * 3 + 1], pos[j * 3 + 2]);
+          }
+        }
+      }
+      lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+    }
+    rebuildLines();
+
+    var mouseX = 0, mouseY = 0, rotX = 0, rotY = 0, frame = 0;
+    window.addEventListener('mousemove', function (e) {
+      mouseX = (e.clientX / window.innerWidth) - 0.5;
+      mouseY = (e.clientY / window.innerHeight) - 0.5;
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (!reduceMotion) {
+        var pos = geo.attributes.position.array;
+        for (var i = 0; i < count; i++) {
+          pos[i * 3] += velocities[i].x;
+          pos[i * 3 + 1] += velocities[i].y;
+          pos[i * 3 + 2] += velocities[i].z;
+          if (Math.abs(pos[i * 3]) > 75) velocities[i].x *= -1;
+          if (Math.abs(pos[i * 3 + 1]) > 42) velocities[i].y *= -1;
+          if (Math.abs(pos[i * 3 + 2]) > 30) velocities[i].z *= -1;
+        }
+        geo.attributes.position.needsUpdate = true;
+        frame++;
+        if (frame % 4 === 0) rebuildLines();
+
+        rotX += (mouseY * 0.3 - rotX) * 0.03;
+        rotY += (mouseX * 0.3 - rotY) * 0.03;
+        points.rotation.x = rotX;
+        points.rotation.y = rotY + frame * 0.0006;
+        lineSegments.rotation.x = rotX;
+        lineSegments.rotation.y = rotY + frame * 0.0006;
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', function () {
+      w = heroSection.clientWidth; h = heroSection.clientHeight;
+      camera.aspect = w / h; camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+  })();
+})();
+</script>
+
+</body>
+</html>
