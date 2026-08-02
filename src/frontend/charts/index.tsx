@@ -38,9 +38,15 @@ function Donut({ data, size = 220, thickness = 30, onHover, activeId }) {
   );
 }
 
+/** Compact axis label: 12000 -> "12K", 800 -> "800". */
+function axisShort(v: number) {
+  if (v >= 1000) return (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + "K";
+  return String(v);
+}
+
 function AreaTrend({ points, width = 720, height = 200, accent, budgetLine, showDots }) {
   // points: [{x: label, v: number}]
-  const padL = 8, padR = 8, padT = 14, padB = 22;
+  const padL = 34, padR = 8, padT = 14, padB = 22;
   const W = width, H = height;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
@@ -59,11 +65,19 @@ function AreaTrend({ points, width = 720, height = 200, accent, budgetLine, show
           <stop offset="100%" stopColor={accent} stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* gridlines */}
-      {[0.25, 0.5, 0.75, 1].map((g) => (
-        <line key={g} x1={padL} x2={W - padR} y1={padT + innerH * (1 - g)} y2={padT + innerH * (1 - g)}
-          stroke="var(--hair)" strokeWidth="1" />
-      ))}
+      {/* gridlines + y labels */}
+      {[0, 0.25, 0.5, 0.75, 1].map((g) => {
+        const gy = padT + innerH * (1 - g);
+        return (
+          <g key={g}>
+            {g > 0 && (
+              <line x1={padL} x2={W - padR} y1={gy} y2={gy} stroke="var(--hair)" strokeWidth="1" />
+            )}
+            <text x={padL - 6} y={gy} dy="3" fontSize="10" fill="var(--ink-faint)"
+              textAnchor="end" fontFamily="var(--font-mono)">{axisShort(Math.round(nice * g))}</text>
+          </g>
+        );
+      })}
       {budgetLine ? (
         <line x1={padL} x2={W - padR} y1={y(budgetLine)} y2={y(budgetLine)}
           stroke="var(--ink-soft)" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.6" />
