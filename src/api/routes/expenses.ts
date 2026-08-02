@@ -4,6 +4,7 @@ import {
   retireOldExpenseSeries,
   shouldRetireOldExpenseSeries,
 } from "@/api/lib/expense-delete-scope";
+import { buildExpenseUpdate } from "@/api/lib/expense-update";
 import { randomObjectId } from "@/api/lib/ids";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
@@ -156,31 +157,7 @@ expensesRoutes.patch("/:id", zValidator("json", updateExpenseSchema), async (c) 
     });
   }
 
-  const patch: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.walletId) patch.walletId = new ObjectId(body.walletId);
-  if (body.kind !== undefined) patch.kind = body.kind;
-  if (body.date !== undefined) patch.date = body.date;
-  if (body.recurring !== undefined) patch.recurring = body.recurring;
-  if (body.enc !== undefined) patch.enc = body.enc;
-  if (body.payload !== undefined) patch.payload = body.payload;
-  if ("seriesKey" in body) patch.seriesKey = body.seriesKey ?? undefined;
-  if (body.eventId) {
-    patch.eventId = new ObjectId(body.eventId);
-  }
-
-  const unset: Record<string, "" | 1> = {};
-  if (body.payload !== undefined) {
-    unset.sub = "";
-    unset.amount = "";
-    unset.note = "";
-  }
-  if (body.seriesKey === null) unset.seriesKey = "";
-  if (body.eventId === null) unset.eventId = "";
-
-  const update =
-    Object.keys(unset).length > 0
-      ? { $set: patch, $unset: unset }
-      : { $set: patch };
+  const update = buildExpenseUpdate(body);
 
   const updated = await expenses.findOneAndUpdate(
     { _id: existing._id, accountId, skipped: { $ne: true } },
