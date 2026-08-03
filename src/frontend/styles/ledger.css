@@ -2257,10 +2257,6 @@ h1, h2, h3 {
   white-space: nowrap;
 }
 
-.ctip-cat {
-  color: var(--ink-faint);
-}
-
 .ctip-count {
   font-family: var(--font-num);
   font-size: 10.5px;

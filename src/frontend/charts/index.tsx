@@ -97,11 +97,10 @@ function tipAnchor(frac: number): CSSProperties {
 /** Longest tooltip breakdown before the rest is folded into a "+N more" row. */
 const TIP_ROWS = 5;
 
-/** One line of a day's spend or income: a source, its category, and the total. */
+/** One line of a day's spend or income: a category and its combined total. */
 type FlowEntry = {
   id: string;
   name: string;
-  cat: string;
   color: string;
   glyph: string;
   amount: number;
@@ -148,10 +147,7 @@ function TipSection({ title, total, entries, dotColor, dotClass, empty, format }
           {shown.map((entry) => (
             <li key={entry.id}>
               <span className="ctip-glyph" aria-hidden="true">{entry.glyph}</span>
-              <span className="ctip-name">
-                {entry.name}
-                <span className="ctip-cat"> · {entry.cat}</span>
-              </span>
+              <span className="ctip-name">{entry.name}</span>
               {entry.count > 1 ? <span className="ctip-count">×{entry.count}</span> : null}
               <span className="ctip-amt">{format(entry.amount)}</span>
             </li>

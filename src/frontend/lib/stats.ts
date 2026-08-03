@@ -128,20 +128,20 @@ export function spendingChartSeries(
 }
 
 /**
- * One line of a day's spend or income: a subcategory total, carrying its
- * parent category's name, color, and glyph so the row reads in context.
+ * One line of a day's spend or income: a category total. Subcategories are
+ * folded into their parent, so "Meal" and "Snacks" read as one Food & Dining
+ * row carrying the category's name, color, and glyph.
  */
 export type FlowEntry = {
   id: string;
   name: string;
-  cat: string;
   color: string;
   glyph: string;
   amount: number;
   count: number;
 };
 
-/** A single day of the trend line, broken down by spend / income source. */
+/** A single day of the trend line, broken down by spend / income category. */
 export type DayFlow = {
   /** ISO date, `YYYY-MM-DD`. */
   day: string;
@@ -153,24 +153,26 @@ export type DayFlow = {
   earn: FlowEntry[];
 };
 
-/** Display meta for a subcategory, falling back to the static taxonomy. */
-function subMetaOf(sub: string, index?: CategoryIndex) {
+/**
+ * Display meta for a subcategory's parent category, falling back to the static
+ * taxonomy. Subs with no known parent all collapse into one "Uncategorized" row.
+ */
+function catMetaOf(sub: string, index?: CategoryIndex) {
   const catId = catOf(sub, index);
   const cat = index?.catById[catId];
-  const fallback = SUB_BY_ID[sub];
 
   return {
-    id: sub,
-    name: index?.subById[sub]?.name ?? fallback?.name ?? sub,
-    cat: cat?.name ?? (catId || "Uncategorized"),
-    color: cat?.color ?? fallback?.color ?? "#8b93a1",
+    id: catId || "uncategorized",
+    name: cat?.name ?? (catId || "Uncategorized"),
+    color: cat?.color ?? SUB_BY_ID[sub]?.color ?? "#8b93a1",
     glyph: displayGlyph(cat?.glyph, catId),
   };
 }
 
-/** Fold one transaction into a day's per-subcategory bucket. */
+/** Fold one transaction into a day's per-category bucket. */
 function addToBucket(bucket: Map<string, FlowEntry>, e: Expense, index?: CategoryIndex) {
-  const prev = bucket.get(e.sub);
+  const meta = catMetaOf(e.sub, index);
+  const prev = bucket.get(meta.id);
 
   if (prev) {
     prev.amount += e.amount;
@@ -178,7 +180,7 @@ function addToBucket(bucket: Map<string, FlowEntry>, e: Expense, index?: Categor
     return;
   }
 
-  bucket.set(e.sub, { ...subMetaOf(e.sub, index), amount: e.amount, count: 1 });
+  bucket.set(meta.id, { ...meta, amount: e.amount, count: 1 });
 }
 
 /** Largest slice first, then alphabetical so equal amounts keep a stable order. */
@@ -193,8 +195,8 @@ function sealEntries(bucket?: Map<string, FlowEntry>) {
 }
 
 /**
- * Per-day spend and income for `monthKey`, each broken down by subcategory
- * with its parent category attached. Mirrors the overview trend line: savings
+ * Per-day spend and income for `monthKey`, each broken down by category with
+ * its subcategories combined. Mirrors the overview trend line: savings
  * envelopes are left out of spend. Days run 1..`upToDay` (defaults to the whole
  * month) so the series lines up with the plotted points.
  */
