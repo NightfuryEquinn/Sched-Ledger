@@ -10,7 +10,7 @@ import {
 } from "@/lib/recurring";
 import type { CategoryIndex } from "./categories";
 import { catOfSub, isIncomeCategory, isSavingsSub, isSpendingCategory } from "./categories";
-import { CURRENT_MONTH_KEY, SUB_BY_ID, TODAY_ISO, monthLabel, monthsWindow } from "./data";
+import { CURRENT_MONTH_KEY, SUB_BY_ID, TODAY_ISO, monthLabel, monthsWindow, roundMoney } from "./data";
 import type { Budgets, Expense, FinancialWallet, LedgerEvent } from "./types";
 import { holdsByCategory, totalActiveHolds } from "./envelope-holds";
 
@@ -54,8 +54,9 @@ function outgoingSpend(expenses: Expense[], index?: CategoryIndex) {
   return expenses.filter((e) => isOutgoing(e) && !isSavings(e, index));
 }
 
+/** Total outgoing amounts, rounded to cents so float drift never leaks into a bar. */
 function roundSpent(expenses: Expense[]) {
-  return Math.round(expenses.reduce((s, e) => s + e.amount, 0));
+  return roundMoney(expenses.reduce((s, e) => s + e.amount, 0));
 }
 
 export function spendingChartSeries(
@@ -91,7 +92,7 @@ export function spendingChartSeries(
         const monthKey = `${year}-${pad2(startM + i)}`;
         spent += roundSpent(outgoingSpend(monthExpenses(expenses, monthKey), index));
       }
-      return { key, label: `${label} '${String(year).slice(2)}`, spent };
+      return { key, label: `${label} '${String(year).slice(2)}`, spent: roundMoney(spent) };
     });
   }
 

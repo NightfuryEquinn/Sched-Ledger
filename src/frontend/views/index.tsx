@@ -26,6 +26,7 @@ import {
   monthLabel,
   monthsWindow,
   pad,
+  roundMoney,
   weekdayLabel,
 } from "@/frontend/lib/data";
 import { fetchFxRates, fxConvert, fxRateLabel } from "@/frontend/lib/fx";
@@ -450,7 +451,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 
   const startEdit = (id) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
   const commit = () => {
-    const v = Math.max(0, Math.round(parseFloat(draft) || 0));
+    const v = Math.max(0, roundMoney(parseFloat(draft) || 0));
     setBudgets({ ...budgets, [editId]: v });
     setEditId(null);
   };
@@ -501,7 +502,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                         autoFocus
                         type="number"
                         min="0"
-                        step="1"
+                        step="0.01"
                         value={draft}
                         onChange={(e) => setDraft(stripNegativeInput(e.target.value))}
                         onKeyDown={(e) => {
@@ -578,8 +579,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     (fxStatus === "ready" && typeof fxRates?.[viewCurrency] === "number");
   const displayCurrency = canConvert ? viewCurrency : currency;
   const money = (n: number) =>
-    fmtMoney(Math.round(fxConvert(n, currency, displayCurrency, fxRates)), {
-      cents: false,
+    fmtMoney(roundMoney(fxConvert(n, currency, displayCurrency, fxRates)), {
       currency: displayCurrency,
     });
 
@@ -614,11 +614,11 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const chartBars = useMemo(() => {
     return spendingChartSeries(chartPeriod, expenses, month, categoryIndex).map((bar) => ({
       ...bar,
-      spent: Math.round(fxConvert(bar.spent, currency, displayCurrency, fxRates)),
+      spent: roundMoney(fxConvert(bar.spent, currency, displayCurrency, fxRates)),
     }));
   }, [chartPeriod, expenses, month, categoryIndex, currency, displayCurrency, fxRates]);
   const chartBudget = useMemo(
-    () => Math.round(fxConvert(chartBudgetForPeriod(chartPeriod, totalBudget, month), currency, displayCurrency, fxRates)),
+    () => roundMoney(fxConvert(chartBudgetForPeriod(chartPeriod, totalBudget, month), currency, displayCurrency, fxRates)),
     [chartPeriod, totalBudget, month, currency, displayCurrency, fxRates],
   );
   const activeChartKey = chartActiveKey(chartPeriod, month);
@@ -627,7 +627,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       chartMonths.map((mo) => ({
         key: mo.key,
         label: monthLabel(mo.key).split(" ")[0],
-        spent: Math.round(monthlyAgg.get(mo.key)?.spent || 0),
+        spent: roundMoney(monthlyAgg.get(mo.key)?.spent || 0),
       })),
     [chartMonths, monthlyAgg],
   );
@@ -643,7 +643,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           const now = cur.byCat[c.id] || 0;
           const was = prev ? prev.byCat[c.id] || 0 : 0;
           const series = chartMonths.map((mo) =>
-            Math.round(
+            roundMoney(
               fxConvert(
                 monthlyAgg.get(mo.key)?.byCat[c.id] || 0,
                 currency,
@@ -677,7 +677,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const topSubs = Object.entries(subTotals).map(([sub, v]) => ({ sub, v })).sort((a, b) => b.v - a.v).slice(0, 6);
   const maxSub = topSubs.length ? topSubs[0].v : 1;
 
-  const avgSpent = Math.round(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
+  const avgSpent = roundMoney(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
   const rateLine = fxRateLabel(currency, displayCurrency, fxRates);
   const fxNote =
     fxStatus === "loading"
@@ -861,13 +861,13 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 // ── Recurring ───────────────────────────────────────────────────────
 export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) {
   const list = recurringSchedulesForMonth(expenses, month);
-  const total = list.reduce((s, e) => s + e.amount, 0);
-  const monthlyEq = Math.round(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
+  const total = roundMoney(list.reduce((s, e) => s + e.amount, 0));
+  const monthlyEq = roundMoney(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
   return (
     <div className="view">
       <div className="summary-grid sg-2" data-tour="tour-recurring-summary">
-        <SummaryCard label="Recurring this Month" value={fmtMoney(total, { cents: false, currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
-        <SummaryCard label="Monthly Equivalent" tone="spent" value={fmtMoney(monthlyEq, { cents: false, currency })} sub="normalized across intervals" />
+        <SummaryCard label="Recurring this Month" value={fmtMoney(total, { currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
+        <SummaryCard label="Monthly Equivalent" tone="spent" value={fmtMoney(monthlyEq, { currency })} sub="normalized across intervals" />
       </div>
       <section className="panel">
         <div className="panel-head"><h2>Fixed & Recurring</h2><p className="panel-sub">Auto-posted on due dates from your last amount</p></div>
