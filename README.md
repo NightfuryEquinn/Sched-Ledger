@@ -22,7 +22,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence (daily/weekly/monthly/yearly)
 - **Budget holds** — optional encrypted envelope holds on any schedule event (amount + category); active holds reserve budget until you log payment or release the occurrence; amounts never leave the E2EE payload
 - **Log payment** — from a bill/renewal event, open a prefilled expense and link `eventId` ↔ `expenseId` (plaintext metadata only); also releases that occurrence's budget hold when present
-- **Email reminders** — optional Resend emails with per-event lead times and user timezone; confirmation when you enable notify; titles stay encrypted (emails use a generic subject)
+- **Email reminders** — optional Resend emails with per-event lead times and user timezone; confirmation when you enable notify; the email includes the event name, budget hold and comments, so turning notify on stores a readable copy (`notifyDetails`) for delivery — switching it off deletes that copy and events without reminders stay fully encrypted
 - **TO-DO lists** — multiple named lists with inline task management
 
 ### Identity & privacy
@@ -41,7 +41,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ### Security
 
-- **End-to-end encryption** — ledger content (transactions, wallet names/budgets, category trees, event titles/comments/budget holds, and to-do lists) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for accurate reminder cron — day-level dates are intentional)
+- **End-to-end encryption** — ledger content (transactions, wallet names/budgets, category trees, event titles/comments/budget holds, and to-do lists) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for accurate reminder cron — day-level dates are intentional, and events with email reminders on also keep a readable copy of the name/hold/comments the email renders)
 - Ownership uses opaque `accountId` (`users._id`); the SIWE address stays on `users` for login only
 - New document ids are random ObjectIds (no embedded creation timestamp)
 - Signature verification, Mongo-backed rate limiting (in-memory fallback), security headers, in-memory profile cache
@@ -155,7 +155,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `financial_wallets` | `financialWallets` | Wallets (currency, funding mode; E2EE financials) |
 | `category_taxonomies` | `categoryTaxonomies` | One document per user — E2EE category tree |
 | `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
-| `events` | `events` | Schedule events (E2EE title/comments/holds; plaintext schedule + email for reminders) |
+| `events` | `events` | Schedule events (E2EE title/comments/holds; plaintext schedule + email for reminders, plus `notifyDetails` while notify is on) |
 | `todo_lists` | `todoLists` | Named to-do lists (E2EE name/icon/tasks) |
 | `consent` | `consent` | Data-sharing opt-in flag |
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
@@ -171,7 +171,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId` |
 | `financial_wallets` | `payload` (name, income, starting balance, budgets) via `enc` | `accountId`, `currency`, `fundingMode`, `isDefault` |
 | `category_taxonomies` | `payload` (full `categories[]` tree) via `enc` | `accountId` |
-| `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId` |
+| `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on |
 | `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
 | `users` | — | `address` (SIWE login), notify prefs |
 | `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |

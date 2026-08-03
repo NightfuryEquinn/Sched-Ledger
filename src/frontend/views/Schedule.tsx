@@ -660,6 +660,10 @@ export function EventModal({
                   <input className="text-in" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
               </div>
+              <p className="notify-note">
+                The email includes this event's name, budget hold and comments. Email is not
+                encrypted, so a readable copy is stored for delivery until you turn reminders off.
+              </p>
             </div>
           )}
           <div className="event-div" />

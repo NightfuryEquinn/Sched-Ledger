@@ -20,6 +20,24 @@ export const eventCommentSchema = z.object({
 const customLabelSchema = z.string().min(1).max(40);
 const customGlyphSchema = z.string().min(1).max(8);
 
+/**
+ * Server-readable copy of the event content that reminder emails render.
+ * Event secrets stay E2EE, so the client decrypts and sends this alongside the
+ * ciphertext when (and only when) email reminders are switched on — the email
+ * body itself is plaintext, so delivery is the consent point.
+ */
+export const reminderDetailsSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  hold: z
+    .object({
+      amount: z.number().nonnegative(),
+      currency: z.string().trim().min(3).max(3).optional(),
+      categoryName: z.string().trim().min(1).max(64).optional(),
+    })
+    .optional(),
+  comments: z.array(z.string().trim().min(1).max(500)).max(20).optional(),
+});
+
 /** Refine lead against allDay for plaintext schedule fields. */
 function refineLeadForAllDay(data: { allDay?: boolean; lead?: LeadId }, ctx: z.RefinementCtx) {
   if (data.lead === undefined) return;
@@ -52,6 +70,8 @@ const eventScheduleShape = {
   notify: z.boolean().default(false),
   lead: leadIdSchema.default("1d"),
   email: z.string().email().optional().or(z.literal("")),
+  /** Plaintext event content for reminder emails (only while notify is on). */
+  notifyDetails: reminderDetailsSchema.optional(),
   /** Optional expense logged from this event (e.g. bill paid). */
   expenseId: objectIdSchema.optional(),
 };
@@ -85,6 +105,7 @@ export const createEventSchema = z
     notify: z.boolean().optional().default(false),
     lead: leadIdSchema.optional().default("1d"),
     email: z.string().email().optional().or(z.literal("")),
+    notifyDetails: reminderDetailsSchema.optional(),
     expenseId: objectIdSchema.optional(),
     enc: e2eeVersionSchema,
     payload: encryptedPayloadSchema,
@@ -107,6 +128,8 @@ export const updateEventSchema = z
     notify: z.boolean().optional(),
     lead: leadIdSchema.optional(),
     email: z.string().email().optional().or(z.literal("")),
+    /** `null` clears the stored plaintext copy (e.g. reminders switched off). */
+    notifyDetails: reminderDetailsSchema.nullable().optional(),
     expenseId: objectIdSchema.nullable().optional(),
     enc: e2eeVersionSchema,
     payload: encryptedPayloadSchema,
@@ -128,6 +151,7 @@ export const listEventsQuerySchema = z.object({
 });
 
 export type EventComment = z.infer<typeof eventCommentSchema>;
+export type ReminderDetails = z.infer<typeof reminderDetailsSchema>;
 export type Event = z.infer<typeof eventSchema>;
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;

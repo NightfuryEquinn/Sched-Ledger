@@ -1,6 +1,7 @@
 import { api } from "@/frontend/lib/api";
 import { maybeNotifyBudgetAlerts } from "@/frontend/lib/budget/notify";
 import {
+  buildReminderDetails,
   decodeCategories,
   decodeEvent,
   decodeExpense,
@@ -14,6 +15,7 @@ import {
   encodeTodoListCreate,
   encodeTodoListUpdate,
   encodeWalletFinancials,
+  type ReminderContext,
 } from "@/frontend/lib/crypto/codec";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
@@ -265,7 +267,30 @@ export function useLedger(walletAddress: string) {
               const { event } = await api.events.update(wire.id, body);
               return decodeEvent(event, cryptoKey);
             }
-            return decodeEvent(wire, cryptoKey);
+
+            const decodedEvent = await decodeEvent(wire, cryptoKey);
+            /*
+             * Reminders predating notifyDetails would email a content-free body,
+             * so attach the copy once. Sending no `notify` keeps this silent —
+             * the server only re-confirms when a request switches notify on.
+             */
+            if (!wire.notifyDetails && wire.enc === 1 && wire.payload) {
+              const details = buildReminderDetails(decodedEvent, {
+                currency: activeWallet?.currency,
+                holdCategoryName: decodedEvent.budgetHoldCategoryId
+                  ? categoryIndex.catById[decodedEvent.budgetHoldCategoryId]?.name
+                  : undefined,
+              });
+              if (details) {
+                await api.events.update(wire.id, {
+                  enc: 1,
+                  payload: wire.payload,
+                  notifyDetails: details,
+                });
+              }
+            }
+
+            return decodedEvent;
           }),
         );
         collected.push(...decoded);
@@ -517,12 +542,19 @@ export function useLedger(walletAddress: string) {
     mutationFn: async (data: Omit<LedgerEvent, "id"> & { id?: string }) => {
       const cryptoKey = requireKey(wallet);
       assertCustomEventFields(data);
+      /* Wallet currency + hold category name are E2EE — resolve them for the email copy. */
+      const reminderCtx: ReminderContext = {
+        currency: activeWallet?.currency,
+        holdCategoryName: data.budgetHoldCategoryId
+          ? categoryIndex.catById[data.budgetHoldCategoryId]?.name
+          : undefined,
+      };
       if (data.id) {
-        const body = await encodeEventUpdate(data, cryptoKey);
+        const body = await encodeEventUpdate(data, cryptoKey, reminderCtx);
         const { event } = await api.events.update(data.id, body);
         return decodeEvent(event, cryptoKey);
       }
-      const body = await encodeEventCreate(data, cryptoKey);
+      const body = await encodeEventCreate(data, cryptoKey, reminderCtx);
       const { event } = await api.events.create(body);
       return decodeEvent(event, cryptoKey);
     },

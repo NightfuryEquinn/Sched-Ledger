@@ -1,4 +1,5 @@
 import { emailConfigured, reminderEmailHtml, sendEmail } from "@/api/lib/email";
+import { formatMoneyLabel } from "@/api/lib/money";
 import { getCollections, getDb } from "@/db";
 import type { EventDocument } from "@/db/collections";
 import {
@@ -35,8 +36,37 @@ function eventCategoryLabel(doc: { catId: string }): string {
   return EVENT_CAT_NAMES[doc.catId] ?? doc.catId;
 }
 
-/** Generic event title used in emails — real titles are E2EE and unavailable server-side. */
+/** Fallback title for events saved without a plaintext copy for delivery. */
 const GENERIC_EVENT_TITLE = "Upcoming event";
+
+/**
+ * Content rendered in reminder emails. Event secrets are E2EE, so this comes
+ * from the plaintext `notifyDetails` the client stores while reminders are on;
+ * without it the email falls back to the generic, content-free form.
+ */
+function reminderContent(doc: EventDocument): {
+  title: string;
+  hold?: string;
+  comments?: string[];
+} {
+  const details = doc.notifyDetails;
+  if (!details) return { title: GENERIC_EVENT_TITLE };
+
+  const hold = details.hold
+    ? [
+        formatMoneyLabel(details.hold.amount, details.hold.currency),
+        details.hold.categoryName ? `from ${details.hold.categoryName}` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : undefined;
+
+  return {
+    title: details.title.trim() || GENERIC_EVENT_TITLE,
+    ...(hold ? { hold } : {}),
+    ...(details.comments?.length ? { comments: details.comments } : {}),
+  };
+}
 
 export type ReminderProcessResult = {
   scanned: number;
@@ -103,7 +133,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   const category = eventCategoryLabel(doc);
   const lead = leadDescription(doc.lead as LeadId, doc.allDay);
   const { html, text, subject } = reminderEmailHtml({
-    title: GENERIC_EVENT_TITLE,
+    ...reminderContent(doc),
     when,
     category,
     lead,
@@ -255,7 +285,7 @@ async function sendReminderOnce(
   const lead = leadDescription(ev.lead as LeadId, ev.allDay);
 
   const { html, text, subject } = reminderEmailHtml({
-    title: GENERIC_EVENT_TITLE,
+    ...reminderContent(ev),
     when,
     category,
     lead,

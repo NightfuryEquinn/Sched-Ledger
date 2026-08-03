@@ -96,7 +96,8 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "date", value: '"2026-07-20"' },
       { key: "allDay / time / repeat", value: "schedule metadata" },
       { key: "exceptDates? / until?", value: "recurrence exceptions / end date" },
-      { key: "notify / lead / email", value: "reminder settings (plaintext for cron)", note: "emails use a generic title; real title stays encrypted" },
+      { key: "notify / lead / email", value: "reminder settings (plaintext for cron)" },
+      { key: "notifyDetails?", value: "title, hold, comments", note: "readable copy of what the reminder email says — stored only while notify is on, deleted when you switch it off" },
       { key: "expenseId?", value: "ObjectId", note: "optional link when a bill payment was logged" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
@@ -481,9 +482,12 @@ export function Transparency() {
               <code>users</code> for login. The server can still see that address, session cookies (HttpOnly, rotated
               on sliding renewal), wallet currencies/funding modes, expense dates/kinds/recurrence flags, schedule
               timing, reminder email addresses and lead times, and that a budget-alert email was delivered — but not
-              amounts, wallet names, category trees, notes, event titles, or to-do text. Reminder emails use a generic
-              subject; titles stay encrypted. Linking a bill payment stores plaintext <code>eventId</code> /{" "}
-              <code>expenseId</code> references only.
+              amounts, wallet names, category trees, notes, event titles, or to-do text. One deliberate exception:
+              email is not encrypted, so an event with email reminders switched on also stores{" "}
+              <code>notifyDetails</code> — the name, budget hold and comments that the email itself carries. It is
+              written only while that event has reminders on and an address set, and deleted the moment either goes
+              away; events without reminders keep everything in the payload. Linking a bill payment stores plaintext{" "}
+              <code>eventId</code> / <code>expenseId</code> references only.
             </p>
             <p className="panel-sub" style={{ marginTop: "0.75rem" }}>
               If the same auth key is ever used on-chain, chain analysis can correlate it with this account. Prefer a{" "}

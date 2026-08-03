@@ -4258,6 +4258,13 @@ h1, h2, h3 {
   margin-bottom: var(--sp-5);
 }
 
+.notify-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  margin: 12px 0 0;
+}
+
 /* Half a phone-width column clips the lead label, so stack the reminder fields. */
 @media (max-width: 560px) {
   .notify-card .fld-2col {
