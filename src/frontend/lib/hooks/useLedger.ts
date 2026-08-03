@@ -15,6 +15,7 @@ import {
   encodeTodoListCreate,
   encodeTodoListUpdate,
   encodeWalletFinancials,
+  type EventWire,
   type ReminderContext,
 } from "@/frontend/lib/crypto/codec";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
@@ -73,6 +74,57 @@ function monthStartIso(key: string): string {
 
 const EXPENSE_LOOKBACK_MONTHS = 36;
 const LIST_PAGE_LIMIT = 2000;
+
+/*
+ * Reminder events saved before `notifyDetails` existed would email a
+ * content-free body. Attaching the copy is a one-off write per event, so it is
+ * capped and batched: a month full of reminders must not burst hundreds of
+ * PATCHes into the shared rate limit on first load. Whatever is left over is
+ * picked up by later loads.
+ */
+const REMINDER_BACKFILL_PER_LOAD = 10;
+const REMINDER_BACKFILL_CONCURRENCY = 5;
+
+/**
+ * Attach the reminder email copy to already-encrypted events that lack it.
+ * Best-effort by design — it changes nothing the client renders, so a failed
+ * write is swallowed rather than failing the whole events query. Legacy
+ * plaintext rows (`enc` unset) are skipped: their own migration re-encrypts the
+ * payload, and reusing the stale ciphertext here would undo that.
+ */
+async function backfillReminderDetails(
+  pairs: Array<{ wire: EventWire; event: LedgerEvent }>,
+  currency: string | undefined,
+  catById: Record<string, Category>,
+): Promise<void> {
+  const stale = pairs
+    .filter(
+      ({ wire, event }) =>
+        wire.enc === 1 && wire.payload && !wire.notifyDetails && event.notify && event.email.trim(),
+    )
+    .slice(0, REMINDER_BACKFILL_PER_LOAD);
+
+  for (let i = 0; i < stale.length; i += REMINDER_BACKFILL_CONCURRENCY) {
+    await Promise.all(
+      stale.slice(i, i + REMINDER_BACKFILL_CONCURRENCY).map(async ({ wire, event }) => {
+        const notifyDetails = buildReminderDetails(event, {
+          currency,
+          holdCategoryName: event.budgetHoldCategoryId
+            ? catById[event.budgetHoldCategoryId]?.name
+            : undefined,
+        });
+        if (!notifyDetails) return;
+
+        try {
+          /* No `notify` in the body — the server only re-confirms when a request turns it on. */
+          await api.events.update(wire.id, { enc: 1, payload: wire.payload, notifyDetails });
+        } catch {
+          /* A later load retries; reminders still send, just without the details. */
+        }
+      }),
+    );
+  }
+}
 
 const keys = {
   profile: (wallet: string) => ["profile", wallet] as const,
@@ -268,31 +320,16 @@ export function useLedger(walletAddress: string) {
               return decodeEvent(event, cryptoKey);
             }
 
-            const decodedEvent = await decodeEvent(wire, cryptoKey);
-            /*
-             * Reminders predating notifyDetails would email a content-free body,
-             * so attach the copy once. Sending no `notify` keeps this silent —
-             * the server only re-confirms when a request switches notify on.
-             */
-            if (!wire.notifyDetails && wire.enc === 1 && wire.payload) {
-              const details = buildReminderDetails(decodedEvent, {
-                currency: activeWallet?.currency,
-                holdCategoryName: decodedEvent.budgetHoldCategoryId
-                  ? categoryIndex.catById[decodedEvent.budgetHoldCategoryId]?.name
-                  : undefined,
-              });
-              if (details) {
-                await api.events.update(wire.id, {
-                  enc: 1,
-                  payload: wire.payload,
-                  notifyDetails: details,
-                });
-              }
-            }
-
-            return decodedEvent;
+            return decodeEvent(wire, cryptoKey);
           }),
         );
+
+        await backfillReminderDetails(
+          page.events.map((wire, i) => ({ wire, event: decoded[i]! })),
+          activeWallet?.currency,
+          categoryIndex.catById,
+        );
+
         collected.push(...decoded);
         if (!page.hasMore || !page.nextBefore) break;
         before = page.nextBefore;
