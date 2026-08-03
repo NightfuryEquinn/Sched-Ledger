@@ -103,13 +103,17 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id: 
 }
 
 /** Build reminder / confirmation email subject, HTML, and plain text.
- * Title is intentionally generic when event content is E2EE (server never sees it).
+ * Title falls back to a generic label when the event has no plaintext copy for
+ * delivery (content is E2EE, so the server has nothing else to render).
+ * `hold` and `comments` are rendered only when the client supplied them.
  */
 export function reminderEmailHtml(opts: {
   title: string;
   when: string;
   category: string;
   lead: string;
+  hold?: string;
+  comments?: string[];
   isConfirmation?: boolean;
 }): { html: string; text: string; subject: string } {
   const subject = opts.isConfirmation
@@ -119,6 +123,14 @@ export function reminderEmailHtml(opts: {
   const intro = opts.isConfirmation
     ? `We'll email you <strong>${opts.lead}</strong> this event.`
     : `This is your reminder for an upcoming event.`;
+
+  const comments = (opts.comments ?? []).filter((c) => c.trim());
+  const commentsHtml = comments.length
+    ? `<h3 style="margin:20px 0 8px;font-size:15px;color:#6b6560">Comments</h3>
+  <ul style="margin:0;padding:0 0 0 18px;font-size:15px">
+    ${comments.map((c) => `<li style="margin:0 0 6px">${escapeHtml(c)}</li>`).join("\n    ")}
+  </ul>`
+    : "";
 
   const html = `<!DOCTYPE html>
 <html>
@@ -130,17 +142,24 @@ export function reminderEmailHtml(opts: {
     <tr><td style="padding:6px 0;color:#6b6560">Event</td><td style="padding:6px 0"><strong>${escapeHtml(opts.title)}</strong></td></tr>
     <tr><td style="padding:6px 0;color:#6b6560">When</td><td style="padding:6px 0">${escapeHtml(opts.when)}</td></tr>
     <tr><td style="padding:6px 0;color:#6b6560">Type</td><td style="padding:6px 0">${escapeHtml(opts.category)}</td></tr>
+    ${opts.hold ? `<tr><td style="padding:6px 0;color:#6b6560">Hold from budget</td><td style="padding:6px 0">${escapeHtml(opts.hold)}</td></tr>` : ""}
     ${opts.isConfirmation ? `<tr><td style="padding:6px 0;color:#6b6560">Notify</td><td style="padding:6px 0">${escapeHtml(opts.lead)}</td></tr>` : ""}
   </table>
+  ${commentsHtml}
   <p style="margin:20px 0 0;font-size:13px;color:#8a8480">— Sched Ledger</p>
 </body>
 </html>`;
 
-  const text = opts.isConfirmation
-    ? `Reminder set for "${opts.title}" on ${opts.when}. We'll notify you ${opts.lead}.`
-    : `Reminder: "${opts.title}" on ${opts.when} (${opts.category}).`;
+  const lines = opts.isConfirmation
+    ? [`Reminder set for "${opts.title}" on ${opts.when}. We'll notify you ${opts.lead}.`]
+    : [`Reminder: "${opts.title}" on ${opts.when} (${opts.category}).`];
 
-  return { html, text, subject };
+  if (opts.hold) lines.push(`Hold from budget: ${opts.hold}`);
+  if (comments.length) {
+    lines.push("Comments:", ...comments.map((c) => `- ${c}`));
+  }
+
+  return { html, text: lines.join("\n"), subject };
 }
 
 /** Build budget warning / exceeded email subject, HTML, and plain text. */

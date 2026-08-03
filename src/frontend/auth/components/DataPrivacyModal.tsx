@@ -208,7 +208,7 @@ export function DataPrivacyModal({
               <div className="consent-top">
                 <div>
                   <div className="consent-title">Allow Reminder Emails</div>
-                  <p className="consent-desc">Events can send you email reminders when you turn them on per event. Switching this off stops all reminder delivery at once, without editing each event.</p>
+                  <p className="consent-desc">Events can send you email reminders when you turn them on per event. Those emails include the event name, budget hold and comments, so events with reminders on keep a readable copy on the server for delivery — turn an event's reminder off to delete it. Switching this off stops all reminder delivery at once, without editing each event.</p>
                 </div>
                 <label className="switch">
                   <input type="checkbox" checked={remindersOn} disabled={remindersBusy} onChange={toggleReminders} />
