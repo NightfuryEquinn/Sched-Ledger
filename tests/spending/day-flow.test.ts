@@ -58,11 +58,12 @@ function tx(
 }
 
 describe("dayFlowSeries", () => {
-  test("groups a day's transactions by source on both sides", () => {
+  test("folds a day's subcategories into their parent category on both sides", () => {
     const series = dayFlowSeries(
       [
         tx("2026-08-03", 20, "food-groceries"),
         tx("2026-08-03", 12.5, "food-groceries", "expense", "second-grocery-run"),
+        tx("2026-08-03", 5, "food-dining"),
         tx("2026-08-03", 40, "transport-fuel"),
         tx("2026-08-03", 900, "income-salary", "income"),
         tx("2026-08-03", 75, "income-side", "income"),
@@ -75,14 +76,15 @@ describe("dayFlowSeries", () => {
     const day = series[2]!;
     expect(day.day).toBe("2026-08-03");
     expect(day.label).toBe("3");
-    expect(day.spent).toBe(72.5);
+    expect(day.spent).toBe(77.5);
     expect(day.earned).toBe(975);
 
-    // Largest first: fuel 40, then the two grocery runs folded into one row.
-    expect(day.spend.map((s) => s.id)).toEqual(["transport-fuel", "food-groceries"]);
-    expect(day.spend[0]).toMatchObject({ name: "Fuel", cat: "Transport", amount: 40, count: 1, glyph: "🚗" });
-    expect(day.spend[1]).toMatchObject({ name: "Groceries", cat: "Food", amount: 32.5, count: 2 });
-    expect(day.earn.map((e) => [e.name, e.amount])).toEqual([["Salary", 900], ["Side Gig", 75]]);
+    // Largest first: Transport 40, then Food 37.5 (two grocery runs + one dining).
+    expect(day.spend.map((s) => s.id)).toEqual(["transport", "food"]);
+    expect(day.spend[0]).toMatchObject({ name: "Transport", amount: 40, count: 1, glyph: "🚗" });
+    expect(day.spend[1]).toMatchObject({ name: "Food", amount: 37.5, count: 3, glyph: "🍽️" });
+    // Salary and Side Gig share one Income category, so they read as a single row.
+    expect(day.earn.map((e) => [e.id, e.name, e.amount, e.count])).toEqual([["income", "Income", 975, 2]]);
   });
 
   test("keeps savings out of spend, matching the trend line", () => {
@@ -94,7 +96,7 @@ describe("dayFlowSeries", () => {
     );
 
     expect(series[0]!.spent).toBe(30);
-    expect(series[0]!.spend.map((s) => s.id)).toEqual(["food-groceries"]);
+    expect(series[0]!.spend.map((s) => s.id)).toEqual(["food"]);
   });
 
   test("emits an empty entry for every day up to the cap", () => {

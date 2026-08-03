@@ -2257,10 +2257,6 @@ h1, h2, h3 {
   white-space: nowrap;
 }
 
-.ctip-cat {
-  color: var(--ink-faint);
-}
-
 .ctip-count {
   font-family: var(--font-num);
   font-size: 10.5px;
@@ -2409,19 +2405,25 @@ h1, h2, h3 {
 }
 
 .recent-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: 14px 0;
-  border-top: 1px solid var(--hair);
+  /* Bleeds into the panel padding so the hover fill breathes around the row
+     content instead of stopping flush against the glyph and the amount. */
+  padding: 14px var(--sp-3);
+  margin-inline: calc(var(--sp-3) * -1);
   text-align: left;
-  width: 100%;
   transition: background .12s;
   border-radius: var(--r-lg);
 }
 
-.recent-row:first-child {
-  border-top: none;
+/* Separator tracks the row content, not the wider hover fill. */
+.recent-row + .recent-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 var(--sp-3) auto;
+  border-top: 1px solid var(--hair);
 }
 
 .recent-row:hover {
