@@ -44,17 +44,38 @@ function axisShort(v: number) {
   return String(v);
 }
 
-function AreaTrend({ points, width = 720, height = 200, accent, budgetLine, showDots }) {
-  // points: [{x: label, v: number}]
+type TrendPoint = { x: string; v: number };
+
+type AreaTrendProps = {
+  points: TrendPoint[];
+  width?: number;
+  height?: number;
+  accent: string;
+  budgetLine?: number;
+  showDots?: boolean;
+  /** Optional second series, drawn as a plain line over the main area. */
+  compare?: TrendPoint[] | null;
+  compareAccent?: string;
+};
+
+function AreaTrend({
+  points, width = 720, height = 200, accent, budgetLine, showDots,
+  compare = null, compareAccent = "var(--ok)",
+}: AreaTrendProps) {
   const padL = 34, padR = 8, padT = 14, padB = 22;
   const W = width, H = height;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
-  const maxV = Math.max(budgetLine || 0, ...points.map((p) => p.v), 1);
+  const cmp = compare && compare.length ? compare : null;
+  const maxV = Math.max(budgetLine || 0, ...points.map((p) => p.v), ...(cmp ? cmp.map((p) => p.v) : []), 1);
   const nice = Math.ceil(maxV / 100) * 100 || maxV;
-  const x = (i) => padL + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
-  const y = (v) => padT + innerH - (v / nice) * innerH;
-  const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+  const xAt = (i: number, len: number) => padL + (len === 1 ? innerW / 2 : (i / (len - 1)) * innerW);
+  const x = (i: number) => xAt(i, points.length);
+  const y = (v: number) => padT + innerH - (v / nice) * innerH;
+  const pathOf = (pts: TrendPoint[]) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"}${xAt(i, pts.length).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+  const line = pathOf(points);
+  const cmpLine = cmp ? pathOf(cmp) : null;
   const area = `${line} L${x(points.length - 1).toFixed(1)},${(padT + innerH).toFixed(1)} L${x(0).toFixed(1)},${(padT + innerH).toFixed(1)} Z`;
   const gid = "ag" + Math.round((accent || "").length + width);
   return (
@@ -83,7 +104,15 @@ function AreaTrend({ points, width = 720, height = 200, accent, budgetLine, show
           stroke="var(--ink-soft)" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.6" />
       ) : null}
       <path d={area} fill={`url(#${gid})`} />
+      {cmpLine ? (
+        <path d={cmpLine} fill="none" stroke={compareAccent} strokeWidth="2.5"
+          strokeLinejoin="round" strokeLinecap="round" />
+      ) : null}
       <path d={line} fill="none" stroke={accent} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      {showDots && cmp && cmp.map((p, i) => (
+        <circle key={"c" + i} cx={xAt(i, cmp.length)} cy={y(p.v)} r="3" fill="var(--surface)"
+          stroke={compareAccent} strokeWidth="2" />
+      ))}
       {showDots && points.map((p, i) => (
         <circle key={i} cx={x(i)} cy={y(p.v)} r="3" fill="var(--surface)" stroke={accent} strokeWidth="2" />
       ))}

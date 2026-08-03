@@ -2095,6 +2095,50 @@ h1, h2, h3 {
   letter-spacing: -.5px;
 }
 
+.trend-head {
+  flex-wrap: wrap;
+}
+
+.trend-head h2 {
+  white-space: normal;
+}
+
+.trend-totals {
+  display: flex;
+  gap: var(--sp-5);
+  flex: none;
+}
+
+.trend-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.trend-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.trend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.trend-dot--earn {
+  background: var(--ok);
+}
+
+.trend-now--earn {
+  color: var(--ok);
+}
+
 /* ── 7. Views: overview ───────────────────────────────────────────── */
 /* Donut chart */
 .donut-wrap {
