@@ -13,7 +13,7 @@ import {
   sumPercents,
   type TaxPreset,
 } from "@/frontend/lib/calculator";
-import { fmtMoney, getCurrency } from "@/frontend/lib/data";
+import { fmtMoney, getCurrency, roundMoney } from "@/frontend/lib/data";
 import {
   preventNegativeKeys,
   preventWheelChange,
@@ -170,19 +170,19 @@ export function Calculator({
       <div className="summary-grid sg-3" data-tour="tour-calculator-summary">
         <SummaryCard
           label="Gross Income"
-          value={fmtMoney(gross, { cents: false, currency })}
+          value={fmtMoney(gross, { currency })}
           sub="calculator draft"
         />
         <SummaryCard
           label="Tax Total"
           tone="spent"
-          value={fmtMoney(taxAmount, { cents: false, currency })}
+          value={fmtMoney(taxAmount, { currency })}
           sub={taxOk ? `${formatPct(taxSum)} of gross` : "tax exceeds 100%"}
         />
         <SummaryCard
           label="Net After Tax"
           tone={taxOk ? "ok" : "danger"}
-          value={fmtMoney(net, { cents: false, currency })}
+          value={fmtMoney(net, { currency })}
           sub="available to allocate"
         />
       </div>
@@ -198,9 +198,9 @@ export function Calculator({
           <input
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             inputMode="decimal"
-            placeholder="0"
+            placeholder="0.00"
             value={grossDraft}
             onChange={(e) => {
               markDirty();
@@ -314,7 +314,7 @@ export function Calculator({
             <div className="calculator-alloc-list">
               {expenseCategories.map((c) => {
                 const pct = parseNonNeg(pctByCat[c.id] ?? "");
-                const amount = canApply ? (computed[c.id] ?? 0) : Math.round((net * pct) / 100);
+                const amount = canApply ? (computed[c.id] ?? 0) : roundMoney((net * pct) / 100);
 
                 return (
                   <div key={c.id} className="calculator-alloc-row">
@@ -344,7 +344,7 @@ export function Calculator({
                       <span className="calculator-pct-suffix">%</span>
                     </div>
                     <div className="calculator-alloc-amt num">
-                      {fmtMoney(amount, { cents: false, currency })}
+                      {fmtMoney(amount, { currency })}
                     </div>
                   </div>
                 );
@@ -412,7 +412,7 @@ export function Calculator({
                       <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
                     </span>
                     <span className="num">
-                      {fmtMoney(computed[c.id] ?? 0, { cents: false, currency })}
+                      {fmtMoney(computed[c.id] ?? 0, { currency })}
                     </span>
                   </li>
                 ))}

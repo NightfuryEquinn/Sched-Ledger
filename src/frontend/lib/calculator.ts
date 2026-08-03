@@ -89,30 +89,31 @@ export function computeNet(gross: number, taxPercents: number[]): number {
 
 /**
  * Allocate net across categories by percentage.
- * Amounts are whole units; any rounding remainder goes to the last
- * category with a positive percentage so the map totals `Math.round(net)`.
+ * Amounts carry 2 decimal places; the split is computed in whole cents so
+ * any rounding remainder goes to the last category with a positive
+ * percentage and the map totals net rounded to the nearest cent.
  */
 export function allocateBudgets(
   net: number,
   allocations: AllocationRow[],
 ): Record<string, number> {
-  const target = Math.max(0, Math.round(Number.isFinite(net) ? net : 0));
-  const result: Record<string, number> = {};
+  const targetCents = Math.max(0, Math.round((Number.isFinite(net) ? net : 0) * 100));
+  const centsById: Record<string, number> = {};
 
   if (!allocations.length) {
-    return result;
+    return {};
   }
 
   let allocated = 0;
 
   for (const row of allocations) {
     const pct = Number.isFinite(row.pct) ? Math.max(0, row.pct) : 0;
-    const amount = Math.round((target * pct) / 100);
-    result[row.id] = amount;
-    allocated += amount;
+    const cents = Math.round((targetCents * pct) / 100);
+    centsById[row.id] = cents;
+    allocated += cents;
   }
 
-  const remainder = target - allocated;
+  const remainder = targetCents - allocated;
 
   if (remainder !== 0) {
     for (let i = allocations.length - 1; i >= 0; i--) {
@@ -123,10 +124,16 @@ export function allocateBudgets(
       const pct = Number.isFinite(row.pct) ? row.pct : 0;
 
       if (pct > 0) {
-        result[row.id] = (result[row.id] ?? 0) + remainder;
+        centsById[row.id] = (centsById[row.id] ?? 0) + remainder;
         break;
       }
     }
+  }
+
+  const result: Record<string, number> = {};
+
+  for (const [id, cents] of Object.entries(centsById)) {
+    result[id] = cents / 100;
   }
 
   return result;

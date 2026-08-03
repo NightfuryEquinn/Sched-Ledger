@@ -22,7 +22,7 @@ import { normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
 import type { Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const ACTIVE_WALLET_KEY = "ledger:active-wallet";
@@ -277,6 +277,13 @@ export function useLedger(walletAddress: string) {
       return collected;
     },
     enabled: cryptoReady && !!profileQuery.data,
+    /*
+     * The key is month-scoped, so switching months would otherwise put this
+     * query back into `pending` and trip the app-wide "Loading your ledger…"
+     * screen. Holding the previous month's rows keeps the shell mounted while
+     * the new month streams in.
+     */
+    placeholderData: keepPreviousData,
   });
 
   const todoListsQuery = useQuery({

@@ -290,6 +290,13 @@ export function fmtCommentTime(iso) {
 
 // ── Formatting helpers ──────────────────────────────────────────────
 
+/** Round a money amount to 2 decimal places; non-finite input becomes 0. */
+export function roundMoney(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+
+  return Math.round(n * 100) / 100;
+}
+
 /** Format a number as currency with optional cents. */
 export function fmtMoney(n, opts: { cents?: boolean; currency?: string } = {}) {
   const cur = getCurrency(opts.currency);
