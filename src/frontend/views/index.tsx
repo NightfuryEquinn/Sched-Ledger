@@ -58,7 +58,7 @@ export { Categories } from "./Categories";
 /*
  * Ledger views
  * ────────────
- *   Overview     — summary cards, to-do & schedule, spend trend, donut,
+ *   Overview     — summary cards, to-do & schedule, spend/earn trend, donut,
  *                  recent transactions
  *   Transactions — searchable / filterable list grouped by date
  *   Budgets      — per-category budget editing
@@ -154,23 +154,34 @@ export function Overview({
   const [yy, mm] = month.split("-").map(Number);
   const days = new Date(yy, mm, 0).getDate();
   const todayCap = month === CURRENT_MONTH_KEY ? CURRENT_DAY : days;
-  const cum = useMemo(() => {
-    const byDay = new Map<string, number>();
+  /** Cumulative spend and earnings per day of the selected month. */
+  const { cum, earnCum } = useMemo(() => {
+    const spentByDay = new Map<string, number>();
+    const earnedByDay = new Map<string, number>();
     for (const e of st.list) {
+      if (isIncome(e)) {
+        earnedByDay.set(e.date, (earnedByDay.get(e.date) || 0) + e.amount);
+        continue;
+      }
       if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
-      byDay.set(e.date, (byDay.get(e.date) || 0) + e.amount);
+      spentByDay.set(e.date, (spentByDay.get(e.date) || 0) + e.amount);
     }
-    const points: Array<{ x: string; v: number }> = [];
-    let run = 0;
+    const spentPoints: Array<{ x: string; v: number }> = [];
+    const earnedPoints: Array<{ x: string; v: number }> = [];
+    let spentRun = 0;
+    let earnedRun = 0;
     for (let d = 1; d <= todayCap; d++) {
       const dayKey = `${month}-${pad(d)}`;
-      run += byDay.get(dayKey) || 0;
-      points.push({ x: String(d), v: Math.round(run) });
+      spentRun += spentByDay.get(dayKey) || 0;
+      earnedRun += earnedByDay.get(dayKey) || 0;
+      spentPoints.push({ x: String(d), v: Math.round(spentRun) });
+      earnedPoints.push({ x: String(d), v: Math.round(earnedRun) });
     }
-    return points;
+    return { cum: spentPoints, earnCum: earnedPoints };
   }, [st.list, month, todayCap, categoryIndex]);
 
   const recent = st.list.slice(0, 3);
+  const accent = getAccent();
   const spentPct = st.spendingBudget ? st.spent / st.spendingBudget : 0;
   const activeCat = hoverCat;
   const isStarting = wallet?.fundingMode === "starting";
@@ -264,14 +275,29 @@ export function Overview({
       </div>
 
       <section className="panel trend-panel" data-tour="tour-overview-trend">
-        <div className="panel-head">
+        <div className="panel-head trend-head">
           <div>
-            <h2>Spending this Month</h2>
+            <h2>Spending & Earning this Month</h2>
             <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}</p>
           </div>
-          <div className="trend-now">{fmtMoney(st.spent, { currency })}</div>
+          <div className="trend-totals">
+            <div className="trend-total">
+              <span className="trend-key"><i className="trend-dot" style={{ background: accent }} /> Spending</span>
+              <span className="trend-now">{fmtMoney(st.spent, { currency })}</span>
+            </div>
+            <div className="trend-total">
+              <span className="trend-key"><i className="trend-dot trend-dot--earn" /> Earning</span>
+              <span className="trend-now trend-now--earn">{fmtMoney(st.earned, { currency })}</span>
+            </div>
+          </div>
         </div>
-        <AreaTrend points={cum.length ? cum : [{ x: "1", v: 0 }]} accent={getAccent()} height={210} budgetLine={st.totalBudget} />
+        <AreaTrend
+          points={cum.length ? cum : [{ x: "1", v: 0 }]}
+          compare={earnCum.length ? earnCum : [{ x: "1", v: 0 }]}
+          accent={accent}
+          height={210}
+          budgetLine={st.totalBudget}
+        />
       </section>
 
       <div className="ov-grid ov-grid--charts">

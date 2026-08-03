@@ -85,7 +85,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("overview-summary", "Summary Cards", "These four cards show your pool, spending, savings, and remaining balance for the month.", '[data-tour="tour-overview-summary"]'),
     step("overview-oldest-todo", "Recent To-Do", "Up to three of your oldest to-do lists — tap to open TO-DO List.", '[data-tour="tour-overview-oldest-todo"]'),
     step("overview-today-schedule", "Recent Schedule", "Up to three remaining events for today, based on the current time when Overview loads.", '[data-tour="tour-overview-today-schedule"]'),
-    step("overview-trend", "Spending Trend", "Track cumulative spending against your total budget as the month progresses.", '[data-tour="tour-overview-trend"]', "top"),
+    step("overview-trend", "Spending & Earning Trend", "Track cumulative spending and earning against your total budget as the month progresses.", '[data-tour="tour-overview-trend"]', "top"),
     step("overview-donut", "By Category", "Hover slices to see how spending breaks down across categories.", '[data-tour="tour-overview-donut"]', "left"),
     lastStep("overview-recent", "Recent Transaction", "Up to three of your latest transactions. Tap one to edit, or See All for the full list.", '[data-tour="tour-overview-recent"]'),
   ],
