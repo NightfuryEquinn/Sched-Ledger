@@ -41,6 +41,12 @@ const LEAD_LABELS: Record<LeadId, string> = {
   "2d": "2 days before",
 };
 
+/** All-day events have no clock time, so reminders anchor to this local hour. */
+export const ALL_DAY_REMINDER_TIME = "09:00";
+
+/** All-day events fire "at" on the event day itself rather than at a clock time. */
+const ALL_DAY_AT_LABEL = "on the day of the event (9:00 AM)";
+
 /**
  * External cron poll cadence (cron-job.org should run at this interval).
  * Each run scans the database for reminders whose target time falls in the due window.
@@ -63,13 +69,29 @@ export function isReminderDueNow(
   return nowMs >= remindAtMs - earlyBufferMs && nowMs <= remindAtMs + pollIntervalMs;
 }
 
+/**
+ * True when an occurrence is far enough in the past that reminding is pointless.
+ * Mirrors the late tolerance of `isReminderDueNow`, so a zero-lead reminder
+ * (e.g. an all-day event at 09:00) still goes out when the poll lands just
+ * after the event time instead of being dropped.
+ */
+export function isOccurrencePast(
+  eventAtMs: number,
+  nowMs: number = Date.now(),
+  pollIntervalMs = REMINDER_POLL_INTERVAL_MS,
+): boolean {
+  return nowMs > eventAtMs + pollIntervalMs;
+}
+
 /** Milliseconds before event time for a given reminder lead id. */
 export function leadOffsetMs(lead: LeadId): number {
   return LEAD_MS[lead] ?? 0;
 }
 
 /** Human-readable reminder lead phrase (e.g. "1 day before"). */
-export function leadDescription(lead: LeadId): string {
+export function leadDescription(lead: LeadId, allDay = false): string {
+  if (allDay && lead === "at") return ALL_DAY_AT_LABEL;
+
   return LEAD_LABELS[lead] ?? LEAD_LABELS.at;
 }
 
@@ -120,7 +142,7 @@ export function eventTimeMs(
   allDay: boolean,
   timeZone = DEFAULT_TIMEZONE,
 ): number {
-  const hhmm = allDay ? "09:00" : (time ?? "09:00");
+  const hhmm = allDay ? ALL_DAY_REMINDER_TIME : (time ?? ALL_DAY_REMINDER_TIME);
   return zonedLocalToUtcMs(iso, hhmm, timeZone);
 }
 

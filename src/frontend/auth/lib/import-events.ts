@@ -204,7 +204,7 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
       errors.push({
         row: rowNum,
         message: allDay
-          ? `All-day events only support "1d" or "2d" lead (got "${lead}").`
+          ? `All-day events only support "at", "1d" or "2d" lead (got "${lead}").`
           : `Invalid lead "${lead}" for timed events.`,
       });
       return;

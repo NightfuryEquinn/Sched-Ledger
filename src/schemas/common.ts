@@ -42,8 +42,11 @@ export type RepeatId = (typeof REPEAT_IDS)[number];
 export const LEAD_IDS = ["at", "15m", "30m", "1h", "6h", "12h", "1d", "2d"] as const;
 export type LeadId = (typeof LEAD_IDS)[number];
 
-/** Reminder leads allowed for all-day events (days only). */
-export const ALL_DAY_LEAD_IDS = ["1d", "2d"] as const satisfies readonly LeadId[];
+/**
+ * Reminder leads allowed for all-day events: the day of the event itself
+ * (delivered at 09:00 in the user's timezone) plus whole-day offsets.
+ */
+export const ALL_DAY_LEAD_IDS = ["at", "1d", "2d"] as const satisfies readonly LeadId[];
 
 /** Reminder leads allowed for timed events. */
 export const TIMED_LEAD_IDS = LEAD_IDS;

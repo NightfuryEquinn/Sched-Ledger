@@ -28,7 +28,7 @@ function refineLeadForAllDay(data: { allDay?: boolean; lead?: LeadId }, ctx: z.R
     ctx.addIssue({
       code: "custom",
       message: allDay
-        ? "All-day events only support day-based reminders"
+        ? "All-day events only support day-of or day-based reminders"
         : "Invalid reminder lead for timed events",
       path: ["lead"],
     });

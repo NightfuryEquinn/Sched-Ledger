@@ -171,11 +171,25 @@ const LEAD_TIMES = [
 
 const LEAD_BY_ID = Object.fromEntries(LEAD_TIMES.map((l) => [l.id, l]));
 
-const ALL_DAY_LEAD_SET = new Set(["1d", "2d"]);
+const ALL_DAY_LEAD_SET = new Set(["at", "1d", "2d"]);
+
+/**
+ * All-day events have no clock time, so "at" means the morning of the event
+ * itself — the server sends it at 09:00 in the account timezone.
+ */
+const ALL_DAY_AT_LEAD = {
+  id: "at",
+  label: "On the day (9:00 AM)",
+  short: "on the day",
+} as const;
 
 /** Reminder dropdown options for the event modal. */
 export function leadTimesForEvent(allDay: boolean) {
-  return allDay ? LEAD_TIMES.filter((l) => ALL_DAY_LEAD_SET.has(l.id)) : LEAD_TIMES;
+  if (!allDay) return LEAD_TIMES;
+
+  return LEAD_TIMES.filter((l) => ALL_DAY_LEAD_SET.has(l.id)).map((l) =>
+    l.id === "at" ? ALL_DAY_AT_LEAD : l,
+  );
 }
 
 export { occursOn };
@@ -276,8 +290,10 @@ export function repeatLabel(ev) {
   return (REPEAT_BY_ID[ev.repeat] || REPEAT_BY_ID.once).label;
 }
 
-/** Human-readable lead-time label. */
-export function leadLabel(id) {
+/** Human-readable lead-time label ("at" reads differently for all-day events). */
+export function leadLabel(id, allDay = false) {
+  if (allDay && id === "at") return ALL_DAY_AT_LEAD.label;
+
   return (LEAD_BY_ID[id] || LEAD_BY_ID.at).label;
 }
 

@@ -5,6 +5,7 @@ import {
   candidateOccurrenceDates,
   eventTimeMs,
   formatEventWhen,
+  isOccurrencePast,
   isReminderDueNow,
   leadDescription,
   occursOn,
@@ -100,7 +101,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
 
   const when = formatEventWhen(doc.date, doc.time, doc.allDay, prefs.timezone);
   const category = eventCategoryLabel(doc);
-  const lead = leadDescription(doc.lead as LeadId);
+  const lead = leadDescription(doc.lead as LeadId, doc.allDay);
   const { html, text, subject } = reminderEmailHtml({
     title: GENERIC_EVENT_TITLE,
     when,
@@ -178,7 +179,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       if (!isReminderDueNow(remindAt, nowMs)) continue;
 
       /* Never send a reminder for an occurrence that has already happened. */
-      if (eventTimeMs(iso, ev.time, ev.allDay, prefs.timezone) < nowMs) {
+      if (isOccurrencePast(eventTimeMs(iso, ev.time, ev.allDay, prefs.timezone), nowMs)) {
         result.skipped++;
         continue;
       }
@@ -251,7 +252,7 @@ async function sendReminderOnce(
 
   const when = formatEventWhen(occurrenceIso, ev.time, ev.allDay, timezone);
   const category = eventCategoryLabel(ev);
-  const lead = leadDescription(ev.lead as LeadId);
+  const lead = leadDescription(ev.lead as LeadId, ev.allDay);
 
   const { html, text, subject } = reminderEmailHtml({
     title: GENERIC_EVENT_TITLE,
@@ -306,7 +307,7 @@ export async function sendImmediateReminderIfDue(
     if (!occursOn(doc, iso)) continue;
 
     const eventAt = eventTimeMs(iso, doc.time, doc.allDay, prefs.timezone);
-    if (eventAt < nowMs) continue; // occurrence already happened
+    if (isOccurrencePast(eventAt, nowMs)) continue; // occurrence already happened
 
     const remindAt = remindAtMs(doc, iso, prefs.timezone);
     if (!isReminderDueNow(remindAt, nowMs)) continue;
