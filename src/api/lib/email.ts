@@ -142,8 +142,8 @@ export function reminderEmailHtml(opts: {
     <tr><td style="padding:6px 0;color:#6b6560">Event</td><td style="padding:6px 0"><strong>${escapeHtml(opts.title)}</strong></td></tr>
     <tr><td style="padding:6px 0;color:#6b6560">When</td><td style="padding:6px 0">${escapeHtml(opts.when)}</td></tr>
     <tr><td style="padding:6px 0;color:#6b6560">Type</td><td style="padding:6px 0">${escapeHtml(opts.category)}</td></tr>
-    ${opts.hold ? `<tr><td style="padding:6px 0;color:#6b6560">Hold from budget</td><td style="padding:6px 0">${escapeHtml(opts.hold)}</td></tr>` : ""}
-    ${opts.isConfirmation ? `<tr><td style="padding:6px 0;color:#6b6560">Notify</td><td style="padding:6px 0">${escapeHtml(opts.lead)}</td></tr>` : ""}
+    ${opts.hold ? `<tr><td style="padding:6px 0;color:#6b6560">Hold</td><td style="padding:6px 0">${escapeHtml(opts.hold)}</td></tr>` : ""}
+    ${opts.isConfirmation ? `<tr><td style="padding:6px 0;color:#6b6560">Notify</td><td style="padding:6px 0">${escapeHtml(capitalizeFirst(opts.lead))}</td></tr>` : ""}
   </table>
   ${commentsHtml}
   <p style="margin:20px 0 0;font-size:13px;color:#8a8480">— Sched Ledger</p>
@@ -154,7 +154,7 @@ export function reminderEmailHtml(opts: {
     ? [`Reminder set for "${opts.title}" on ${opts.when}. We'll notify you ${opts.lead}.`]
     : [`Reminder: "${opts.title}" on ${opts.when} (${opts.category}).`];
 
-  if (opts.hold) lines.push(`Hold from budget: ${opts.hold}`);
+  if (opts.hold) lines.push(`Hold: ${opts.hold}`);
   if (comments.length) {
     lines.push("Comments:", ...comments.map((c) => `- ${c}`));
   }
@@ -203,6 +203,15 @@ export function budgetAlertEmailHtml(opts: {
     : `Budget exceeded: ${opts.categoryName} — ${opts.spentLabel} of ${opts.budgetLabel} for ${opts.monthLabel}.`;
 
   return { html, text, subject };
+}
+
+/**
+ * Upper-case the first letter so table values read as standalone labels
+ * ("On the day of the event"), while the same phrase stays lower-case where
+ * it is embedded mid-sentence.
+ */
+function capitalizeFirst(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /** Escape text for safe inclusion in HTML email bodies. */

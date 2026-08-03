@@ -19,7 +19,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ### Schedule & tasks
 
-- **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence (daily/weekly/monthly/yearly)
+- **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence (daily/weekly/biweekly/monthly/yearly)
 - **Budget holds** — optional encrypted envelope holds on any schedule event (amount + category); active holds reserve budget until you log payment or release the occurrence; amounts never leave the E2EE payload
 - **Log payment** — from a bill/renewal event, open a prefilled expense and link `eventId` ↔ `expenseId` (plaintext metadata only); also releases that occurrence's budget hold when present
 - **Email reminders** — optional Resend emails with per-event lead times and user timezone; confirmation when you enable notify; the email includes the event name, budget hold and comments, so turning notify on stores a readable copy (`notifyDetails`) for delivery — switching it off deletes that copy and events without reminders stay fully encrypted

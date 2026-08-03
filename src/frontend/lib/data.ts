@@ -152,6 +152,7 @@ export const REPEATS = [
   { id: "once", label: "One-time", adj: "Once" },
   { id: "daily", label: "Daily", adj: "Daily" },
   { id: "weekly", label: "Weekly", adj: "Weekly" },
+  { id: "biweekly", label: "Biweekly", adj: "Biweekly" },
   { id: "monthly", label: "Monthly", adj: "Monthly" },
   { id: "yearly", label: "Yearly", adj: "Yearly" },
 ];
