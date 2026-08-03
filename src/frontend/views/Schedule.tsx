@@ -203,7 +203,7 @@ function AgendaEventRow({
           {ev.notify ? (
             <span className="ag-bell">
               <Icon name="bell" size={11} />
-              <span>{leadLabel(ev.lead).toLowerCase()}</span>
+              <span>{leadLabel(ev.lead, ev.allDay).toLowerCase()}</span>
             </span>
           ) : null}
         </span>
@@ -293,7 +293,7 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
         <SummaryCard label="Events this Month" value={String(occ.length)} sub={monthLabel(month, true)} />
         <SummaryCard label="Next Reminder" tone="ok"
           value={nextRem ? dayLabel(nextRem.iso) : "—"}
-          sub={nextRem ? `${nextRem.ev.title} · ${leadLabel(nextRem.ev.lead).toLowerCase()}` : "no upcoming reminders"} />
+          sub={nextRem ? `${nextRem.ev.title} · ${leadLabel(nextRem.ev.lead, nextRem.ev.allDay).toLowerCase()}` : "no upcoming reminders"} />
         <SummaryCard label="Email Reminders" value={String(alertsCount)} sub="occurrences will notify you" />
       </div>
 

@@ -136,7 +136,7 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
   if (!isLeadAllowedForEvent(mergedLead, mergedAllDay)) {
     throw new HTTPException(400, {
       message: mergedAllDay
-        ? "All-day events only support 1 day or 2 days before reminders"
+        ? "All-day events only support day-of, 1 day or 2 days before reminders"
         : "Invalid reminder lead for timed events",
     });
   }

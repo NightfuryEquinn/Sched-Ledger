@@ -1436,6 +1436,20 @@ h1, h2, h3 {
   overflow: auto;
 }
 
+/*
+ * Lead rows reuse .picker-timezone-item but render a label only — drop the
+ * 84px offset column so the option text gets the full menu width.
+ */
+.picker-menu--lead .picker-timezone-item {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.picker-menu--lead .pti-label {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .picker-currency-list, .picker-timezone-list, .picker-category-list {
   display: flex;
   flex-direction: column;
@@ -4242,6 +4256,14 @@ h1, h2, h3 {
   border-radius: var(--r-lg);
   padding: 15px;
   margin-bottom: var(--sp-5);
+}
+
+/* Half a phone-width column clips the lead label, so stack the reminder fields. */
+@media (max-width: 560px) {
+  .notify-card .fld-2col {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-4);
+  }
 }
 
 .event-div {
