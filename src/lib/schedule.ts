@@ -113,6 +113,9 @@ export function occursOn(ev: OccurrenceEvent, iso: string): boolean {
       return true;
     case "weekly":
       return a.getDay() === b.getDay();
+    case "biweekly":
+      /* Every other week from the start date, so a 14-day stride from `ev.date`. */
+      return (isoDayNumber(iso) - isoDayNumber(ev.date)) % 14 === 0;
     case "monthly":
       return a.getDate() === b.getDate();
     case "yearly":
@@ -164,7 +167,7 @@ export function formatEventWhen(
     month: "long",
     year: "numeric",
   }).format(new Date(noonMs));
-  if (allDay) return `${day} (all day)`;
+  if (allDay) return `${day} (All day)`;
   if (!time) return day;
   const [h, m] = time.split(":").map(Number);
   const ap = h < 12 ? "AM" : "PM";
@@ -174,6 +177,13 @@ export function formatEventWhen(
     .find((p) => p.type === "timeZoneName")?.value;
   const suffix = tzLabel ? ` ${tzLabel}` : "";
   return `${day} at ${hh}:${String(m).padStart(2, "0")} ${ap}${suffix}`;
+}
+
+/** Whole days since the epoch for an ISO date, unaffected by local DST shifts. */
+function isoDayNumber(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+
+  return Date.UTC(y!, m! - 1, d!) / 86_400_000;
 }
 
 function formatIsoDate(d: Date): string {

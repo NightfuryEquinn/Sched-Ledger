@@ -36,7 +36,7 @@ export const EVENT_CATEGORY_IDS = [
   "custom",
 ] as const;
 
-export const REPEAT_IDS = ["once", "daily", "weekly", "monthly", "yearly"] as const;
+export const REPEAT_IDS = ["once", "daily", "weekly", "biweekly", "monthly", "yearly"] as const;
 export type RepeatId = (typeof REPEAT_IDS)[number];
 
 export const LEAD_IDS = ["at", "15m", "30m", "1h", "6h", "12h", "1d", "2d"] as const;

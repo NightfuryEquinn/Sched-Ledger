@@ -14,7 +14,7 @@ describe("reminderEmailHtml", () => {
     expect(html).toContain("Upcoming event");
     expect(html).toContain("Appointment");
     expect(html).not.toContain("Dentist");
-    expect(html).not.toContain("Hold from budget");
+    expect(html).not.toContain(">Hold<");
     expect(html).not.toContain("Comments");
     expect(text).toContain("Upcoming event");
     expect(text).not.toContain("Dentist");
@@ -33,6 +33,20 @@ describe("reminderEmailHtml", () => {
     expect(text).toContain("Upcoming event");
   });
 
+  test("the notify row capitalizes the lead while the intro keeps it mid-sentence", () => {
+    const { html } = reminderEmailHtml({
+      title: "Fix Airconditioner",
+      when: "Saturday, August 8, 2026 (All day)",
+      category: "Appointment",
+      lead: "on the day of the event (9:00 AM)",
+      isConfirmation: true,
+    });
+
+    expect(html).toContain(">On the day of the event (9:00 AM)</td>");
+    expect(html).toContain("We'll email you <strong>on the day of the event (9:00 AM)</strong>");
+    expect(html).toContain("(All day)");
+  });
+
   test("renders the event name, budget hold and comments when supplied", () => {
     const { subject, html, text } = reminderEmailHtml({
       title: "Dentist",
@@ -45,12 +59,13 @@ describe("reminderEmailHtml", () => {
 
     expect(subject).toBe("Upcoming: Dentist");
     expect(html).toContain("Dentist");
-    expect(html).toContain("Hold from budget");
+    expect(html).toContain(">Hold<");
+    expect(html).not.toContain("Hold from budget");
     expect(html).toContain("RM 120 from Health");
     expect(html).toContain("Bring card");
     expect(html).toContain("Ask about the crown");
     expect(text).toContain('"Dentist"');
-    expect(text).toContain("Hold from budget: RM 120 from Health");
+    expect(text).toContain("Hold: RM 120 from Health");
     expect(text).toContain("- Bring card");
   });
 
