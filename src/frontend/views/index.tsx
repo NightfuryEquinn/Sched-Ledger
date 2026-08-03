@@ -40,6 +40,7 @@ import {
   chartActiveKey,
   chartBudgetForPeriod,
   chartSelectionMonth,
+  dayFlowSeries,
   isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
   recurringDueDay,
   recurringLabel,
@@ -155,31 +156,29 @@ export function Overview({
   const [yy, mm] = month.split("-").map(Number);
   const days = new Date(yy, mm, 0).getDate();
   const todayCap = month === CURRENT_MONTH_KEY ? CURRENT_DAY : days;
+  /** Per-day spend / income split by source — powers the trend hover card. */
+  const dayFlows = useMemo(
+    () => dayFlowSeries(st.list, month, categoryIndex, todayCap),
+    [st.list, month, categoryIndex, todayCap],
+  );
+  const trendDetails = useMemo(
+    () => dayFlows.map((f) => ({ ...f, label: `${weekdayLabel(f.day)}, ${dayLabel(f.day)}` })),
+    [dayFlows],
+  );
   /** Cumulative spend and earnings per day of the selected month. */
   const { cum, earnCum } = useMemo(() => {
-    const spentByDay = new Map<string, number>();
-    const earnedByDay = new Map<string, number>();
-    for (const e of st.list) {
-      if (isIncome(e)) {
-        earnedByDay.set(e.date, (earnedByDay.get(e.date) || 0) + e.amount);
-        continue;
-      }
-      if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
-      spentByDay.set(e.date, (spentByDay.get(e.date) || 0) + e.amount);
-    }
     const spentPoints: Array<{ x: string; v: number }> = [];
     const earnedPoints: Array<{ x: string; v: number }> = [];
     let spentRun = 0;
     let earnedRun = 0;
-    for (let d = 1; d <= todayCap; d++) {
-      const dayKey = `${month}-${pad(d)}`;
-      spentRun += spentByDay.get(dayKey) || 0;
-      earnedRun += earnedByDay.get(dayKey) || 0;
-      spentPoints.push({ x: String(d), v: Math.round(spentRun) });
-      earnedPoints.push({ x: String(d), v: Math.round(earnedRun) });
+    for (const flow of dayFlows) {
+      spentRun += flow.spent;
+      earnedRun += flow.earned;
+      spentPoints.push({ x: flow.label, v: Math.round(spentRun) });
+      earnedPoints.push({ x: flow.label, v: Math.round(earnedRun) });
     }
     return { cum: spentPoints, earnCum: earnedPoints };
-  }, [st.list, month, todayCap, categoryIndex]);
+  }, [dayFlows]);
 
   const recent = st.list.slice(0, 3);
   const accent = getAccent();
@@ -279,7 +278,9 @@ export function Overview({
         <div className="panel-head trend-head">
           <div>
             <h2>Spending & Earning this Month</h2>
-            <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}</p>
+            <p className="panel-sub">
+              Cumulative · hover a day for its categories · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}
+            </p>
           </div>
           <div className="trend-totals">
             <div className="trend-total">
@@ -298,6 +299,8 @@ export function Overview({
           accent={accent}
           height={210}
           budgetLine={st.totalBudget}
+          details={trendDetails.length ? trendDetails : null}
+          format={(n) => fmtMoney(n, { currency })}
         />
       </section>
 
@@ -592,19 +595,32 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
   const chartMonths = useMemo(() => monthsWindow(month), [month]);
 
-  /** Pre-aggregate outgoing spend by month and category once for Insights charts. */
+  /** Pre-aggregate spend and income by month and category once for Insights charts. */
   const monthlyAgg = useMemo(() => {
     const monthKeys = new Set(chartMonths.map((m) => m.key));
-    const byMonth = new Map<string, { spent: number; byCat: Record<string, number> }>();
-    for (const key of monthKeys) byMonth.set(key, { spent: 0, byCat: {} });
+    type Bucket = {
+      spent: number;
+      earned: number;
+      byCat: Record<string, number>;
+      /** Income keyed by subcategory — most wallets have a single income category. */
+      byIncomeSub: Record<string, number>;
+    };
+    const byMonth = new Map<string, Bucket>();
+    for (const key of monthKeys) byMonth.set(key, { spent: 0, earned: 0, byCat: {}, byIncomeSub: {} });
 
     for (const e of expenses) {
       const key = e.date.slice(0, 7);
       if (!monthKeys.has(key)) continue;
-      if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
       const bucket = byMonth.get(key)!;
-      bucket.spent += e.amount;
       const cat = catOf(e.sub, categoryIndex);
+
+      if (isIncome(e)) {
+        bucket.earned += e.amount;
+        bucket.byIncomeSub[e.sub] = (bucket.byIncomeSub[e.sub] || 0) + e.amount;
+        continue;
+      }
+      if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
+      bucket.spent += e.amount;
       bucket.byCat[cat] = (bucket.byCat[cat] || 0) + e.amount;
     }
 
@@ -615,6 +631,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     return spendingChartSeries(chartPeriod, expenses, month, categoryIndex).map((bar) => ({
       ...bar,
       spent: roundMoney(fxConvert(bar.spent, currency, displayCurrency, fxRates)),
+      earned: roundMoney(fxConvert(bar.earned, currency, displayCurrency, fxRates)),
     }));
   }, [chartPeriod, expenses, month, categoryIndex, currency, displayCurrency, fxRates]);
   const chartBudget = useMemo(
@@ -678,6 +695,76 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const maxSub = topSubs.length ? topSubs[0].v : 1;
 
   const avgSpent = roundMoney(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
+
+  // ── Income ────────────────────────────────────────────────────────
+  /** Income totals per subcategory for one month's transactions. */
+  const incomeBySub = (list: Expense[]) => {
+    const totals: Record<string, number> = {};
+    for (const e of list) {
+      if (!isIncome(e)) continue;
+      totals[e.sub] = (totals[e.sub] || 0) + e.amount;
+    }
+
+    return totals;
+  };
+
+  /** One row per income source that has ever paid out inside the chart window. */
+  const incomeRows = useMemo(() => {
+    const now = incomeBySub(cur.list);
+    const was = prev ? incomeBySub(prev.list) : {};
+    const sources = new Set([...Object.keys(now), ...Object.keys(was)]);
+    for (const mo of chartMonths) {
+      for (const sub of Object.keys(monthlyAgg.get(mo.key)?.byIncomeSub ?? {})) sources.add(sub);
+    }
+
+    return [...sources]
+      .map((sub) => {
+        const meta = categoryIndex.subById[sub];
+        const cat = meta ? categoryIndex.catById[meta.catId] : null;
+        const amount = now[sub] || 0;
+        const before = was[sub] || 0;
+        const series = chartMonths.map((mo) =>
+          roundMoney(
+            fxConvert(monthlyAgg.get(mo.key)?.byIncomeSub[sub] || 0, currency, displayCurrency, fxRates),
+          ),
+        );
+
+        return {
+          sub,
+          name: meta?.name ?? sub,
+          cat,
+          now: amount,
+          delta: before ? (amount - before) / before : amount > 0 ? 1 : 0,
+          series,
+        };
+      })
+      .filter((row) => row.cat)
+      .sort((a, b) => b.now - a.now);
+  }, [
+    categoryIndex.subById,
+    categoryIndex.catById,
+    cur.list,
+    prev,
+    chartMonths,
+    monthlyAgg,
+    currency,
+    displayCurrency,
+    fxRates,
+  ]);
+
+  // top income sources this month
+  const topIncomeSubs = Object.entries(incomeBySub(cur.list))
+    .map(([sub, v]) => ({ sub, v }))
+    .sort((a, b) => b.v - a.v)
+    .slice(0, 6);
+  const maxIncomeSub = topIncomeSubs.length ? topIncomeSubs[0].v : 1;
+
+  const avgEarned = roundMoney(
+    chartMonths.reduce((s, mo) => s + (monthlyAgg.get(mo.key)?.earned || 0), 0) / chartMonths.length,
+  );
+  const earnedDelta = prev ? cur.earned - prev.earned : 0;
+  const netKept = cur.earned - cur.spent;
+  const keptPct = cur.earned ? Math.round((netKept / cur.earned) * 100) : 0;
   const rateLine = fxRateLabel(currency, displayCurrency, fxRates);
   const fxNote =
     fxStatus === "loading"
@@ -688,7 +775,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           ? `View only · ${rateLine}`
           : "Wallet currency";
 
-  const chartSub =
+  const chartPeriodSub =
     chartPeriod === "daily"
       ? `Daily spend in ${monthLabel(month, true)} · dashed line is daily budget`
       : chartPeriod === "quarterly"
@@ -696,6 +783,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         : chartPeriod === "yearly"
           ? "Total spend by year · dashed line is yearly budget · tap a bar to view"
           : "Total spend · dashed line is budget · tap a bar to view";
+  const chartSub = `${chartPeriodSub} · hover for spend & income`;
 
   const habit = useMemo(
     () => assessSpendingHabit(expenses, habitPeriod, month, categoryIndex),
@@ -817,6 +905,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           activeKey={activeChartKey}
           onSelect={(key) => setMonth(chartSelectionMonth(chartPeriod, key))}
           budget={chartBudget}
+          format={money}
         />
       </section>
 
@@ -853,6 +942,78 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
             })}
           </div>
         </section>
+      </div>
+
+      <div className="insights-section" data-tour="tour-insights-income">
+        <div className="insights-section-head">
+          <h2>Income</h2>
+          <p className="panel-sub">Where money came in, and how much of it survived the month</p>
+        </div>
+
+        <div className="summary-grid">
+          <SummaryCard label="Income This Month" tone="saved" value={money(cur.earned)} sub={monthLabel(month)} />
+          <SummaryCard
+            label="Vs Last Month"
+            tone={!prev || earnedDelta === 0 ? undefined : earnedDelta > 0 ? "saved" : "danger"}
+            value={prev ? (earnedDelta >= 0 ? "+" : "−") + money(Math.abs(earnedDelta)) : "—"}
+            sub={
+              prev
+                ? `${Math.round(Math.abs(earnedDelta) / (prev.earned || 1) * 100)}% ${earnedDelta >= 0 ? "higher" : "lower"}`
+                : "no prior data"
+            }
+          />
+          <SummaryCard label="6-Month Average" value={money(avgEarned)} sub="monthly income" />
+          <SummaryCard
+            label="Net Kept"
+            tone={netKept < 0 ? "danger" : "ok"}
+            value={money(netKept)}
+            sub={cur.earned ? `${keptPct}% of income kept` : "no income recorded"}
+          />
+        </div>
+
+        <div className="ov-grid">
+          <section className="panel">
+            <div className="panel-head"><h2>Income Trends</h2><p className="panel-sub">by source · vs previous month</p></div>
+            <div className="cat-trend-list">
+              {incomeRows.length ? incomeRows.map(({ sub, name, cat, now, delta, series }) => (
+                <div key={sub} className="ctrow">
+                  <div className="ct-name"><CatGlyph glyph={cat!.glyph} id={cat!.id} /> {name}</div>
+                  <MiniSpark values={series} color={cat!.color} />
+                  <div className="ct-amt">{money(now)}</div>
+                  <div className={"ct-delta ct-delta--income " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")}>
+                    {delta > 0.001 ? "▲" : delta < -0.001 ? "▼" : "—"} {Math.abs(Math.round(delta * 100))}%
+                  </div>
+                </div>
+              )) : (
+                <EmptyState title="No Income Yet" sub="Log an income transaction to see trends here." />
+              )}
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="panel-head"><h2>Top Income Sources</h2><p className="panel-sub">{monthLabel(month, true)}</p></div>
+            <div className="topsub-list">
+              {topIncomeSubs.length ? topIncomeSubs.map(({ sub, v }) => {
+                const s = categoryIndex.subById[sub];
+                const c = s ? categoryIndex.catById[s.catId] : null;
+                if (!s || !c) return null;
+                return (
+                  <div key={sub} className="ts-row">
+                    <div className="ts-head">
+                      <span>{s.name} <span className="ts-cat">· {c.name}</span></span>
+                      <span className="ts-amt">{money(v)}</span>
+                    </div>
+                    <div className="ts-track">
+                      <div className="ts-fill" style={{ width: (v / maxIncomeSub) * 100 + "%", background: c.color }} />
+                    </div>
+                  </div>
+                );
+              }) : (
+                <EmptyState title="Nothing Earned" sub={`No income recorded in ${monthLabel(month, true)}.`} />
+              )}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

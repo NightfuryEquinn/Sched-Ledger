@@ -13,6 +13,7 @@ import { catOfSub, isIncomeCategory, isSavingsSub, isSpendingCategory } from "./
 import { CURRENT_MONTH_KEY, SUB_BY_ID, TODAY_ISO, monthLabel, monthsWindow, roundMoney } from "./data";
 import type { Budgets, Expense, FinancialWallet, LedgerEvent } from "./types";
 import { holdsByCategory, totalActiveHolds } from "./envelope-holds";
+import { displayGlyph } from "@/lib/glyphs";
 
 export {
   normalizeRecurring,
@@ -25,7 +26,7 @@ export {
 export type { RecurringField, RecurringInterval };
 
 export type ChartPeriod = "daily" | "monthly" | "quarterly" | "yearly";
-export type ChartBar = { key: string; label: string; spent: number };
+export type ChartBar = { key: string; label: string; spent: number; earned: number };
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -50,13 +51,24 @@ function quartersWindow(anchorMonth: string, size = 6) {
   return out;
 }
 
-function outgoingSpend(expenses: Expense[], index?: CategoryIndex) {
-  return expenses.filter((e) => isOutgoing(e) && !isSavings(e, index));
-}
+/**
+ * Spend (outgoing, excluding savings envelopes) and income totals for a set of
+ * transactions, rounded to cents so float drift never leaks into a bar.
+ */
+function flowTotals(expenses: Expense[], index?: CategoryIndex) {
+  let spent = 0;
+  let earned = 0;
 
-/** Total outgoing amounts, rounded to cents so float drift never leaks into a bar. */
-function roundSpent(expenses: Expense[]) {
-  return roundMoney(expenses.reduce((s, e) => s + e.amount, 0));
+  for (const e of expenses) {
+    if (isIncome(e)) {
+      earned += e.amount;
+      continue;
+    }
+    if (isSavings(e, index)) continue;
+    spent += e.amount;
+  }
+
+  return { spent: roundMoney(spent), earned: roundMoney(earned) };
 }
 
 export function spendingChartSeries(
@@ -71,16 +83,16 @@ export function spendingChartSeries(
     const bars: ChartBar[] = [];
     for (let d = 1; d <= days; d++) {
       const key = `${anchorMonth}-${pad2(d)}`;
-      const spent = roundSpent(outgoingSpend(expenses.filter((e) => e.date === key), index));
-      bars.push({ key, label: String(d), spent });
+      const totals = flowTotals(expenses.filter((e) => e.date === key), index);
+      bars.push({ key, label: String(d), ...totals });
     }
     return bars;
   }
 
   if (period === "monthly") {
     return monthsWindow(anchorMonth).map((mo) => {
-      const spent = roundSpent(outgoingSpend(monthExpenses(expenses, mo.key), index));
-      return { key: mo.key, label: monthLabel(mo.key).split(" ")[0], spent };
+      const totals = flowTotals(monthExpenses(expenses, mo.key), index);
+      return { key: mo.key, label: monthLabel(mo.key).split(" ")[0], ...totals };
     });
   }
 
@@ -88,11 +100,19 @@ export function spendingChartSeries(
     return quartersWindow(anchorMonth).map(({ year, quarter, key, label }) => {
       const startM = (quarter - 1) * 3 + 1;
       let spent = 0;
+      let earned = 0;
       for (let i = 0; i < 3; i++) {
         const monthKey = `${year}-${pad2(startM + i)}`;
-        spent += roundSpent(outgoingSpend(monthExpenses(expenses, monthKey), index));
+        const totals = flowTotals(monthExpenses(expenses, monthKey), index);
+        spent += totals.spent;
+        earned += totals.earned;
       }
-      return { key, label: `${label} '${String(year).slice(2)}`, spent: roundMoney(spent) };
+      return {
+        key,
+        label: `${label} '${String(year).slice(2)}`,
+        spent: roundMoney(spent),
+        earned: roundMoney(earned),
+      };
     });
   }
 
@@ -101,12 +121,124 @@ export function spendingChartSeries(
   for (let i = 5; i >= 0; i--) {
     const year = anchorYear - i;
     const key = String(year);
-    const spent = roundSpent(
-      outgoingSpend(expenses.filter((e) => e.date.startsWith(`${year}-`)), index),
-    );
-    bars.push({ key, label: key, spent });
+    const totals = flowTotals(expenses.filter((e) => e.date.startsWith(`${year}-`)), index);
+    bars.push({ key, label: key, ...totals });
   }
   return bars;
+}
+
+/**
+ * One line of a day's spend or income: a subcategory total, carrying its
+ * parent category's name, color, and glyph so the row reads in context.
+ */
+export type FlowEntry = {
+  id: string;
+  name: string;
+  cat: string;
+  color: string;
+  glyph: string;
+  amount: number;
+  count: number;
+};
+
+/** A single day of the trend line, broken down by spend / income source. */
+export type DayFlow = {
+  /** ISO date, `YYYY-MM-DD`. */
+  day: string;
+  /** Day of month, matching the trend chart's x label. */
+  label: string;
+  spent: number;
+  earned: number;
+  spend: FlowEntry[];
+  earn: FlowEntry[];
+};
+
+/** Display meta for a subcategory, falling back to the static taxonomy. */
+function subMetaOf(sub: string, index?: CategoryIndex) {
+  const catId = catOf(sub, index);
+  const cat = index?.catById[catId];
+  const fallback = SUB_BY_ID[sub];
+
+  return {
+    id: sub,
+    name: index?.subById[sub]?.name ?? fallback?.name ?? sub,
+    cat: cat?.name ?? (catId || "Uncategorized"),
+    color: cat?.color ?? fallback?.color ?? "#8b93a1",
+    glyph: displayGlyph(cat?.glyph, catId),
+  };
+}
+
+/** Fold one transaction into a day's per-subcategory bucket. */
+function addToBucket(bucket: Map<string, FlowEntry>, e: Expense, index?: CategoryIndex) {
+  const prev = bucket.get(e.sub);
+
+  if (prev) {
+    prev.amount += e.amount;
+    prev.count += 1;
+    return;
+  }
+
+  bucket.set(e.sub, { ...subMetaOf(e.sub, index), amount: e.amount, count: 1 });
+}
+
+/** Largest slice first, then alphabetical so equal amounts keep a stable order. */
+function byAmountDesc(a: FlowEntry, b: FlowEntry) {
+  return b.amount - a.amount || a.name.localeCompare(b.name);
+}
+
+function sealEntries(bucket?: Map<string, FlowEntry>) {
+  return [...(bucket?.values() ?? [])]
+    .map((entry) => ({ ...entry, amount: roundMoney(entry.amount) }))
+    .sort(byAmountDesc);
+}
+
+/**
+ * Per-day spend and income for `monthKey`, each broken down by subcategory
+ * with its parent category attached. Mirrors the overview trend line: savings
+ * envelopes are left out of spend. Days run 1..`upToDay` (defaults to the whole
+ * month) so the series lines up with the plotted points.
+ */
+export function dayFlowSeries(
+  expenses: Expense[],
+  monthKey: string,
+  index?: CategoryIndex,
+  upToDay?: number,
+): DayFlow[] {
+  const [year, month] = monthKey.split("-").map(Number);
+  const days = new Date(year, month, 0).getDate();
+  const last = Math.max(1, Math.min(upToDay ?? days, days));
+  const spendByDay = new Map<string, Map<string, FlowEntry>>();
+  const earnByDay = new Map<string, Map<string, FlowEntry>>();
+
+  for (const e of expenses) {
+    if (!inMonth(e.date, monthKey)) continue;
+    const income = isIncome(e);
+    if (!income && isSavings(e, index)) continue;
+    const target = income ? earnByDay : spendByDay;
+    let bucket = target.get(e.date);
+    if (!bucket) {
+      bucket = new Map();
+      target.set(e.date, bucket);
+    }
+    addToBucket(bucket, e, index);
+  }
+
+  const out: DayFlow[] = [];
+  for (let d = 1; d <= last; d++) {
+    const day = `${monthKey}-${pad2(d)}`;
+    const spend = sealEntries(spendByDay.get(day));
+    const earn = sealEntries(earnByDay.get(day));
+    out.push({
+      day,
+      label: String(d),
+      spent: roundMoney(spend.reduce((s, x) => s + x.amount, 0)),
+      earned: roundMoney(earn.reduce((s, x) => s + x.amount, 0)),
+      spend,
+      earn,
+    });
+  }
+
+  return out;
 }
 
 export function chartActiveKey(period: ChartPeriod, anchorMonth: string) {
