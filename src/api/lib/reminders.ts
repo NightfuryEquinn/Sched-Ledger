@@ -3,17 +3,17 @@ import { formatMoneyLabel } from "@/api/lib/money";
 import { getCollections, getDb } from "@/db";
 import type { EventDocument } from "@/db/collections";
 import {
-  candidateOccurrenceDates,
-  eventTimeMs,
-  formatEventWhen,
+  formatOccurrenceWhen,
   isOccurrencePast,
   isReminderDueNow,
   leadDescription,
-  occursOn,
-  remindAtMs,
+  occurrenceEndMs,
+  reminderTargets,
+  spanDays,
+  type ReminderTarget,
 } from "@/lib/schedule";
 import { DEFAULT_TIMEZONE } from "@/lib/timezone";
-import type { LeadId } from "@/schemas/common";
+import { spanDaysBetween, type LeadId } from "@/schemas/common";
 import { ObjectId } from "mongodb";
 
 const EVENT_CAT_NAMES: Record<string, string> = {
@@ -38,6 +38,11 @@ function eventCategoryLabel(doc: { catId: string }): string {
 
 /** Fallback title for events saved without a plaintext copy for delivery. */
 const GENERIC_EVENT_TITLE = "Upcoming event";
+
+/** 1-based position of a target's day within its occurrence. */
+function dayNumberInSpan(target: ReminderTarget): number {
+  return spanDaysBetween(target.occurrenceIso, target.dayIso);
+}
 
 /**
  * Content rendered in reminder emails. Event secrets are E2EE, so this comes
@@ -129,9 +134,14 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   const prefs = await userReminderPrefs(doc.accountId);
   if (!prefs.remindersEnabled) return;
 
-  const when = formatEventWhen(doc.date, doc.time, doc.allDay, prefs.timezone);
+  const when = formatOccurrenceWhen(doc, doc.date, prefs.timezone);
   const category = eventCategoryLabel(doc);
-  const lead = leadDescription(doc.lead as LeadId, doc.allDay);
+  const span = spanDays(doc);
+  /* Multi-day events also get a daily nudge, so say so up front. */
+  const lead =
+    span > 1
+      ? `${leadDescription(doc.lead as LeadId, doc.allDay)}, then each morning it is still running`
+      : leadDescription(doc.lead as LeadId, doc.allDay);
   const { html, text, subject } = reminderEmailHtml({
     ...reminderContent(doc),
     when,
@@ -172,7 +182,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
 
   type PendingSend = {
     ev: EventDocument;
-    iso: string;
+    target: ReminderTarget;
     email: string;
     timezone: string;
   };
@@ -200,21 +210,16 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       continue;
     }
 
-    const dates = candidateOccurrenceDates(ev.lead as LeadId, now);
+    for (const target of reminderTargets(ev, now, prefs.timezone)) {
+      if (!isReminderDueNow(target.remindAtMs, nowMs)) continue;
 
-    for (const iso of dates) {
-      if (!occursOn(ev, iso)) continue;
-
-      const remindAt = remindAtMs(ev, iso, prefs.timezone);
-      if (!isReminderDueNow(remindAt, nowMs)) continue;
-
-      /* Never send a reminder for an occurrence that has already happened. */
-      if (isOccurrencePast(eventTimeMs(iso, ev.time, ev.allDay, prefs.timezone), nowMs)) {
+      /* Never remind about an occurrence that has already finished. */
+      if (isOccurrencePast(occurrenceEndMs(ev, target.occurrenceIso, prefs.timezone), nowMs)) {
         result.skipped++;
         continue;
       }
 
-      pending.push({ ev, iso, email, timezone: prefs.timezone });
+      pending.push({ ev, target, email, timezone: prefs.timezone });
     }
   }
 
@@ -223,8 +228,8 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
     const logFilter = {
       $or: pending.map((p) => ({
         eventId: p.ev._id,
-        occurrenceIso: p.iso,
-        lead: p.ev.lead,
+        occurrenceIso: p.target.dayIso,
+        lead: p.target.logLead,
       })),
     };
     const existingLogs = await reminderLogs.find(logFilter).toArray();
@@ -233,7 +238,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
     );
 
     const toSend = pending.filter((p) => {
-      const key = `${p.ev._id.toHexString()}|${p.iso}|${p.ev.lead}`;
+      const key = `${p.ev._id.toHexString()}|${p.target.dayIso}|${p.target.logLead}`;
       if (existingKeys.has(key)) {
         result.skipped++;
 
@@ -244,7 +249,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
     });
 
     const outcomes = await mapPool(toSend, SEND_CONCURRENCY, (item) =>
-      sendReminderOnce(item.ev, item.iso, item.email, item.timezone, true),
+      sendReminderOnce(item.ev, item.target, item.email, item.timezone, true),
     );
 
     for (const outcome of outcomes) {
@@ -258,12 +263,12 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
 }
 
 /**
- * Sends a reminder email for one occurrence, deduped via reminderLogs.
- * Returns "skipped" when a log entry already exists for this occurrence.
+ * Sends a reminder email for one target, deduped via reminderLogs.
+ * Returns "skipped" when a log entry already exists for it.
  */
 async function sendReminderOnce(
   ev: EventDocument,
-  occurrenceIso: string,
+  target: ReminderTarget,
   email: string,
   timezone: string,
   alreadyChecked = false,
@@ -271,8 +276,8 @@ async function sendReminderOnce(
   const { reminderLogs } = getCollections(getDb());
   const logKey = {
     eventId: ev._id,
-    occurrenceIso,
-    lead: ev.lead,
+    occurrenceIso: target.dayIso,
+    lead: target.logLead,
   };
 
   if (!alreadyChecked) {
@@ -280,9 +285,14 @@ async function sendReminderOnce(
     if (existing) return "skipped";
   }
 
-  const when = formatEventWhen(occurrenceIso, ev.time, ev.allDay, timezone);
+  const span = spanDays(ev);
+  const when = formatOccurrenceWhen(ev, target.occurrenceIso, timezone);
   const category = eventCategoryLabel(ev);
-  const lead = leadDescription(ev.lead as LeadId, ev.allDay);
+  /* A "still running" send is about today, not about a lead time. */
+  const lead =
+    target.kind === "ongoing"
+      ? `while this event is running (day ${dayNumberInSpan(target)} of ${span})`
+      : leadDescription(ev.lead as LeadId, ev.allDay);
 
   const { html, text, subject } = reminderEmailHtml({
     ...reminderContent(ev),
@@ -333,18 +343,16 @@ export async function sendImmediateReminderIfDue(
 
   const nowMs = now.getTime();
 
-  for (const iso of candidateOccurrenceDates(doc.lead as LeadId, now)) {
-    if (!occursOn(doc, iso)) continue;
+  for (const target of reminderTargets(doc, now, prefs.timezone)) {
+    /* Occurrence already finished. */
+    if (isOccurrencePast(occurrenceEndMs(doc, target.occurrenceIso, prefs.timezone), nowMs)) continue;
+    if (!isReminderDueNow(target.remindAtMs, nowMs)) continue;
 
-    const eventAt = eventTimeMs(iso, doc.time, doc.allDay, prefs.timezone);
-    if (isOccurrencePast(eventAt, nowMs)) continue; // occurrence already happened
-
-    const remindAt = remindAtMs(doc, iso, prefs.timezone);
-    if (!isReminderDueNow(remindAt, nowMs)) continue;
-
-    const outcome = await sendReminderOnce(doc, iso, email, prefs.timezone);
+    const outcome = await sendReminderOnce(doc, target, email, prefs.timezone);
     if (typeof outcome !== "string") {
-      console.error(`[reminders] immediate send failed for event ${doc._id} (${iso}): ${outcome.error}`);
+      console.error(
+        `[reminders] immediate send failed for event ${doc._id} (${target.dayIso}): ${outcome.error}`,
+      );
     }
   }
 }

@@ -223,8 +223,10 @@ export type EventWire = {
   id: string;
   catId: LedgerEvent["catId"];
   date: string;
+  endDate?: string | null;
   allDay: boolean;
   time: string | null;
+  endTime?: string | null;
   repeat: LedgerEvent["repeat"];
   exceptDates?: string[];
   until?: string | null;
@@ -333,8 +335,10 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
         id: wire.id,
         catId: wire.catId,
         date: wire.date,
+        endDate: wire.endDate ?? null,
         allDay: wire.allDay,
         time: wire.time,
+        endTime: wire.endTime ?? null,
         repeat: wire.repeat,
         exceptDates: wire.exceptDates,
         until: wire.until,
@@ -362,8 +366,10 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
     customLabel: wire.customLabel,
     customGlyph: wire.customGlyph,
     date: wire.date,
+    endDate: wire.endDate ?? null,
     allDay: wire.allDay,
     time: wire.time,
+    endTime: wire.endTime ?? null,
     repeat: wire.repeat,
     exceptDates: wire.exceptDates,
     until: wire.until,
@@ -396,8 +402,10 @@ export async function encodeEventCreate(
   return {
     catId: event.catId,
     date: event.date,
+    endDate: event.endDate ?? null,
     allDay: event.allDay,
     time: event.time,
+    endTime: event.endTime ?? null,
     repeat: event.repeat,
     notify: event.notify,
     lead: event.lead,
@@ -432,8 +440,10 @@ export async function encodeEventUpdate(
 
   if (event.catId !== undefined) patch.catId = event.catId;
   if (event.date !== undefined) patch.date = event.date;
+  if (event.endDate !== undefined) patch.endDate = event.endDate;
   if (event.allDay !== undefined) patch.allDay = event.allDay;
   if (event.time !== undefined) patch.time = event.time;
+  if (event.endTime !== undefined) patch.endTime = event.endTime;
   if (event.repeat !== undefined) patch.repeat = event.repeat;
   if (event.exceptDates !== undefined) patch.exceptDates = event.exceptDates;
   if (event.until !== undefined) patch.until = event.until;

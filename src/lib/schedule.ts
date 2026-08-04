@@ -1,5 +1,5 @@
 import { DEFAULT_TIMEZONE, zonedLocalToUtcMs } from "@/lib/timezone";
-import type { LeadId } from "@/schemas/common";
+import { spanDaysBetween, type LeadId } from "@/schemas/common";
 
 export type ScheduleEvent = {
   date: string;
@@ -9,15 +9,23 @@ export type ScheduleEvent = {
   lead: LeadId;
   exceptDates?: string[];
   until?: string | null;
+  /** Inclusive last covered day of one occurrence; absent = single-day. */
+  endDate?: string | null;
+  /** End clock time on the last covered day; absent = no end time set. */
+  endTime?: string | null;
 };
 
 /** Minimal shape needed to evaluate recurrence on a calendar day. */
 export type OccurrenceEvent = {
   date: string;
-  repeat: string;
+  /** Absent behaves as "once". */
+  repeat?: string;
   exceptDates?: string[];
   until?: string | null;
 };
+
+/** An occurrence event that may cover more than one calendar day. */
+export type SpanningEvent = OccurrenceEvent & { endDate?: string | null };
 
 const LEAD_MS: Record<LeadId, number> = {
   at: 0,
@@ -125,13 +133,82 @@ export function occursOn(ev: OccurrenceEvent, iso: string): boolean {
   }
 }
 
-/** ISO dates to scan for due reminders (today −2 through today + lead horizon, padded for timezone offsets). */
-export function candidateOccurrenceDates(lead: LeadId, now = new Date()): string[] {
+/**
+ * Inclusive covered-day count for one occurrence (1 for a single-day event).
+ * `endDate` before `date` is treated as unset rather than a negative span.
+ */
+export function spanDays(ev: { date: string; endDate?: string | null }): number {
+  return spanDaysBetween(ev.date, ev.endDate);
+}
+
+/**
+ * The start of the occurrence whose span covers `iso`, or null when none does.
+ *
+ * Walks back at most `span - 1` days and delegates to `occursOn`, so
+ * `exceptDates` and `until` keep applying to occurrence *starts* — removing an
+ * occurrence removes the whole run, not just the day that was clicked.
+ */
+export function occurrenceStartFor(ev: SpanningEvent, iso: string): string | null {
+  const span = spanDays(ev);
+
+  for (let back = 0; back < span; back++) {
+    const start = back === 0 ? iso : shiftIso(iso, -back);
+    if (start < ev.date) break;
+    if (occursOn(ev, start)) return start;
+  }
+
+  return null;
+}
+
+/** Whether any occurrence of `ev` covers `iso` (start, middle or end day). */
+export function coversOn(ev: SpanningEvent, iso: string): boolean {
+  return occurrenceStartFor(ev, iso) !== null;
+}
+
+/** Inclusive last covered day of the occurrence starting on `startIso`. */
+export function occurrenceEndIso(
+  ev: { date: string; endDate?: string | null },
+  startIso: string,
+): string {
+  const span = spanDays(ev);
+
+  return span === 1 ? startIso : shiftIso(startIso, span - 1);
+}
+
+/**
+ * Last covered instant of the occurrence starting on `startIso`.
+ * Without an `endTime` the final day counts as fully covered, so the occurrence
+ * runs to the same anchor hour an all-day event would use.
+ */
+export function occurrenceEndMs(
+  ev: { date: string; endDate?: string | null; endTime?: string | null; time: string | null; allDay: boolean },
+  startIso: string,
+  timeZone = DEFAULT_TIMEZONE,
+): number {
+  const endIso = occurrenceEndIso(ev, startIso);
+  const multiDay = endIso !== startIso;
+
+  if (!ev.allDay && ev.endTime) {
+    return zonedLocalToUtcMs(endIso, ev.endTime, timeZone);
+  }
+  /* No end time: a later day is covered whole, the start day keeps its own time. */
+  if (multiDay) return eventTimeMs(endIso, null, true, timeZone);
+
+  return eventTimeMs(startIso, ev.time, ev.allDay, timeZone);
+}
+
+/**
+ * ISO dates to scan for due reminders: today −2 through today + lead horizon,
+ * padded for timezone offsets. `span` extends the lookback so an occurrence that
+ * started days ago but is still running is still found.
+ */
+export function candidateOccurrenceDates(lead: LeadId, now = new Date(), span = 1): string[] {
   const horizon = Math.ceil(leadOffsetMs(lead) / (24 * 60 * 60 * 1000)) + 3;
+  const lookback = 2 + Math.max(0, span - 1);
   const start = new Date(now);
-  start.setDate(start.getDate() - 2);
+  start.setDate(start.getDate() - lookback);
   const out: string[] = [];
-  for (let i = 0; i < horizon + 3; i++) {
+  for (let i = 0; i < lookback + horizon + 3; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     out.push(formatIsoDate(d));
@@ -151,6 +228,35 @@ export function eventTimeMs(
 
 export function remindAtMs(ev: ScheduleEvent, occurrenceIso: string, timeZone = DEFAULT_TIMEZONE): number {
   return eventTimeMs(occurrenceIso, ev.time, ev.allDay, timeZone) - leadOffsetMs(ev.lead);
+}
+
+/**
+ * Human-readable span for one occurrence, e.g.
+ * "Monday, 10 August 2026 at 3:00 PM MYT — Thursday, 13 August 2026 at 11:00 AM MYT".
+ * Falls back to the single-day form when the occurrence covers one day.
+ */
+export function formatOccurrenceWhen(
+  ev: {
+    date: string;
+    time: string | null;
+    allDay: boolean;
+    endDate?: string | null;
+    endTime?: string | null;
+  },
+  startIso: string,
+  timeZone = DEFAULT_TIMEZONE,
+): string {
+  const endIso = occurrenceEndIso(ev, startIso);
+  const start = formatEventWhen(startIso, ev.time, ev.allDay, timeZone);
+
+  if (endIso === startIso) return start;
+
+  /* Without an end time the closing day is covered whole, so read it as all-day. */
+  const end = ev.allDay || !ev.endTime
+    ? formatEventWhen(endIso, null, true, timeZone)
+    : formatEventWhen(endIso, ev.endTime, false, timeZone);
+
+  return `${start} — ${end}`;
 }
 
 export function formatEventWhen(
@@ -179,11 +285,88 @@ export function formatEventWhen(
   return `${day} at ${hh}:${String(m).padStart(2, "0")} ${ap}${suffix}`;
 }
 
+/** Dedupe key stored in `reminderLogs.lead` for daily "still running" sends. */
+export const SPAN_REMINDER_LEAD = "span";
+
+export type ReminderTarget = {
+  /** Occurrence start — the occurrence's identity for dedupe and content. */
+  occurrenceIso: string;
+  /** Calendar day this particular reminder is about. */
+  dayIso: string;
+  kind: "lead" | "ongoing";
+  remindAtMs: number;
+  /** Value written to `reminderLogs.lead`, keeping the two kinds distinct. */
+  logLead: string;
+};
+
+/**
+ * Every reminder this event wants delivered around `now`.
+ *
+ *   lead    — one per occurrence, at the configured lead before it starts.
+ *   ongoing — 09:00 local on each day a multi-day occurrence is still running.
+ *
+ * Single-day events produce exactly the one `lead` target they always have.
+ * Callers still gate on `isReminderDueNow` and the reminder log.
+ */
+export function reminderTargets(
+  ev: ScheduleEvent,
+  now = new Date(),
+  timeZone = DEFAULT_TIMEZONE,
+): ReminderTarget[] {
+  const span = spanDays(ev);
+  const out: ReminderTarget[] = [];
+
+  for (const startIso of candidateOccurrenceDates(ev.lead, now, span)) {
+    if (!occursOn(ev, startIso)) continue;
+
+    const leadAt = remindAtMs(ev, startIso, timeZone);
+    out.push({
+      occurrenceIso: startIso,
+      dayIso: startIso,
+      kind: "lead",
+      remindAtMs: leadAt,
+      logLead: ev.lead,
+    });
+
+    if (span === 1) continue;
+
+    const endIso = occurrenceEndIso(ev, startIso);
+    for (let i = 0; i < span; i++) {
+      const dayIso = i === 0 ? startIso : shiftIso(startIso, i);
+      /* The event is already over before the 09:00 send on its closing day. */
+      if (dayIso === endIso && !ev.allDay && ev.endTime && ev.endTime < ALL_DAY_REMINDER_TIME) {
+        continue;
+      }
+
+      const remindAt = zonedLocalToUtcMs(dayIso, ALL_DAY_REMINDER_TIME, timeZone);
+      /* Don't double-send when the lead reminder already lands at 09:00 today. */
+      if (dayIso === startIso && remindAt === leadAt) continue;
+
+      out.push({
+        occurrenceIso: startIso,
+        dayIso,
+        kind: "ongoing",
+        remindAtMs: remindAt,
+        logLead: SPAN_REMINDER_LEAD,
+      });
+    }
+  }
+
+  return out;
+}
+
 /** Whole days since the epoch for an ISO date, unaffected by local DST shifts. */
 function isoDayNumber(iso: string): number {
   const [y, m, d] = iso.split("-").map(Number);
 
   return Date.UTC(y!, m! - 1, d!) / 86_400_000;
+}
+
+/** ISO date `delta` days from `iso`, via UTC so DST never shifts the result. */
+export function shiftIso(iso: string, delta: number): string {
+  const d = new Date(isoDayNumber(iso) * 86_400_000 + delta * 86_400_000);
+
+  return d.toISOString().slice(0, 10);
 }
 
 function formatIsoDate(d: Date): string {

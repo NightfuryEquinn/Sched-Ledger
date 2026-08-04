@@ -15,8 +15,9 @@ import {
   collapseRecurringToNext,
   dayLabel,
   eventCatMeta,
+  eventDaysByMonth,
+  eventSpanLabel,
   eventTimeLabel,
-  eventsByDayForMonth,
   fmtCommentTime,
   fmtMoney,
   fmtTime,
@@ -27,11 +28,14 @@ import {
   repeatLabel,
   weekdayLabel,
 } from "@/frontend/lib/data";
+import type { EventDay } from "@/frontend/lib/data";
 import { isActiveHoldOccurrence } from "@/frontend/lib/envelope-holds";
 import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
 import type { CategoryIndex, LedgerEvent } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
+import { shiftIso } from "@/lib/schedule";
+import { isRepeatAllowedForSpan, spanDaysBetween } from "@/schemas/common";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -47,15 +51,6 @@ const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 function normalizeLead(lead: string, allDay: boolean): string {
   const allowed = leadTimesForEvent(allDay);
   return allowed.some((l) => l.id === lead) ? lead : allDay ? "1d" : "at";
-}
-
-function shiftIso(iso: string, delta: number): string {
-  const d = new Date(iso + "T12:00:00");
-  d.setDate(d.getDate() + delta);
-  const y = d.getFullYear();
-  const mo = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${mo}-${day}`;
 }
 
 function ChevDown({ size = 16 }: { size?: number }) {
@@ -164,20 +159,24 @@ function LeadPicker({ options, value, onChange }: LeadPickerProps) {
 }
 
 function AgendaEventRow({
-  ev,
-  iso,
+  day,
   currency,
   onEditEvent,
 }: {
-  ev: LedgerEvent;
-  iso: string;
+  day: EventDay<LedgerEvent>;
   currency: string;
   onEditEvent: (ev: LedgerEvent, occurrenceIso: string) => void;
 }) {
+  const { ev, startIso } = day;
   const c = eventCatMeta(ev);
-  const holdActive = isActiveHoldOccurrence(ev, iso);
+  /*
+   * The hold is reserved once for the whole run, so the badge belongs on the
+   * first day only — repeating it would read as a charge every day.
+   */
+  const holdActive = day.dayIndex === 0 && isActiveHoldOccurrence(ev, startIso);
+  const spanLabel = eventSpanLabel(day);
   return (
-    <button type="button" className="agenda-row" onClick={() => onEditEvent(ev, iso)}>
+    <button type="button" className="agenda-row" onClick={() => onEditEvent(ev, startIso)}>
       <span className="ag-glyph" style={glyphTint(c.color)}>{displayGlyph(c.glyph, c.id)}</span>
       <span className="ag-main">
         <span className="ag-title">
@@ -201,6 +200,7 @@ function AgendaEventRow({
         </span>
         <span className="ag-sub">
           <span>{c.name}</span>
+          {spanLabel ? <span className="ag-span">{spanLabel}</span> : null}
           {ev.notify ? (
             <span className="ag-bell">
               <Icon name="bell" size={11} />
@@ -209,19 +209,31 @@ function AgendaEventRow({
           ) : null}
         </span>
       </span>
-      <span className="ag-time">{eventTimeLabel(ev)}</span>
+      <span className="ag-time">{eventTimeLabel(ev, day)}</span>
     </button>
   );
 }
 
 // ── Schedule (calendar + agenda) ────────────────────────────────────
-export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
+export function Schedule({
+  events,
+  month,
+  currency,
+  onAddEvent,
+  onEditEvent,
+}: {
+  events: LedgerEvent[];
+  month: string;
+  currency: string;
+  onAddEvent: (iso: string) => void;
+  onEditEvent: (ev: LedgerEvent, occurrenceIso: string) => void;
+}) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [y, m] = month.split("-").map(Number);
-  const days = new Date(y, m, 0).getDate();
+  const days = new Date(y!, m!, 0).getDate();
   const monthStart = `${month}-01`;
   const monthEnd = `${month}-${String(days).padStart(2, "0")}`;
-  const startOffset = (new Date(y, m - 1, 1).getDay() + 6) % 7; // Monday-first
+  const startOffset = (new Date(y!, m! - 1, 1).getDay() + 6) % 7; // Monday-first
 
   useEffect(() => {
     setSelectedDay(null);
@@ -233,14 +245,14 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
   while (cells.length % 7) cells.push(null);
 
   const isCurrent = month === CURRENT_MONTH_KEY;
-  const byDay = useMemo(() => eventsByDayForMonth(events, month), [events, month]);
+  const byDay = useMemo(() => eventDaysByMonth(events, month), [events, month]);
   const occ = useMemo(() => {
-    const out: Array<{ iso: string; ev: LedgerEvent }> = [];
-    for (const [iso, list] of byDay) {
-      for (const ev of list) out.push({ iso, ev });
-    }
+    const out: Array<EventDay<LedgerEvent>> = [];
+    for (const [, list] of byDay) out.push(...list);
     return out;
   }, [byDay]);
+  /* Occurrence starts only — a 4-day event counts once toward the month total. */
+  const occStarts = useMemo(() => occ.filter((o) => o.dayIndex === 0), [occ]);
   const agenda = isCurrent ? occ.filter((o) => o.iso >= TODAY_ISO) : occ;
 
   // Re-tick each minute so today's occurrence drops out of the agenda once its
@@ -259,26 +271,26 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
 
   const upcomingByDay = useMemo(() => {
     if (!isCurrent) return [];
-    const groups = new Map<string, LedgerEvent[]>();
-    for (const { iso, ev } of upcoming) {
-      const list = groups.get(iso);
-      if (list) list.push(ev);
-      else groups.set(iso, [ev]);
+    const groups = new Map<string, Array<EventDay<LedgerEvent>>>();
+    for (const day of upcoming) {
+      const list = groups.get(day.iso);
+      if (list) list.push(day as EventDay<LedgerEvent>);
+      else groups.set(day.iso, [day as EventDay<LedgerEvent>]);
     }
     return [...groups.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([iso, dayEvents]) => ({ iso, events: dayEvents }));
+      .map(([iso, days]) => ({ iso, days }));
   }, [upcoming, isCurrent]);
 
-  const nextRem = agenda.find((o) => o.ev.notify);
-  const alertsCount = occ.filter((o) => o.ev.notify).length;
+  const nextRem = agenda.find((o) => o.ev.notify && o.dayIndex === 0);
+  const alertsCount = occStarts.filter((o) => o.ev.notify).length;
 
   const defaultFocusDay =
     isCurrent && TODAY_ISO >= monthStart && TODAY_ISO <= monthEnd ? TODAY_ISO : monthStart;
   const viewDay = selectedDay ?? defaultFocusDay;
   const navAnchor = viewDay;
 
-  const handleDayClick = (iso: string, dayEvents: LedgerEvent[]) => {
+  const handleDayClick = (iso: string, dayEvents: Array<EventDay<LedgerEvent>>) => {
     if (dayEvents.length === 0) {
       onAddEvent(iso);
       return;
@@ -305,7 +317,7 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
   return (
     <div className="view">
       <div className="summary-grid sg-3" data-tour="tour-schedule-summary">
-        <SummaryCard label="Events this Month" value={String(occ.length)} sub={monthLabel(month, true)} />
+        <SummaryCard label="Events this Month" value={String(occStarts.length)} sub={monthLabel(month, true)} />
         <SummaryCard label="Next Reminder" tone="ok"
           value={nextRem ? dayLabel(nextRem.iso) : "—"}
           sub={nextRem ? `${nextRem.ev.title} · ${leadLabel(nextRem.ev.lead, nextRem.ev.allDay).toLowerCase()}` : "no upcoming reminders"} />
@@ -346,15 +358,15 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
         <div className="agenda">
           {showFullUpcoming ? (
             upcomingByDay.length ? (
-              upcomingByDay.map(({ iso, events: dayEvents }) => (
+              upcomingByDay.map(({ iso, days }) => (
                 <div key={iso} className="agenda-group">
                   <div className="agenda-date">
                     <span className="agenda-dnum">{new Date(iso + "T00:00:00").getDate()}</span>
                     <span className="agenda-dwd">{weekdayLabel(iso)}</span>
                   </div>
                   <div className="agenda-items">
-                    {dayEvents.map((ev) => (
-                      <AgendaEventRow key={`${iso}-${ev.id}`} ev={ev} iso={iso} currency={currency} onEditEvent={onEditEvent} />
+                    {days.map((day) => (
+                      <AgendaEventRow key={`${iso}-${day.ev.id}`} day={day} currency={currency} onEditEvent={onEditEvent} />
                     ))}
                   </div>
                 </div>
@@ -372,8 +384,8 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
                 <span className="agenda-dwd">{weekdayLabel(viewDay)}</span>
               </div>
               <div className="agenda-items">
-                {focusedEvents.map((ev) => (
-                  <AgendaEventRow key={ev.id} ev={ev} iso={viewDay} currency={currency} onEditEvent={onEditEvent} />
+                {focusedEvents.map((day) => (
+                  <AgendaEventRow key={day.ev.id} day={day} currency={currency} onEditEvent={onEditEvent} />
                 ))}
               </div>
             </div>
@@ -421,14 +433,30 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
                 >
                   <div className="cal-daynum">{d}</div>
                   <div className="cal-events">
-                    {list.slice(0, 3).map((ev) => {
+                    {list.slice(0, 3).map((day) => {
+                      const { ev, dayIndex, span } = day;
                       const c = eventCatMeta(ev);
+                      /* Flatten the inner edges so a run reads as one bar. */
+                      const runCls = span === 1
+                        ? ""
+                        : dayIndex === 0
+                          ? " cal-chip--run cal-chip--run-start"
+                          : dayIndex === span - 1
+                            ? " cal-chip--run cal-chip--run-end"
+                            : " cal-chip--run cal-chip--run-mid";
+                      const label = dayIndex > 0
+                        ? ev.title
+                        : ev.allDay || !ev.time
+                          ? ev.title
+                          : `${fmtTime(ev.time)} ${ev.title}`;
                       return (
-                        <button key={ev.id} className="cal-chip" style={{ background: c.color + "1c", color: c.color }}
+                        <button key={ev.id} className={"cal-chip" + runCls} style={{ background: c.color + "1c", color: c.color }}
                           title={ev.title}
-                          onClick={(e) => { e.stopPropagation(); onEditEvent(ev, iso); }}>
-                          <span className="cal-chip-glyph">{displayGlyph(c.glyph, c.id)}</span>
-                          <span className="cal-chip-txt">{ev.allDay ? ev.title : `${fmtTime(ev.time)} ${ev.title}`}</span>
+                          onClick={(e) => { e.stopPropagation(); onEditEvent(ev, day.startIso); }}>
+                          {dayIndex === 0 ? (
+                            <span className="cal-chip-glyph">{displayGlyph(c.glyph, c.id)}</span>
+                          ) : null}
+                          <span className="cal-chip-txt">{label}</span>
                         </button>
                       );
                     })}
@@ -466,8 +494,13 @@ export function EventModal({
   const [customLabel, setCustomLabel] = useState(initial?.customLabel ?? "");
   const [customGlyph, setCustomGlyph] = useState(initial?.customGlyph ?? customMeta.glyph);
   const [date, setDate] = useState(initial ? initial.date : (defaultDate || TODAY_ISO));
+  const [endDate, setEndDate] = useState(
+    initial?.endDate || initial?.date || defaultDate || TODAY_ISO,
+  );
   const [allDay, setAllDay] = useState(initial ? !!initial.allDay : true);
   const [time, setTime] = useState(initial && initial.time ? initial.time : "09:00");
+  /* Never seeded from the start time — an unset end time stays unset. */
+  const [endTime, setEndTime] = useState(initial?.endTime ?? "");
   const [repeat, setRepeat] = useState(initial ? initial.repeat : "once");
   // Email reminders are opt-in: new events start with notifications off,
   // matching the API schema default.
@@ -493,6 +526,27 @@ export function EventModal({
   const deleteFromDate = occurrenceIso || initial?.date || date;
   const showLogPayment = !!(editing && onLogPayment);
 
+  const span = spanDaysBetween(date, endDate);
+  const spanValid = endDate >= date;
+  const endTimeValid =
+    allDay || !endTime || endDate > date || (!!time && endTime > time);
+
+  /*
+   * A repeat is only offered while the next occurrence would start after this
+   * one finishes; stretching the span past the active repeat resets it to Once
+   * rather than silently promoting it to a different cadence.
+   */
+  const repeatAllowed = (id: string) => isRepeatAllowedForSpan(id as never, span);
+  useEffect(() => {
+    if (repeat !== "once" && !repeatAllowed(repeat)) setRepeat("once");
+  }, [span, repeat]);
+
+  /** Keep the end on or after the start when the start moves. */
+  const handleDateChange = (next: string) => {
+    setDate(next);
+    if (endDate < next) setEndDate(shiftIso(next, span - 1));
+  };
+
   const titleRef = useRef(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
   useEffect(() => {
@@ -502,6 +556,7 @@ export function EventModal({
 
   const handleAllDayChange = (checked: boolean) => {
     setAllDay(checked);
+    if (checked) setEndTime("");
     if (!leadTimesForEvent(checked).some((l) => l.id === lead)) {
       setLead(checked ? "1d" : "at");
     }
@@ -523,7 +578,8 @@ export function EventModal({
   const holdAmountNum = Math.max(0, Math.round(parseFloat(holdAmount) || 0));
   const resolvedHoldCategoryId = holdCategoryId || categoryIndex?.expenseCategories[0]?.id || "";
   const holdValid = !holdEnabled || (holdAmountNum > 0 && resolvedHoldCategoryId);
-  const valid = title.trim() && date && (allDay || time) && customOk && holdValid;
+  const valid =
+    title.trim() && date && (allDay || time) && customOk && holdValid && spanValid && endTimeValid;
   const submit = () => {
     if (!valid) return;
     if (notify && email.trim()) { try { localStorage.setItem("ledger:notifyEmail", email.trim()); } catch (e) {} }
@@ -542,7 +598,11 @@ export function EventModal({
       customLabel: catId === "custom" ? customLabel.trim() : undefined,
       customGlyph: catId === "custom" ? customGlyph : undefined,
       date,
-      allDay, time: allDay ? null : time, repeat,
+      /* Both null for a plain single-day event, so its payload is unchanged. */
+      endDate: endDate > date ? endDate : null,
+      allDay, time: allDay ? null : time,
+      endTime: allDay || !endTime ? null : endTime,
+      repeat,
       notify, lead, email: email.trim(), comments,
       ...holdFields,
     });
@@ -633,8 +693,8 @@ export function EventModal({
 
           <div className="fld-2col">
             <div>
-              <label className="fld-label">Date</label>
-              <DatePicker value={date} onChange={setDate} />
+              <label className="fld-label">Starts</label>
+              <DatePicker value={date} onChange={handleDateChange} />
             </div>
             <div>
               <label className="fld-label">Time</label>
@@ -644,6 +704,42 @@ export function EventModal({
             </div>
           </div>
 
+          <div className="fld-2col">
+            <div>
+              <label className="fld-label">Ends</label>
+              <DatePicker value={endDate} onChange={setEndDate} />
+            </div>
+            <div>
+              <label className="fld-label">End time</label>
+              {allDay ? (
+                <div className="time-allday">All day</div>
+              ) : endTime ? (
+                <div className="end-time-row">
+                  <TimePicker value={endTime} onChange={setEndTime} />
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => setEndTime("")}
+                    aria-label="Clear End Time"
+                  >
+                    <Icon name="close" size={15} />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="ghost-btn end-time-add" onClick={() => setEndTime(time)}>
+                  <Icon name="plus" size={14} /> End time
+                </button>
+              )}
+            </div>
+          </div>
+          {!spanValid ? (
+            <p className="fld-error">End date cannot be before the start date.</p>
+          ) : !endTimeValid ? (
+            <p className="fld-error">End time must be after the start time.</p>
+          ) : span > 1 ? (
+            <p className="fld-hint">Runs for {span} days.</p>
+          ) : null}
+
           <label className="toggle-line tight">
             <input type="checkbox" checked={allDay} onChange={(e) => handleAllDayChange(e.target.checked)} />
             <span className="toggle-ui" /> <span>All-day event</span>
@@ -652,10 +748,25 @@ export function EventModal({
           <div className="event-div" />
           <label className="fld-label">Repeats</label>
           <div className="sub-row">
-            {REPEATS.map((r) => (
-              <button key={r.id} type="button" className={"sub-chip" + (repeat === r.id ? " active" : "")} onClick={() => setRepeat(r.id)}>{r.label}</button>
-            ))}
+            {REPEATS.map((r) => {
+              const allowed = repeatAllowed(r.id);
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={"sub-chip" + (repeat === r.id ? " active" : "")}
+                  disabled={!allowed}
+                  title={allowed ? undefined : `A ${span}-day event can't repeat ${r.label.toLowerCase()}`}
+                  onClick={() => setRepeat(r.id)}
+                >
+                  {r.label}
+                </button>
+              );
+            })}
           </div>
+          {span > 1 ? (
+            <p className="fld-hint">Repeats that would overlap a {span}-day run are unavailable.</p>
+          ) : null}
           <div className="event-div" />
           <div className="notify-head">
             <label className="toggle-line tight">

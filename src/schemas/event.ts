@@ -4,10 +4,13 @@ import {
   eventCategoryIdSchema,
   isoDateSchema,
   isLeadAllowedForEvent,
+  isRepeatAllowedForSpan,
   leadIdSchema,
   objectIdSchema,
   repeatIdSchema,
+  spanDaysBetween,
   type LeadId,
+  type RepeatId,
 } from "./common";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
@@ -53,15 +56,74 @@ function refineLeadForAllDay(data: { allDay?: boolean; lead?: LeadId }, ctx: z.R
   }
 }
 
+type SpanFields = {
+  date?: string;
+  endDate?: string | null;
+  time?: string | null;
+  endTime?: string | null;
+  allDay?: boolean;
+  repeat?: RepeatId;
+};
+
+/**
+ * Refine the multi-day span: an end that is not before the start, no end time
+ * on an all-day event, and a repeat whose next occurrence starts after this one
+ * finishes. A patch that touches none of the span fields is left alone — the
+ * route re-validates the merged document.
+ */
+function refineSpan(data: SpanFields, ctx: z.RefinementCtx) {
+  const { date, endDate } = data;
+  if (!date || !endDate) return;
+
+  if (endDate < date) {
+    ctx.addIssue({
+      code: "custom",
+      message: "End date cannot be before the start date",
+      path: ["endDate"],
+    });
+
+    return;
+  }
+
+  const allDay = data.allDay ?? true;
+  if (allDay && data.endTime) {
+    ctx.addIssue({
+      code: "custom",
+      message: "All-day events cannot have an end time",
+      path: ["endTime"],
+    });
+  }
+
+  if (endDate === date && !allDay && data.endTime && data.time && data.endTime <= data.time) {
+    ctx.addIssue({
+      code: "custom",
+      message: "End time must be after the start time",
+      path: ["endTime"],
+    });
+  }
+
+  const repeat = data.repeat ?? "once";
+  const span = spanDaysBetween(date, endDate);
+  if (!isRepeatAllowedForSpan(repeat, span)) {
+    ctx.addIssue({
+      code: "custom",
+      message: `A ${span}-day event cannot repeat ${repeat} — occurrences would overlap`,
+      path: ["repeat"],
+    });
+  }
+}
+
+const timeOfDaySchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
 const eventScheduleShape = {
   catId: eventCategoryIdSchema,
   date: isoDateSchema,
+  /** Inclusive last covered day; null/undefined means a single-day event. */
+  endDate: isoDateSchema.nullable().optional(),
   allDay: z.boolean().default(true),
-  time: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
-    .nullable()
-    .default(null),
+  time: timeOfDaySchema.nullable().default(null),
+  /** End clock time on `endDate`; null/undefined means none was set. */
+  endTime: timeOfDaySchema.nullable().optional(),
   repeat: repeatIdSchema.default("once"),
   /** Occurrence dates removed with "This Only". */
   exceptDates: z.array(isoDateSchema).optional(),
@@ -94,13 +156,10 @@ export const createEventSchema = z
   .object({
     catId: eventCategoryIdSchema,
     date: isoDateSchema,
+    endDate: isoDateSchema.nullable().optional(),
     allDay: z.boolean().optional().default(true),
-    time: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
-      .nullable()
-      .optional()
-      .default(null),
+    time: timeOfDaySchema.nullable().optional().default(null),
+    endTime: timeOfDaySchema.nullable().optional(),
     repeat: repeatIdSchema.optional().default("once"),
     notify: z.boolean().optional().default(false),
     lead: leadIdSchema.optional().default("1d"),
@@ -110,18 +169,17 @@ export const createEventSchema = z
     enc: e2eeVersionSchema,
     payload: encryptedPayloadSchema,
   })
-  .superRefine(refineLeadForAllDay);
+  .superRefine(refineLeadForAllDay)
+  .superRefine(refineSpan);
 
 export const updateEventSchema = z
   .object({
     catId: eventCategoryIdSchema.optional(),
     date: isoDateSchema.optional(),
+    endDate: isoDateSchema.nullable().optional(),
     allDay: z.boolean().optional(),
-    time: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
-      .nullable()
-      .optional(),
+    time: timeOfDaySchema.nullable().optional(),
+    endTime: timeOfDaySchema.nullable().optional(),
     repeat: repeatIdSchema.optional(),
     exceptDates: z.array(isoDateSchema).optional(),
     until: isoDateSchema.nullable().optional(),
@@ -137,7 +195,8 @@ export const updateEventSchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
   })
-  .superRefine(refineLeadForAllDay);
+  .superRefine(refineLeadForAllDay)
+  .superRefine(refineSpan);
 
 export const listEventsQuerySchema = z.object({
   month: z
