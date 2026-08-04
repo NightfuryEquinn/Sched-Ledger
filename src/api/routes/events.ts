@@ -11,12 +11,28 @@ import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
 import { deleteScopeQuerySchema, resolveEventDeleteAction } from "@/lib/delete-scope";
-import { monthDateBounds, objectIdSchema, isLeadAllowedForEvent, type LeadId } from "@/schemas/common";
+import { shiftIso } from "@/lib/schedule";
+import {
+  isLeadAllowedForEvent,
+  isRepeatAllowedForSpan,
+  monthDateBounds,
+  objectIdSchema,
+  spanDaysBetween,
+  type LeadId,
+  type RepeatId,
+} from "@/schemas/common";
 import { createEventSchema, listEventsQuerySchema, updateEventSchema } from "@/schemas/event";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ObjectId } from "mongodb";
+
+/**
+ * How far before the window to look for multi-day series that may spill into it.
+ * Deliberately generous — the over-fetch is bounded to multi-day series that
+ * ended within the past year, and the client filters exactly.
+ */
+const MAX_SPAN_LOOKBACK_DAYS = 366;
 
 export const eventsRoutes = new Hono<{ Variables: SessionVariables }>();
 
@@ -30,9 +46,10 @@ eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
   const filter: Record<string, unknown> = { accountId };
 
   /*
-   * Recurring events may start before the window but still occur inside it.
-   * Include non-once rows that have not ended before the window start, plus
-   * once rows whose date falls in range.
+   * Recurring events may start before the window but still occur inside it, and
+   * a multi-day event may start before the window and still run into it. Include
+   * non-once rows that have not ended before the window start, plus once rows
+   * that overlap the range at all.
    */
   if (month || from || to || before) {
     const bounds = month ? monthDateBounds(month) : null;
@@ -45,11 +62,32 @@ eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
 
     const clauses: Record<string, unknown>[] = [{ repeat: "once", date: onceDate }];
 
+    /* A once-event starting before the window but ending inside it. */
+    if (rangeStart) {
+      const spillDate: Record<string, string> = { $lt: rangeStart };
+      if (before) spillDate.$lt = before < rangeStart ? before : rangeStart;
+      clauses.push({
+        repeat: "once",
+        date: spillDate,
+        endDate: { $gte: rangeStart },
+      });
+    }
+
     if (rangeStart) {
       clauses.push(
         { repeat: { $ne: "once" }, until: { $gte: rangeStart } },
         { repeat: { $ne: "once" }, until: null },
         { repeat: { $ne: "once" }, until: { $exists: false } },
+        /*
+         * A series whose last occurrence *starts* just before the window can
+         * still run into it. Widen the bound for multi-day series only; the
+         * client filters exactly via `coversOn`.
+         */
+        {
+          repeat: { $ne: "once" },
+          endDate: { $exists: true, $ne: null },
+          until: { $gte: shiftIso(rangeStart, -MAX_SPAN_LOOKBACK_DAYS) },
+        },
       );
     } else {
       clauses.push({ repeat: { $ne: "once" } });
@@ -145,6 +183,20 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
       message: mergedAllDay
         ? "All-day events only support day-of, 1 day or 2 days before reminders"
         : "Invalid reminder lead for timed events",
+    });
+  }
+
+  /* A patch may change one half of the span, so re-check the merged result. */
+  const mergedDate = body.date ?? existing.date;
+  const mergedEndDate = body.endDate !== undefined ? body.endDate : existing.endDate;
+  const mergedRepeat = (body.repeat ?? existing.repeat) as RepeatId;
+  if (mergedEndDate && mergedEndDate < mergedDate) {
+    throw new HTTPException(400, { message: "End date cannot be before the start date" });
+  }
+  const mergedSpan = spanDaysBetween(mergedDate, mergedEndDate);
+  if (!isRepeatAllowedForSpan(mergedRepeat, mergedSpan)) {
+    throw new HTTPException(400, {
+      message: `A ${mergedSpan}-day event cannot repeat ${mergedRepeat} — occurrences would overlap`,
     });
   }
 

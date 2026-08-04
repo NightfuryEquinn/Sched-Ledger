@@ -690,6 +690,18 @@ h1, h2, h3 {
   margin-bottom: 0;
 }
 
+.fld-hint,
+.fld-error {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  margin: -8px 0 12px;
+}
+
+.fld-error {
+  color: var(--danger);
+}
+
 .fld-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -719,6 +731,32 @@ h1, h2, h3 {
 
 .modal .fld-2col > div > .select-wrap {
   display: flex;
+}
+
+/* Optional end time: a compact "add" affordance until one is actually set. */
+.end-time-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.end-time-row .picker-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal .fld-2col > div > .end-time-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 43px;
+  font-size: 13px;
+}
+
+.picker-trigger-label.is-placeholder {
+  color: var(--ink-faint);
 }
 
 .modal .fld-2col .select-wrap select {
@@ -3910,11 +3948,13 @@ h1, h2, h3 {
 }
 
 .cal-cell {
+  /* Horizontal padding, shared with the multi-day chip bleed. */
+  --cal-cell-pad: 7px;
   min-height: 98px;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface-2);
-  padding: 7px 7px 8px;
+  padding: 7px var(--cal-cell-pad) 8px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -3993,6 +4033,40 @@ h1, h2, h3 {
 
 .cal-chip:hover {
   filter: brightness(.96) saturate(1.1);
+}
+
+/*
+ * A multi-day run is one chip per covered day. Flattening the inner edges and
+ * bleeding each chip into the cell padding makes consecutive days read as a
+ * single continuous bar across the week.
+ */
+.cal-chip--run {
+  width: auto;
+}
+
+.cal-chip--run-start {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: calc(var(--cal-cell-pad, 6px) * -1);
+}
+
+.cal-chip--run-mid {
+  border-radius: 0;
+  margin-inline: calc(var(--cal-cell-pad, 6px) * -1);
+  padding-inline: calc(var(--cal-cell-pad, 6px) + 6px);
+}
+
+.cal-chip--run-end {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: calc(var(--cal-cell-pad, 6px) * -1);
+  padding-left: calc(var(--cal-cell-pad, 6px) + 6px);
+}
+
+/* Continuation days repeat the title faintly — the run's start carries it. */
+.cal-chip--run-mid .cal-chip-txt,
+.cal-chip--run-end .cal-chip-txt {
+  opacity: .72;
 }
 
 .cal-chip-glyph {
@@ -4178,6 +4252,13 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   gap: 9px;
+}
+
+.ag-span {
+  flex: none;
+  font-family: var(--font-num);
+  font-feature-settings: "tnum";
+  white-space: nowrap;
 }
 
 .ag-bell {
@@ -4788,8 +4869,14 @@ h1, h2, h3 {
   transition: all .13s;
 }
 
-.sub-chip:hover {
+.sub-chip:hover:not(:disabled) {
   border-color: var(--border-strong);
+}
+
+/* Repeats that would overlap a multi-day run are offered but not selectable. */
+.sub-chip:disabled {
+  opacity: .42;
+  cursor: not-allowed;
 }
 
 .sub-chip.active {

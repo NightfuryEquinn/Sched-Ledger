@@ -17,7 +17,7 @@ import {
   dayLabel,
   eventCatMeta,
   eventTimeLabel,
-  eventsForDay,
+  eventDaysForDay,
   fmtBudgetLimit,
   fmtMoney,
   fmtMoneyShort,
@@ -91,8 +91,11 @@ function remainingTodayEvents(events: LedgerEvent[], now: Date, limit = 3) {
   const todayIso = isoDateOf(now);
   const nowHm = clockHm(now);
 
-  return eventsForDay(events, todayIso)
-    .filter((ev) => ev.allDay || (ev.time || "00:00") >= nowHm)
+  return eventDaysForDay(events, todayIso)
+    .filter(
+      /* A run already under way stays listed regardless of its start time. */
+      (day) => day.dayIndex > 0 || day.ev.allDay || (day.ev.time || "00:00") >= nowHm,
+    )
     .slice(0, limit);
 }
 
@@ -246,7 +249,8 @@ export function Overview({
             <button className="link-btn" onClick={() => setView("schedule")}>See All</button>
           </div>
           <div className="recent-list">
-            {todayEvents.length ? todayEvents.map((ev) => {
+            {todayEvents.length ? todayEvents.map((day) => {
+              const ev = day.ev;
               const cat = eventCatMeta(ev);
 
               return (
@@ -262,7 +266,7 @@ export function Overview({
                   <span className="rr-main">
                     <span className="rr-note">{ev.title}</span>
                     <span className="rr-sub">
-                      {cat.name} · {eventTimeLabel(ev)}
+                      {cat.name} · {eventTimeLabel(ev, day)}
                     </span>
                   </span>
                 </button>

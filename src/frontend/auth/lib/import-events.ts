@@ -9,7 +9,16 @@ import {
 } from "@/frontend/auth/lib/csv";
 import { EVENT_CATS } from "@/frontend/lib/data";
 import type { EventComment, LedgerEvent } from "@/frontend/lib/types";
-import { EVENT_CATEGORY_IDS, LEAD_IDS, REPEAT_IDS, isLeadAllowedForEvent, type LeadId } from "@/schemas/common";
+import {
+  EVENT_CATEGORY_IDS,
+  LEAD_IDS,
+  REPEAT_IDS,
+  isLeadAllowedForEvent,
+  isRepeatAllowedForSpan,
+  spanDaysBetween,
+  type LeadId,
+  type RepeatId,
+} from "@/schemas/common";
 
 export type EventImportRow = Omit<LedgerEvent, "id">;
 
@@ -117,8 +126,10 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
   const customLabelIdx = colIndex(headerMap, "customlabel", "custom label");
   const customGlyphIdx = colIndex(headerMap, "customglyph", "custom glyph");
   const dateIdx = colIndex(headerMap, "date");
+  const endDateIdx = colIndex(headerMap, "enddate", "end date");
   const allDayIdx = colIndex(headerMap, "allday", "all day");
   const timeIdx = colIndex(headerMap, "time");
+  const endTimeIdx = colIndex(headerMap, "endtime", "end time");
   const repeatIdx = colIndex(headerMap, "repeat");
   const notifyIdx = colIndex(headerMap, "notify");
   const leadIdx = colIndex(headerMap, "lead");
@@ -187,9 +198,50 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
       time = timeRaw;
     }
 
+    /* Both end columns are optional — an absent end time stays absent. */
+    const endDateRaw = get(endDateIdx);
+    let endDate: string | null = null;
+    if (endDateRaw) {
+      if (!isValidIsoDate(endDateRaw)) {
+        errors.push({ row: rowNum, message: `Invalid end date "${endDateRaw}" — use YYYY-MM-DD.` });
+        return;
+      }
+      if (endDateRaw < date) {
+        errors.push({ row: rowNum, message: "End date cannot be before the start date." });
+        return;
+      }
+      if (endDateRaw > date) endDate = endDateRaw;
+    }
+
+    const endTimeRaw = get(endTimeIdx);
+    let endTime: string | null = null;
+    if (endTimeRaw) {
+      if (allDay) {
+        errors.push({ row: rowNum, message: "All-day events cannot have an end time." });
+        return;
+      }
+      if (!TIME_RE.test(endTimeRaw)) {
+        errors.push({ row: rowNum, message: `Invalid end time "${endTimeRaw}" — use HH:MM.` });
+        return;
+      }
+      if (!endDate && time && endTimeRaw <= time) {
+        errors.push({ row: rowNum, message: "End time must be after the start time." });
+        return;
+      }
+      endTime = endTimeRaw;
+    }
+
     const repeatRaw = get(repeatIdx) || "once";
     if (!REPEAT_SET.has(repeatRaw)) {
       errors.push({ row: rowNum, message: `Invalid repeat "${repeatRaw}".` });
+      return;
+    }
+    const span = spanDaysBetween(date, endDate);
+    if (!isRepeatAllowedForSpan(repeatRaw as RepeatId, span)) {
+      errors.push({
+        row: rowNum,
+        message: `A ${span}-day event cannot repeat "${repeatRaw}" — occurrences would overlap.`,
+      });
       return;
     }
 
@@ -222,8 +274,10 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
       customLabel: catResolved.customLabel,
       customGlyph: catResolved.customGlyph,
       date,
+      endDate,
       allDay,
       time,
+      endTime,
       repeat: repeatRaw,
       notify,
       lead,
