@@ -270,6 +270,62 @@ export function scheduleForMonth<T extends DayEvent>(events: T[], monthKey: stri
   return out;
 }
 
+/** Local YYYY-MM-DD for a Date. */
+export function isoFromDate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Has this occurrence already gone by? Dates before today have; dates after
+ * have not. Today counts as passed only for a timed event whose clock time is
+ * behind `now` — all-day events stay upcoming for the whole day.
+ */
+function occurrencePassed(
+  iso: string,
+  ev: { allDay?: boolean; time?: string | null },
+  todayIso: string,
+  nowHm: string,
+): boolean {
+  if (iso !== todayIso) return iso < todayIso;
+  if (ev.allDay) return false;
+
+  return (ev.time || "00:00") < nowHm;
+}
+
+/**
+ * Collapse each recurring series down to its single next occurrence.
+ *
+ * A daily event would otherwise fill the agenda with one row per remaining day
+ * of the month; the agenda only needs the one the user is heading toward. The
+ * kept occurrence is today's while its time is still ahead, otherwise the next
+ * one in the list. One-time events pass through untouched.
+ *
+ * `occurrences` must be ordered earliest-first (as `scheduleForMonth` returns).
+ */
+export function collapseRecurringToNext<T extends DayEvent & { id: string }>(
+  occurrences: Array<{ iso: string; ev: T }>,
+  now: Date = new Date(),
+): Array<{ iso: string; ev: T }> {
+  const todayIso = isoFromDate(now);
+  const nowHm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const kept = new Set<string>();
+  const out: Array<{ iso: string; ev: T }> = [];
+
+  for (const o of occurrences) {
+    if (!o.ev.repeat || o.ev.repeat === "once") {
+      out.push(o);
+      continue;
+    }
+    if (kept.has(o.ev.id)) continue;
+    if (occurrencePassed(o.iso, o.ev, todayIso, nowHm)) continue;
+
+    kept.add(o.ev.id);
+    out.push(o);
+  }
+
+  return out;
+}
+
 /** Format HH:MM as a 12-hour clock string. */
 export function fmtTime(t) {
   if (!t) return "";

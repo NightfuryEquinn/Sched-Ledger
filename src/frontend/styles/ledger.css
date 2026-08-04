@@ -3460,6 +3460,8 @@ h1, h2, h3 {
   place-items: center;
   color: var(--accent);
   flex: none;
+  /* Stay beside the task's first line instead of drifting down when it wraps. */
+  align-self: flex-start;
 }
 
 .todo-check.checked {
