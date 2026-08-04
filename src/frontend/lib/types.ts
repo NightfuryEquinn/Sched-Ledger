@@ -39,8 +39,12 @@ export type LedgerEvent = {
   customLabel?: string;
   customGlyph?: string;
   date: string;
+  /** Inclusive last covered day of one occurrence; absent = single-day. */
+  endDate?: string | null;
   allDay: boolean;
   time: string | null;
+  /** End clock time on the last covered day; absent = none set. */
+  endTime?: string | null;
   repeat: string;
   exceptDates?: string[];
   until?: string | null;

@@ -1,4 +1,5 @@
 import { budgetAlertEmailHtml, emailConfigured, sendEmail } from "@/api/lib/email";
+import { formatMoneyLabel } from "@/api/lib/money";
 import { getCollections, getDb } from "@/db";
 import type { BudgetAlertItem } from "@/schemas/budget-alert";
 import { ObjectId } from "mongodb";
@@ -8,20 +9,6 @@ export type BudgetAlertSendResult = {
   skipped: number;
   errors: string[];
 };
-
-/** Format a money amount for alert copy. */
-function formatAmount(amount: number, currency?: string): string {
-  const code = (currency || "MYR").toUpperCase();
-  try {
-    return new Intl.NumberFormat("en", {
-      style: "currency",
-      currency: code,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${code} ${Math.round(amount)}`;
-  }
-}
 
 /** Turn YYYY-MM into a long month label. */
 function monthLabel(month: string): string {
@@ -94,8 +81,8 @@ export async function sendBudgetAlerts(opts: {
     }
 
     const percent = Math.round((alert.spent / alert.budget) * 100);
-    const spentLabel = formatAmount(alert.spent, alert.currency);
-    const budgetLabel = formatAmount(alert.budget, alert.currency);
+    const spentLabel = formatMoneyLabel(alert.spent, alert.currency);
+    const budgetLabel = formatMoneyLabel(alert.budget, alert.currency);
 
     const { html, text, subject } = budgetAlertEmailHtml({
       categoryName: alert.categoryName,

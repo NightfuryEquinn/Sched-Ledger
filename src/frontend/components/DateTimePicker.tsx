@@ -64,8 +64,9 @@ function datePickerLabel(iso: string) {
   return `${y}/${m}/${d}`;
 }
 
+/** Split HH:MM into 12-hour parts; an unset value opens the menu at 9:00 AM. */
 function parseTime24(t: string) {
-  const [h, m] = t.split(":").map(Number);
+  const [h, m] = (t || "09:00").split(":").map(Number);
   const ap = h < 12 ? "AM" : "PM";
   const h12 = ((h + 11) % 12) + 1;
   return { h12, m, ap: ap as "AM" | "PM" };
@@ -186,9 +187,11 @@ type TimePickerProps = {
   onChange: (time: string) => void;
   className?: string;
   disabled?: boolean;
+  /** Shown when `value` is empty (e.g. an end time that was never set). */
+  placeholder?: string;
 };
 
-export function TimePicker({ value, onChange, className, disabled }: TimePickerProps) {
+export function TimePicker({ value, onChange, className, disabled, placeholder }: TimePickerProps) {
   const { open, setOpen, rootRef, triggerRef, menuRef } = usePickerPortal();
   const parsed = parseTime24(value);
   const hourRef = useRef<HTMLButtonElement>(null);
@@ -274,9 +277,9 @@ export function TimePicker({ value, onChange, className, disabled }: TimePickerP
         disabled={disabled}
         onClick={() => !disabled && setOpen((o) => !o)}
       >
-        <span className="picker-trigger-label">
+        <span className={"picker-trigger-label" + (value ? "" : " is-placeholder")}>
           <PickerIcon name="clock" />
-          {fmtTime(value)}
+          {value ? fmtTime(value) : (placeholder ?? "")}
         </span>
         <PickerIcon name="chevD" />
       </button>

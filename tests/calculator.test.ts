@@ -35,15 +35,25 @@ describe("calculator", () => {
     expect(isValidAllocationTotal([40, 40])).toBe(false);
   });
 
-  test("allocateBudgets rounds and places remainder on last positive pct", () => {
+  test("allocateBudgets splits to the cent and places remainder on last positive pct", () => {
     const result = allocateBudgets(100, [
       { id: "a", pct: 33.33 },
       { id: "b", pct: 33.33 },
       { id: "c", pct: 33.34 },
     ]);
 
-    expect((result.a ?? 0) + (result.b ?? 0) + (result.c ?? 0)).toBe(100);
-    expect(result).toEqual({ a: 33, b: 33, c: 34 });
+    expect((result.a ?? 0) + (result.b ?? 0) + (result.c ?? 0)).toBeCloseTo(100, 6);
+    expect(result).toEqual({ a: 33.33, b: 33.33, c: 33.34 });
+  });
+
+  test("allocateBudgets keeps 2 decimal places on a fractional net", () => {
+    const result = allocateBudgets(100.55, [
+      { id: "a", pct: 50 },
+      { id: "b", pct: 50 },
+    ]);
+
+    expect((result.a ?? 0) + (result.b ?? 0)).toBeCloseTo(100.55, 6);
+    expect(result).toEqual({ a: 50.28, b: 50.27 });
   });
 
   test("allocateBudgets skips zero-pct categories for remainder", () => {

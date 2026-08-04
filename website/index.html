@@ -319,10 +319,10 @@
       <h2>Bills and budgets, finally in sync</h2>
       <p>Sched Ledger connects your calendar directly to your ledger, so nothing falls through the cracks between "I should pay this" and "I paid this."</p>
       <ul class="checklist">
-        <li>Calendar and agenda views for bills, appointments, and reminders with daily/weekly/monthly/yearly recurrence</li>
+        <li>Calendar and agenda views for bills, appointments, and reminders with daily/weekly/biweekly/monthly/yearly recurrence</li>
         <li>Budget holds reserve money for a scheduled bill until you log the payment or release it</li>
         <li>Log payment links an event to an expense in one click, and releases its budget hold automatically</li>
-        <li>Optional email reminders with per-event lead times, in your timezone</li>
+        <li>Optional email reminders with per-event lead times, in your timezone — the email carries the event name, budget hold, and comments</li>
         <li>Multiple named to-do lists with inline task management</li>
       </ul>
     </div>
@@ -358,7 +358,7 @@
     <div>
       <div class="eyebrow">Privacy & identity</div>
       <h2>The server sees ciphertext. That's it.</h2>
-      <p>Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are AES-256-GCM encrypted in your browser before anything reaches the database. Only day-level dates needed for accurate reminders stay in plaintext — everything else is unreadable server-side.</p>
+      <p>Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are AES-256-GCM encrypted in your browser before anything reaches the database. Only day-level dates needed for accurate reminders stay in plaintext — plus, on events where you switch email reminders on, a readable copy of what that email says. Everything else is unreadable server-side.</p>
       <ul class="checklist">
         <li>Sign in with a Web3 wallet — create or restore with a 12- or 24-word recovery phrase, no email or password</li>
         <li>Device passphrase vault wraps your keys locally with PBKDF2 + AES-GCM instead of plaintext storage</li>

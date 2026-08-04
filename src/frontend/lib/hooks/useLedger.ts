@@ -1,6 +1,7 @@
 import { api } from "@/frontend/lib/api";
 import { maybeNotifyBudgetAlerts } from "@/frontend/lib/budget/notify";
 import {
+  buildReminderDetails,
   decodeCategories,
   decodeEvent,
   decodeExpense,
@@ -14,6 +15,8 @@ import {
   encodeTodoListCreate,
   encodeTodoListUpdate,
   encodeWalletFinancials,
+  type EventWire,
+  type ReminderContext,
 } from "@/frontend/lib/crypto/codec";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
@@ -22,7 +25,7 @@ import { normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
 import type { Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const ACTIVE_WALLET_KEY = "ledger:active-wallet";
@@ -71,6 +74,57 @@ function monthStartIso(key: string): string {
 
 const EXPENSE_LOOKBACK_MONTHS = 36;
 const LIST_PAGE_LIMIT = 2000;
+
+/*
+ * Reminder events saved before `notifyDetails` existed would email a
+ * content-free body. Attaching the copy is a one-off write per event, so it is
+ * capped and batched: a month full of reminders must not burst hundreds of
+ * PATCHes into the shared rate limit on first load. Whatever is left over is
+ * picked up by later loads.
+ */
+const REMINDER_BACKFILL_PER_LOAD = 10;
+const REMINDER_BACKFILL_CONCURRENCY = 5;
+
+/**
+ * Attach the reminder email copy to already-encrypted events that lack it.
+ * Best-effort by design — it changes nothing the client renders, so a failed
+ * write is swallowed rather than failing the whole events query. Legacy
+ * plaintext rows (`enc` unset) are skipped: their own migration re-encrypts the
+ * payload, and reusing the stale ciphertext here would undo that.
+ */
+async function backfillReminderDetails(
+  pairs: Array<{ wire: EventWire; event: LedgerEvent }>,
+  currency: string | undefined,
+  catById: Record<string, Category>,
+): Promise<void> {
+  const stale = pairs
+    .filter(
+      ({ wire, event }) =>
+        wire.enc === 1 && wire.payload && !wire.notifyDetails && event.notify && event.email.trim(),
+    )
+    .slice(0, REMINDER_BACKFILL_PER_LOAD);
+
+  for (let i = 0; i < stale.length; i += REMINDER_BACKFILL_CONCURRENCY) {
+    await Promise.all(
+      stale.slice(i, i + REMINDER_BACKFILL_CONCURRENCY).map(async ({ wire, event }) => {
+        const notifyDetails = buildReminderDetails(event, {
+          currency,
+          holdCategoryName: event.budgetHoldCategoryId
+            ? catById[event.budgetHoldCategoryId]?.name
+            : undefined,
+        });
+        if (!notifyDetails) return;
+
+        try {
+          /* No `notify` in the body — the server only re-confirms when a request turns it on. */
+          await api.events.update(wire.id, { enc: 1, payload: wire.payload, notifyDetails });
+        } catch {
+          /* A later load retries; reminders still send, just without the details. */
+        }
+      }),
+    );
+  }
+}
 
 const keys = {
   profile: (wallet: string) => ["profile", wallet] as const,
@@ -251,8 +305,10 @@ export function useLedger(walletAddress: string) {
                   customGlyph: wire.customGlyph,
                   catId: wire.catId,
                   date: wire.date,
+                  endDate: wire.endDate ?? null,
                   allDay: wire.allDay,
                   time: wire.time,
+                  endTime: wire.endTime ?? null,
                   repeat: wire.repeat,
                   exceptDates: wire.exceptDates,
                   until: wire.until,
@@ -265,9 +321,17 @@ export function useLedger(walletAddress: string) {
               const { event } = await api.events.update(wire.id, body);
               return decodeEvent(event, cryptoKey);
             }
+
             return decodeEvent(wire, cryptoKey);
           }),
         );
+
+        await backfillReminderDetails(
+          page.events.map((wire, i) => ({ wire, event: decoded[i]! })),
+          activeWallet?.currency,
+          categoryIndex.catById,
+        );
+
         collected.push(...decoded);
         if (!page.hasMore || !page.nextBefore) break;
         before = page.nextBefore;
@@ -277,6 +341,13 @@ export function useLedger(walletAddress: string) {
       return collected;
     },
     enabled: cryptoReady && !!profileQuery.data,
+    /*
+     * The key is month-scoped, so switching months would otherwise put this
+     * query back into `pending` and trip the app-wide "Loading your ledger…"
+     * screen. Holding the previous month's rows keeps the shell mounted while
+     * the new month streams in.
+     */
+    placeholderData: keepPreviousData,
   });
 
   const todoListsQuery = useQuery({
@@ -510,12 +581,19 @@ export function useLedger(walletAddress: string) {
     mutationFn: async (data: Omit<LedgerEvent, "id"> & { id?: string }) => {
       const cryptoKey = requireKey(wallet);
       assertCustomEventFields(data);
+      /* Wallet currency + hold category name are E2EE — resolve them for the email copy. */
+      const reminderCtx: ReminderContext = {
+        currency: activeWallet?.currency,
+        holdCategoryName: data.budgetHoldCategoryId
+          ? categoryIndex.catById[data.budgetHoldCategoryId]?.name
+          : undefined,
+      };
       if (data.id) {
-        const body = await encodeEventUpdate(data, cryptoKey);
+        const body = await encodeEventUpdate(data, cryptoKey, reminderCtx);
         const { event } = await api.events.update(data.id, body);
         return decodeEvent(event, cryptoKey);
       }
-      const body = await encodeEventCreate(data, cryptoKey);
+      const body = await encodeEventCreate(data, cryptoKey, reminderCtx);
       const { event } = await api.events.create(body);
       return decodeEvent(event, cryptoKey);
     },

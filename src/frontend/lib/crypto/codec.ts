@@ -18,6 +18,7 @@ import type {
 } from "@/frontend/lib/types";
 import { normalizeRecurring } from "@/frontend/lib/stats";
 import type { RecurringField } from "@/lib/recurring";
+import type { ReminderDetails } from "@/schemas/event";
 
 export type ExpenseWire = {
   id: string;
@@ -212,12 +213,20 @@ export async function encodeCategories(categories: Category[], key: CryptoKey) {
   };
 }
 
+/** Wallet currency + resolved hold category name, needed for email copy. */
+export type ReminderContext = {
+  currency?: string;
+  holdCategoryName?: string;
+};
+
 export type EventWire = {
   id: string;
   catId: LedgerEvent["catId"];
   date: string;
+  endDate?: string | null;
   allDay: boolean;
   time: string | null;
+  endTime?: string | null;
   repeat: LedgerEvent["repeat"];
   exceptDates?: string[];
   until?: string | null;
@@ -227,6 +236,8 @@ export type EventWire = {
   expenseId?: string;
   enc?: 1;
   payload?: string;
+  /** Plaintext copy the server renders into reminder emails. */
+  notifyDetails?: ReminderDetails;
   /** Legacy plaintext secrets. */
   title?: string;
   comments?: LedgerEvent["comments"];
@@ -275,6 +286,45 @@ function eventHoldSecrets(event: Partial<LedgerEvent>): Partial<EventSecrets> {
   return secrets;
 }
 
+/** Field limits mirroring `reminderDetailsSchema` so a save is never rejected. */
+const REMINDER_TITLE_MAX = 200;
+const REMINDER_COMMENT_MAX = 500;
+const REMINDER_COMMENTS_MAX = 20;
+const REMINDER_CATEGORY_MAX = 64;
+
+/**
+ * Plaintext copy of the event content that reminder emails render (name, budget
+ * hold, comments). Only built while an email reminder is configured — the email
+ * body is plaintext anyway, so the server needs a readable copy to send it.
+ */
+export function buildReminderDetails(
+  event: Partial<LedgerEvent>,
+  ctx?: ReminderContext,
+): ReminderDetails | null {
+  const title = (event.title ?? "").trim().slice(0, REMINDER_TITLE_MAX);
+  if (!event.notify || !event.email?.trim() || !title) return null;
+
+  const details: ReminderDetails = { title };
+
+  const holdAmount = Number(event.budgetHoldAmount);
+  if (event.budgetHoldEnabled && Number.isFinite(holdAmount) && holdAmount > 0) {
+    const categoryName = ctx?.holdCategoryName?.trim().slice(0, REMINDER_CATEGORY_MAX);
+    details.hold = {
+      amount: holdAmount,
+      ...(ctx?.currency?.length === 3 ? { currency: ctx.currency } : {}),
+      ...(categoryName ? { categoryName } : {}),
+    };
+  }
+
+  const comments = (event.comments ?? [])
+    .map((c) => c.text.trim().slice(0, REMINDER_COMMENT_MAX))
+    .filter(Boolean)
+    .slice(-REMINDER_COMMENTS_MAX);
+  if (comments.length) details.comments = comments;
+
+  return details;
+}
+
 /** Decrypt event secrets and merge with plaintext schedule metadata. */
 export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<LedgerEvent> {
   if (wire.enc === 1 && wire.payload) {
@@ -285,8 +335,10 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
         id: wire.id,
         catId: wire.catId,
         date: wire.date,
+        endDate: wire.endDate ?? null,
         allDay: wire.allDay,
         time: wire.time,
+        endTime: wire.endTime ?? null,
         repeat: wire.repeat,
         exceptDates: wire.exceptDates,
         until: wire.until,
@@ -314,8 +366,10 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
     customLabel: wire.customLabel,
     customGlyph: wire.customGlyph,
     date: wire.date,
+    endDate: wire.endDate ?? null,
     allDay: wire.allDay,
     time: wire.time,
+    endTime: wire.endTime ?? null,
     repeat: wire.repeat,
     exceptDates: wire.exceptDates,
     until: wire.until,
@@ -331,6 +385,7 @@ export async function decodeEvent(wire: EventWire, key: CryptoKey): Promise<Ledg
 export async function encodeEventCreate(
   event: Omit<LedgerEvent, "id">,
   key: CryptoKey,
+  ctx?: ReminderContext,
 ) {
   const secrets: EventSecrets = {
     title: event.title,
@@ -342,15 +397,20 @@ export async function encodeEventCreate(
     if (event.customGlyph) secrets.customGlyph = event.customGlyph;
   }
 
+  const notifyDetails = buildReminderDetails(event, ctx);
+
   return {
     catId: event.catId,
     date: event.date,
+    endDate: event.endDate ?? null,
     allDay: event.allDay,
     time: event.time,
+    endTime: event.endTime ?? null,
     repeat: event.repeat,
     notify: event.notify,
     lead: event.lead,
     email: event.email ?? "",
+    ...(notifyDetails ? { notifyDetails } : {}),
     ...(event.expenseId ? { expenseId: event.expenseId } : {}),
     enc: 1 as const,
     payload: await encryptJson(key, secrets),
@@ -361,6 +421,7 @@ export async function encodeEventCreate(
 export async function encodeEventUpdate(
   event: Partial<Omit<LedgerEvent, "id">> & Pick<LedgerEvent, "title" | "comments">,
   key: CryptoKey,
+  ctx?: ReminderContext,
 ) {
   const secrets: EventSecrets = {
     title: event.title,
@@ -379,8 +440,10 @@ export async function encodeEventUpdate(
 
   if (event.catId !== undefined) patch.catId = event.catId;
   if (event.date !== undefined) patch.date = event.date;
+  if (event.endDate !== undefined) patch.endDate = event.endDate;
   if (event.allDay !== undefined) patch.allDay = event.allDay;
   if (event.time !== undefined) patch.time = event.time;
+  if (event.endTime !== undefined) patch.endTime = event.endTime;
   if (event.repeat !== undefined) patch.repeat = event.repeat;
   if (event.exceptDates !== undefined) patch.exceptDates = event.exceptDates;
   if (event.until !== undefined) patch.until = event.until;
@@ -388,6 +451,8 @@ export async function encodeEventUpdate(
   if (event.lead !== undefined) patch.lead = event.lead;
   if (event.email !== undefined) patch.email = event.email;
   if (event.expenseId !== undefined) patch.expenseId = event.expenseId || null;
+  /* `null` clears any copy stored while reminders were on. */
+  patch.notifyDetails = buildReminderDetails(event, ctx);
 
   return patch;
 }

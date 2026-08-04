@@ -7,6 +7,7 @@ import {
   decodeWallet,
   encodeCategories,
   encodeEventCreate,
+  encodeEventUpdate,
   encodeExpenseCreate,
   encodeTodoListCreate,
   encodeWalletFinancials,
@@ -15,6 +16,7 @@ import {
   buildDerivationMessage,
   deriveKeyFromSignature,
 } from "@/frontend/lib/crypto/e2ee";
+import { createEventSchema, updateEventSchema } from "@/schemas/event";
 import { Wallet } from "ethers";
 
 /** Derive a test AES key from a random wallet signature. */
@@ -293,6 +295,136 @@ describe("crypto codec", () => {
     expect(decoded.budgetHoldEnabled).toBe(true);
     expect(decoded.budgetHoldAmount).toBe(1200);
     expect(decoded.budgetHoldCategoryId).toBe("housing");
+  });
+
+  test("reminder events carry a plaintext copy for the email body", async () => {
+    const key = await testKey();
+    const wire = await encodeEventCreate(
+      {
+        title: "Dentist",
+        catId: "appointment",
+        date: "2026-07-20",
+        allDay: false,
+        time: "14:30",
+        repeat: "once",
+        notify: true,
+        lead: "1d",
+        email: "you@mail.com",
+        comments: [{ id: "c1", text: "Bring card", at: "2026-07-18T10:00:00" }],
+        budgetHoldEnabled: true,
+        budgetHoldAmount: 120,
+        budgetHoldCategoryId: "health",
+      },
+      key,
+      { currency: "MYR", holdCategoryName: "Health" },
+    );
+
+    expect(wire.notifyDetails).toEqual({
+      title: "Dentist",
+      hold: { amount: 120, currency: "MYR", categoryName: "Health" },
+      comments: ["Bring card"],
+    });
+    /* Secrets are still encrypted — the copy exists only for delivery. */
+    expect(wire).not.toHaveProperty("title");
+    expect(wire).not.toHaveProperty("comments");
+    expect(createEventSchema.safeParse(wire).success).toBe(true);
+  });
+
+  test("events without a reminder email carry no plaintext copy", async () => {
+    const key = await testKey();
+    const wire = await encodeEventCreate(
+      {
+        title: "Dentist",
+        catId: "appointment",
+        date: "2026-07-20",
+        allDay: true,
+        time: null,
+        repeat: "once",
+        notify: false,
+        lead: "1d",
+        email: "you@mail.com",
+        comments: [],
+      },
+      key,
+    );
+
+    expect(wire).not.toHaveProperty("notifyDetails");
+
+    const noAddress = await encodeEventCreate(
+      {
+        title: "Dentist",
+        catId: "appointment",
+        date: "2026-07-20",
+        allDay: true,
+        time: null,
+        repeat: "once",
+        notify: true,
+        lead: "1d",
+        email: "",
+        comments: [],
+      },
+      key,
+    );
+
+    expect(noAddress).not.toHaveProperty("notifyDetails");
+  });
+
+  test("switching reminders off sends null so the server clears the copy", async () => {
+    const key = await testKey();
+    const patch = await encodeEventUpdate(
+      {
+        title: "Dentist",
+        catId: "appointment",
+        date: "2026-07-20",
+        allDay: true,
+        time: null,
+        repeat: "once",
+        notify: false,
+        lead: "1d",
+        email: "you@mail.com",
+        comments: [{ id: "c1", text: "Bring card", at: "2026-07-18T10:00:00" }],
+      },
+      key,
+    );
+
+    expect(patch.notifyDetails).toBeNull();
+    expect(updateEventSchema.safeParse(patch).success).toBe(true);
+  });
+
+  test("the plaintext copy stays inside the schema limits", async () => {
+    const key = await testKey();
+    const wire = await encodeEventCreate(
+      {
+        title: "T".repeat(400),
+        catId: "personal",
+        date: "2026-07-20",
+        allDay: true,
+        time: null,
+        repeat: "once",
+        notify: true,
+        lead: "1d",
+        email: "you@mail.com",
+        comments: Array.from({ length: 30 }, (_, i) => ({
+          id: `c${i}`,
+          text: "x".repeat(900),
+          at: "2026-07-18T10:00:00",
+        })),
+        budgetHoldEnabled: true,
+        budgetHoldAmount: 80,
+        budgetHoldCategoryId: "misc",
+      },
+      key,
+      { currency: "not-a-code", holdCategoryName: "N".repeat(90) },
+    );
+
+    expect(wire.notifyDetails?.title).toHaveLength(200);
+    expect(wire.notifyDetails?.comments).toHaveLength(20);
+    expect(wire.notifyDetails?.comments?.[0]).toHaveLength(500);
+    expect(wire.notifyDetails?.hold?.amount).toBe(80);
+    /* Unusable currency codes are dropped rather than rejected server-side. */
+    expect(wire.notifyDetails?.hold?.currency).toBeUndefined();
+    expect(wire.notifyDetails?.hold?.categoryName).toHaveLength(64);
+    expect(createEventSchema.safeParse(wire).success).toBe(true);
   });
 
   test("decodeEvent supports legacy plaintext events", async () => {

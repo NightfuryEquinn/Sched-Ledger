@@ -690,6 +690,18 @@ h1, h2, h3 {
   margin-bottom: 0;
 }
 
+.fld-hint,
+.fld-error {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  margin: -8px 0 12px;
+}
+
+.fld-error {
+  color: var(--danger);
+}
+
 .fld-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -719,6 +731,32 @@ h1, h2, h3 {
 
 .modal .fld-2col > div > .select-wrap {
   display: flex;
+}
+
+/* Optional end time: a compact "add" affordance until one is actually set. */
+.end-time-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.end-time-row .picker-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal .fld-2col > div > .end-time-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 43px;
+  font-size: 13px;
+}
+
+.picker-trigger-label.is-placeholder {
+  color: var(--ink-faint);
 }
 
 .modal .fld-2col .select-wrap select {
@@ -1436,6 +1474,20 @@ h1, h2, h3 {
   overflow: auto;
 }
 
+/*
+ * Lead rows reuse .picker-timezone-item but render a label only — drop the
+ * 84px offset column so the option text gets the full menu width.
+ */
+.picker-menu--lead .picker-timezone-item {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.picker-menu--lead .pti-label {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .picker-currency-list, .picker-timezone-list, .picker-category-list {
   display: flex;
   flex-direction: column;
@@ -2095,6 +2147,193 @@ h1, h2, h3 {
   letter-spacing: -.5px;
 }
 
+.trend-head {
+  flex-wrap: wrap;
+}
+
+.trend-head h2 {
+  white-space: normal;
+}
+
+.trend-totals {
+  display: flex;
+  gap: var(--sp-5);
+  flex: none;
+}
+
+.trend-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.trend-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.trend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.trend-dot--earn {
+  background: var(--ok);
+}
+
+.trend-now--earn {
+  color: var(--ok);
+}
+
+/* Chart hover cards (trend by day, month-over-month bars) */
+.chart-hoverable {
+  position: relative;
+}
+
+.chart-tip {
+  position: absolute;
+  top: 4px;
+  z-index: 3;
+  min-width: 188px;
+  max-width: min(280px, 100%);
+  padding: 10px 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  animation: chart-tip-in var(--dur-fast) var(--ease);
+}
+
+@keyframes chart-tip-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.chart-tip--brief {
+  min-width: 168px;
+}
+
+.ctip-day {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.ctip-block + .ctip-block {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--hair);
+}
+
+.ctip-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ctip-line + .ctip-line {
+  margin-top: 5px;
+}
+
+.ctip-line--net {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid var(--hair);
+}
+
+.ctip-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.ctip-total {
+  font-family: var(--font-num);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.ctip-total.is-up {
+  color: var(--saved);
+}
+
+.ctip-total.is-down {
+  color: var(--danger);
+}
+
+.ctip-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ctip-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.ctip-glyph {
+  font-size: 13px;
+  line-height: 1;
+  flex: none;
+}
+
+.ctip-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ctip-count {
+  font-family: var(--font-num);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  flex: none;
+}
+
+.ctip-amt {
+  font-family: var(--font-num);
+  font-size: 12px;
+  color: var(--ink);
+  flex: none;
+}
+
+.ctip-more,
+.ctip-empty {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  margin: 6px 0 0;
+}
+
+.ctip-more {
+  margin-top: 2px;
+}
+
 /* ── 7. Views: overview ───────────────────────────────────────────── */
 /* Donut chart */
 .donut-wrap {
@@ -2218,19 +2457,25 @@ h1, h2, h3 {
 }
 
 .recent-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: 14px 0;
-  border-top: 1px solid var(--hair);
+  /* Bleeds into the panel padding so the hover fill breathes around the row
+     content instead of stopping flush against the glyph and the amount. */
+  padding: 14px var(--sp-3);
+  margin-inline: calc(var(--sp-3) * -1);
   text-align: left;
-  width: 100%;
   transition: background .12s;
   border-radius: var(--r-lg);
 }
 
-.recent-row:first-child {
-  border-top: none;
+/* Separator tracks the row content, not the wider hover fill. */
+.recent-row + .recent-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 var(--sp-3) auto;
+  border-top: 1px solid var(--hair);
 }
 
 .recent-row:hover {
@@ -2642,6 +2887,30 @@ h1, h2, h3 {
 
 .ct-delta.flat {
   color: var(--ink-faint);
+}
+
+/* Income reads the other way round: more coming in is the good direction. */
+.ct-delta--income.up {
+  color: var(--saved);
+}
+
+.ct-delta--income.down {
+  color: var(--danger);
+}
+
+/* Insights: income block */
+.insights-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vgap);
+}
+
+.insights-section-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -.2px;
 }
 
 .topsub-list {
@@ -3229,6 +3498,8 @@ h1, h2, h3 {
   place-items: center;
   color: var(--accent);
   flex: none;
+  /* Stay beside the task's first line instead of drifting down when it wraps. */
+  align-self: flex-start;
 }
 
 .todo-check.checked {
@@ -3677,11 +3948,13 @@ h1, h2, h3 {
 }
 
 .cal-cell {
+  /* Horizontal padding, shared with the multi-day chip bleed. */
+  --cal-cell-pad: 7px;
   min-height: 98px;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface-2);
-  padding: 7px 7px 8px;
+  padding: 7px var(--cal-cell-pad) 8px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -3760,6 +4033,40 @@ h1, h2, h3 {
 
 .cal-chip:hover {
   filter: brightness(.96) saturate(1.1);
+}
+
+/*
+ * A multi-day run is one chip per covered day. Flattening the inner edges and
+ * bleeding each chip into the cell padding makes consecutive days read as a
+ * single continuous bar across the week.
+ */
+.cal-chip--run {
+  width: auto;
+}
+
+.cal-chip--run-start {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: calc(var(--cal-cell-pad, 6px) * -1);
+}
+
+.cal-chip--run-mid {
+  border-radius: 0;
+  margin-inline: calc(var(--cal-cell-pad, 6px) * -1);
+  padding-inline: calc(var(--cal-cell-pad, 6px) + 6px);
+}
+
+.cal-chip--run-end {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: calc(var(--cal-cell-pad, 6px) * -1);
+  padding-left: calc(var(--cal-cell-pad, 6px) + 6px);
+}
+
+/* Continuation days repeat the title faintly — the run's start carries it. */
+.cal-chip--run-mid .cal-chip-txt,
+.cal-chip--run-end .cal-chip-txt {
+  opacity: .72;
 }
 
 .cal-chip-glyph {
@@ -3947,6 +4254,13 @@ h1, h2, h3 {
   gap: 9px;
 }
 
+.ag-span {
+  flex: none;
+  font-family: var(--font-num);
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+}
+
 .ag-bell {
   display: inline-flex;
   align-items: center;
@@ -4025,6 +4339,21 @@ h1, h2, h3 {
   border-radius: var(--r-lg);
   padding: 15px;
   margin-bottom: var(--sp-5);
+}
+
+.notify-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  margin: 12px 0 0;
+}
+
+/* Half a phone-width column clips the lead label, so stack the reminder fields. */
+@media (max-width: 560px) {
+  .notify-card .fld-2col {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-4);
+  }
 }
 
 .event-div {
@@ -4540,8 +4869,14 @@ h1, h2, h3 {
   transition: all .13s;
 }
 
-.sub-chip:hover {
+.sub-chip:hover:not(:disabled) {
   border-color: var(--border-strong);
+}
+
+/* Repeats that would overlap a multi-day run are offered but not selectable. */
+.sub-chip:disabled {
+  opacity: .42;
+  cursor: not-allowed;
 }
 
 .sub-chip.active {
@@ -5678,6 +6013,16 @@ h1, h2, h3 {
     --gap: var(--sp-4);
     --vgap: var(--sp-5);
     --card-pad: var(--sp-4);
+  }
+  /* Charts are short on phones — keep the hover card from swamping them. */
+  .chart-tip {
+    min-width: 0;
+    max-width: min(240px, 100%);
+    padding: 8px 10px;
+  }
+  .ctip-list li,
+  .ctip-amt {
+    font-size: 11.5px;
   }
   .summary-grid, .summary-grid.sg-3, .summary-grid.sg-4, .summary-grid.sg-5 {
     grid-template-columns: repeat(2, 1fr);

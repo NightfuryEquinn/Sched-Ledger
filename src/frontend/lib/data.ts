@@ -1,5 +1,6 @@
 import { DEFAULT_CATEGORIES } from "@/schemas/category";
-import { occursOn } from "@/lib/schedule";
+import { spanDaysBetween } from "@/schemas/common";
+import { coversOn, occurrenceStartFor, occursOn, spanDays } from "@/lib/schedule";
 import type { MonthEntry } from "./types";
 
 const CURRENCY = { code: "MYR", symbol: "RM" };
@@ -152,6 +153,7 @@ export const REPEATS = [
   { id: "once", label: "One-time", adj: "Once" },
   { id: "daily", label: "Daily", adj: "Daily" },
   { id: "weekly", label: "Weekly", adj: "Weekly" },
+  { id: "biweekly", label: "Biweekly", adj: "Biweekly" },
   { id: "monthly", label: "Monthly", adj: "Monthly" },
   { id: "yearly", label: "Yearly", adj: "Yearly" },
 ];
@@ -171,28 +173,46 @@ const LEAD_TIMES = [
 
 const LEAD_BY_ID = Object.fromEntries(LEAD_TIMES.map((l) => [l.id, l]));
 
-const ALL_DAY_LEAD_SET = new Set(["1d", "2d"]);
+const ALL_DAY_LEAD_SET = new Set(["at", "1d", "2d"]);
+
+/**
+ * All-day events have no clock time, so "at" means the morning of the event
+ * itself — the server sends it at 09:00 in the account timezone.
+ */
+const ALL_DAY_AT_LEAD = {
+  id: "at",
+  label: "On the day (9:00 AM)",
+  short: "on the day",
+} as const;
 
 /** Reminder dropdown options for the event modal. */
 export function leadTimesForEvent(allDay: boolean) {
-  return allDay ? LEAD_TIMES.filter((l) => ALL_DAY_LEAD_SET.has(l.id)) : LEAD_TIMES;
+  if (!allDay) return LEAD_TIMES;
+
+  return LEAD_TIMES.filter((l) => ALL_DAY_LEAD_SET.has(l.id)).map((l) =>
+    l.id === "at" ? ALL_DAY_AT_LEAD : l,
+  );
 }
 
-export { occursOn };
+export { coversOn, occursOn, spanDays };
 
-/** Sort events on the same day: all-day first, then earliest time, then title. */
+/**
+ * Sort events on the same day: all-day first, then earliest time, then title.
+ * A day the event merely runs through (`dayIndex > 0`) has no clock time of its
+ * own, so it ranks with the all-day group.
+ */
 export function compareEventsByEarliest(
-  a: { allDay?: boolean; time?: string | null; title?: string },
-  b: { allDay?: boolean; time?: string | null; title?: string },
+  a: { allDay?: boolean; time?: string | null; title?: string; dayIndex?: number },
+  b: { allDay?: boolean; time?: string | null; title?: string; dayIndex?: number },
 ): number {
-  const dayRank = (ev: typeof a) => (ev.allDay ? 0 : 1);
-  const ra = dayRank(a);
-  const rb = dayRank(b);
+  const timed = (ev: typeof a) => !ev.allDay && !ev.dayIndex;
+  const ra = timed(a) ? 1 : 0;
+  const rb = timed(b) ? 1 : 0;
 
   if (ra !== rb) return ra - rb;
 
-  const ta = a.time || "00:00";
-  const tb = b.time || "00:00";
+  const ta = (timed(a) && a.time) || "00:00";
+  const tb = (timed(b) && b.time) || "00:00";
 
   if (ta < tb) return -1;
   if (ta > tb) return 1;
@@ -202,27 +222,56 @@ export function compareEventsByEarliest(
 
 type DayEvent = {
   date: string;
+  endDate?: string | null;
   allDay?: boolean;
   time?: string | null;
+  endTime?: string | null;
   title?: string;
   repeat?: string;
   until?: string | null;
   exceptDates?: string[];
 };
 
-/** Events occurring on `iso`, sorted earliest-first within the day. */
-export function eventsForDay<T extends DayEvent>(events: T[], iso: string): T[] {
-  return events.filter((ev) => occursOn(ev, iso)).sort(compareEventsByEarliest);
+/** One calendar day touched by one occurrence of an event. */
+export type EventDay<T> = {
+  /** The day this entry is about. */
+  iso: string;
+  ev: T;
+  /** Start of the occurrence covering `iso` — the occurrence's identity. */
+  startIso: string;
+  /** 0 on the start day, 1 on the second day, and so on. */
+  dayIndex: number;
+  /** Inclusive covered-day count of this occurrence. */
+  span: number;
+};
+
+/** Build the covered-day entry for `ev` on `iso`, or null when it isn't running. */
+function eventDayFor<T extends DayEvent>(ev: T, iso: string): EventDay<T> | null {
+  const startIso = occurrenceStartFor(ev, iso);
+  if (startIso === null) return null;
+
+  const span = spanDays(ev);
+
+  return {
+    iso,
+    ev,
+    startIso,
+    dayIndex: span === 1 ? 0 : daysBetweenIso(startIso, iso),
+    span,
+  };
 }
 
-/** Build a day → events map for one month (single pass per event). */
-export function eventsByDayForMonth<T extends DayEvent>(
+/**
+ * Day → covered-occurrence map for one month. This is the display view: a
+ * multi-day event appears on every day it runs through.
+ */
+export function eventDaysByMonth<T extends DayEvent>(
   events: T[],
   monthKey: string,
-): Map<string, T[]> {
+): Map<string, Array<EventDay<T>>> {
   const [y, m] = monthKey.split("-").map(Number);
   const days = new Date(y!, m!, 0).getDate();
-  const map = new Map<string, T[]>();
+  const map = new Map<string, Array<EventDay<T>>>();
 
   for (let d = 1; d <= days; d++) {
     map.set(`${monthKey}-${pad(d)}`, []);
@@ -231,25 +280,136 @@ export function eventsByDayForMonth<T extends DayEvent>(
   for (const ev of events) {
     for (let d = 1; d <= days; d++) {
       const iso = `${monthKey}-${pad(d)}`;
-      if (!occursOn(ev, iso)) continue;
-      map.get(iso)!.push(ev);
+      const day = eventDayFor(ev, iso);
+      if (day) map.get(iso)!.push(day);
     }
   }
 
   for (const [, list] of map) {
-    list.sort(compareEventsByEarliest);
+    list.sort((a, b) =>
+      compareEventsByEarliest({ ...a.ev, dayIndex: a.dayIndex }, { ...b.ev, dayIndex: b.dayIndex }),
+    );
   }
 
   return map;
 }
 
-/** All occurrences within a month, sorted by date then earliest time. */
+/** Build a day → events map for one month, including days a span runs through. */
+export function eventsByDayForMonth<T extends DayEvent>(
+  events: T[],
+  monthKey: string,
+): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+
+  for (const [iso, list] of eventDaysByMonth(events, monthKey)) {
+    map.set(iso, list.map((d) => d.ev));
+  }
+
+  return map;
+}
+
+/** Covered-occurrence entries running on `iso`, sorted earliest-first. */
+export function eventDaysForDay<T extends DayEvent>(events: T[], iso: string): Array<EventDay<T>> {
+  return events
+    .map((ev) => eventDayFor(ev, iso))
+    .filter((d): d is EventDay<T> => d !== null)
+    .sort((a, b) =>
+      compareEventsByEarliest({ ...a.ev, dayIndex: a.dayIndex }, { ...b.ev, dayIndex: b.dayIndex }),
+    );
+}
+
+/** Events running on `iso`, sorted earliest-first within the day. */
+export function eventsForDay<T extends DayEvent>(events: T[], iso: string): T[] {
+  return eventDaysForDay(events, iso).map((d) => d.ev);
+}
+
+/**
+ * Occurrence *starts* within a month, sorted by date then earliest time.
+ *
+ * Deliberately one entry per occurrence rather than per covered day: this feeds
+ * the envelope-hold math, where a 4-day event reserves its budget once, not once
+ * a day. Use `eventDaysByMonth` for anything that renders days.
+ */
 export function scheduleForMonth<T extends DayEvent>(events: T[], monthKey: string) {
-  const byDay = eventsByDayForMonth(events, monthKey);
   const out: Array<{ iso: string; ev: T }> = [];
 
-  for (const [iso, list] of byDay) {
-    for (const ev of list) out.push({ iso, ev });
+  for (const [iso, list] of eventDaysByMonth(events, monthKey)) {
+    for (const day of list) {
+      if (day.dayIndex === 0) out.push({ iso, ev: day.ev });
+    }
+  }
+
+  return out;
+}
+
+/** Local YYYY-MM-DD for a Date. */
+export function isoFromDate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Whole days from `from` to `to`, via UTC so DST never shifts the result. */
+function daysBetweenIso(from: string, to: string): number {
+  return spanDaysBetween(from, to) - 1;
+}
+
+/**
+ * Has this occurrence already gone by? Dates before today have; dates after
+ * have not. Today counts as passed only for a timed event whose clock time is
+ * behind `now` — all-day events stay upcoming for the whole day.
+ */
+function occurrencePassed(
+  iso: string,
+  ev: { allDay?: boolean; time?: string | null },
+  todayIso: string,
+  nowHm: string,
+  dayIndex = 0,
+): boolean {
+  if (iso !== todayIso) return iso < todayIso;
+  if (ev.allDay) return false;
+  /* Mid-run: the start time is behind us but the event is still going. */
+  if (dayIndex > 0) return false;
+
+  return (ev.time || "00:00") < nowHm;
+}
+
+/**
+ * Collapse each recurring series to its next occurrence, and each multi-day run
+ * to a single row.
+ *
+ * A daily event would otherwise fill the agenda with one row per remaining day
+ * of the month, and a week-long event with one row per day it covers; the agenda
+ * only needs the one the user is heading toward. The kept entry is today's while
+ * its time is still ahead, otherwise the next one in the list — so a run that
+ * started before today stays visible, anchored to today rather than dropping out
+ * with its past start day. Single-day one-time events pass through untouched.
+ *
+ * `occurrences` must be ordered earliest-first (as `eventDaysByMonth` returns).
+ */
+export function collapseRecurringToNext<T extends DayEvent & { id: string }>(
+  occurrences: Array<{ iso: string; ev: T; startIso?: string; dayIndex?: number; span?: number }>,
+  now: Date = new Date(),
+): Array<{ iso: string; ev: T; startIso?: string; dayIndex?: number; span?: number }> {
+  const todayIso = isoFromDate(now);
+  const nowHm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const kept = new Set<string>();
+  const out: typeof occurrences = [];
+
+  for (const o of occurrences) {
+    const recurring = Boolean(o.ev.repeat) && o.ev.repeat !== "once";
+    const spans = (o.span ?? 1) > 1;
+
+    if (!recurring && !spans) {
+      out.push(o);
+      continue;
+    }
+
+    /* A recurring event collapses across occurrences too, not just within one. */
+    const key = recurring ? o.ev.id : `${o.ev.id}|${o.startIso ?? o.iso}`;
+    if (kept.has(key)) continue;
+    if (occurrencePassed(o.iso, o.ev, todayIso, nowHm, o.dayIndex ?? 0)) continue;
+
+    kept.add(key);
+    out.push(o);
   }
 
   return out;
@@ -266,9 +426,38 @@ export function fmtTime(t) {
   return `${hh}:${pad(m)} ${ap}`;
 }
 
-/** Human-readable event time label (all-day or clock time). */
-export function eventTimeLabel(ev) {
-  return ev.allDay ? "All day" : fmtTime(ev.time);
+/**
+ * Human-readable event time label for one covered day.
+ *
+ * An unset `endTime` is never filled in with a guess — the event just shows its
+ * start time, and any later day it runs through reads as all-day:
+ *
+ *   all-day span         → "All day" every day
+ *   timed, no end time   → "3:00 PM", then "All day"
+ *   timed, end time      → "from 3:00 PM", "All day", "until 11:00 AM"
+ *   timed, same day      → "3:00 – 4:30 PM"
+ */
+export function eventTimeLabel(ev, day?: { dayIndex: number; span: number }) {
+  const dayIndex = day?.dayIndex ?? 0;
+  const span = day?.span ?? spanDays(ev);
+  const multiDay = span > 1;
+
+  if (ev.allDay) return "All day";
+  if (dayIndex > 0) {
+    const last = dayIndex === span - 1;
+
+    return last && ev.endTime ? `until ${fmtTime(ev.endTime)}` : "All day";
+  }
+  if (multiDay) return ev.endTime ? `from ${fmtTime(ev.time)}` : fmtTime(ev.time);
+
+  return ev.endTime ? `${fmtTime(ev.time)} – ${fmtTime(ev.endTime)}` : fmtTime(ev.time);
+}
+
+/** "Day 2 of 4" for a day inside a multi-day run, or "" for single-day events. */
+export function eventSpanLabel(day: { dayIndex: number; span: number }): string {
+  if (day.span <= 1) return "";
+
+  return `Day ${day.dayIndex + 1} of ${day.span}`;
 }
 
 /** Human-readable repeat label for an event. */
@@ -276,8 +465,10 @@ export function repeatLabel(ev) {
   return (REPEAT_BY_ID[ev.repeat] || REPEAT_BY_ID.once).label;
 }
 
-/** Human-readable lead-time label. */
-export function leadLabel(id) {
+/** Human-readable lead-time label ("at" reads differently for all-day events). */
+export function leadLabel(id, allDay = false) {
+  if (allDay && id === "at") return ALL_DAY_AT_LEAD.label;
+
   return (LEAD_BY_ID[id] || LEAD_BY_ID.at).label;
 }
 
@@ -289,6 +480,13 @@ export function fmtCommentTime(iso) {
 }
 
 // ── Formatting helpers ──────────────────────────────────────────────
+
+/** Round a money amount to 2 decimal places; non-finite input becomes 0. */
+export function roundMoney(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+
+  return Math.round(n * 100) / 100;
+}
 
 /** Format a number as currency with optional cents. */
 export function fmtMoney(n, opts: { cents?: boolean; currency?: string } = {}) {

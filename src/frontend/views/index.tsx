@@ -17,7 +17,7 @@ import {
   dayLabel,
   eventCatMeta,
   eventTimeLabel,
-  eventsForDay,
+  eventDaysForDay,
   fmtBudgetLimit,
   fmtMoney,
   fmtMoneyShort,
@@ -26,6 +26,7 @@ import {
   monthLabel,
   monthsWindow,
   pad,
+  roundMoney,
   weekdayLabel,
 } from "@/frontend/lib/data";
 import { fetchFxRates, fxConvert, fxRateLabel } from "@/frontend/lib/fx";
@@ -39,6 +40,7 @@ import {
   chartActiveKey,
   chartBudgetForPeriod,
   chartSelectionMonth,
+  dayFlowSeries,
   isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
   recurringDueDay,
   recurringLabel,
@@ -58,7 +60,7 @@ export { Categories } from "./Categories";
 /*
  * Ledger views
  * ────────────
- *   Overview     — summary cards, to-do & schedule, spend trend, donut,
+ *   Overview     — summary cards, to-do & schedule, spend/earn trend, donut,
  *                  recent transactions
  *   Transactions — searchable / filterable list grouped by date
  *   Budgets      — per-category budget editing
@@ -89,8 +91,11 @@ function remainingTodayEvents(events: LedgerEvent[], now: Date, limit = 3) {
   const todayIso = isoDateOf(now);
   const nowHm = clockHm(now);
 
-  return eventsForDay(events, todayIso)
-    .filter((ev) => ev.allDay || (ev.time || "00:00") >= nowHm)
+  return eventDaysForDay(events, todayIso)
+    .filter(
+      /* A run already under way stays listed regardless of its start time. */
+      (day) => day.dayIndex > 0 || day.ev.allDay || (day.ev.time || "00:00") >= nowHm,
+    )
     .slice(0, limit);
 }
 
@@ -154,23 +159,32 @@ export function Overview({
   const [yy, mm] = month.split("-").map(Number);
   const days = new Date(yy, mm, 0).getDate();
   const todayCap = month === CURRENT_MONTH_KEY ? CURRENT_DAY : days;
-  const cum = useMemo(() => {
-    const byDay = new Map<string, number>();
-    for (const e of st.list) {
-      if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
-      byDay.set(e.date, (byDay.get(e.date) || 0) + e.amount);
+  /** Per-day spend / income split by source — powers the trend hover card. */
+  const dayFlows = useMemo(
+    () => dayFlowSeries(st.list, month, categoryIndex, todayCap),
+    [st.list, month, categoryIndex, todayCap],
+  );
+  const trendDetails = useMemo(
+    () => dayFlows.map((f) => ({ ...f, label: `${weekdayLabel(f.day)}, ${dayLabel(f.day)}` })),
+    [dayFlows],
+  );
+  /** Cumulative spend and earnings per day of the selected month. */
+  const { cum, earnCum } = useMemo(() => {
+    const spentPoints: Array<{ x: string; v: number }> = [];
+    const earnedPoints: Array<{ x: string; v: number }> = [];
+    let spentRun = 0;
+    let earnedRun = 0;
+    for (const flow of dayFlows) {
+      spentRun += flow.spent;
+      earnedRun += flow.earned;
+      spentPoints.push({ x: flow.label, v: Math.round(spentRun) });
+      earnedPoints.push({ x: flow.label, v: Math.round(earnedRun) });
     }
-    const points: Array<{ x: string; v: number }> = [];
-    let run = 0;
-    for (let d = 1; d <= todayCap; d++) {
-      const dayKey = `${month}-${pad(d)}`;
-      run += byDay.get(dayKey) || 0;
-      points.push({ x: String(d), v: Math.round(run) });
-    }
-    return points;
-  }, [st.list, month, todayCap, categoryIndex]);
+    return { cum: spentPoints, earnCum: earnedPoints };
+  }, [dayFlows]);
 
   const recent = st.list.slice(0, 3);
+  const accent = getAccent();
   const spentPct = st.spendingBudget ? st.spent / st.spendingBudget : 0;
   const activeCat = hoverCat;
   const isStarting = wallet?.fundingMode === "starting";
@@ -235,7 +249,8 @@ export function Overview({
             <button className="link-btn" onClick={() => setView("schedule")}>See All</button>
           </div>
           <div className="recent-list">
-            {todayEvents.length ? todayEvents.map((ev) => {
+            {todayEvents.length ? todayEvents.map((day) => {
+              const ev = day.ev;
               const cat = eventCatMeta(ev);
 
               return (
@@ -251,7 +266,7 @@ export function Overview({
                   <span className="rr-main">
                     <span className="rr-note">{ev.title}</span>
                     <span className="rr-sub">
-                      {cat.name} · {eventTimeLabel(ev)}
+                      {cat.name} · {eventTimeLabel(ev, day)}
                     </span>
                   </span>
                 </button>
@@ -264,14 +279,33 @@ export function Overview({
       </div>
 
       <section className="panel trend-panel" data-tour="tour-overview-trend">
-        <div className="panel-head">
+        <div className="panel-head trend-head">
           <div>
-            <h2>Spending this Month</h2>
-            <p className="panel-sub">Cumulative · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}</p>
+            <h2>Spending & Earning this Month</h2>
+            <p className="panel-sub">
+              Cumulative · hover a day for its categories · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}
+            </p>
           </div>
-          <div className="trend-now">{fmtMoney(st.spent, { currency })}</div>
+          <div className="trend-totals">
+            <div className="trend-total">
+              <span className="trend-key"><i className="trend-dot" style={{ background: accent }} /> Spending</span>
+              <span className="trend-now">{fmtMoney(st.spent, { currency })}</span>
+            </div>
+            <div className="trend-total">
+              <span className="trend-key"><i className="trend-dot trend-dot--earn" /> Earning</span>
+              <span className="trend-now trend-now--earn">{fmtMoney(st.earned, { currency })}</span>
+            </div>
+          </div>
         </div>
-        <AreaTrend points={cum.length ? cum : [{ x: "1", v: 0 }]} accent={getAccent()} height={210} budgetLine={st.totalBudget} />
+        <AreaTrend
+          points={cum.length ? cum : [{ x: "1", v: 0 }]}
+          compare={earnCum.length ? earnCum : [{ x: "1", v: 0 }]}
+          accent={accent}
+          height={210}
+          budgetLine={st.totalBudget}
+          details={trendDetails.length ? trendDetails : null}
+          format={(n) => fmtMoney(n, { currency })}
+        />
       </section>
 
       <div className="ov-grid ov-grid--charts">
@@ -424,7 +458,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 
   const startEdit = (id) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
   const commit = () => {
-    const v = Math.max(0, Math.round(parseFloat(draft) || 0));
+    const v = Math.max(0, roundMoney(parseFloat(draft) || 0));
     setBudgets({ ...budgets, [editId]: v });
     setEditId(null);
   };
@@ -475,7 +509,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                         autoFocus
                         type="number"
                         min="0"
-                        step="1"
+                        step="0.01"
                         value={draft}
                         onChange={(e) => setDraft(stripNegativeInput(e.target.value))}
                         onKeyDown={(e) => {
@@ -552,8 +586,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     (fxStatus === "ready" && typeof fxRates?.[viewCurrency] === "number");
   const displayCurrency = canConvert ? viewCurrency : currency;
   const money = (n: number) =>
-    fmtMoney(Math.round(fxConvert(n, currency, displayCurrency, fxRates)), {
-      cents: false,
+    fmtMoney(roundMoney(fxConvert(n, currency, displayCurrency, fxRates)), {
       currency: displayCurrency,
     });
 
@@ -566,19 +599,32 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
   const chartMonths = useMemo(() => monthsWindow(month), [month]);
 
-  /** Pre-aggregate outgoing spend by month and category once for Insights charts. */
+  /** Pre-aggregate spend and income by month and category once for Insights charts. */
   const monthlyAgg = useMemo(() => {
     const monthKeys = new Set(chartMonths.map((m) => m.key));
-    const byMonth = new Map<string, { spent: number; byCat: Record<string, number> }>();
-    for (const key of monthKeys) byMonth.set(key, { spent: 0, byCat: {} });
+    type Bucket = {
+      spent: number;
+      earned: number;
+      byCat: Record<string, number>;
+      /** Income keyed by subcategory — most wallets have a single income category. */
+      byIncomeSub: Record<string, number>;
+    };
+    const byMonth = new Map<string, Bucket>();
+    for (const key of monthKeys) byMonth.set(key, { spent: 0, earned: 0, byCat: {}, byIncomeSub: {} });
 
     for (const e of expenses) {
       const key = e.date.slice(0, 7);
       if (!monthKeys.has(key)) continue;
-      if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
       const bucket = byMonth.get(key)!;
-      bucket.spent += e.amount;
       const cat = catOf(e.sub, categoryIndex);
+
+      if (isIncome(e)) {
+        bucket.earned += e.amount;
+        bucket.byIncomeSub[e.sub] = (bucket.byIncomeSub[e.sub] || 0) + e.amount;
+        continue;
+      }
+      if (!isOutgoing(e) || isSavings(e, categoryIndex)) continue;
+      bucket.spent += e.amount;
       bucket.byCat[cat] = (bucket.byCat[cat] || 0) + e.amount;
     }
 
@@ -588,11 +634,12 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const chartBars = useMemo(() => {
     return spendingChartSeries(chartPeriod, expenses, month, categoryIndex).map((bar) => ({
       ...bar,
-      spent: Math.round(fxConvert(bar.spent, currency, displayCurrency, fxRates)),
+      spent: roundMoney(fxConvert(bar.spent, currency, displayCurrency, fxRates)),
+      earned: roundMoney(fxConvert(bar.earned, currency, displayCurrency, fxRates)),
     }));
   }, [chartPeriod, expenses, month, categoryIndex, currency, displayCurrency, fxRates]);
   const chartBudget = useMemo(
-    () => Math.round(fxConvert(chartBudgetForPeriod(chartPeriod, totalBudget, month), currency, displayCurrency, fxRates)),
+    () => roundMoney(fxConvert(chartBudgetForPeriod(chartPeriod, totalBudget, month), currency, displayCurrency, fxRates)),
     [chartPeriod, totalBudget, month, currency, displayCurrency, fxRates],
   );
   const activeChartKey = chartActiveKey(chartPeriod, month);
@@ -601,7 +648,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       chartMonths.map((mo) => ({
         key: mo.key,
         label: monthLabel(mo.key).split(" ")[0],
-        spent: Math.round(monthlyAgg.get(mo.key)?.spent || 0),
+        spent: roundMoney(monthlyAgg.get(mo.key)?.spent || 0),
       })),
     [chartMonths, monthlyAgg],
   );
@@ -617,7 +664,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           const now = cur.byCat[c.id] || 0;
           const was = prev ? prev.byCat[c.id] || 0 : 0;
           const series = chartMonths.map((mo) =>
-            Math.round(
+            roundMoney(
               fxConvert(
                 monthlyAgg.get(mo.key)?.byCat[c.id] || 0,
                 currency,
@@ -651,7 +698,77 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const topSubs = Object.entries(subTotals).map(([sub, v]) => ({ sub, v })).sort((a, b) => b.v - a.v).slice(0, 6);
   const maxSub = topSubs.length ? topSubs[0].v : 1;
 
-  const avgSpent = Math.round(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
+  const avgSpent = roundMoney(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
+
+  // ── Income ────────────────────────────────────────────────────────
+  /** Income totals per subcategory for one month's transactions. */
+  const incomeBySub = (list: Expense[]) => {
+    const totals: Record<string, number> = {};
+    for (const e of list) {
+      if (!isIncome(e)) continue;
+      totals[e.sub] = (totals[e.sub] || 0) + e.amount;
+    }
+
+    return totals;
+  };
+
+  /** One row per income source that has ever paid out inside the chart window. */
+  const incomeRows = useMemo(() => {
+    const now = incomeBySub(cur.list);
+    const was = prev ? incomeBySub(prev.list) : {};
+    const sources = new Set([...Object.keys(now), ...Object.keys(was)]);
+    for (const mo of chartMonths) {
+      for (const sub of Object.keys(monthlyAgg.get(mo.key)?.byIncomeSub ?? {})) sources.add(sub);
+    }
+
+    return [...sources]
+      .map((sub) => {
+        const meta = categoryIndex.subById[sub];
+        const cat = meta ? categoryIndex.catById[meta.catId] : null;
+        const amount = now[sub] || 0;
+        const before = was[sub] || 0;
+        const series = chartMonths.map((mo) =>
+          roundMoney(
+            fxConvert(monthlyAgg.get(mo.key)?.byIncomeSub[sub] || 0, currency, displayCurrency, fxRates),
+          ),
+        );
+
+        return {
+          sub,
+          name: meta?.name ?? sub,
+          cat,
+          now: amount,
+          delta: before ? (amount - before) / before : amount > 0 ? 1 : 0,
+          series,
+        };
+      })
+      .filter((row) => row.cat)
+      .sort((a, b) => b.now - a.now);
+  }, [
+    categoryIndex.subById,
+    categoryIndex.catById,
+    cur.list,
+    prev,
+    chartMonths,
+    monthlyAgg,
+    currency,
+    displayCurrency,
+    fxRates,
+  ]);
+
+  // top income sources this month
+  const topIncomeSubs = Object.entries(incomeBySub(cur.list))
+    .map(([sub, v]) => ({ sub, v }))
+    .sort((a, b) => b.v - a.v)
+    .slice(0, 6);
+  const maxIncomeSub = topIncomeSubs.length ? topIncomeSubs[0].v : 1;
+
+  const avgEarned = roundMoney(
+    chartMonths.reduce((s, mo) => s + (monthlyAgg.get(mo.key)?.earned || 0), 0) / chartMonths.length,
+  );
+  const earnedDelta = prev ? cur.earned - prev.earned : 0;
+  const netKept = cur.earned - cur.spent;
+  const keptPct = cur.earned ? Math.round((netKept / cur.earned) * 100) : 0;
   const rateLine = fxRateLabel(currency, displayCurrency, fxRates);
   const fxNote =
     fxStatus === "loading"
@@ -662,7 +779,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           ? `View only · ${rateLine}`
           : "Wallet currency";
 
-  const chartSub =
+  const chartPeriodSub =
     chartPeriod === "daily"
       ? `Daily spend in ${monthLabel(month, true)} · dashed line is daily budget`
       : chartPeriod === "quarterly"
@@ -670,6 +787,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         : chartPeriod === "yearly"
           ? "Total spend by year · dashed line is yearly budget · tap a bar to view"
           : "Total spend · dashed line is budget · tap a bar to view";
+  const chartSub = `${chartPeriodSub} · hover for spend & income`;
 
   const habit = useMemo(
     () => assessSpendingHabit(expenses, habitPeriod, month, categoryIndex),
@@ -791,6 +909,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           activeKey={activeChartKey}
           onSelect={(key) => setMonth(chartSelectionMonth(chartPeriod, key))}
           budget={chartBudget}
+          format={money}
         />
       </section>
 
@@ -828,6 +947,78 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           </div>
         </section>
       </div>
+
+      <div className="insights-section" data-tour="tour-insights-income">
+        <div className="insights-section-head">
+          <h2>Income</h2>
+          <p className="panel-sub">Where money came in, and how much of it survived the month</p>
+        </div>
+
+        <div className="summary-grid">
+          <SummaryCard label="Income This Month" tone="saved" value={money(cur.earned)} sub={monthLabel(month)} />
+          <SummaryCard
+            label="Vs Last Month"
+            tone={!prev || earnedDelta === 0 ? undefined : earnedDelta > 0 ? "saved" : "danger"}
+            value={prev ? (earnedDelta >= 0 ? "+" : "−") + money(Math.abs(earnedDelta)) : "—"}
+            sub={
+              prev
+                ? `${Math.round(Math.abs(earnedDelta) / (prev.earned || 1) * 100)}% ${earnedDelta >= 0 ? "higher" : "lower"}`
+                : "no prior data"
+            }
+          />
+          <SummaryCard label="6-Month Average" value={money(avgEarned)} sub="monthly income" />
+          <SummaryCard
+            label="Net Kept"
+            tone={netKept < 0 ? "danger" : "ok"}
+            value={money(netKept)}
+            sub={cur.earned ? `${keptPct}% of income kept` : "no income recorded"}
+          />
+        </div>
+
+        <div className="ov-grid">
+          <section className="panel">
+            <div className="panel-head"><h2>Income Trends</h2><p className="panel-sub">by source · vs previous month</p></div>
+            <div className="cat-trend-list">
+              {incomeRows.length ? incomeRows.map(({ sub, name, cat, now, delta, series }) => (
+                <div key={sub} className="ctrow">
+                  <div className="ct-name"><CatGlyph glyph={cat!.glyph} id={cat!.id} /> {name}</div>
+                  <MiniSpark values={series} color={cat!.color} />
+                  <div className="ct-amt">{money(now)}</div>
+                  <div className={"ct-delta ct-delta--income " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")}>
+                    {delta > 0.001 ? "▲" : delta < -0.001 ? "▼" : "—"} {Math.abs(Math.round(delta * 100))}%
+                  </div>
+                </div>
+              )) : (
+                <EmptyState title="No Income Yet" sub="Log an income transaction to see trends here." />
+              )}
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="panel-head"><h2>Top Income Sources</h2><p className="panel-sub">{monthLabel(month, true)}</p></div>
+            <div className="topsub-list">
+              {topIncomeSubs.length ? topIncomeSubs.map(({ sub, v }) => {
+                const s = categoryIndex.subById[sub];
+                const c = s ? categoryIndex.catById[s.catId] : null;
+                if (!s || !c) return null;
+                return (
+                  <div key={sub} className="ts-row">
+                    <div className="ts-head">
+                      <span>{s.name} <span className="ts-cat">· {c.name}</span></span>
+                      <span className="ts-amt">{money(v)}</span>
+                    </div>
+                    <div className="ts-track">
+                      <div className="ts-fill" style={{ width: (v / maxIncomeSub) * 100 + "%", background: c.color }} />
+                    </div>
+                  </div>
+                );
+              }) : (
+                <EmptyState title="Nothing Earned" sub={`No income recorded in ${monthLabel(month, true)}.`} />
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
@@ -835,13 +1026,13 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 // ── Recurring ───────────────────────────────────────────────────────
 export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) {
   const list = recurringSchedulesForMonth(expenses, month);
-  const total = list.reduce((s, e) => s + e.amount, 0);
-  const monthlyEq = Math.round(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
+  const total = roundMoney(list.reduce((s, e) => s + e.amount, 0));
+  const monthlyEq = roundMoney(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
   return (
     <div className="view">
       <div className="summary-grid sg-2" data-tour="tour-recurring-summary">
-        <SummaryCard label="Recurring this Month" value={fmtMoney(total, { cents: false, currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
-        <SummaryCard label="Monthly Equivalent" tone="spent" value={fmtMoney(monthlyEq, { cents: false, currency })} sub="normalized across intervals" />
+        <SummaryCard label="Recurring this Month" value={fmtMoney(total, { currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
+        <SummaryCard label="Monthly Equivalent" tone="spent" value={fmtMoney(monthlyEq, { currency })} sub="normalized across intervals" />
       </div>
       <section className="panel">
         <div className="panel-head"><h2>Fixed & Recurring</h2><p className="panel-sub">Auto-posted on due dates from your last amount</p></div>
