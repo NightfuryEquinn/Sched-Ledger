@@ -12,6 +12,7 @@ import {
   EVENT_CATS,
   REPEATS,
   TODAY_ISO,
+  collapseRecurringToNext,
   dayLabel,
   eventCatMeta,
   eventTimeLabel,
@@ -242,10 +243,24 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
   }, [byDay]);
   const agenda = isCurrent ? occ.filter((o) => o.iso >= TODAY_ISO) : occ;
 
+  // Re-tick each minute so today's occurrence drops out of the agenda once its
+  // time goes by, handing the slot to the series' next occurrence.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  /** Agenda with each recurring series reduced to its next occurrence. */
+  const upcoming = useMemo(
+    () => (isCurrent ? collapseRecurringToNext(agenda, now) : agenda),
+    [agenda, isCurrent, now],
+  );
+
   const upcomingByDay = useMemo(() => {
     if (!isCurrent) return [];
     const groups = new Map<string, LedgerEvent[]>();
-    for (const { iso, ev } of agenda) {
+    for (const { iso, ev } of upcoming) {
       const list = groups.get(iso);
       if (list) list.push(ev);
       else groups.set(iso, [ev]);
@@ -253,7 +268,7 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
     return [...groups.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([iso, dayEvents]) => ({ iso, events: dayEvents }));
-  }, [agenda, isCurrent]);
+  }, [upcoming, isCurrent]);
 
   const nextRem = agenda.find((o) => o.ev.notify);
   const alertsCount = occ.filter((o) => o.ev.notify).length;
@@ -313,7 +328,7 @@ export function Schedule({ events, month, currency, onAddEvent, onEditEvent }) {
               <h2>{upcomingTitle}</h2>
               <p className="panel-sub">
                 {showFullUpcoming
-                  ? `${agenda.length} ${agenda.length === 1 ? "event" : "events"} from ${dayLabel(TODAY_ISO)} · earliest first`
+                  ? `${upcoming.length} ${upcoming.length === 1 ? "event" : "events"} from ${dayLabel(TODAY_ISO)} · earliest first`
                   : `${dayLabel(viewDay)} · ${weekdayLabel(viewDay)} · ${focusedEvents.length} ${focusedEvents.length === 1 ? "event" : "events"}`}
               </p>
             </div>
