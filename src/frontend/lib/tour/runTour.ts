@@ -94,3 +94,8 @@ export function cancelActiveTour() {
   if (activeTour?.isActive()) activeTour.cancel();
   activeTour = null;
 }
+
+/** Whether a guided tour is on screen right now. */
+export function isTourActive(): boolean {
+  return !!activeTour?.isActive();
+}

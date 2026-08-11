@@ -1,6 +1,6 @@
 # Sched Ledger
 
-Private expense ledger, schedule, and to-do app. Track spending across multiple wallets and currencies, plan events with email reminders, and sign in with a Web3 wallet — no email or password required.
+Private expense ledger, schedule, and to-do app. Track spending across multiple wallets and currencies, plan events with email and push reminders, and sign in with a Web3 wallet — no email or password required.
 
 Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
@@ -15,14 +15,15 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable expense and income category/subcategory taxonomy with glyphs and colors
 - **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron-job.org; delete scopes for one occurrence, this-and-future, or the whole series
-- **Insights** — FX conversion, month-over-month charts (daily/monthly/quarterly/yearly), and spending habits (unlock after five active transaction days)
+- **Insights** — FX conversion, month-over-month charts (daily/monthly/quarterly/yearly), an earnings line plotted against spending on the overview trend, per-category hover breakdowns on charts and recent rows, and spending habits (unlock after five active transaction days)
 
 ### Schedule & tasks
 
-- **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence (daily/weekly/biweekly/monthly/yearly)
+- **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence (daily/weekly/biweekly/monthly/yearly); events can span multiple days via `endDate`, and Upcoming shows only the next occurrence of a recurring series
 - **Budget holds** — optional encrypted envelope holds on any schedule event (amount + category); active holds reserve budget until you log payment or release the occurrence; amounts never leave the E2EE payload
 - **Log payment** — from a bill/renewal event, open a prefilled expense and link `eventId` ↔ `expenseId` (plaintext metadata only); also releases that occurrence's budget hold when present
-- **Email reminders** — optional Resend emails with per-event lead times and user timezone; confirmation when you enable notify; the email includes the event name, budget hold and comments, so turning notify on stores a readable copy (`notifyDetails`) for delivery — switching it off deletes that copy and events without reminders stay fully encrypted
+- **Email reminders** — optional Resend emails with per-event lead times and user timezone; confirmation when you enable notify; all-day events get day-of reminders; the reminder includes the event name, budget hold and comments, so turning notify on stores a readable copy (`notifyDetails`) that renders both the email and the push notification — switching it off deletes that copy and events without reminders stay fully encrypted
+- **Push notifications** — opt-in Web Push per device under **Account → Notification**, delivered on the same 15-minute poll as the reminder emails and carrying the same event name, time, hold and comments; each browser subscribes separately, and turning it off on one device leaves the others and your emails untouched
 - **TO-DO lists** — multiple named lists with inline task management
 
 ### Identity & privacy
@@ -38,14 +39,15 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Budget alerts** — email when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates and sends names/amounts; server only delivers)
 - **Transparency** — in-app map of hosting roles, what the server can infer, MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagrams)
 - **Guided tour** — Shepherd.js walkthrough for each main view
+- **What's New** — release notes open once per device per app version (see [Versioning](#versioning)), and stay reachable from **Account → What's New**
 
 ### Security
 
-- **End-to-end encryption** — ledger content (transactions, wallet names/budgets, category trees, event titles/comments/budget holds, and to-do lists) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for accurate reminder cron — day-level dates are intentional, and events with email reminders on also keep a readable copy of the name/hold/comments the email renders)
+- **End-to-end encryption** — ledger content (transactions, wallet names/budgets, category trees, event titles/comments/budget holds, and to-do lists) is AES-256-GCM encrypted in the browser before reaching MongoDB; the server only stores ciphertext (plus plaintext schedule/email metadata needed for accurate reminder cron — day-level dates are intentional, and events with reminders on also keep a readable copy of the name/hold/comments that both the email and the push notification render)
 - Ownership uses opaque `accountId` (`users._id`); the SIWE address stays on `users` for login only
 - New document ids are random ObjectIds (no embedded creation timestamp)
 - Signature verification, Mongo-backed rate limiting (in-memory fallback), security headers, in-memory profile cache
-- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, budget-alert evaluation, and envelope holds (`bun test`)
+- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, budget-alert evaluation, envelope holds, multi-day and recurring schedule math, push dedupe, and the release-notes gate (`bun test`)
 
 ## Tech stack
 
@@ -71,16 +73,17 @@ src/
 ├── vercel-api.ts         # API bundle source (built → api/index.js)
 ├── api/
 │   ├── app.ts            # Hono app + error handler
-│   ├── lib/              # auth, cache, email, reminders, recurring-expenses,
-│   │                     # budget-alerts, expense-delete-scope, ids, serialize, errors
+│   ├── lib/              # auth, cache, email, push, reminders, reminder-details,
+│   │                     # recurring-expenses, budget-alerts, expense-delete-scope,
+│   │                     # expense-update, money, ids, serialize, errors
 │   ├── middleware/       # session, rate-limit (Mongo + memory fallback), security, db
 │   └── routes/           # auth, users, profile, wallets, categories,
 │                         # expenses, events, todo-lists, consent,
-│                         # budget-alerts, fx, cron
+│                         # budget-alerts, push, fx, cron
 ├── db/                   # MongoDB client, collections, indexes, URI resolver
 ├── schemas/              # Zod schemas (shared API validation)
 ├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts,
-│                         # delete-scope (shared)
+│                         # delete-scope, account-retention, version (shared)
 └── frontend/
     ├── app/              # Root, LedgerApp
     ├── auth/             # wallet sign-in, device vault, backups, account menu, session UI
@@ -90,9 +93,11 @@ src/
     ├── lib/
     │   ├── budget/         # in-tab budget-alert notifications
     │   ├── crypto/         # E2EE codec, key derivation, unlock flow
+    │   ├── push/           # Web Push permission + subscription lifecycle
     │   ├── pwa/            # service worker registration + IndexedDB cipher cache
     │   ├── hooks/          # useLedger, useTheme
     │   ├── tour/           # guided tour steps and runner
+    │   ├── whats-new/      # release notes, per-device seen state, auto-show gate
     │   └── envelope-holds.ts  # schedule ↔ budget hold math
     ├── styles/           # ledger.css (theme tokens + layout)
     ├── views/            # Overview, Transactions, Budgets, Calculator, Categories,
@@ -100,7 +105,7 @@ src/
     └── main.tsx
 public/                   # PWA manifest + service worker (copied into dist/ on build)
 scripts/                  # MongoDB collection maintenance (drop/list, accountId backfill, stale-user prune)
-tests/                    # auth, crypto, calculator, spending, schedule, budget/holds
+tests/                    # auth, crypto, calculator, spending, schedule, budget/holds, whats-new
 build.ts                  # Production build (dist/ + api/index.js)
 ```
 
@@ -154,7 +159,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | MongoDB collection | Code key | Purpose |
 |------------------|----------|---------|
 | `users` | `users` | Account profile (codename, notify email, timezone, reminder/alert prefs) |
-| `ledger_profiles` | `ledgerProfiles` | Per-user UI state (`currentMonth`) |
+| `ledger_profiles` | `ledgerProfiles` | Per-user UI state (`currentMonth`); its `createdAt` is exposed to the client as account age |
 | `financial_wallets` | `financialWallets` | Wallets (currency, funding mode; E2EE financials) |
 | `category_taxonomies` | `categoryTaxonomies` | One document per user — E2EE category tree |
 | `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
@@ -163,8 +168,9 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `consent` | `consent` | Data-sharing opt-in flag |
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
-| `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminder emails |
+| `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminders, per occurrence and per `channels` (email / push; absent on pre-push rows, which were email-only) |
 | `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit email delivery |
+| `push_subscriptions` | `pushSubscriptions` | Web Push endpoints, one row per browser (unique on `endpoint`) — the row *is* the opt-in |
 | `rate_limits` | `rateLimits` | Shared API rate-limit buckets (TTL on `resetAt`; multi-instance) |
 
 ### Encryption vs plaintext
@@ -177,6 +183,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on |
 | `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
 | `users` | — | `address` (SIWE login), notify prefs |
+| `push_subscriptions` | — | `accountId`, `endpoint`, and the browser's `p256dh` / `auth` keys — required verbatim to encrypt each push payload |
 | `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |
 | `rate_limits` | — | `_id` (limit key), `count`, `resetAt` |
 
@@ -195,7 +202,8 @@ The in-app **Transparency** view documents hosting roles, what the server can in
 
 ```bash
 bun dev
-bun test   # crypto, reminders, calculator, spending habits, session auth, budget alerts, envelope holds
+bun test   # crypto, reminders, calculator, spending habits, session auth, budget alerts,
+           # envelope holds, schedule recurrence/multi-day, push dedupe, release-notes gate
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
@@ -207,6 +215,16 @@ When `CRON_SECRET` is set in development, the server also polls every 15 minutes
 ```bash
 curl http://localhost:3000/api/health
 ```
+
+### Versioning
+
+The user-facing version lives in [`src/lib/version.ts`](src/lib/version.ts) as `APP_VERSION`, mirrored by `"version"` in `package.json`. It is shown under **Sign Out** in the account menu and in the **What's New** popup header.
+
+Release notes are edited in [`src/frontend/lib/whats-new/release-notes.ts`](src/frontend/lib/whats-new/release-notes.ts). Bumping `APP_VERSION` re-announces them: the popup opens on the next load of every device that has not seen that version, because seen-state is stored per version in `localStorage` under `ledger:whatsnew:v1`.
+
+Two cases are deliberately quiet — a device that already saw the current version, and a brand-new account (profile `createdAt` under 10 minutes old), for which the guided tour is the introduction instead. When the popup is due it waits for the Shepherd tour to finish first, so the two never overlap.
+
+To preview it during development, delete `ledger:whatsnew:v1` in DevTools → Application → Local Storage and reload, or open **Account → What's New**.
 
 ## Authentication
 
@@ -244,7 +262,7 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 | `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder/alert prefs |
 | `GET /api/users/:address` | Own profile only (session-gated; other addresses forbidden) |
 | `POST /api/users` | Create or upsert user profile on first sign-in |
-| `GET/PATCH /api/profile` | Per-user UI state (`currentMonth` only) |
+| `GET/PATCH /api/profile` | Per-user UI state — accepts `currentMonth` only; returns `id`, `currentMonth`, and `createdAt` (account age, used to gate release notes) |
 | `CRUD /api/wallets` | Financial wallets (metadata + E2EE `enc`/`payload` via PATCH) |
 | `PUT /api/wallets/:id/budgets` | Update encrypted wallet financials (`enc`/`payload`) |
 | `GET/PUT /api/categories` | Category taxonomy |
@@ -345,6 +363,8 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 7. **Transparency** — open the Transparency view and confirm hosting, inference, and collection maps render.
 8. **Log payment** — create a bill event, use **Log payment**, and confirm the expense links back to the event.
 9. **Budget hold** — enable a hold on a schedule event, confirm Budgets shows **Held**, then log payment and confirm the hold releases for that occurrence.
+10. **Push notifications** — open **Account → Notification**, enable push, and confirm the device registers (needs the `VAPID_*` keys; on iOS add the app to the Home Screen first).
+11. **What's New** — confirm the release notes open on a device that has not seen this version, and that **Account → What's New** reopens them afterwards.
 
 ### Serverless notes
 

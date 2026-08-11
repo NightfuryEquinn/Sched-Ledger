@@ -1170,6 +1170,14 @@ h1, h2, h3 {
   flex: none;
 }
 
+.am-version {
+  padding: 10px 10px 2px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+  user-select: none;
+}
+
 .am-div {
   height: 1px;
   background: var(--hair);
@@ -5277,6 +5285,65 @@ h1, h2, h3 {
   height: 1px;
   background: var(--hair);
   margin: var(--sp-6) 2px;
+}
+
+/* ── What's New release notes ─────────────────────────────────────── */
+.wn-pill {
+  margin-right: auto;
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.wn-date {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin: -10px 0 0;
+}
+
+.wn-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.wn-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.wn-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.wn-item-text {
+  min-width: 0;
+}
+
+.wn-item-title {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 5px;
+}
+
+.wn-item-text .legal-p {
+  margin-bottom: 0;
 }
 
 .delete-scope-list {

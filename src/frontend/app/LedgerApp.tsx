@@ -1,4 +1,5 @@
 import { AccountMenu } from "@/frontend/auth";
+import { WhatsNewModal } from "@/frontend/auth/components/WhatsNewModal";
 import type { LedgerBackupPlain } from "@/frontend/auth/lib/encrypted-backup";
 import type { EventImportRow } from "@/frontend/auth/lib/import-events";
 import type { TodoImportList } from "@/frontend/auth/lib/import-todos";
@@ -16,6 +17,7 @@ import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
 import { releaseHoldForOccurrence, restoreHoldForOccurrence } from "@/frontend/lib/envelope-holds";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour } from "@/frontend/lib/tour";
+import { useWhatsNew } from "@/frontend/lib/whats-new";
 import type { Account, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
 import {
   Budgets as BudgetsView,
@@ -69,6 +71,10 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   const fabRef = useRef<HTMLDivElement>(null);
   const tourReady = !ledger.isLoading && !ledger.error && !!ledger.profile;
   const { startViewTour } = useLedgerTour({ view, ready: tourReady });
+  const { open: whatsNewOpen, openWhatsNew, closeWhatsNew } = useWhatsNew({
+    ready: tourReady,
+    accountCreatedAt: ledger.profile?.createdAt,
+  });
 
   useEffect(() => {
     if (!fabOpen) return;
@@ -333,6 +339,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
                 onImportTodos={importTodos}
                 onRestoreBackup={restoreBackup}
                 onTakeTour={() => startViewTour(view)}
+                onWhatsNew={openWhatsNew}
               />
             </div>
           </div>
@@ -515,6 +522,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           onDelete={deleteEvent}
         />
       )}
+      {whatsNewOpen ? <WhatsNewModal onClose={closeWhatsNew} /> : null}
     </div>
   );
 }

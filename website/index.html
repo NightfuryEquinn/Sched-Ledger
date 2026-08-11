@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
 <title>Sched Ledger — Your money and schedule, encrypted end-to-end</title>
-<meta name="description" content="Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and currencies, plan events with reminders, and sign in with a Web3 wallet — no email or password required.">
+<meta name="description" content="Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and currencies, plan events with email and push reminders, and sign in with a Web3 wallet — no email or password required.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="logo.png" type="image/x-icon" />
@@ -80,6 +80,11 @@
     margin-bottom:28px;
   }
   .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .badge .ver{
+    padding:2px 8px;border-radius:999px;
+    background:linear-gradient(135deg, rgba(110,231,183,0.18), rgba(124,154,255,0.18));
+    border:1px solid var(--border);color:var(--text);font-weight:700;font-size:0.74rem;
+  }
   .hero h1{
     font-size:clamp(2.2rem, 5vw, 3.6rem);
     font-weight:800;letter-spacing:-0.02em;
@@ -257,9 +262,9 @@
 <section class="hero">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="wrap">
-    <div class="badge"><span class="dot"></span> End-to-end encrypted · Web3 sign-in · No email or password</div>
+    <div class="badge"><span class="ver">v1.0.0</span> <span class="dot"></span> End-to-end encrypted · Web3 sign-in · No email or password</div>
     <h1>Your money and schedule,<br><span class="grad">encrypted end-to-end.</span></h1>
-    <p>Sched Ledger is a private expense ledger, calendar, and to-do app. Track spending across wallets and currencies, plan bills and events with reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.</p>
+    <p>Sched Ledger is a private expense ledger, calendar, and to-do app. Track spending across wallets and currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.</p>
     <div class="hero-ctas">
       <a class="btn-primary" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Get started free</a>
       <a class="btn-secondary" href="#privacy">See how privacy works</a>
@@ -301,12 +306,27 @@
       <div class="card">
         <div class="icon">📊</div>
         <h3>Insights that go deep</h3>
-        <p>FX conversion, month-over-month charts across daily, monthly, quarterly, and yearly views, plus spending-habit analysis.</p>
+        <p>Earnings plotted against spending on the overview trend, hover any point for a per-category breakdown, FX conversion, month-over-month charts across daily, monthly, quarterly, and yearly views, plus spending-habit analysis.</p>
       </div>
       <div class="card">
         <div class="icon">🔔</div>
         <h3>Budget alerts</h3>
         <p>Get emailed when a category nears or exceeds its monthly budget — evaluated client-side, so the server only delivers, never sees.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📱</div>
+        <h3>Push notifications</h3>
+        <p>Opt in per device for Web Push reminders that arrive even when the app is closed, carrying the same event name, time, and budget hold as the email.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📥</div>
+        <h3>Export and import</h3>
+        <p>CSV round-trips for transactions, schedule events, and to-do lists, plus a full encrypted backup only your ledger key can open.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📲</div>
+        <h3>Installable PWA</h3>
+        <p>Add Sched Ledger to your home screen and keep reading your ledger offline from an encrypted local cache.</p>
       </div>
     </div>
   </div>
@@ -320,9 +340,11 @@
       <p>Sched Ledger connects your calendar directly to your ledger, so nothing falls through the cracks between "I should pay this" and "I paid this."</p>
       <ul class="checklist">
         <li>Calendar and agenda views for bills, appointments, and reminders with daily/weekly/biweekly/monthly/yearly recurrence</li>
+        <li>Events can span multiple days, and Upcoming shows only the next occurrence of a repeating series</li>
         <li>Budget holds reserve money for a scheduled bill until you log the payment or release it</li>
         <li>Log payment links an event to an expense in one click, and releases its budget hold automatically</li>
         <li>Optional email reminders with per-event lead times, in your timezone — the email carries the event name, budget hold, and comments</li>
+        <li>Web Push reminders on any device you opt in, delivered even when the app is closed</li>
         <li>Multiple named to-do lists with inline task management</li>
       </ul>
     </div>
@@ -358,7 +380,7 @@
     <div>
       <div class="eyebrow">Privacy & identity</div>
       <h2>The server sees ciphertext. That's it.</h2>
-      <p>Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are AES-256-GCM encrypted in your browser before anything reaches the database. Only day-level dates needed for accurate reminders stay in plaintext — plus, on events where you switch email reminders on, a readable copy of what that email says. Everything else is unreadable server-side.</p>
+      <p>Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are AES-256-GCM encrypted in your browser before anything reaches the database. Only day-level dates needed for accurate reminders stay in plaintext — plus, on events where you switch reminders on, a readable copy of what that email or push notification says. Everything else is unreadable server-side.</p>
       <ul class="checklist">
         <li>Sign in with a Web3 wallet — create or restore with a 12- or 24-word recovery phrase, no email or password</li>
         <li>Device passphrase vault wraps your keys locally with PBKDF2 + AES-GCM instead of plaintext storage</li>
@@ -397,7 +419,7 @@
 <section class="cta-final">
   <div class="wrap">
     <h2>Take your ledger back from the cloud.</h2>
-    <p>Free, open-source, and self-hostable. Sign in and start tracking in seconds, or clone it and run your own instance with Bun.</p>
+    <p>Free to use, source-available under BSL 1.1, and self-hostable. Sign in and start tracking in seconds, or clone it and run your own instance with Bun.</p>
     <div class="hero-ctas">
       <a class="btn-primary" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Launch Sched Ledger</a>
       <a class="btn-secondary" href="https://github.com/NightfuryEquinn/Sched-Ledger" target="_blank" rel="noopener">View source on GitHub</a>
@@ -416,7 +438,7 @@
         <a href="#privacy">Privacy</a>
       </div>
     </div>
-    <p class="foot-note">Sched Ledger — private expense ledger, schedule, and to-do app. E2EE by default.</p>
+    <p class="foot-note">Sched Ledger v1.0.0 — private expense ledger, schedule, and to-do app. E2EE by default. Source available under the <a href="https://github.com/NightfuryEquinn/Sched-Ledger/blob/develop/LICENSE" target="_blank" rel="noopener" style="text-decoration:underline;">Business Source License 1.1</a>.</p>
   </div>
 </footer>
 
