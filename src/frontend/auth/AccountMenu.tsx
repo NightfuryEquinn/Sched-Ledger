@@ -1,4 +1,5 @@
 import { ACCOUNT_STALE_DAYS } from "@/lib/account-retention";
+import { APP_VERSION } from "@/lib/version";
 import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
@@ -46,6 +47,7 @@ type AccountMenuProps = {
     import("./lib/restore-backup").BackupRestoreResult
   >;
   onTakeTour?: () => void;
+  onWhatsNew?: () => void;
 };
 
 export function AccountMenu({
@@ -62,6 +64,7 @@ export function AccountMenu({
   onImportTodos,
   onRestoreBackup,
   onTakeTour,
+  onWhatsNew,
 }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [reveal, setReveal] = useState(false);
@@ -172,6 +175,11 @@ export function AccountMenu({
             ) : null}
           </div>
           <div className="am-div" />
+          {onWhatsNew ? (
+            <button className="am-item" type="button" onClick={() => { onWhatsNew(); setOpen(false); }}>
+              <Icon name="sparkle" size={16} /> What&apos;s New
+            </button>
+          ) : null}
           <button className="am-item" type="button" onClick={() => { setNotifOpen(true); setOpen(false); }}>
             <Icon name="bell" size={16} /> Notification
           </button>
@@ -213,6 +221,7 @@ export function AccountMenu({
           <button className="am-item danger" type="button" onClick={onSignOut}>
             <Icon name="logout" size={16} /> Sign Out
           </button>
+          <div className="am-version num">v{APP_VERSION}</div>
         </div>
       ) : null}
       {reveal && stored ? (

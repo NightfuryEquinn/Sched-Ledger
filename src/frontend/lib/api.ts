@@ -22,6 +22,9 @@ export class ApiError extends Error {
 export type ApiProfile = {
   id: string;
   currentMonth: string;
+  /* ISO timestamp; tells a brand-new account from a returning one when
+     deciding whether to announce release notes. */
+  createdAt: string;
 };
 
 export type ApiSession = {

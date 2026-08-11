@@ -20,13 +20,19 @@ function profileCacheKey(accountId: string) {
   return `profile:${accountId}`;
 }
 
-/** Expose only id + currentMonth (ownership keys stay server-side). */
-function serializeProfile(doc: { _id: import("mongodb").ObjectId; currentMonth: string }) {
+/** Expose only id + currentMonth + createdAt (ownership keys stay server-side). */
+function serializeProfile(doc: {
+  _id: import("mongodb").ObjectId;
+  currentMonth: string;
+  createdAt: Date;
+}) {
   const serialized = serializeDoc(doc);
 
   return {
     id: serialized.id,
     currentMonth: serialized.currentMonth,
+    /* Account age tells the client whether to announce release notes. */
+    createdAt: serialized.createdAt.toISOString(),
   };
 }
 
