@@ -24,11 +24,13 @@
     "react": "^19",
     "react-dom": "^19",
     "shepherd.js": "^15.2.2",
+    "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^19",
-    "@types/react-dom": "^19"
+    "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4"
   }
 }

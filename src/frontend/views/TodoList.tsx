@@ -248,7 +248,9 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
 
               <div className="todo-task-list">
                 {active.tasks.length ? (
-                  active.tasks.map((task) => (
+                  [...active.tasks]
+                    .sort((a, b) => Number(a.done) - Number(b.done))
+                    .map((task) => (
                     <div key={task.id} className={"todo-task" + (task.done ? " done" : "")}>
                       <button
                         type="button"

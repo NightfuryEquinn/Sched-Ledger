@@ -90,6 +90,9 @@ export async function ensureIndexes(db: Db): Promise<void> {
       { unique: true },
     ),
     db.collection(COLLECTIONS.todoLists).createIndex({ accountId: 1, createdAt: 1 }),
+    /* Push subscriptions: one row per browser endpoint, fanned out per account. */
+    db.collection(COLLECTIONS.pushSubscriptions).createIndex({ endpoint: 1 }, { unique: true }),
+    db.collection(COLLECTIONS.pushSubscriptions).createIndex({ accountId: 1 }),
     /* TTL cleanup for shared rate-limit buckets (resetAt is epoch ms). */
     db.collection(COLLECTIONS.rateLimits).createIndex(
       { resetAt: 1 },

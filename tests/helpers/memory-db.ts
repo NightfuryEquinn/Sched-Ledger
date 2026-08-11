@@ -111,12 +111,38 @@ function applyUpdate(doc: Doc, update: Record<string, unknown>): void {
       doc[k] = current + v;
     }
   }
+  if (update.$addToSet && typeof update.$addToSet === "object") {
+    for (const [k, v] of Object.entries(update.$addToSet as Record<string, unknown>)) {
+      const current = Array.isArray(doc[k]) ? (doc[k] as unknown[]) : [];
+      const incoming =
+        v && typeof v === "object" && "$each" in (v as Record<string, unknown>)
+          ? ((v as { $each: unknown[] }).$each ?? [])
+          : [v];
+      doc[k] = [...current, ...incoming.filter((item) => !current.includes(item))];
+    }
+  }
   if (update.$setOnInsert && typeof update.$setOnInsert === "object") {
-    /* only applied on insert by findOneAndUpdate path */
+    /* only applied on insert by the upsert paths */
   }
   for (const [k, v] of Object.entries(update)) {
     if (!k.startsWith("$")) doc[k] = v;
   }
+}
+
+/** Build the document Mongo would create for an upsert that matched nothing. */
+function upsertedDoc(filter: Record<string, unknown>, update: Record<string, unknown>): Doc {
+  const _id = (filter._id as ObjectId | string | undefined) ?? new ObjectId();
+  const doc = { _id } as Doc;
+  if (update.$setOnInsert && typeof update.$setOnInsert === "object") {
+    Object.assign(doc, update.$setOnInsert);
+  }
+  applyUpdate(doc, update);
+  /* Merge equality filter fields onto inserted doc (Mongo upsert behavior). */
+  for (const [k, v] of Object.entries(filter)) {
+    if (!k.startsWith("$") && doc[k] === undefined) doc[k] = v as never;
+  }
+
+  return doc;
 }
 
 function createCollection() {
@@ -146,29 +172,34 @@ function createCollection() {
       update: Record<string, unknown>,
       options?: { upsert?: boolean; returnDocument?: "before" | "after" },
     ) {
-      let doc = docs.find((d) => matches(d, filter));
+      const doc = docs.find((d) => matches(d, filter));
       if (!doc && options?.upsert) {
-        const _id = (filter._id as ObjectId | string | undefined) ?? new ObjectId();
-        doc = { _id } as Doc;
-        if (update.$setOnInsert && typeof update.$setOnInsert === "object") {
-          Object.assign(doc, update.$setOnInsert);
-        }
-        applyUpdate(doc, update);
-        /* Merge equality filter fields onto inserted doc (Mongo upsert behavior). */
-        for (const [k, v] of Object.entries(filter)) {
-          if (!k.startsWith("$") && doc[k] === undefined) doc[k] = v as never;
-        }
-        docs.push(doc);
-        return options?.returnDocument === "before" ? null : { ...doc };
+        const created = upsertedDoc(filter, update);
+        docs.push(created);
+        return options?.returnDocument === "before" ? null : { ...created };
       }
       if (!doc) return null;
       const before = { ...doc };
       applyUpdate(doc, update);
       return options?.returnDocument === "before" ? before : { ...doc };
     },
-    async updateOne(filter: Record<string, unknown>, update: Record<string, unknown>) {
+    async updateOne(
+      filter: Record<string, unknown>,
+      update: Record<string, unknown>,
+      options?: { upsert?: boolean },
+    ) {
       const doc = docs.find((d) => matches(d, filter));
-      if (!doc) return { matchedCount: 0, modifiedCount: 0, acknowledged: true };
+      if (!doc) {
+        if (!options?.upsert) return { matchedCount: 0, modifiedCount: 0, acknowledged: true };
+        const created = upsertedDoc(filter, update);
+        docs.push(created);
+        return {
+          matchedCount: 0,
+          modifiedCount: 0,
+          upsertedId: created._id,
+          acknowledged: true,
+        };
+      }
       applyUpdate(doc, update);
       return { matchedCount: 1, modifiedCount: 1, acknowledged: true };
     },

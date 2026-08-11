@@ -169,6 +169,21 @@ export const api = {
     },
   },
 
+  push: {
+    publicKey() {
+      return request<{ key: string | null }>("/push/public-key");
+    },
+    subscribe(body: { endpoint: string; keys: { p256dh: string; auth: string } }) {
+      return request<{ ok: boolean }>("/push/subscribe", { method: "POST", body });
+    },
+    unsubscribe(endpoint: string) {
+      return request<{ ok: boolean; removed: number }>("/push/subscribe", {
+        method: "DELETE",
+        body: { endpoint },
+      });
+    },
+  },
+
   consent: {
     get() {
       return request<{ consent: ApiConsent }>("/consent");

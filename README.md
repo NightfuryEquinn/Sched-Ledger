@@ -121,6 +121,9 @@ Create a `.env` file in the project root (see `.env.example`):
 | `CRON_SECRET` | For cron | Bearer token for `GET /api/cron/reminders` |
 | `RESEND_API_KEY` | For email | Resend API key for schedule reminders and budget alerts |
 | `EMAIL_FROM` | No | Sender address (default: `Sched Ledger <onboarding@resend.dev>`) |
+| `VAPID_PUBLIC_KEY` | For push | Web Push application server key (generate with `npx web-push generate-vapid-keys`) |
+| `VAPID_PRIVATE_KEY` | For push | Web Push private key — pairs with `VAPID_PUBLIC_KEY` |
+| `VAPID_SUBJECT` | For push | Contact URL for the push services, e.g. `mailto:you@example.com` |
 | `EXCHANGE_RATE_API_KEY` | For FX | [ExchangeRate-API](https://www.exchangerate-api.com) key for Insights currency conversion |
 
 ### MongoDB
@@ -197,7 +200,7 @@ bun test   # crypto, reminders, calculator, spending habits, session auth, budge
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
 
-When `CRON_SECRET` is set in development, the server also polls every 15 minutes for due reminders and recurring expense rows. Reminder delivery needs `RESEND_API_KEY`; recurring expense materialization runs regardless.
+When `CRON_SECRET` is set in development, the server also polls every 15 minutes for due reminders and recurring expense rows. Email delivery needs `RESEND_API_KEY` and Web Push delivery needs the `VAPID_*` keys — each channel is independent, and recurring expense materialization runs regardless.
 
 ### Health check
 
@@ -251,7 +254,9 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 | `GET/PATCH /api/consent` | Data-sharing consent |
 | `POST /api/budget-alerts` | Deliver client-evaluated budget alerts (email; deduped) |
 | `GET /api/fx/latest/:base` | Cached FX rates (requires `EXCHANGE_RATE_API_KEY`) |
-| `GET /api/cron/reminders` | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminder emails and materializes recurring expense rows |
+| `GET /api/push/public-key` | VAPID application server key for browser subscription |
+| `POST/DELETE /api/push/subscribe` | Register or remove this device's Web Push endpoint |
+| `GET /api/cron/reminders` | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminders (email + Web Push) and materializes recurring expense rows |
 
 All mutating routes require a valid session cookie. Auth endpoints have stricter rate limits.
 
@@ -282,6 +287,7 @@ Set these in **Vercel → Project → Settings → Environment Variables** for P
 | `CRON_SECRET` | Secret for the cron handler (used by cron-job.org) |
 | `RESEND_API_KEY` | Optional — enable schedule reminder emails and budget-alert emails |
 | `EMAIL_FROM` | Optional — verified sender in Resend |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Optional — enable Web Push reminders alongside email |
 | `EXCHANGE_RATE_API_KEY` | Optional — enable FX conversion in Insights |
 
 **Atlas network access:** allow `0.0.0.0/0` so Vercel's dynamic egress IPs can reach your cluster.

@@ -1,7 +1,13 @@
 import { emailConfigured, reminderEmailHtml, sendEmail } from "@/api/lib/email";
 import { formatMoneyLabel } from "@/api/lib/money";
+import {
+  accountHasPushSubscription,
+  pushConfigured,
+  reminderPushPayload,
+  sendPushToAccount,
+} from "@/api/lib/push";
 import { getCollections, getDb } from "@/db";
-import type { EventDocument } from "@/db/collections";
+import type { EventDocument, ReminderChannel, ReminderLogDocument } from "@/db/collections";
 import {
   formatOccurrenceWhen,
   isOccurrencePast,
@@ -82,26 +88,46 @@ export type ReminderProcessResult = {
 };
 
 /**
- * Global reminder opt-out: users can disable all reminder emails from
- * the Data & privacy modal. Absent field means enabled (default opt-in per event).
+ * Per-account channel state.
+ * `emailEnabled` is the global opt-out from the Data & privacy modal; an absent
+ * field means enabled (default opt-in per event). `pushEnabled` is simply
+ * whether any device registered a push endpoint — the subscription is the opt-in.
  */
 type UserReminderPrefs = {
-  remindersEnabled: boolean;
+  emailEnabled: boolean;
+  pushEnabled: boolean;
   timezone: string;
 };
 
-/** Load reminder kill-switch and timezone for an account. */
+/** Load per-channel reminder eligibility and timezone for an account. */
 async function userReminderPrefs(accountId: string): Promise<UserReminderPrefs> {
   const { users } = getCollections(getDb());
-  const user = await users.findOne(
-    { _id: new ObjectId(accountId) },
-    { projection: { emailRemindersEnabled: 1, timezone: 1 } },
-  );
+  const [user, hasPush] = await Promise.all([
+    users.findOne(
+      { _id: new ObjectId(accountId) },
+      { projection: { emailRemindersEnabled: 1, timezone: 1 } },
+    ),
+    pushConfigured() ? accountHasPushSubscription(accountId) : Promise.resolve(false),
+  ]);
 
   return {
-    remindersEnabled: user?.emailRemindersEnabled !== false,
+    emailEnabled: user?.emailRemindersEnabled !== false,
+    pushEnabled: hasPush,
     timezone: user?.timezone ?? DEFAULT_TIMEZONE,
   };
+}
+
+/** Dedupe key for a reminder log row. */
+function logKeyOf(eventId: string, dayIso: string, lead: string): string {
+  return `${eventId}|${dayIso}|${lead}`;
+}
+
+/**
+ * Channels a log row already covers. Rows written before Web Push existed have
+ * no `channels` field and were email-only, so treat the absence as such.
+ */
+function loggedChannels(log: ReminderLogDocument): ReminderChannel[] {
+  return log.channels ?? ["email"];
 }
 
 /** Run async tasks with a fixed concurrency cap. */
@@ -132,7 +158,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   if (!emailConfigured()) return;
 
   const prefs = await userReminderPrefs(doc.accountId);
-  if (!prefs.remindersEnabled) return;
+  if (!prefs.emailEnabled) return;
 
   const when = formatOccurrenceWhen(doc, doc.date, prefs.timezone);
   const category = eventCategoryLabel(doc);
@@ -153,12 +179,17 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   await sendEmail({ to: doc.email.trim(), subject, html, text });
 }
 
-/** Cron entry: scan notify events and deliver due reminder emails (batched). */
+/**
+ * Cron entry: scan notify events and deliver due reminders (batched).
+ * Email and Web Push are independent channels — either alone is enough to run.
+ */
 export async function processDueReminders(now = new Date()): Promise<ReminderProcessResult> {
   const result: ReminderProcessResult = { scanned: 0, sent: 0, skipped: 0, errors: [] };
 
-  if (!emailConfigured()) {
-    result.errors.push("RESEND_API_KEY not configured");
+  const emailReady = emailConfigured();
+  const pushReady = pushConfigured();
+  if (!emailReady && !pushReady) {
+    result.errors.push("no reminder channel configured (RESEND_API_KEY / VAPID_* keys)");
 
     return result;
   }
@@ -185,6 +216,8 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
     target: ReminderTarget;
     email: string;
     timezone: string;
+    /** Channels this event is eligible for before dedupe. */
+    channels: ReminderChannel[];
   };
   const pending: PendingSend[] = [];
 
@@ -199,13 +232,15 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       prefs = await userReminderPrefs(ev.accountId);
       prefsCache.set(ev.accountId, prefs);
     }
-    if (!prefs.remindersEnabled) {
-      result.skipped++;
-      continue;
-    }
 
+    /* Email needs Resend, the global opt-in, and a per-event address.
+       Push needs only a registered device, so it works without any of those. */
     const email = ev.email?.trim() || "";
-    if (!email) {
+    const channels: ReminderChannel[] = [];
+    if (emailReady && prefs.emailEnabled && email) channels.push("email");
+    if (pushReady && prefs.pushEnabled) channels.push("push");
+
+    if (!channels.length) {
       result.skipped++;
       continue;
     }
@@ -219,7 +254,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
         continue;
       }
 
-      pending.push({ ev, target, email, timezone: prefs.timezone });
+      pending.push({ ev, target, email, timezone: prefs.timezone, channels });
     }
   }
 
@@ -233,23 +268,28 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       })),
     };
     const existingLogs = await reminderLogs.find(logFilter).toArray();
-    const existingKeys = new Set(
-      existingLogs.map((log) => `${log.eventId.toHexString()}|${log.occurrenceIso}|${log.lead}`),
-    );
+    const alreadySent = new Map<string, Set<ReminderChannel>>();
+    for (const log of existingLogs) {
+      const key = logKeyOf(log.eventId.toHexString(), log.occurrenceIso, log.lead);
+      alreadySent.set(key, new Set(loggedChannels(log)));
+    }
 
-    const toSend = pending.filter((p) => {
-      const key = `${p.ev._id.toHexString()}|${p.target.dayIso}|${p.target.logLead}`;
-      if (existingKeys.has(key)) {
+    /* Dedupe per channel: a reminder already emailed can still be pushed. */
+    const toSend = pending.flatMap((p) => {
+      const key = logKeyOf(p.ev._id.toHexString(), p.target.dayIso, p.target.logLead);
+      const logged = [...(alreadySent.get(key) ?? [])];
+      const remaining = p.channels.filter((ch) => !logged.includes(ch));
+      if (!remaining.length) {
         result.skipped++;
 
-        return false;
+        return [];
       }
 
-      return true;
+      return [{ ...p, channels: remaining, logged }];
     });
 
     const outcomes = await mapPool(toSend, SEND_CONCURRENCY, (item) =>
-      sendReminderOnce(item.ev, item.target, item.email, item.timezone, true),
+      sendReminderOnce(item.ev, item.target, item.email, item.timezone, item.channels, item.logged),
     );
 
     for (const outcome of outcomes) {
@@ -263,15 +303,19 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
 }
 
 /**
- * Sends a reminder email for one target, deduped via reminderLogs.
- * Returns "skipped" when a log entry already exists for it.
+ * Delivers one reminder target over the given channels, deduped via reminderLogs.
+ * Channels are independent: an email failure never suppresses the push, and the
+ * log records only what actually went out so the next poll retries the rest.
+ * Returns "skipped" when every requested channel already fired.
  */
 async function sendReminderOnce(
   ev: EventDocument,
   target: ReminderTarget,
   email: string,
   timezone: string,
-  alreadyChecked = false,
+  channels: ReminderChannel[],
+  /** Channels the caller already knows fired; omit to look them up here. */
+  alreadyLogged?: ReminderChannel[],
 ): Promise<"sent" | "skipped" | { error: string }> {
   const { reminderLogs } = getCollections(getDb());
   const logKey = {
@@ -280,10 +324,15 @@ async function sendReminderOnce(
     lead: target.logLead,
   };
 
-  if (!alreadyChecked) {
+  let logged = alreadyLogged;
+  if (!logged) {
     const existing = await reminderLogs.findOne(logKey);
-    if (existing) return "skipped";
+    logged = existing ? loggedChannels(existing) : [];
   }
+
+  const done = new Set(logged);
+  const wanted = channels.filter((ch) => !done.has(ch));
+  if (!wanted.length) return "skipped";
 
   const span = spanDays(ev);
   const when = formatOccurrenceWhen(ev, target.occurrenceIso, timezone);
@@ -294,26 +343,59 @@ async function sendReminderOnce(
       ? `while this event is running (day ${dayNumberInSpan(target)} of ${span})`
       : leadDescription(ev.lead as LeadId, ev.allDay);
 
-  const { html, text, subject } = reminderEmailHtml({
-    ...reminderContent(ev),
-    when,
-    category,
-    lead,
-  });
-  const sent = await sendEmail({ to: email, subject, html, text });
+  /* Both channels render from the same plaintext copy so they never drift. */
+  const content = reminderContent(ev);
 
-  if (!sent.ok) {
-    return { error: sent.error || "email delivery failed" };
+  const [emailResult, pushResult] = await Promise.all([
+    wanted.includes("email")
+      ? (async () => {
+          const { html, text, subject } = reminderEmailHtml({ ...content, when, category, lead });
+
+          return sendEmail({ to: email, subject, html, text });
+        })()
+      : null,
+    wanted.includes("push")
+      ? sendPushToAccount(
+          ev.accountId,
+          reminderPushPayload({
+            ...content,
+            when,
+            category,
+            tag: logKeyOf(ev._id.toHexString(), target.dayIso, target.logLead),
+          }),
+        )
+      : null,
+  ]);
+
+  const delivered: ReminderChannel[] = [];
+  const errors: string[] = [];
+
+  if (emailResult) {
+    if (emailResult.ok) delivered.push("email");
+    else errors.push(emailResult.error || "email delivery failed");
+  }
+  if (pushResult) {
+    if (pushResult.sent > 0) delivered.push("push");
+    else errors.push(pushResult.errors[0] ?? "no push endpoints reachable");
+  }
+
+  if (!delivered.length) {
+    return { error: errors.join("; ") || "no reminder channel delivered" };
   }
 
   try {
-    await reminderLogs.insertOne({
-      _id: new ObjectId(),
-      ...logKey,
-      email,
-      channels: ["email"],
-      sentAt: new Date(),
-    });
+    await reminderLogs.updateOne(
+      logKey,
+      {
+        /* Re-add the known channels too: rows written before Web Push have no
+           `channels` field, and materializing it here keeps the implicit
+           "email already sent" from being lost on the first push. */
+        $addToSet: { channels: { $each: [...logged, ...delivered] } },
+        /* Filter fields are seeded from the equality match on insert. */
+        $setOnInsert: { email, sentAt: new Date() },
+      },
+      { upsert: true },
+    );
   } catch (err) {
     const code = (err as { code?: number }).code;
     if (code === 11000) return "skipped";
@@ -333,13 +415,14 @@ export async function sendImmediateReminderIfDue(
   now = new Date(),
 ): Promise<void> {
   if (!doc.notify) return;
-  if (!emailConfigured()) return;
 
   const prefs = await userReminderPrefs(doc.accountId);
-  if (!prefs.remindersEnabled) return;
-
   const email = doc.email?.trim() || "";
-  if (!email) return;
+
+  const channels: ReminderChannel[] = [];
+  if (emailConfigured() && prefs.emailEnabled && email) channels.push("email");
+  if (pushConfigured() && prefs.pushEnabled) channels.push("push");
+  if (!channels.length) return;
 
   const nowMs = now.getTime();
 
@@ -348,7 +431,7 @@ export async function sendImmediateReminderIfDue(
     if (isOccurrencePast(occurrenceEndMs(doc, target.occurrenceIso, prefs.timezone), nowMs)) continue;
     if (!isReminderDueNow(target.remindAtMs, nowMs)) continue;
 
-    const outcome = await sendReminderOnce(doc, target, email, prefs.timezone);
+    const outcome = await sendReminderOnce(doc, target, email, prefs.timezone, channels);
     if (typeof outcome !== "string") {
       console.error(
         `[reminders] immediate send failed for event ${doc._id} (${target.dayIso}): ${outcome.error}`,

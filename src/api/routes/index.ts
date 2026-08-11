@@ -11,6 +11,7 @@ import { eventsRoutes } from "./events";
 import { expensesRoutes } from "./expenses";
 import { fxRoutes } from "./fx";
 import { profileRoutes } from "./profile";
+import { pushRoutes } from "./push";
 import { todoListsRoutes } from "./todo-lists";
 import { usersRoutes } from "./users";
 import { walletsRoutes } from "./wallets";
@@ -41,6 +42,7 @@ export function createApiRoutes() {
 
   api.route("/auth", authRoutes);
   api.route("/users", usersRoutes);
+  api.route("/push", pushRoutes);
   api.route("/profile", profileRoutes);
   api.route("/wallets", walletsRoutes);
   api.route("/categories", categoriesRoutes);

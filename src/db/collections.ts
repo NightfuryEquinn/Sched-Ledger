@@ -20,6 +20,7 @@ export const COLLECTIONS = {
   sessions: "sessions",
   reminderLogs: "reminder_logs",
   budgetAlertLogs: "budget_alert_logs",
+  pushSubscriptions: "push_subscriptions",
   todoLists: "todo_lists",
   rateLimits: "rate_limits",
 } as const;
@@ -115,14 +116,31 @@ export type SessionDocument = {
   revokedAt?: Date;
 };
 
+/** Delivery channels a reminder can go out on. */
+export type ReminderChannel = "email" | "push";
+
+/**
+ * A browser push endpoint registered by one device. Presence of a row is the
+ * account's push opt-in; disabling notifications deletes it.
+ */
+export type PushSubscriptionDocument = {
+  _id: ObjectId;
+  accountId: string;
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  userAgent?: string;
+  createdAt: Date;
+  lastSeenAt: Date;
+};
+
 export type ReminderLogDocument = {
   _id: ObjectId;
   eventId: ObjectId;
   occurrenceIso: string;
   lead: string;
   email: string;
-  /** Channels that succeeded for this occurrence. */
-  channels?: Array<"email">;
+  /** Channels that succeeded for this occurrence (absent on pre-push rows). */
+  channels?: ReminderChannel[];
   sentAt: Date;
 };
 
@@ -137,7 +155,7 @@ export type BudgetAlertLogDocument = {
   month: string;
   level: "warning" | "exceeded";
   email: string;
-  channels?: Array<"email">;
+  channels?: ReminderChannel[];
   sentAt: Date;
 };
 
@@ -159,6 +177,7 @@ export type Collections = {
   sessions: Collection<SessionDocument>;
   reminderLogs: Collection<ReminderLogDocument>;
   budgetAlertLogs: Collection<BudgetAlertLogDocument>;
+  pushSubscriptions: Collection<PushSubscriptionDocument>;
   todoLists: Collection<TodoListDocument>;
 };
 
@@ -176,6 +195,7 @@ export function getCollections(db: Db): Collections {
     sessions: db.collection<SessionDocument>(COLLECTIONS.sessions),
     reminderLogs: db.collection<ReminderLogDocument>(COLLECTIONS.reminderLogs),
     budgetAlertLogs: db.collection<BudgetAlertLogDocument>(COLLECTIONS.budgetAlertLogs),
+    pushSubscriptions: db.collection<PushSubscriptionDocument>(COLLECTIONS.pushSubscriptions),
     todoLists: db.collection<TodoListDocument>(COLLECTIONS.todoLists),
   };
 }
