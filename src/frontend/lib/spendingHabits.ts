@@ -1,5 +1,19 @@
 import { CURRENT_MONTH_KEY, TODAY_ISO, dayLabel, isoFromDate, monthsWindow, weekdayLabel } from "./data";
 import type { CategoryIndex } from "./categories";
+import {
+  DEFAULT_FORMATTERS,
+  clamp01,
+  confidenceLevel,
+  cv,
+  mean,
+  pct,
+  percentileOf,
+  sorted,
+  topBin,
+  type Confidence,
+  type ConfidenceLevel,
+  type Formatters,
+} from "./stat-helpers";
 import { catMetaOf, isOutgoing, isRecurring, isSavings } from "./stats";
 import type { Expense } from "./types";
 
@@ -158,13 +172,9 @@ export type HabitMetrics = {
   driverRecurring: HabitCatStat | null;
 };
 
-export type HabitConfidenceLevel = "low" | "medium" | "high";
-export type HabitConfidence = {
-  level: HabitConfidenceLevel;
-  value: number;
-  margin: number;
-  reasons: string[];
-};
+/** Confidence shape is shared with the income engine — see `stat-helpers`. */
+export type HabitConfidenceLevel = ConfidenceLevel;
+export type HabitConfidence = Confidence;
 
 export type HabitAssessment =
   | {
@@ -206,62 +216,6 @@ function parseDateParts(iso: string) {
     dayOfMonth: d,
     time: date.getTime(),
   };
-}
-
-/** Mean of a numeric list, or 0 when empty. */
-function mean(values: number[]) {
-  if (!values.length) return 0;
-  return values.reduce((s, v) => s + v, 0) / values.length;
-}
-
-/** Population standard deviation. */
-function stdev(values: number[]) {
-  if (values.length < 2) return 0;
-  const m = mean(values);
-  return Math.sqrt(mean(values.map((v) => (v - m) ** 2)));
-}
-
-/** Coefficient of variation, capped for empty / zero-mean lists. */
-function cv(values: number[]) {
-  if (values.length < 2) return 0;
-  const m = mean(values);
-  if (m === 0) return 0;
-  return stdev(values) / Math.abs(m);
-}
-
-/** Clamp a score into [0, 1]. */
-function clamp01(n: number) {
-  return Math.max(0, Math.min(1, n));
-}
-
-/** Sort ascending without mutating the source. */
-function sorted(values: number[]) {
-  return [...values].sort((a, b) => a - b);
-}
-
-/** Percentile of an already-ascending-sorted list (linear interpolation). No allocation, no sort. */
-function percentileOf(s: number[], p: number): number {
-  if (!s.length) return 0;
-  if (s.length === 1) return s[0]!;
-  const idx = (s.length - 1) * p;
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  if (lo === hi) return s[lo]!;
-  const t = idx - lo;
-  return s[lo]! * (1 - t) + s[hi]! * t;
-}
-
-/** Largest bin in a prebuilt histogram, as {value, count, share}. */
-function topBin(hist: Map<number, number>, total: number): { value: number; count: number; share: number } {
-  let bestKey = 0;
-  let bestCount = 0;
-  for (const [key, count] of hist) {
-    if (count > bestCount) {
-      bestCount = count;
-      bestKey = key;
-    }
-  }
-  return { value: bestKey, count: bestCount, share: total ? bestCount / total : 0 };
 }
 
 /**
@@ -751,7 +705,7 @@ export function habitConfidence(
       0.25 * clamp01(margin / 0.15) +
       0.1 * clamp01((topScore - 0.22) / 0.38),
   );
-  const level: HabitConfidenceLevel = value >= 0.66 ? "high" : value >= 0.38 ? "medium" : "low";
+  const level: HabitConfidenceLevel = confidenceLevel(value);
 
   const reasons: string[] = [`${metrics.activeDays} active day${metrics.activeDays === 1 ? "" : "s"}`];
   if (runnerUp) {
@@ -790,15 +744,9 @@ export function habitBlend(ranked: [HabitStyleId, number][]): {
   };
 }
 
-export type HabitFormatters = { money: (n: number) => string };
-
-const DEFAULT_FORMATTERS: HabitFormatters = { money: (n: number) => String(Math.round(n)) };
+export type HabitFormatters = Formatters;
 
 export type HabitNarrative = { pattern: string; behavior: string };
-
-function pct(share: number) {
-  return `${Math.round(share * 100)}%`;
-}
 
 /** Personalized "Data Pattern" / "Behavior" copy, built from the period's real numbers. */
 export function buildHabitNarrative(
