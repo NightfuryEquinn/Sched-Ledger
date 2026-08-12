@@ -95,6 +95,8 @@ export type Category = {
   glyph: string;
   type?: "expense" | "income" | "savings";
   builtin?: boolean;
+  /** Retired: hidden from pickers, still resolvable so history keeps its type. */
+  archived?: boolean;
   subs: { id: string; name: string }[];
 };
 

@@ -1,4 +1,11 @@
-import { buildCategoryIndex, isIncomeCategory, nextCategoryColor, slugId } from "@/frontend/lib/categories";
+import {
+  buildCategoryIndex,
+  isArchivedCategory,
+  isIncomeCategory,
+  nextCategoryColor,
+  slugId,
+  type CategoryType,
+} from "@/frontend/lib/categories";
 import type { Category } from "@/frontend/lib/types";
 import { DEFAULT_GLYPH } from "@/lib/glyphs";
 
@@ -14,18 +21,48 @@ function categoryKind(cat: Category): "expense" | "income" {
   return isIncomeCategory(cat) ? "income" : "expense";
 }
 
+/**
+ * Normalize a CSV CategoryType cell. Unknown or missing values fall back to
+ * "expense", which is exactly how imports behaved before the column existed.
+ */
+function parseCategoryType(raw: string): CategoryType {
+  const value = raw.trim().toLowerCase();
+  if (value === "income") return "income";
+  if (value === "savings") return "savings";
+
+  return "expense";
+}
+
+/**
+ * A row's declared category type must agree with its transaction kind.
+ * Income is the only type tied to income kind — savings and expense BOTH pair
+ * with expense kind, since putting money into a savings envelope is an
+ * outgoing transaction.
+ */
+function typeMatchesKind(type: CategoryType, kind: "expense" | "income"): boolean {
+  return kind === "income" ? type === "income" : type !== "income";
+}
+
+/** Live categories only — imports must never attach rows to a retired category. */
+function selectable(categories: Category[]): Category[] {
+  return categories.filter((c) => !isArchivedCategory(c));
+}
+
 /** Primary income category used when importing income rows. */
 function incomeCategory(categories: Category[]): Category {
+  const live = selectable(categories);
+
   return (
-    categories.find((c) => isIncomeCategory(c)) ??
-    categories.find((c) => c.id === "income") ??
+    live.find((c) => isIncomeCategory(c)) ??
+    live.find((c) => c.id === "income") ??
+    live[0] ??
     categories[0]
   );
 }
 
 /** Non-income categories (spending + savings) for expense imports. */
 function expenseCategories(categories: Category[]): Category[] {
-  return categories.filter((c) => categoryKind(c) !== "income");
+  return selectable(categories).filter((c) => categoryKind(c) !== "income");
 }
 
 function findCategoryById(categories: Category[], id: string): Category | undefined {
@@ -72,6 +109,8 @@ export function resolveImportSub(
     kind: "expense" | "income";
     catName: string;
     catId: string;
+    /** Optional CategoryType column; absent means "expense", the legacy default. */
+    catType?: string;
     subName: string;
     subId: string;
   },
@@ -82,6 +121,16 @@ export function resolveImportSub(
   const catName = opts.catName.trim();
   const catId = opts.catId.trim();
   const subId = opts.subId.trim();
+  const declaredType = parseCategoryType(opts.catType ?? "");
+
+  if (opts.catType?.trim() && !typeMatchesKind(declaredType, opts.kind)) {
+    return {
+      error: `Category type "${declaredType}" does not match a ${opts.kind} transaction.`,
+    };
+  }
+
+  /** Type for a category this import creates, honouring the CSV's declaration. */
+  const newCategoryType: CategoryType = opts.kind === "income" ? "income" : declaredType;
 
   if (catId && !isValidTaxonomyId(catId)) {
     return { error: `Invalid category ID "${catId}".` };
@@ -134,6 +183,9 @@ export function resolveImportSub(
   let targetCat: Category | undefined;
 
   if (catId) {
+    // Explicit id matches archived categories too: re-importing your own export
+    // should land history back in the category it came from. Name matching
+    // (below) stays restricted to live categories.
     targetCat = findCategoryById(next, catId);
     if (targetCat && categoryKind(targetCat) === "income") {
       return { error: `Category ID "${catId}" is an income category.` };
@@ -145,7 +197,7 @@ export function resolveImportSub(
         name,
         color: nextCategoryColor(next),
         glyph: DEFAULT_GLYPH,
-        type: "expense",
+        type: newCategoryType,
         builtin: false,
         subs: [],
       };
@@ -160,7 +212,7 @@ export function resolveImportSub(
         name: catName,
         color: nextCategoryColor(next),
         glyph: DEFAULT_GLYPH,
-        type: "expense",
+        type: newCategoryType,
         builtin: false,
         subs: [],
       };
@@ -174,7 +226,7 @@ export function resolveImportSub(
       name,
       color: nextCategoryColor(next),
       glyph: DEFAULT_GLYPH,
-      type: "expense",
+      type: newCategoryType,
       builtin: false,
       subs: [],
     };

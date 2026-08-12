@@ -111,6 +111,7 @@ export function parseExpenseCsv(
   const typeIdx = colIndex(headerMap, "type", "kind");
   const catIdIdx = colIndex(headerMap, "categoryid", "category id");
   const catIdx = colIndex(headerMap, "category");
+  const catTypeIdx = colIndex(headerMap, "categorytype", "category type", "cattype");
   const subIdIdx = colIndex(headerMap, "subcategoryid", "subcategory id");
   const subIdx = colIndex(headerMap, "subcategory", "sub");
   const noteIdx = colIndex(headerMap, "note");
@@ -173,6 +174,7 @@ export function parseExpenseCsv(
       kind,
       catName: get(catIdx),
       catId: get(catIdIdx),
+      catType: get(catTypeIdx),
       subName: get(subIdx),
       subId: get(subIdIdx),
     });

@@ -1975,16 +1975,16 @@ h1, h2, h3 {
   color: var(--danger);
 }
 
-.insights-habits-head {
+.profile-head {
   align-items: center;
   flex-wrap: wrap;
 }
 
-.insights-habits-head .seg {
+.profile-head .seg {
   flex: none;
 }
 
-.insights-habits-locked {
+.profile-locked {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 10px 14px;
@@ -1992,17 +1992,17 @@ h1, h2, h3 {
   padding: 4px 0 2px;
 }
 
-.insights-habits-locked-mark {
+.profile-locked-mark {
   font-size: 22px;
   line-height: 1.2;
   color: var(--ink-faint);
 }
 
-.insights-habits-locked-copy {
+.profile-locked-copy {
   min-width: 0;
 }
 
-.insights-habits-locked-title {
+.profile-locked-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
@@ -2010,14 +2010,14 @@ h1, h2, h3 {
   letter-spacing: -.1px;
 }
 
-.insights-habits-locked-sub {
+.profile-locked-sub {
   margin: 4px 0 0;
   font-size: 13px;
   color: var(--ink-soft);
   line-height: 1.45;
 }
 
-.insights-habits-progress {
+.profile-progress {
   grid-column: 1 / -1;
   height: 6px;
   border-radius: 999px;
@@ -2026,37 +2026,78 @@ h1, h2, h3 {
   margin-top: 4px;
 }
 
-.insights-habits-progress-fill {
+.profile-progress-fill {
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
   transition: width 0.25s ease;
 }
 
-.insights-habits-result {
+.profile-result {
+  display: grid;
+  gap: 18px;
+  padding: 2px 0;
+}
+
+.profile-top {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
   gap: 18px 28px;
   align-items: start;
-  padding: 2px 0;
 }
 
-.insights-habits-identity {
+.profile-identity {
   min-width: 0;
   padding-left: 14px;
-  border-left: 3px solid var(--habit-accent, var(--accent));
+  border-left: 3px solid var(--profile-accent, var(--accent));
 }
 
-.insights-habits-temperament {
+.profile-crown {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-confidence {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.profile-confidence.conf-high {
+  color: var(--ok);
+}
+
+.profile-confidence.conf-medium {
+  color: var(--ink-soft);
+}
+
+.profile-confidence.conf-low {
+  color: var(--ink-faint);
+}
+
+.profile-temperament {
   margin: 0;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--habit-accent, var(--accent));
+  color: var(--profile-accent, var(--accent));
 }
 
-.insights-habits-title {
+.profile-blend {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.profile-title {
   margin: 8px 0 0;
   font-family: var(--font-display);
   font-size: 22px;
@@ -2066,28 +2107,28 @@ h1, h2, h3 {
   color: var(--ink);
 }
 
-.insights-habits-meta {
+.profile-meta {
   margin: 10px 0 0;
   font-size: 12.5px;
   color: var(--ink-faint);
   line-height: 1.4;
 }
 
-.insights-habits-copy {
+.profile-copy {
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
 }
 
-.insights-habits-block p {
+.profile-block p {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--ink-soft);
 }
 
-.insights-habits-block .insights-habits-kicker {
+.profile-block .profile-kicker {
   margin: 0 0 4px;
   font-size: 11.5px;
   font-weight: 600;
@@ -2096,28 +2137,241 @@ h1, h2, h3 {
   color: var(--ink-faint);
 }
 
-.insights-habits-result.style-clockwork {
-  --habit-accent: #3d6b5a;
+.profile-block.is-nudge {
+  border-left: 2px solid var(--profile-accent, var(--accent));
+  padding-left: 12px;
+  background: color-mix(in srgb, var(--profile-accent, var(--accent)) 7%, transparent);
+  border-radius: 8px;
 }
 
-.insights-habits-result.style-burst {
-  --habit-accent: #a85a3a;
+.profile-signals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hair);
 }
 
-.insights-habits-result.style-dripper {
-  --habit-accent: #4a6fa5;
+.profile-signal {
+  min-width: 0;
 }
 
-.insights-habits-result.style-peakValley {
-  --habit-accent: #8a6b3d;
+.psig-label {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
-.insights-habits-result.style-accumulator {
-  --habit-accent: #2f6f7a;
+.psig-value {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 
-.insights-habits-result.style-nomad {
-  --habit-accent: #7a6a4a;
+.psig-hint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.profile-driver {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hair);
+}
+
+.pdrv-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdrv-name {
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdrv-bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.pdrv-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--profile-accent, var(--accent));
+}
+
+.pdrv-amt {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.profile-trajectory {
+  padding-top: 14px;
+  border-top: 1px solid var(--hair);
+}
+
+.ptrl-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.ptrl-grid {
+  display: grid;
+  /* Column count is set per panel — 6 for the habit trail, 6 or 12 for income. */
+  grid-template-columns: repeat(var(--ptrl-cols, 6), minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  min-height: 68px;
+}
+
+.ptrl-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ptrl-col:disabled {
+  cursor: default;
+}
+
+.ptrl-bar {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 4px;
+  background: var(--profile-accent, var(--accent));
+  transition: height var(--dur) var(--ease);
+}
+
+.ptrl-bar.is-empty {
+  background: var(--surface-3);
+}
+
+.ptrl-col.is-active .ptrl-bar {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 1px;
+}
+
+.ptrl-label {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+.ptrl-style {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--profile-accent, var(--ink-faint));
+}
+
+.profile-tinted.style-clockwork {
+  --profile-accent: #3d6b5a;
+}
+
+.profile-tinted.style-burst {
+  --profile-accent: #a85a3a;
+}
+
+.profile-tinted.style-dripper {
+  --profile-accent: #4a6fa5;
+}
+
+.profile-tinted.style-peakValley {
+  --profile-accent: #8a6b3d;
+}
+
+.profile-tinted.style-accumulator {
+  --profile-accent: #2f6f7a;
+}
+
+.profile-tinted.style-nomad {
+  --profile-accent: #7a6a4a;
+}
+
+/*
+ * Income archetype accents — a cooler, greener family than the spending set,
+ * matching the existing convention that income reads green (.ct-delta--income).
+ */
+.profile-tinted.style-salaried {
+  --profile-accent: #3f7d63;
+}
+
+.profile-tinted.style-variable {
+  --profile-accent: #4a7f8a;
+}
+
+.profile-tinted.style-projectBased {
+  --profile-accent: #5c6f9e;
+}
+
+.profile-tinted.style-portfolio {
+  --profile-accent: #4e8a76;
+}
+
+.profile-tinted.style-windfall {
+  --profile-accent: #8a7a3d;
+}
+
+.profile-tinted.style-emerging {
+  --profile-accent: #6b7280;
+}
+
+/* A month whose income fell short of its spend. */
+.ptrl-bar.is-short {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--danger) 0 3px,
+    color-mix(in srgb, var(--danger) 45%, transparent) 3px 6px
+  );
+}
+
+/*
+ * Diagnostic line for wallets that declare a monthly income on top of logged
+ * transactions — the two are additive in the pool math, so a logged salary is
+ * counted twice.
+ */
+.profile-callout {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--hair);
+  border-left: 3px solid var(--ink-faint);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
 }
 
 .panel-sub {
@@ -3076,6 +3330,40 @@ h1, h2, h3 {
 
 .cat-block:last-child {
   margin-bottom: 0;
+}
+
+/* Archived categories: retired from pickers, kept for historical classification. */
+.cat-archived-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cat-archived-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.cat-archived-row .cat-block-glyph {
+  opacity: 0.6;
+}
+
+.cat-archived-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cat-archived-copy .cat-block-name {
+  color: var(--ink-soft);
 }
 
 .cat-block-head {
@@ -5759,15 +6047,32 @@ h1, h2, h3 {
     align-self: stretch;
     overflow-x: auto;
   }
-  .insights-habits-head .seg {
+  .profile-head .seg {
     align-self: stretch;
   }
-  .insights-habits-result {
+  .profile-top {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  .insights-habits-title {
+  .profile-signals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ptrl-style {
+    display: none;
+  }
+  /* Twelve months never fit across a phone. Give every column a floor width
+     and let the row scroll, rather than crushing each bar to a sliver. */
+  .ptrl-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(30px, 1fr);
+    overflow-x: auto;
+  }
+  .profile-title {
     font-size: 20px;
+  }
+  .profile-callout {
+    font-size: 12px;
   }
   .insights-fx {
     align-items: stretch;

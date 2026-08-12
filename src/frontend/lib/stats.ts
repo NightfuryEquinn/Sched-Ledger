@@ -9,7 +9,7 @@ import {
   type RecurringInterval,
 } from "@/lib/recurring";
 import type { CategoryIndex } from "./categories";
-import { catOfSub, isIncomeCategory, isSavingsSub, isSpendingCategory } from "./categories";
+import { catOfSub, isArchivedCategory, isIncomeCategory, isSavingsSub, isSpendingCategory } from "./categories";
 import { CURRENT_MONTH_KEY, SUB_BY_ID, TODAY_ISO, monthLabel, monthsWindow, roundMoney } from "./data";
 import type { Budgets, Expense, FinancialWallet, LedgerEvent } from "./types";
 import { holdsByCategory, totalActiveHolds } from "./envelope-holds";
@@ -157,7 +157,7 @@ export type DayFlow = {
  * Display meta for a subcategory's parent category, falling back to the static
  * taxonomy. Subs with no known parent all collapse into one "Uncategorized" row.
  */
-function catMetaOf(sub: string, index?: CategoryIndex) {
+export function catMetaOf(sub: string, index?: CategoryIndex) {
   const catId = catOf(sub, index);
   const cat = index?.catById[catId];
 
@@ -324,11 +324,46 @@ export function catOf(sub: string, index?: CategoryIndex) {
   return SUB_BY_ID[sub]?.catId ?? "";
 }
 
-export function isSavings(e: Expense, index?: CategoryIndex) {
-  if (isIncome(e)) return false;
-  if (index) return isSavingsSub(e.sub, index.subById, index.catById);
+/** Which pool a transaction belongs to for every analytics calculation. */
+export type TxClass = "spend" | "savings" | "income";
 
-  return catOf(e.sub) === "savings";
+/**
+ * Single source of truth for splitting transactions into spend / savings /
+ * income, honouring user-created categories of all three types.
+ *
+ * Resolution order matters:
+ *
+ * 1. `kind` is authoritative for income. The transaction form only offers
+ *    income categories when kind is income, and the CSV importer rejects
+ *    kind/type mismatches, so this needs no taxonomy lookup — and it keeps
+ *    working when a category is later deleted.
+ * 2. The taxonomy is authoritative for savings, via the category's `type`.
+ *    This is what picks up user-created savings envelopes; the static
+ *    `SUB_BY_ID` fallback below cannot see them, which is why callers that
+ *    classify should always pass an index.
+ * 3. Everything else is spend — including subcategories orphaned by a deleted
+ *    category. An orphan's type is genuinely unrecoverable, so spend is both
+ *    the safe default and the correct answer for the common case of a deleted
+ *    expense category. Archived categories (see `buildCategoryIndex`) stay in
+ *    the index precisely so savings history does not fall through to here.
+ */
+export function classifyTx(e: Expense, index?: CategoryIndex): TxClass {
+  if (isIncome(e)) return "income";
+
+  const savings = index
+    ? isSavingsSub(e.sub, index.subById, index.catById)
+    : catOf(e.sub) === "savings";
+
+  return savings ? "savings" : "spend";
+}
+
+export function isSavings(e: Expense, index?: CategoryIndex) {
+  return classifyTx(e, index) === "savings";
+}
+
+/** True when the transaction counts toward spending (not savings, not income). */
+export function isSpend(e: Expense, index?: CategoryIndex) {
+  return classifyTx(e, index) === "spend";
 }
 
 export type WalletFunding = Pick<FinancialWallet, "fundingMode" | "income" | "startingBalance">;
@@ -387,7 +422,9 @@ export function monthStats(
   const envelopeBudgets = Object.fromEntries(
     Object.entries(budgets).filter(([id]) => {
       const cat = index?.catById[id];
-      if (cat) return !isIncomeCategory(cat);
+      // A retired envelope keeps its stored budget but must stop counting
+      // toward the month's totals, or the budget line never comes back down.
+      if (cat) return !isIncomeCategory(cat) && !isArchivedCategory(cat);
 
       return id !== "income";
     }),

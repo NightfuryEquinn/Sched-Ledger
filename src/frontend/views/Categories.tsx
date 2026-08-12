@@ -20,6 +20,8 @@ import { useEffect, useState } from "react";
 type CategoriesViewProps = {
   categoryIndex: CategoryIndex;
   onSave: (categories: Category[]) => Promise<unknown>;
+  /** Subcategory ids that have transaction history — drives archive vs delete. */
+  usedSubIds?: Set<string>;
 };
 
 type EditorMode =
@@ -39,8 +41,10 @@ function typeLabel(type: CategoryType) {
   return "Expense";
 }
 
-export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
-  const [categories, setCategories] = useState(categoryIndex.categories);
+export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesViewProps) {
+  // Hold the FULL taxonomy: `persist` writes this list wholesale, so dropping
+  // archived entries here would delete them on the next save.
+  const [categories, setCategories] = useState(categoryIndex.allCategories);
   const [filter, setFilter] = useState<"all" | CategoryType>("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [editor, setEditor] = useState<EditorMode>(null);
@@ -51,8 +55,11 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setCategories(categoryIndex.categories);
-  }, [categoryIndex.categories]);
+    setCategories(categoryIndex.allCategories);
+  }, [categoryIndex.allCategories]);
+
+  const activeCategories = categories.filter((c) => !c.archived);
+  const archivedCategories = categories.filter((c) => Boolean(c.archived));
 
   /** Whether a category matches the active type filter. */
   const catMatches = (cat: Category) => {
@@ -60,7 +67,19 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
 
     return resolveCategoryType(cat) === filter;
   };
-  const visibleCount = categories.reduce((n, c) => n + (catMatches(c) ? 1 : 0), 0);
+  const visibleCount = activeCategories.reduce((n, c) => n + (catMatches(c) ? 1 : 0), 0);
+
+  /** True when any of the category's subs carries transaction history. */
+  const catInUse = (cat: Category) =>
+    Boolean(usedSubIds && cat.subs.some((s) => usedSubIds.has(s.id)));
+
+  /** Last remaining live category of its type cannot be retired. */
+  const isLastOfType = (cat: Category) => {
+    const type = resolveCategoryType(cat);
+    if (type === "savings") return false;
+
+    return activeCategories.filter((c) => resolveCategoryType(c) === type).length <= 1;
+  };
 
   /** Persist taxonomy changes through the parent save handler. */
   const persist = async (next: Category[]) => {
@@ -109,15 +128,48 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
     setError("");
   };
 
-  /** Delete a non-builtin category. */
+  /**
+   * Retire a non-builtin category. One with transaction history is archived,
+   * not deleted: the taxonomy is the only record of whether a subcategory was
+   * spending or a savings envelope, so removing it outright would silently
+   * reclassify every past transaction as spending. Unused categories are
+   * deleted outright so the taxonomy does not grow without bound.
+   */
   const removeCategory = async (catId: string) => {
     const cat = categories.find((c) => c.id === catId);
     if (!cat || cat.builtin) return;
-    await persist(categories.filter((c) => c.id !== catId));
+    if (isLastOfType(cat)) {
+      setError(`Keep at least one ${typeLabel(resolveCategoryType(cat)).toLowerCase()} category.`);
+
+      return;
+    }
+
+    if (!catInUse(cat)) {
+      await persist(categories.filter((c) => c.id !== catId));
+
+      return;
+    }
+
+    await persist(categories.map((c) => (c.id === catId ? { ...c, archived: true } : c)));
   };
 
-  /** Remove a subcategory when more than one remains. */
+  /** Bring an archived category back into the pickers. */
+  const restoreCategory = async (catId: string) => {
+    await persist(categories.map((c) => (c.id === catId ? { ...c, archived: false } : c)));
+  };
+
+  /**
+   * Remove a subcategory when more than one remains. A sub with history is kept
+   * — same reasoning as `removeCategory`, since classification resolves through
+   * the sub before it reaches the category.
+   */
   const removeSub = async (catId: string, subId: string) => {
+    if (usedSubIds?.has(subId)) {
+      setError("That subcategory has transactions — archive its category instead.");
+
+      return;
+    }
+
     const next = categories.map((c) => {
       if (c.id !== catId) return c;
       if (c.subs.length <= 1) return c;
@@ -229,13 +281,15 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
           <div>
             <h2>Your Taxonomy</h2>
             <p className="panel-sub">
-              {categories.length} categories · {categories.reduce((n, c) => n + c.subs.length, 0)} subcategories
+              {activeCategories.length} categories ·{" "}
+              {activeCategories.reduce((n, c) => n + c.subs.length, 0)} subcategories
+              {archivedCategories.length ? ` · ${archivedCategories.length} archived` : ""}
             </p>
           </div>
         </div>
 
         <div className="cat-tree" data-tour="tour-categories-tree">
-          {categories.length ? categories.map((cat) => {
+          {activeCategories.length ? activeCategories.map((cat) => {
             const catType = resolveCategoryType(cat);
             const open = expanded[cat.id] ?? true;
             const filteredOut = !catMatches(cat);
@@ -279,8 +333,20 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
                       <Icon name="plus" size={16} />
                     </button>
                     {!cat.builtin ? (
-                      <button type="button" className="danger" disabled={busy} onClick={() => removeCategory(cat.id)} aria-label="Delete" tabIndex={filteredOut ? -1 : undefined}>
-                        <Icon name="trash" size={16} />
+                      <button
+                        type="button"
+                        className="danger"
+                        disabled={busy}
+                        onClick={() => removeCategory(cat.id)}
+                        aria-label={catInUse(cat) ? "Archive" : "Delete"}
+                        title={
+                          catInUse(cat)
+                            ? "Archive — keeps past transactions classified correctly"
+                            : "Delete"
+                        }
+                        tabIndex={filteredOut ? -1 : undefined}
+                      >
+                        <Icon name={catInUse(cat) ? "archive" : "trash"} size={16} />
                       </button>
                     ) : null}
                   </div>
@@ -313,11 +379,49 @@ export function Categories({ categoryIndex, onSave }: CategoriesViewProps) {
           }) : (
             <EmptyState title="No Categories" sub="Add a category to start organizing transactions." />
           )}
-          {categories.length && !visibleCount ? (
+          {activeCategories.length && !visibleCount ? (
             <EmptyState title="Nothing Matches" sub="Try a different filter." />
           ) : null}
         </div>
       </section>
+
+      {archivedCategories.length ? (
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>Archived</h2>
+              <p className="panel-sub">
+                Retired categories, kept so past transactions keep their type. Hidden from
+                pickers and budgets.
+              </p>
+            </div>
+          </div>
+
+          <div className="cat-archived-list">
+            {archivedCategories.map((cat) => (
+              <div key={cat.id} className="cat-archived-row">
+                <span className="cat-block-glyph" style={glyphTint(cat.color)}>
+                  {displayGlyph(cat.glyph, cat.id)}
+                </span>
+                <div className="cat-archived-copy">
+                  <div className="cat-block-name">{cat.name}</div>
+                  <div className="cat-block-tags">
+                    <span className="wallet-badge">{typeLabel(resolveCategoryType(cat))}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={busy}
+                  onClick={() => restoreCategory(cat.id)}
+                >
+                  Restore
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {editor ? (
         <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) setEditor(null); }}>
