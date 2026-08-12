@@ -32,6 +32,16 @@ import {
 import { fetchFxRates, fxConvert, fxRateLabel } from "@/frontend/lib/fx";
 import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
 import {
+  INCOME_MIN_EVENTS,
+  INCOME_MIN_MONTHS,
+  assessIncomeProfile,
+  buildIncomeNarrative,
+  buildIncomeNudge,
+  declaresMonthlyIncome,
+  describeIncomeTrend,
+  type IncomeWindow,
+} from "@/frontend/lib/incomeProfile";
+import {
   assessSpendingHabit,
   buildHabitNarrative,
   buildHabitNudge,
@@ -555,6 +565,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, setMonth }) {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
   const [habitPeriod, setHabitPeriod] = useState<HabitPeriod>("month");
+  const [incomeWindow, setIncomeWindow] = useState<IncomeWindow>("6mo");
   const [viewCurrency, setViewCurrency] = useState(currency);
   const [fxRates, setFxRates] = useState<Record<string, number> | null>(null);
   const [fxStatus, setFxStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -820,6 +831,29 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     // unrelated re-render doesn't rebuild the narrative/nudge strings.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habit, habitTrail, currency, displayCurrency, fxRates]);
+  const incomeProfile = useMemo(
+    () => assessIncomeProfile(expenses, month, incomeWindow, categoryIndex),
+    [expenses, month, incomeWindow, categoryIndex],
+  );
+  const incomeStory = useMemo(() => {
+    if (incomeProfile.status !== "ready") return null;
+    return {
+      narrative: buildIncomeNarrative(incomeProfile.style.id, incomeProfile.metrics, { money }),
+      nudge: buildIncomeNudge(incomeProfile.style.id, incomeProfile.metrics, { money }),
+      trend: describeIncomeTrend(incomeProfile.metrics),
+    };
+    // Same reasoning as habitStory: `money` is a fresh closure every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomeProfile, currency, displayCurrency, fxRates]);
+  const incomeTrailMax = useMemo(
+    () =>
+      incomeProfile.status === "ready"
+        ? Math.max(...incomeProfile.metrics.monthly.map((m) => Math.max(m.earned, m.spent)), 1)
+        : 1,
+    [incomeProfile],
+  );
+  const showDeclaredIncomeNote = declaresMonthlyIncome(wallet);
+
   const habitSub =
     habitPeriod === "month"
       ? `Based on outgoing spend in ${habit.periodLabel} · updates with the selected month`
@@ -1093,6 +1127,194 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           <h2>Income</h2>
           <p className="panel-sub">Where money came in, and how much of it survived the month</p>
         </div>
+
+        <section className="panel insights-income-profile">
+          <div className="panel-head profile-head">
+            <div>
+              <h2>Income Profile</h2>
+              <p className="panel-sub">
+                {incomeProfile.status === "ready"
+                  ? `Based on income in ${incomeProfile.windowLabel}`
+                  : `Needs a bit more history · ${incomeProfile.windowLabel}`}
+              </p>
+            </div>
+            <Segmented
+              options={[
+                { v: "6mo", label: "Last 6 Months" },
+                { v: "12mo", label: "Last 12 Months" },
+              ]}
+              value={incomeWindow}
+              onChange={setIncomeWindow}
+            />
+          </div>
+
+          {incomeProfile.status === "insufficient" ? (
+            <div className="profile-locked">
+              <div className="profile-locked-mark" aria-hidden="true">◌</div>
+              <div className="profile-locked-copy">
+                <p className="profile-locked-title">
+                  Profile unlocks after {INCOME_MIN_EVENTS} payments across {INCOME_MIN_MONTHS} months
+                </p>
+                <p className="profile-locked-sub">
+                  {incomeProfile.txHave === 0
+                    ? `No income logged yet in ${incomeProfile.windowLabel}.`
+                    : `${incomeProfile.txHave} of ${incomeProfile.txNeeded} payments · ${incomeProfile.monthsHave} of ${incomeProfile.monthsNeeded} months in ${incomeProfile.windowLabel}.`}
+                </p>
+              </div>
+              <div
+                className="profile-progress"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={incomeProfile.txNeeded}
+                aria-valuenow={Math.min(incomeProfile.txHave, incomeProfile.txNeeded)}
+                aria-label="Payments Toward Income Profile Unlock"
+              >
+                <div
+                  className="profile-progress-fill"
+                  style={{
+                    width: `${Math.min(100, (incomeProfile.txHave / incomeProfile.txNeeded) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className={"profile-result profile-tinted style-" + incomeProfile.style.id}>
+              <div className="profile-top">
+                <div className="profile-identity">
+                  <div className="profile-crown">
+                    <p className="profile-temperament">{incomeProfile.style.temperament}</p>
+                    <span className={"profile-confidence conf-" + incomeProfile.confidence.level}>
+                      {incomeProfile.confidence.level} confidence
+                    </span>
+                  </div>
+                  <h3 className="profile-title">
+                    {incomeProfile.style.title}
+                    {incomeProfile.blend.secondary && (
+                      <span className="profile-blend">
+                        {" "}with a {incomeProfile.blend.secondary.trait} streak
+                      </span>
+                    )}
+                  </h3>
+                  <p className="profile-meta">
+                    {incomeProfile.metrics.monthsWithIncome} of {incomeProfile.metrics.monthsInWindow} months ·{" "}
+                    {incomeProfile.metrics.txCount} payments · {money(incomeProfile.metrics.total)} in{" "}
+                    {incomeProfile.windowLabel}
+                  </p>
+                </div>
+                {incomeStory && (
+                  <div className="profile-copy">
+                    <div className="profile-block">
+                      <p className="profile-kicker">Data Pattern</p>
+                      <p>{incomeStory.narrative.pattern}</p>
+                    </div>
+                    <div className="profile-block">
+                      <p className="profile-kicker">Behavior</p>
+                      <p>{incomeStory.narrative.behavior}</p>
+                    </div>
+                    <div className="profile-block is-nudge">
+                      <p className="profile-kicker">Try This</p>
+                      <p>{incomeStory.nudge}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="profile-signals">
+                <div className="profile-signal">
+                  <p className="psig-label">Typical payment</p>
+                  <p className="psig-value">{money(incomeProfile.metrics.medianAmt)}</p>
+                  <p className="psig-hint">largest {money(incomeProfile.metrics.maxAmt)}</p>
+                </div>
+                <div className="profile-signal">
+                  <p className="psig-label">Payment swing</p>
+                  <p className="psig-value">{incomeProfile.metrics.amountCv.toFixed(2)}×</p>
+                  <p className="psig-hint">lower is steadier</p>
+                </div>
+                <div className="profile-signal">
+                  <p className="psig-label">Cadence</p>
+                  <p className="psig-value">{incomeProfile.metrics.medianGap}d</p>
+                  <p className="psig-hint">
+                    {incomeProfile.metrics.topDom ? `payday ~day ${incomeProfile.metrics.topDom}` : "no clear payday"}
+                  </p>
+                </div>
+                <div className="profile-signal">
+                  <p className="psig-label">Source mix</p>
+                  <p className="psig-value">
+                    {incomeProfile.metrics.sourceCount} source{incomeProfile.metrics.sourceCount === 1 ? "" : "s"}
+                  </p>
+                  <p className="psig-hint">top {Math.round(incomeProfile.metrics.topSourceShare * 100)}%</p>
+                </div>
+                <div className="profile-signal">
+                  <p className="psig-label">Reliable floor</p>
+                  <p className="psig-value">{money(incomeProfile.metrics.monthlyMin)}</p>
+                  <p className="psig-hint">lowest of {incomeProfile.metrics.monthsInWindow} months</p>
+                </div>
+                <div className="profile-signal">
+                  <p className="psig-label">Covers spend</p>
+                  <p className="psig-value">
+                    {incomeProfile.metrics.monthsCovered}/{incomeProfile.metrics.monthsInWindow}
+                  </p>
+                  <p className="psig-hint">keeps {Math.round(incomeProfile.metrics.meanSavingsRate * 100)}%</p>
+                </div>
+              </div>
+
+              {incomeProfile.metrics.sources.length > 0 && (
+                <div className="profile-driver">
+                  {incomeProfile.metrics.sources.slice(0, 3).map((src) => (
+                    <div key={src.id} className="pdrv-row">
+                      <CatGlyph glyph={src.glyph} id={src.id} />
+                      <div className="pdrv-name">{src.name} · {src.parentName}</div>
+                      <div className="pdrv-bar">
+                        <div
+                          className="pdrv-fill"
+                          style={{ width: `${Math.round(src.share * 100)}%` }}
+                        />
+                      </div>
+                      <div className="pdrv-amt">{money(src.amount)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="profile-trajectory">
+                <p className="ptrl-note">{incomeStory?.trend}</p>
+                <div
+                  className="ptrl-grid"
+                  style={{ "--ptrl-cols": incomeProfile.metrics.monthly.length } as CSSProperties}
+                >
+                  {incomeProfile.metrics.monthly.map((pt) => (
+                    <button
+                      key={pt.monthKey}
+                      type="button"
+                      className={
+                        "ptrl-col profile-tinted style-" +
+                        incomeProfile.style.id +
+                        (pt.monthKey === month ? " is-active" : "")
+                      }
+                      onClick={() => setMonth(pt.monthKey)}
+                    >
+                      <div
+                        className={"ptrl-bar" + (pt.covered ? "" : " is-short")}
+                        style={{ height: `${Math.max(6, (pt.earned / incomeTrailMax) * 100)}%` }}
+                      />
+                      <p className="ptrl-label">{pt.label}</p>
+                      <p className="ptrl-style">{money(pt.earned)}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showDeclaredIncomeNote && (
+            <p className="profile-callout">
+              Wallet declares {money(wallet.income)}/mo on top of logged income. Logged income
+              averages{" "}
+              {incomeProfile.status === "ready" ? money(incomeProfile.metrics.monthlyMean) : "—"}
+              /mo — if your salary is logged as a transaction, the pool counts it twice.
+            </p>
+          )}
+        </section>
 
         <div className="summary-grid">
           <SummaryCard label="Income This Month" tone="saved" value={money(cur.earned)} sub={monthLabel(month)} />
