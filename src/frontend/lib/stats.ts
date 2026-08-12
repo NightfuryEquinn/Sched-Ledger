@@ -157,7 +157,7 @@ export type DayFlow = {
  * Display meta for a subcategory's parent category, falling back to the static
  * taxonomy. Subs with no known parent all collapse into one "Uncategorized" row.
  */
-function catMetaOf(sub: string, index?: CategoryIndex) {
+export function catMetaOf(sub: string, index?: CategoryIndex) {
   const catId = catOf(sub, index);
   const cat = index?.catById[catId];
 
