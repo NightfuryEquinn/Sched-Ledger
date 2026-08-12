@@ -124,7 +124,7 @@ export function ImportExportModal({
       const plain = buildBackupPlain({
         address: accountAddress,
         wallets,
-        categories: categoryIndex?.categories ?? [],
+        categories: categoryIndex?.allCategories ?? [],
         expenses,
         events,
         todoLists,
@@ -163,7 +163,7 @@ export function ImportExportModal({
         rows: [],
         errors: [{ row: 0, message: "Please choose a .csv file." }],
         notices: [],
-        categories: categoryIndex.categories,
+        categories: categoryIndex.allCategories,
         stats: { newCategories: 0, newSubcategories: 0, walletRemapped: 0 },
       });
       setTxnResult(null);
@@ -172,7 +172,7 @@ export function ImportExportModal({
     const parsed = parseExpenseCsv(
       await file.text(),
       wallets,
-      categoryIndex.categories,
+      categoryIndex.allCategories,
       activeWalletId,
       expenses.map((e) => e.id),
     );

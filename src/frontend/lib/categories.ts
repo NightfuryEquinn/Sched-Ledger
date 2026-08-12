@@ -3,7 +3,14 @@ import type { Category } from "@/frontend/lib/types";
 export type CategoryType = "expense" | "income" | "savings";
 
 export type CategoryIndex = {
+  /** Live categories only — what pickers, editors and legends should offer. */
   categories: Category[];
+  /**
+   * Complete taxonomy including archived entries, in the same sorted order.
+   * Anything that persists or exports the taxonomy must round-trip THIS list,
+   * or archiving a category would silently delete it on the next save.
+   */
+  allCategories: Category[];
   catById: Record<string, Category>;
   subById: Record<string, { id: string; name: string; catId: string; color: string }>;
   /** Non-income categories (spending + savings envelopes). */
@@ -16,6 +23,8 @@ export type CategoryIndex = {
   incomeCategories: Category[];
   /** Primary income category (first income entry). */
   incomeCategory: Category;
+  /** Retired categories — excluded from every partition above, still in the maps. */
+  archivedCategories: Category[];
 };
 
 /* Cool muted palette for user-created categories. */
@@ -66,6 +75,7 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
   if (!categories.length) {
     return {
       categories: [],
+      allCategories: [],
       catById: {},
       subById: {},
       expenseCategories: [],
@@ -73,6 +83,7 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
       savingsCategories: [],
       incomeCategories: [],
       incomeCategory: emptyIncome,
+      archivedCategories: [],
     };
   }
 
@@ -86,6 +97,9 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
     })
     .sort(byName);
 
+  // Lookup maps include archived categories so historical transactions keep
+  // resolving to their real type, name and colour. The partitions below drop
+  // them so pickers, budget editors and legends only offer live categories.
   const catById = Object.fromEntries(sorted.map((c) => [c.id, c]));
   const subById: CategoryIndex["subById"] = {};
   sorted.forEach((c) =>
@@ -94,14 +108,17 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
     }),
   );
 
-  const incomeCategories = sorted.filter((c) => isIncomeCategory(c));
-  const savingsCategories = sorted.filter((c) => isSavingsCategory(c));
-  const spendingCategories = sorted.filter((c) => isSpendingCategory(c));
-  const expenseCategories = sorted.filter((c) => !isIncomeCategory(c));
+  const active = sorted.filter((c) => !c.archived);
+  const archivedCategories = sorted.filter((c) => Boolean(c.archived));
+  const incomeCategories = active.filter((c) => isIncomeCategory(c));
+  const savingsCategories = active.filter((c) => isSavingsCategory(c));
+  const spendingCategories = active.filter((c) => isSpendingCategory(c));
+  const expenseCategories = active.filter((c) => !isIncomeCategory(c));
   const incomeCategory = incomeCategories[0] ?? emptyIncome;
 
   return {
-    categories: sorted,
+    categories: active,
+    allCategories: sorted,
     catById,
     subById,
     expenseCategories,
@@ -109,7 +126,34 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
     savingsCategories,
     incomeCategories,
     incomeCategory,
+    archivedCategories,
   };
+}
+
+/** True when a category is retired — resolvable for history, hidden from pickers. */
+export function isArchivedCategory(cat?: Pick<Category, "archived"> | null): boolean {
+  return Boolean(cat?.archived);
+}
+
+/**
+ * Spending categories to render for a window of data: every live one, plus any
+ * archived category that still carries value in that window.
+ *
+ * Charts and breakdowns must sum to the same total as the summary cards. An
+ * archived envelope's past transactions still count toward spend, so dropping
+ * its row would leave the breakdown quietly short of the total — while adding
+ * it back unconditionally would clutter pickers with retired categories.
+ */
+export function spendingCategoriesFor(
+  index: CategoryIndex,
+  hasValue: (catId: string) => boolean,
+): Category[] {
+  const retained = index.archivedCategories.filter(
+    (c) => isSpendingCategory(c) && hasValue(c.id),
+  );
+  if (!retained.length) return index.spendingCategories;
+
+  return [...index.spendingCategories, ...retained];
 }
 
 /** Build a stable slug id from a display name. */

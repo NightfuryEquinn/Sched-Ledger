@@ -31,7 +31,7 @@ import { EventModal, Schedule } from "@/frontend/views/Schedule";
 import { TodoListView } from "@/frontend/views/TodoList";
 import { Calculator } from "@/frontend/views/Calculator";
 import { Transparency } from "@/frontend/views/Transparency";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /*
  * LedgerApp — authenticated app shell
@@ -164,9 +164,9 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     let newCategories = 0;
     let newSubcategories = 0;
     if (categories) {
-      const before = new Set(ledger.categoryIndex.categories.map((c) => c.id));
+      const before = new Set(ledger.categoryIndex.allCategories.map((c) => c.id));
       const beforeSubs = new Set(
-        ledger.categoryIndex.categories.flatMap((c) => c.subs.map((s) => s.id)),
+        ledger.categoryIndex.allCategories.flatMap((c) => c.subs.map((s) => s.id)),
       );
       await ledger.saveCategories(categories);
       newCategories = categories.filter((c) => !before.has(c.id)).length;
@@ -306,6 +306,14 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
 
   const viewProps = { expenses, budgets, wallet, month, currency, categoryIndex: ledger.categoryIndex };
 
+  /**
+   * Subcategories with transaction history. A category holding any of these is
+   * archived rather than deleted, so its past transactions keep resolving to
+   * the right type — deleting a savings envelope outright would silently
+   * reclassify its whole history as spending.
+   */
+  const usedSubIds = useMemo(() => new Set(expenses.map((e) => e.sub)), [expenses]);
+
   return (
     <div className="app">
       <Sidebar view={view} setView={setView} />
@@ -405,6 +413,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
             <CategoriesView
               categoryIndex={ledger.categoryIndex}
               onSave={ledger.saveCategories}
+              usedSubIds={usedSubIds}
             />
           )}
           {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}

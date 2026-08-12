@@ -31,6 +31,13 @@ export const categorySchema = z.object({
   glyph: z.string().min(1).max(8).default(DEFAULT_GLYPH),
   type: categoryTypeSchema.default("expense"),
   builtin: z.boolean().default(false),
+  /**
+   * Retired category kept for historical classification. Hidden from pickers
+   * and budget editors, but still resolvable so past transactions keep their
+   * type — deleting a savings category outright would silently reclassify its
+   * whole history as spending.
+   */
+  archived: z.boolean().default(false),
   subs: z.array(subcategorySchema).min(1),
 });
 
@@ -114,6 +121,7 @@ export function validateTaxonomy(
   categories: Array<{
     id: string;
     type?: "expense" | "income" | "savings";
+    archived?: boolean;
     subs: Array<{ id: string }>;
   }>,
 ): string | null {
@@ -133,8 +141,13 @@ export function validateTaxonomy(
           ? "savings"
           : "expense";
 
-    if (type === "income") hasIncome = true;
-    else if (type === "expense") hasExpense = true;
+    // Archived categories still occupy their ids, but cannot satisfy the
+    // "at least one income / expense" rule — otherwise archiving the only
+    // income category would leave the pickers empty.
+    if (!cat.archived) {
+      if (type === "income") hasIncome = true;
+      else if (type === "expense") hasExpense = true;
+    }
 
     for (const sub of cat.subs) {
       if (subIds.has(sub.id)) return `Duplicate subcategory id: ${sub.id}`;

@@ -9,7 +9,7 @@ import {
   TransactionRow,
   glyphTint,
 } from "@/frontend/components/ui";
-import { isSavingsCategory, isSpendingCategory } from "@/frontend/lib/categories";
+import { isSavingsCategory, isSpendingCategory, spendingCategoriesFor } from "@/frontend/lib/categories";
 import {
   CURRENT_DAY,
   CURRENT_MONTH_KEY,
@@ -146,7 +146,7 @@ export function Overview({
 
   const donutData = useMemo(
     () =>
-      categoryIndex.spendingCategories
+      spendingCategoriesFor(categoryIndex, (id) => (st.byCat[id] || 0) > 0)
         .map((c) => ({
           id: c.id,
           label: c.name,
@@ -156,7 +156,7 @@ export function Overview({
         }))
         .filter((d) => d.value > 0)
         .sort((a, b) => b.value - a.value),
-    [categoryIndex.spendingCategories, st.byCat],
+    [categoryIndex, st.byCat],
   );
   const totalAll = useMemo(() => donutData.reduce((s, d) => s + d.value, 0), [donutData]);
 
@@ -663,7 +663,11 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
   const catRows = useMemo(
     () =>
-      categoryIndex.spendingCategories
+      // Retired envelopes stay in the list while they still have spend anywhere
+      // in the charted window, so the rows keep summing to the period total.
+      spendingCategoriesFor(categoryIndex, (id) =>
+        chartMonths.some((mo) => (monthlyAgg.get(mo.key)?.byCat[id] || 0) > 0),
+      )
         .map((c) => {
           const now = cur.byCat[c.id] || 0;
           const was = prev ? prev.byCat[c.id] || 0 : 0;
@@ -683,7 +687,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         })
         .sort((a, b) => b.now - a.now),
     [
-      categoryIndex.spendingCategories,
+      categoryIndex,
       cur.byCat,
       prev,
       chartMonths,
