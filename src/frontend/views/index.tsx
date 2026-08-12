@@ -57,7 +57,7 @@ import {
 import { getAccent } from "@/frontend/lib/theme";
 import type { Budgets, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 export { Categories } from "./Categories";
 
@@ -844,7 +844,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       </div>
 
       <section className="panel insights-habits" data-tour="tour-insights-habits">
-        <div className="panel-head insights-habits-head">
+        <div className="panel-head profile-head">
           <div>
             <h2>Spending Habit</h2>
             <p className="panel-sub">{habitSub}</p>
@@ -861,11 +861,11 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         </div>
 
         {habit.status === "insufficient" ? (
-          <div className="insights-habits-locked">
-            <div className="insights-habits-locked-mark" aria-hidden="true">◌</div>
-            <div className="insights-habits-locked-copy">
-              <p className="insights-habits-locked-title">Style unlocks after 5 days of transactions</p>
-              <p className="insights-habits-locked-sub">
+          <div className="profile-locked">
+            <div className="profile-locked-mark" aria-hidden="true">◌</div>
+            <div className="profile-locked-copy">
+              <p className="profile-locked-title">Style unlocks after 5 days of transactions</p>
+              <p className="profile-locked-sub">
                 {habit.daysHave === 0
                   ? `No outgoing spend days yet in ${habit.periodLabel}.`
                   : `${habit.daysHave} of ${habit.daysNeeded} active days in ${habit.periodLabel}.`}
@@ -873,7 +873,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
               </p>
             </div>
             <div
-              className="insights-habits-progress"
+              className="profile-progress"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={habit.daysNeeded}
@@ -881,111 +881,114 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
               aria-label="Transaction Days Toward Habit Unlock"
             >
               <div
-                className="insights-habits-progress-fill"
+                className="profile-progress-fill"
                 style={{ width: `${(habit.daysHave / habit.daysNeeded) * 100}%` }}
               />
             </div>
           </div>
         ) : (
-          <div className={"insights-habits-result habit-tinted style-" + habit.style.id}>
-            <div className="insights-habits-top">
-              <div className="insights-habits-identity">
-                <div className="insights-habits-crown">
-                  <p className="insights-habits-temperament">{habit.style.temperament}</p>
-                  <span className={"insights-habits-confidence conf-" + habit.confidence.level}>
+          <div className={"profile-result profile-tinted style-" + habit.style.id}>
+            <div className="profile-top">
+              <div className="profile-identity">
+                <div className="profile-crown">
+                  <p className="profile-temperament">{habit.style.temperament}</p>
+                  <span className={"profile-confidence conf-" + habit.confidence.level}>
                     {habit.confidence.level} confidence
                   </span>
                 </div>
-                <h3 className="insights-habits-title">
+                <h3 className="profile-title">
                   {habit.style.title}
                   {habit.blend.secondary && (
-                    <span className="insights-habits-blend"> with a {habit.blend.secondary.trait} streak</span>
+                    <span className="profile-blend"> with a {habit.blend.secondary.trait} streak</span>
                   )}
                 </h3>
-                <p className="insights-habits-meta">
+                <p className="profile-meta">
                   {habit.activeDays} active days · {habit.txCount} transactions · {money(habit.metrics.total)} in {habit.periodLabel}
                 </p>
               </div>
               {habitStory && (
-                <div className="insights-habits-copy">
-                  <div className="insights-habits-block">
-                    <p className="insights-habits-kicker">Data Pattern</p>
+                <div className="profile-copy">
+                  <div className="profile-block">
+                    <p className="profile-kicker">Data Pattern</p>
                     <p>{habitStory.narrative.pattern}</p>
                   </div>
-                  <div className="insights-habits-block">
-                    <p className="insights-habits-kicker">Behavior</p>
+                  <div className="profile-block">
+                    <p className="profile-kicker">Behavior</p>
                     <p>{habitStory.narrative.behavior}</p>
                   </div>
-                  <div className="insights-habits-block is-nudge">
-                    <p className="insights-habits-kicker">Try This</p>
+                  <div className="profile-block is-nudge">
+                    <p className="profile-kicker">Try This</p>
                     <p>{habitStory.nudge}</p>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="insights-habits-signals">
-              <div className="insights-habits-signal">
-                <p className="ihs-label">Median charge</p>
-                <p className="ihs-value">{money(habit.metrics.medianAmt)}</p>
-                <p className="ihs-hint">p90 {money(habit.metrics.p90)}</p>
+            <div className="profile-signals">
+              <div className="profile-signal">
+                <p className="psig-label">Median charge</p>
+                <p className="psig-value">{money(habit.metrics.medianAmt)}</p>
+                <p className="psig-hint">p90 {money(habit.metrics.p90)}</p>
               </div>
-              <div className="insights-habits-signal">
-                <p className="ihs-label">Amount swing</p>
-                <p className="ihs-value">{habit.metrics.amountCv.toFixed(2)}×</p>
-                <p className="ihs-hint">lower is steadier</p>
+              <div className="profile-signal">
+                <p className="psig-label">Amount swing</p>
+                <p className="psig-value">{habit.metrics.amountCv.toFixed(2)}×</p>
+                <p className="psig-hint">lower is steadier</p>
               </div>
-              <div className="insights-habits-signal">
-                <p className="ihs-label">Typical gap</p>
-                <p className="ihs-value">{habit.metrics.medianGap}d</p>
-                <p className="ihs-hint">longest quiet {habit.metrics.longestQuiet}d</p>
+              <div className="profile-signal">
+                <p className="psig-label">Typical gap</p>
+                <p className="psig-value">{habit.metrics.medianGap}d</p>
+                <p className="psig-hint">longest quiet {habit.metrics.longestQuiet}d</p>
               </div>
-              <div className="insights-habits-signal">
-                <p className="ihs-label">Busiest day</p>
-                <p className="ihs-value">
+              <div className="profile-signal">
+                <p className="psig-label">Busiest day</p>
+                <p className="psig-value">
                   {habit.metrics.topDowSampleDate ? weekdayLabel(habit.metrics.topDowSampleDate) : "—"}
                 </p>
-                <p className="ihs-hint">{Math.round(habit.metrics.topDowShare * 100)}% of transactions</p>
+                <p className="psig-hint">{Math.round(habit.metrics.topDowShare * 100)}% of transactions</p>
               </div>
-              <div className="insights-habits-signal">
-                <p className="ihs-label">Biggest cluster</p>
-                <p className="ihs-value">
+              <div className="profile-signal">
+                <p className="psig-label">Biggest cluster</p>
+                <p className="psig-value">
                   {habit.metrics.biggestCluster
                     ? `${habit.metrics.biggestCluster.size} tx / ${habit.metrics.biggestCluster.spanDays}d`
                     : "—"}
                 </p>
-                <p className="ihs-hint">
+                <p className="psig-hint">
                   {habit.metrics.biggestCluster ? Math.round(habit.metrics.biggestCluster.share * 100) : 0}% of spend
                 </p>
               </div>
-              <div className="insights-habits-signal">
-                <p className="ihs-label">On a schedule</p>
-                <p className="ihs-value">{Math.round(habit.metrics.recurringShare * 100)}%</p>
-                <p className="ihs-hint">{habit.metrics.recurringCount} recurring charges</p>
+              <div className="profile-signal">
+                <p className="psig-label">On a schedule</p>
+                <p className="psig-value">{Math.round(habit.metrics.recurringShare * 100)}%</p>
+                <p className="psig-hint">{habit.metrics.recurringCount} recurring charges</p>
               </div>
             </div>
 
             {habit.metrics.categories.length > 0 && (
-              <div className="insights-habits-driver">
+              <div className="profile-driver">
                 {habit.metrics.categories.slice(0, 3).map((cat) => (
-                  <div key={cat.id} className="ihd-row">
+                  <div key={cat.id} className="pdrv-row">
                     <CatGlyph glyph={cat.glyph} id={cat.id} />
-                    <div className="ihd-name">{cat.name}</div>
-                    <div className="ihd-bar">
+                    <div className="pdrv-name">{cat.name}</div>
+                    <div className="pdrv-bar">
                       <div
-                        className="ihd-fill"
+                        className="pdrv-fill"
                         style={{ width: `${Math.round(cat.share * 100)}%` }}
                       />
                     </div>
-                    <div className="ihd-amt">{money(cat.amount)}</div>
+                    <div className="pdrv-amt">{money(cat.amount)}</div>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="insights-habits-trajectory">
-              <p className="iht-note">{habitStory?.shift}</p>
-              <div className="iht-grid">
+            <div className="profile-trajectory">
+              <p className="ptrl-note">{habitStory?.shift}</p>
+              <div
+                className="ptrl-grid"
+                style={{ "--ptrl-cols": habitTrail.length } as CSSProperties}
+              >
                 {habitTrail.map((pt) => {
                   const isReady = pt.status === "ready";
                   return (
@@ -993,7 +996,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                       key={pt.monthKey}
                       type="button"
                       className={
-                        "iht-col habit-tinted " +
+                        "ptrl-col profile-tinted " +
                         (isReady ? "style-" + pt.styleId : "") +
                         (pt.monthKey === month ? " is-active" : "")
                       }
@@ -1001,11 +1004,11 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                       disabled={!isReady}
                     >
                       <div
-                        className={"iht-bar" + (isReady ? "" : " is-empty")}
+                        className={"ptrl-bar" + (isReady ? "" : " is-empty")}
                         style={{ height: isReady ? `${Math.max(6, (pt.spend / habitTrailMaxSpend) * 100)}%` : "4px" }}
                       />
-                      <p className="iht-label">{monthLabel(pt.monthKey).split(" ")[0]}</p>
-                      <p className="iht-style">{isReady ? pt.trait : "—"}</p>
+                      <p className="ptrl-label">{monthLabel(pt.monthKey).split(" ")[0]}</p>
+                      <p className="ptrl-style">{isReady ? pt.trait : "—"}</p>
                     </button>
                   );
                 })}
