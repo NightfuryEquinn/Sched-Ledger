@@ -111,21 +111,6 @@ eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
   });
 });
 
-eventsRoutes.get("/:id", async (c) => {
-  const accountId = c.get("accountId");
-  const id = objectIdSchema.safeParse(c.req.param("id"));
-  if (!id.success) notFound("Event not found");
-
-  const { events } = getCollections(getDb());
-  const doc = await events.findOne({
-    _id: new ObjectId(id.data),
-    accountId,
-  });
-  if (!doc) notFound("Event not found");
-
-  return c.json({ event: serializeDoc(doc) });
-});
-
 eventsRoutes.post("/", zValidator("json", createEventSchema), async (c) => {
   const accountId = c.get("accountId");
   const body = c.req.valid("json");

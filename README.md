@@ -104,7 +104,7 @@ src/
     │                     # Recurring, Insights, Schedule, TodoList, Transparency
     └── main.tsx
 public/                   # PWA manifest + service worker (copied into dist/ on build)
-scripts/                  # MongoDB collection maintenance (drop/list, accountId backfill, stale-user prune)
+scripts/                  # MongoDB collection maintenance (drop/list, stale-user prune)
 tests/                    # auth, crypto, calculator, spending, schedule, budget/holds, whats-new
 build.ts                  # Production build (dist/ + api/index.js)
 ```
@@ -146,7 +146,7 @@ bun run db:drop expenses events --yes   # drop specific collection(s)
 bun run db:drop:all --yes  # drop all app collections
 ```
 
-Connectivity check: `curl http://localhost:3000/api/health`
+Connectivity check: `curl http://localhost:3000/` (expect `200`)
 
 ## Database schema
 
@@ -187,7 +187,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |
 | `rate_limits` | — | `_id` (limit key), `count`, `resetAt` |
 
-Owned collections use opaque `accountId` (`users._id` hex). Run `bun scripts/backfill-account-id.ts` once after upgrading an existing database.
+Owned collections use opaque `accountId` (`users._id` hex).
 
 Inactive accounts (no login / session activity for over 90 days) can be purged with their data:
 
@@ -210,10 +210,10 @@ Open [http://localhost:3000](http://localhost:3000). The SPA and API share the s
 
 When `CRON_SECRET` is set in development, the server also polls every 15 minutes for due reminders and recurring expense rows. Email delivery needs `RESEND_API_KEY` and Web Push delivery needs the `VAPID_*` keys — each channel is independent, and recurring expense materialization runs regardless.
 
-### Health check
+### Liveness check
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3000/
 ```
 
 ### Versioning
@@ -249,8 +249,6 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 
 | Route | Description |
 |-------|-------------|
-| `GET /api/ping` | Runtime probe |
-| `GET /api/health` | Service and DB status |
 | `POST /api/auth/challenge` | Start sign-in |
 | `POST /api/auth/verify` | Complete sign-in |
 | `GET /api/auth/me` | Current session |
@@ -260,7 +258,6 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 | `POST /api/auth/logout` | End current session |
 | `POST /api/auth/clear` | Revoke all sessions and clear cookie |
 | `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder/alert prefs |
-| `GET /api/users/:address` | Own profile only (session-gated; other addresses forbidden) |
 | `POST /api/users` | Create or upsert user profile on first sign-in |
 | `GET/PATCH /api/profile` | Per-user UI state — accepts `currentMonth` only; returns `id`, `currentMonth`, and `createdAt` (account age, used to gate release notes) |
 | `CRUD /api/wallets` | Financial wallets (metadata + E2EE `enc`/`payload` via PATCH) |
@@ -354,7 +351,7 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 
 ### Verify after deploy
 
-1. **Health check** — `GET https://<your-app>.vercel.app/api/health` should return `{ "ok": true, "service": "ledger-api", "db": "connected" }`.
+1. **Liveness check** — `GET https://<your-app>.vercel.app/` should return `200` and serve the app shell.
 2. **Sign-in** — open the app, create or restore a wallet, complete the sign-in challenge, and confirm you land in the main UI.
 3. **CRUD** — add an expense and a schedule event; refresh the page and confirm data persists.
 4. **Wallets** — create a second wallet, switch between them, and confirm transactions stay scoped.

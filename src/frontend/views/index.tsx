@@ -667,10 +667,16 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       })),
     [chartMonths, monthlyAgg],
   );
-  const cur = monthStats(expenses, budgets, wallet, month, categoryIndex);
+  const cur = useMemo(
+    () => monthStats(expenses, budgets, wallet, month, categoryIndex),
+    [expenses, budgets, wallet, month, categoryIndex],
+  );
   const idx = MONTHS.findIndex((m) => m.key === month);
   const prevKey = idx > 0 ? MONTHS[idx - 1].key : null;
-  const prev = prevKey ? monthStats(expenses, budgets, wallet, prevKey, categoryIndex) : null;
+  const prev = useMemo(
+    () => (prevKey ? monthStats(expenses, budgets, wallet, prevKey, categoryIndex) : null),
+    [expenses, budgets, wallet, prevKey, categoryIndex],
+  );
 
   const catRows = useMemo(
     () =>
@@ -1128,7 +1134,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           <p className="panel-sub">Where money came in, and how much of it survived the month</p>
         </div>
 
-        <section className="panel insights-income-profile">
+        <section className="panel">
           <div className="panel-head profile-head">
             <div>
               <h2>Income Profile</h2>

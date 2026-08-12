@@ -30,17 +30,6 @@ todoListsRoutes.get("/", async (c) => {
   return c.json({ todoLists: serializeDocs(docs) });
 });
 
-todoListsRoutes.get("/:id", async (c) => {
-  const accountId = c.get("accountId");
-  const id = objectIdSchema.safeParse(c.req.param("id"));
-  if (!id.success) notFound("List not found");
-
-  const doc = await findOwnedList(accountId, id.data);
-  if (!doc) notFound("List not found");
-
-  return c.json({ todoList: serializeDoc(doc) });
-});
-
 todoListsRoutes.post("/", zValidator("json", createTodoListSchema), async (c) => {
   const accountId = c.get("accountId");
   const body = c.req.valid("json");

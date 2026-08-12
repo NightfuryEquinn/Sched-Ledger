@@ -27,58 +27,30 @@ export type ReleaseNotes = {
  * every device.
  */
 export const RELEASE_NOTES: ReleaseNotes = {
-  version: "1.0.0",
+  version: "1.1.0",
   date: "August 2026",
-  lead: "Sched Ledger reaches 1.0. Here is what your ledger can do now.",
+  lead: "A maintenance release: a faster Insights tab, a fixed install icon, and a squashed startup crash.",
   highlights: [
     {
-      icon: "calendar",
-      title: "A schedule that bends",
-      body:
-        "Events can span multiple days, repeat weekly or biweekly, and recurring series let you " +
-        "delete just this occurrence, this and everything after, or the whole series.",
-    },
-    {
-      icon: "wallet",
-      title: "Bills tied to your budget",
-      body:
-        "Put a hold on a budget envelope when you schedule a bill, so the money is already spoken " +
-        "for. Logging the payment releases the hold and links the transaction back to the event.",
-    },
-    {
-      icon: "bell",
-      title: "Reminders worth reading",
-      body:
-        "Email reminders now carry the event name, its budget hold and your comments. All-day " +
-        "events get day-of reminders, and you can switch on browser push notifications instead.",
-    },
-    {
       icon: "insights",
-      title: "Sharper insights",
+      title: "Snappier Insights",
       body:
-        "The overview trend charts earnings alongside spending, hovering any point breaks the " +
-        "total down by category, and spending habits highlight where the month actually went.",
-    },
-    {
-      icon: "calculator",
-      title: "Budget calculator",
-      body:
-        "Build a month's budget from your own categories, see it balance against your income, " +
-        "and apply it to the ledger in one step.",
+        "The overview and spending-habit panels no longer recompute on every render. Switching " +
+        "months, periods, or currency now updates only what actually changed.",
     },
     {
       icon: "shield",
-      title: "Private by construction",
+      title: "Fixed a load-time crash",
       body:
-        "Your ledger is end-to-end encrypted in the browser before it is stored. Review active " +
-        "sessions, sign out other devices, and clear everything this browser holds at any time.",
+        "A hooks-ordering bug could crash the app right as your ledger finished loading. Fixed at " +
+        "the root — the loading and loaded states now use the exact same hooks.",
     },
     {
       icon: "download",
-      title: "Yours to take with you",
+      title: "Install icon, fixed",
       body:
-        "Export and re-import transactions, schedule and to-do lists as CSV, or take an encrypted " +
-        "backup. Install Sched Ledger to your home screen and it keeps working offline for reads.",
+        "The home-screen icon and splash screen were pointing at a path that didn't exist in " +
+        "production. Installing Sched Ledger now shows the right icon immediately.",
     },
   ],
 };

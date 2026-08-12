@@ -210,7 +210,7 @@ function windowSize(window: IncomeWindow) {
 }
 
 /** Human label for the window under assessment. */
-export function incomeWindowLabel(window: IncomeWindow, monthKey: string) {
+function incomeWindowLabel(window: IncomeWindow, monthKey: string) {
   const months = monthsWindow(monthKey, windowSize(window));
   const first = months[0]?.key ?? monthKey;
   const last = months[months.length - 1]?.key ?? monthKey;
@@ -478,7 +478,7 @@ export function computeIncomeMetrics(
 }
 
 /** Score each income archetype from a window's metrics. */
-export function scoreIncomeStyles(m: IncomeMetrics): Record<IncomeStyleId, number> {
+function scoreIncomeStyles(m: IncomeMetrics): Record<IncomeStyleId, number> {
   if (!m.txCount) return { ...EMPTY_SCORES };
 
   const monthPresence = m.monthsInWindow ? m.monthsWithIncome / m.monthsInWindow : 0;
@@ -558,7 +558,7 @@ function pickFromRanked(ranked: [IncomeStyleId, number][]): IncomeStyleId {
  * How much the verdict can be trusted: sample size (months and payments)
  * blended with how far the leader sits ahead of the runner-up.
  */
-export function incomeConfidence(
+function incomeConfidence(
   ranked: [IncomeStyleId, number][],
   m: IncomeMetrics,
 ): IncomeConfidence {

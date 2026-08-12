@@ -19,25 +19,8 @@ import { walletsRoutes } from "./wallets";
 export function createApiRoutes() {
   const api = new Hono();
 
-  api.get("/ping", (c) =>
-    c.json({ ok: true, runtime: process.versions.bun ? `bun ${process.versions.bun}` : process.version }),
-  );
-
   api.use("*", securityHeaders);
   api.use("*", globalRateLimit);
-
-  api.get("/health", async (c) => {
-    try {
-      const { connectDb } = await import("@/db/client");
-      await connectDb();
-      return c.json({ ok: true, service: "ledger-api", db: "connected" });
-    } catch (err) {
-      /* Log details server-side only; connection errors can leak DB topology. */
-      console.error("[health] database check failed:", err);
-      return c.json({ ok: false, service: "ledger-api", db: "disconnected" }, 503);
-    }
-  });
-
   api.use("*", ensureDb);
 
   api.route("/auth", authRoutes);

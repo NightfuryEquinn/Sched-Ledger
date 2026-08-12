@@ -9,17 +9,7 @@ import {
 } from "@/lib/budget-alerts";
 import { monthStats } from "@/frontend/lib/stats";
 
-const LOCAL_PUSH_KEY = "ledger:budget-alert-push";
 const LOCAL_SENT_KEY = "ledger:budget-alerts-sent";
-
-/** Whether in-tab budget alert notifications are enabled (default on). */
-function getBudgetAlertPushEnabled(): boolean {
-  try {
-    return localStorage.getItem(LOCAL_PUSH_KEY) !== "0";
-  } catch {
-    return true;
-  }
-}
 
 /** Read previously sent alert dedupe keys from localStorage. */
 function readSentKeys(): Set<string> {
@@ -63,7 +53,6 @@ async function showBudgetAlertNotification(
   currency: string,
 ): Promise<boolean> {
   if (typeof Notification === "undefined") return false;
-  if (!getBudgetAlertPushEnabled()) return false;
   if (Notification.permission !== "granted") return false;
 
   const title =

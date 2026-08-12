@@ -108,16 +108,6 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 }
 
 export const api = {
-  health() {
-    return fetch("/api/health").then(async (res) => {
-      if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new ApiError(res.status, payload.error ?? res.statusText);
-      }
-      return res.json() as Promise<{ ok: boolean; service: string; db: string }>;
-    });
-  },
-
   auth: {
     challenge(address: string) {
       return request<{ message: string; nonce: string; expiresAt: string; uri: string }>(

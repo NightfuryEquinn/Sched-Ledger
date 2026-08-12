@@ -9,6 +9,7 @@ import {
   pct,
   percentileOf,
   sorted,
+  stats1D,
   topBin,
   type Confidence,
   type ConfidenceLevel,
@@ -332,8 +333,13 @@ function addCatBucket(
   buckets: Map<string, { amount: number; txCount: number }>,
   p: TxPoint,
   index?: CategoryIndex,
+  metaCache?: Map<string, ReturnType<typeof catMetaOf>>,
 ) {
-  const meta = catMetaOf(p.sub, index);
+  let meta = metaCache?.get(p.sub);
+  if (!meta) {
+    meta = catMetaOf(p.sub, index);
+    metaCache?.set(p.sub, meta);
+  }
   const prev = buckets.get(meta.id);
   if (prev) {
     prev.amount += p.amount;
@@ -436,6 +442,7 @@ export function computeHabitMetrics(
   let recurringCount = 0;
   let recurringAmount = 0;
   const catBuckets = new Map<string, { amount: number; txCount: number }>();
+  const metaCache = new Map<string, ReturnType<typeof catMetaOf>>();
   let total = 0;
 
   let lastDate = "";
@@ -467,7 +474,7 @@ export function computeHabitMetrics(
       recurringAmount += p.amount;
     }
 
-    addCatBucket(catBuckets, p, index);
+    addCatBucket(catBuckets, p, index, metaCache);
   }
 
   const activeDays = uniqueDates.length;
@@ -483,8 +490,7 @@ export function computeHabitMetrics(
   const gaps = gapsFromOrderedDates(uniqueDates, uniqueTimes);
   const sortedGaps = sorted(gaps);
   const medianGap = percentileOf(sortedGaps, 0.5);
-  const meanGap = mean(gaps);
-  const gapCv = cv(gaps);
+  const { mean: meanGap, cv: gapCv } = stats1D(gaps);
   const longestQuiet = gaps.length ? Math.max(...gaps) : 0;
   const quietGaps = gaps.filter((g) => g >= 5).length;
   const quietShare = gaps.length ? quietGaps / gaps.length : 0;
@@ -596,9 +602,9 @@ export function computeHabitMetrics(
     const recurringBuckets = new Map<string, { amount: number; txCount: number }>();
 
     for (const p of points) {
-      if (p.dayOfWeek === topDow || p.dayOfMonth === topDom) addCatBucket(peakBuckets, p, index);
-      if (p.cluster === biggestClusterIdx) addCatBucket(clusterBuckets, p, index);
-      if (p.recurring) addCatBucket(recurringBuckets, p, index);
+      if (p.dayOfWeek === topDow || p.dayOfMonth === topDom) addCatBucket(peakBuckets, p, index, metaCache);
+      if (p.cluster === biggestClusterIdx) addCatBucket(clusterBuckets, p, index, metaCache);
+      if (p.recurring) addCatBucket(recurringBuckets, p, index, metaCache);
     }
 
     attributionFields = {
@@ -659,7 +665,7 @@ export function computeHabitMetrics(
   return { metrics, scores };
 }
 
-/** Score each habit style from a period's transaction list (backward-compatible entry point). */
+/** Score each habit style from a period's transaction list. */
 export function scoreHabitStyles(expenses: Expense[]): Record<HabitStyleId, number> {
   return computeHabitMetrics(expenses, undefined, { attribution: false }).scores;
 }
@@ -932,7 +938,7 @@ function rolling90Bounds(monthKey: string) {
 }
 
 /** Human label for the period under assessment. */
-export function habitPeriodLabel(period: HabitPeriod, monthKey: string) {
+function habitPeriodLabel(period: HabitPeriod, monthKey: string) {
   if (period === "rolling90") {
     const { end } = rolling90Bounds(monthKey);
     return `the 90 days to ${dayLabel(end)}`;

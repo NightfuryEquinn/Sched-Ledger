@@ -100,6 +100,17 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     }
   }, [ledger.isLoading, ledger.error, ledger.profile, ledger.setMonth]);
 
+  /**
+   * Subcategories with transaction history. A category holding any of these is
+   * archived rather than deleted, so its past transactions keep resolving to
+   * the right type — deleting a savings envelope outright would silently
+   * reclassify its whole history as spending.
+   */
+  const usedSubIds = useMemo(
+    () => new Set(ledger.expenses.map((e) => e.sub)),
+    [ledger.expenses],
+  );
+
   if (ledger.isLoading) {
     return (
       <div className="app app--loading">
@@ -305,14 +316,6 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   };
 
   const viewProps = { expenses, budgets, wallet, month, currency, categoryIndex: ledger.categoryIndex };
-
-  /**
-   * Subcategories with transaction history. A category holding any of these is
-   * archived rather than deleted, so its past transactions keep resolving to
-   * the right type — deleting a savings envelope outright would silently
-   * reclassify its whole history as spending.
-   */
-  const usedSubIds = useMemo(() => new Set(expenses.map((e) => e.sub)), [expenses]);
 
   return (
     <div className="app">

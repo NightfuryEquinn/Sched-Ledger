@@ -100,18 +100,6 @@ walletsRoutes.get("/", async (c) => {
   return c.json({ wallets: serializeDocs(wallets) });
 });
 
-walletsRoutes.get("/:id", async (c) => {
-  const accountId = c.get("accountId");
-  const id = objectIdSchema.safeParse(c.req.param("id"));
-  if (!id.success) notFound("Wallet not found");
-
-  await migrateLegacyData(accountId);
-  const doc = await findOwnedWallet(accountId, id.data);
-  if (!doc) notFound("Wallet not found");
-
-  return c.json({ wallet: serializeDoc(doc) });
-});
-
 walletsRoutes.post("/", zValidator("json", createWalletSchema), async (c) => {
   const accountId = c.get("accountId");
   const body = c.req.valid("json");

@@ -68,22 +68,6 @@ expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) 
   });
 });
 
-expensesRoutes.get("/:id", async (c) => {
-  const accountId = c.get("accountId");
-  const id = objectIdSchema.safeParse(c.req.param("id"));
-  if (!id.success) notFound("Expense not found");
-
-  const { expenses } = getCollections(getDb());
-  const doc = await expenses.findOne({
-    _id: new ObjectId(id.data),
-    accountId,
-    skipped: { $ne: true },
-  });
-  if (!doc) notFound("Expense not found");
-
-  return c.json({ expense: serializeDoc(doc) });
-});
-
 expensesRoutes.post("/", zValidator("json", createExpenseSchema), async (c) => {
   const accountId = c.get("accountId");
   const body = c.req.valid("json");
