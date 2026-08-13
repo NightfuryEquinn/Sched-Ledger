@@ -1819,17 +1819,18 @@ h1, h2, h3 {
 }
 
 .summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--gap);
+}
+
+.summary-grid.sg-2,
+.summary-grid.sg-3 {
+  display: grid;
 }
 
 .summary-grid.sg-3 {
   grid-template-columns: repeat(3, 1fr);
-}
-
-.summary-grid.sg-5 {
-  grid-template-columns: repeat(5, 1fr);
 }
 
 .summary-grid.sg-2 {
@@ -1842,6 +1843,8 @@ h1, h2, h3 {
   border-radius: var(--radius);
   padding: var(--card-pad);
   box-shadow: var(--shadow);
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .sc-label {
@@ -5941,14 +5944,8 @@ h1, h2, h3 {
     gap: 8px;
   }
 
-  .summary-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .summary-grid.sg-3 {
     grid-template-columns: repeat(3, 1fr);
-  }
-  .summary-grid.sg-5 {
-    grid-template-columns: repeat(2, 1fr);
   }
 
   /* Panel subheaders */
@@ -6367,11 +6364,14 @@ h1, h2, h3 {
   .ctip-amt {
     font-size: 11.5px;
   }
-  .summary-grid, .summary-grid.sg-3, .summary-grid.sg-5 {
+  .summary-grid.sg-3 {
     grid-template-columns: repeat(2, 1fr);
   }
   .summary-grid.sg-2 {
     grid-template-columns: 1fr;
+  }
+  .summary-card {
+    flex-basis: 140px;
   }
   .sc-value {
     font-size: 25px;
