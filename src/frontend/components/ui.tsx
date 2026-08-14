@@ -219,6 +219,18 @@ function Sidebar({ view, setView }) {
 // ── MonthSwitcher: prev / label picker / next ─────────────────────
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/** Viewport height left below a fixed dropdown, keeping the bottom nav clear. */
+function dropdownMaxHeightPx(anchorBottom: number) {
+  const bottomNav = window.matchMedia("(max-width: 860px)").matches ? 92 : 16;
+
+  return Math.max(140, Math.round(window.innerHeight - anchorBottom - bottomNav));
+}
+
+/** True when a scroll started inside the open dropdown (do not dismiss). */
+function scrollIsInsideMenu(menu: HTMLElement | null, target: EventTarget | null) {
+  return !!(menu && target instanceof Node && (target === menu || menu.contains(target)));
+}
+
 function MonthSwitcher({ months, current, onChange }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<Record<string, string | number>>({});
@@ -244,11 +256,14 @@ function MonthSwitcher({ months, current, onChange }) {
     let left = r.left + r.width / 2 - menuW / 2;
     if (left + menuW > window.innerWidth - 12) left = window.innerWidth - menuW - 12;
     if (left < 12) left = 12;
+    const top = r.bottom + 8;
+
     setMenuStyle({
       position: "fixed",
-      top: r.bottom + 8,
+      top,
       left,
       width: menuW,
+      maxHeight: dropdownMaxHeightPx(top),
       zIndex: 60,
     });
   };
@@ -256,18 +271,21 @@ function MonthSwitcher({ months, current, onChange }) {
   useEffect(() => {
     if (!open) return;
     placeMenu();
-    const close = () => setOpen(false);
+    const onScroll = (e: Event) => {
+      if (scrollIsInsideMenu(menuRef.current, e.target)) return;
+      setOpen(false);
+    };
     const onMouseDown = (e: MouseEvent) => {
       const t = e.target as Node;
       if (rootRef.current?.contains(t) || menuRef.current?.contains(t)) return;
       setOpen(false);
     };
     window.addEventListener("resize", placeMenu);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     document.addEventListener("mousedown", onMouseDown);
     return () => {
       window.removeEventListener("resize", placeMenu);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
       document.removeEventListener("mousedown", onMouseDown);
     };
   }, [open]);
@@ -437,12 +455,15 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
     const chip = chipRef.current;
     if (!chip) return;
     const r = chip.getBoundingClientRect();
+    const top = r.bottom + 8;
+
     setMenuStyle({
       position: "fixed",
-      top: r.bottom + 8,
+      top,
       left: r.left,
       right: "auto",
       minWidth: Math.max(r.width, 220),
+      maxHeight: dropdownMaxHeightPx(top),
       zIndex: 60,
     });
   };
@@ -450,18 +471,21 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
   useEffect(() => {
     if (!open) return;
     placeMenu();
-    const close = () => setOpen(false);
+    const onScroll = (e: Event) => {
+      if (scrollIsInsideMenu(menuRef.current, e.target)) return;
+      setOpen(false);
+    };
     const onMouseDown = (e: MouseEvent) => {
       const t = e.target as Node;
       if (rootRef.current?.contains(t) || menuRef.current?.contains(t)) return;
       setOpen(false);
     };
     window.addEventListener("resize", placeMenu);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     document.addEventListener("mousedown", onMouseDown);
     return () => {
       window.removeEventListener("resize", placeMenu);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
       document.removeEventListener("mousedown", onMouseDown);
     };
   }, [open]);

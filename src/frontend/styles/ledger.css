@@ -27,9 +27,9 @@
   --accent: #4a6fa5;
 
   /* Typography */
-  --font-display: 'Spectral', Georgia, serif;
-  --font-body: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
   --font-num: var(--font-mono);
   --base: 15.5px;
   --emoji-size: 24px;
@@ -949,6 +949,10 @@ h1, h2, h3 {
   box-shadow: var(--shadow);
   padding: var(--sp-2);
   animation: fade .12s ease;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .wallet-menu-item {
@@ -1087,6 +1091,11 @@ h1, h2, h3 {
   padding: var(--sp-2);
   z-index: 40;
   animation: fade .12s ease;
+  max-height: min(32rem, calc(100svh - 6.5rem));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .am-head {
@@ -1291,6 +1300,10 @@ h1, h2, h3 {
   box-shadow: var(--shadow);
   padding: var(--sp-3);
   animation: fade var(--dur-fast) var(--ease);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .month-pick-menu .picker-cal-head {
@@ -2121,7 +2134,7 @@ h1, h2, h3 {
 .profile-signals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 16px;
+  gap: 16px;
   padding-top: 14px;
   border-top: 1px solid var(--hair);
 }
@@ -2600,20 +2613,32 @@ h1, h2, h3 {
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  padding: 38px 32px;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 .dc-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-faint);
   font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dc-value {
   font-family: var(--font-num);
   font-weight: 600;
-  font-size: 22px;
-  letter-spacing: -.5px;
+  font-size: 16px;
+  letter-spacing: -0.3px;
   margin-top: 2px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .legend {
@@ -4853,7 +4878,6 @@ h1, h2, h3 {
 .modal.sm .modal-head {
   flex: none;
   padding: var(--sp-6) var(--sp-6) 0;
-  margin-bottom: 0;
   gap: var(--sp-3);
   min-width: 0;
 }
@@ -5549,9 +5573,28 @@ h1, h2, h3 {
   margin: var(--sp-6) 2px;
 }
 
-/* ── What's New release notes ─────────────────────────────────────── */
+/* ── What's New changelog ─────────────────────────────────────────── */
+.wn-modal {
+  width: min(100%, 460px);
+  max-height: min(88vh, 800px, calc(100dvh - 32px));
+}
+
+.wn-release + .wn-release {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-6);
+  border-top: 1px solid var(--hair);
+}
+
+.wn-release-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  min-width: 0;
+}
+
 .wn-pill {
-  margin-right: auto;
+  flex: none;
   padding: 3px 9px;
   border-radius: var(--r-full);
   background: var(--surface-2);
@@ -5565,7 +5608,8 @@ h1, h2, h3 {
 .wn-date {
   font-size: 12px;
   color: var(--ink-faint);
-  margin: -10px 0 0;
+  margin: 0;
+  min-width: 0;
 }
 
 .wn-list {
@@ -5941,6 +5985,11 @@ h1, h2, h3 {
     gap: 8px;
   }
 
+  /* Keep topbar dropdowns on-screen above the bottom nav. */
+  .acct-menu {
+    max-height: calc(100svh - 6.75rem - 5.75rem - env(safe-area-inset-bottom));
+  }
+
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -5986,6 +6035,10 @@ h1, h2, h3 {
   }
 
   .modal.sm {
+    max-height: min(90dvh, calc(100dvh - 24px));
+  }
+
+  .wn-modal {
     max-height: min(90dvh, calc(100dvh - 24px));
   }
 
@@ -6398,6 +6451,11 @@ h1, h2, h3 {
     padding: 4px 8px 4px 5px;
   }
 
+  .acct-menu {
+    max-height: calc(100svh - 8rem - 6.25rem - env(safe-area-inset-bottom));
+    width: min(280px, calc(100vw - 24px));
+  }
+
   /* Bottom nav — roomier tap targets, same even gap + horizontal scroll */
   .bottom-nav {
     padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom));
@@ -6466,6 +6524,12 @@ h1, h2, h3 {
     width: 100%;
     max-width: none;
     border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+    max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 8px));
+  }
+
+  .wn-modal {
+    width: 100%;
+    max-width: none;
     max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 8px));
   }
 
