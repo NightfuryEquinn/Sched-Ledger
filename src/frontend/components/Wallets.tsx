@@ -1,6 +1,7 @@
-import { getCurrency } from "@/frontend/lib/data";
+import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
+import { fmtMoney, getCurrency } from "@/frontend/lib/data";
 import type { FinancialWallet } from "@/frontend/lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { CurrencyPicker } from "./CurrencyPicker";
 import { Icon, Segmented, WalletPicker } from "./ui";
@@ -41,6 +42,10 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   const [fundingMode, setFundingMode] = useState<"monthly" | "starting">("monthly");
   const [income, setIncome] = useState("");
   const [startingBalance, setStartingBalance] = useState("");
+  const incomeEvaluated = useMemo(() => evaluateExpression(income), [income]);
+  const incomeIsExpression = incomeEvaluated !== null && !isPlainNumber(income);
+  const startingBalanceEvaluated = useMemo(() => evaluateExpression(startingBalance), [startingBalance]);
+  const startingBalanceIsExpression = startingBalanceEvaluated !== null && !isPlainNumber(startingBalance);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -87,8 +92,8 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
         name: name.trim(),
         currency,
         fundingMode,
-        income: fundingMode === "monthly" ? Math.max(0, Math.round(parseFloat(income) || 0)) : 0,
-        startingBalance: fundingMode === "starting" ? Math.max(0, Math.round(parseFloat(startingBalance) || 0)) : 0,
+        income: fundingMode === "monthly" ? Math.max(0, Math.round(incomeEvaluated ?? 0)) : 0,
+        startingBalance: fundingMode === "starting" ? Math.max(0, Math.round(startingBalanceEvaluated ?? 0)) : 0,
       });
       setMode("list");
     } catch (err) {
@@ -209,28 +214,36 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
               {fundingMode === "monthly" ? (
                 <>
                   <label className="fld-label">Monthly Income</label>
+                  {incomeIsExpression ? (
+                    <div className="amount-live-total">= {fmtMoney(incomeEvaluated, { currency })}</div>
+                  ) : null}
                   <div className="amount-field compact wallet-amount">
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
                     <input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
                       placeholder="0"
                       value={income}
                       onChange={(e) => setIncome(e.target.value)}
+                      onBlur={() => { if (incomeIsExpression) setIncome(String(incomeEvaluated)); }}
                     />
                   </div>
                 </>
               ) : (
                 <>
                   <label className="fld-label">Starting Balance</label>
+                  {startingBalanceIsExpression ? (
+                    <div className="amount-live-total">= {fmtMoney(startingBalanceEvaluated, { currency })}</div>
+                  ) : null}
                   <div className="amount-field compact wallet-amount">
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
                     <input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
                       placeholder="0"
                       value={startingBalance}
                       onChange={(e) => setStartingBalance(e.target.value)}
+                      onBlur={() => { if (startingBalanceIsExpression) setStartingBalance(String(startingBalanceEvaluated)); }}
                     />
                   </div>
                 </>

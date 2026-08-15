@@ -3870,12 +3870,6 @@ h1, h2, h3 {
   font-size: 13px;
 }
 
-.transparency-loading {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--ink-faint);
-}
-
 .fab-wrap--hidden {
   display: none !important;
 }
@@ -5066,6 +5060,15 @@ h1, h2, h3 {
   text-align: left;
 }
 
+.amount-live-total {
+  font-family: var(--font-num);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 6px;
+  animation: fade var(--dur-fast) var(--ease);
+}
+
 .amount-field {
   display: flex;
   align-items: center;
@@ -5326,20 +5329,70 @@ h1, h2, h3 {
   font-size: 14.5px;
 }
 
-.spinner {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 3px solid var(--surface-3);
-  border-top-color: var(--accent);
-  animation: spin .8s linear infinite;
-  margin: 0 auto 16px;
+.loading-bloom {
+  text-align: center;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.loading-bloom__ring {
+  position: relative;
+  margin: 0 auto;
+  color: var(--accent);
+  animation: bloom-spin 11s linear infinite;
+}
+
+.loading-bloom--md .loading-bloom__ring {
+  width: 112px;
+  height: 112px;
+  margin-bottom: 16px;
+}
+
+.loading-bloom--sm .loading-bloom__ring {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
+}
+
+.loading-bloom__pos {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+
+.loading-bloom--md .loading-bloom__pos {
+  width: 40px;
+  height: 40px;
+}
+
+.loading-bloom--sm .loading-bloom__pos {
+  width: 22px;
+  height: 22px;
+}
+
+.loading-bloom__leaf {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 50%;
+  animation: bloom-petal 2.2s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+
+.loading-bloom__pos:nth-child(1) .loading-bloom__leaf { animation-delay: 0s; }
+.loading-bloom__pos:nth-child(2) .loading-bloom__leaf { animation-delay: .55s; }
+.loading-bloom__pos:nth-child(3) .loading-bloom__leaf { animation-delay: 1.1s; }
+.loading-bloom__pos:nth-child(4) .loading-bloom__leaf { animation-delay: 1.65s; }
+
+@keyframes bloom-petal {
+  0%, 100% { opacity: .16; transform: scale(.72); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bloom-spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-bloom__label {
+  color: var(--ink-soft);
+  font-size: 14.5px;
 }
 
 .identity-hero {

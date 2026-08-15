@@ -1,5 +1,6 @@
 import { LedgerApp } from "@/frontend/app/LedgerApp";
 import { AuthScreen, getSavedAccount, logoutSession, UnlockScreen } from "@/frontend/auth";
+import { LoadingBloom } from "@/frontend/components/LoadingBloom";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { api } from "@/frontend/lib/api";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
@@ -63,7 +64,7 @@ export function Root() {
     return (
       <ThemeProvider>
         <div className="app app--loading">
-          <div className="loading-state">Loading…</div>
+          <LoadingBloom />
         </div>
       </ThemeProvider>
     );

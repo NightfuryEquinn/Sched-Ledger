@@ -13,12 +13,12 @@ import {
   pad,
   weekdayLabel
 } from "@/frontend/lib/data";
-import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
 import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
 import type { FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import type { DeleteScope } from "@/lib/delete-scope";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /*
@@ -558,6 +558,8 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
       : firstSub(initKind === "income" ? (incomeCategories[0]?.id ?? "income") : defaultExpenseCat),
   );
   const [amount, setAmount] = useState(initial?.amount != null ? String(initial.amount) : "");
+  const amountEvaluated = useMemo(() => evaluateExpression(amount), [amount]);
+  const amountIsExpression = amountEvaluated !== null && !isPlainNumber(amount);
   const [date, setDate] = useState(initial?.date ? initial.date : TODAY_ISO);
   const [note, setNote] = useState(initial?.note ? initial.note : "");
   const initRecurring = normalizeRecurring(initial?.recurring);
@@ -591,7 +593,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
   };
 
   const chooseCat = (id) => { setCatId(id); setSub(firstSub(id)); };
-  const valid = amount && parseFloat(amount) > 0 && date;
+  const valid = amountEvaluated != null && amountEvaluated > 0 && date;
   const submit = () => {
     if (!valid || !walletId) return;
     onSave({
@@ -600,7 +602,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
       kind,
       date,
       sub,
-      amount: Math.round(parseFloat(amount) * 100) / 100,
+      amount: Math.round(amountEvaluated * 100) / 100,
       note: note.trim() || subById[sub]?.name || "Transaction",
       recurring: recurringOn ? recurringFreq : false,
       ...(initial?.eventId ? { eventId: initial.eventId } : {}),
@@ -645,22 +647,20 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
             </div>
           ) : null}
 
+          {amountIsExpression ? (
+            <div className="amount-live-total">= {fmtMoney(amountEvaluated, { currency: selectedWallet?.currency })}</div>
+          ) : null}
           <div className={"amount-field" + (kind === "income" ? " amount-field--income" : "")}>
             <span className="amount-cur">{kind === "income" ? "+" : ""}{cur.symbol}</span>
             <input
               ref={amtRef}
-              type="number"
+              type="text"
               inputMode="decimal"
-              min="0"
-              step="0.01"
               placeholder="0.00"
               value={amount}
-              onChange={(e) => setAmount(stripNegativeInput(e.target.value))}
-              onKeyDown={(e) => {
-                preventNegativeKeys(e);
-                if (e.key === "Enter") submit();
-              }}
-              onWheel={preventWheelChange}
+              onChange={(e) => setAmount(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+              onBlur={() => { if (amountIsExpression) setAmount(String(amountEvaluated)); }}
             />
           </div>
 

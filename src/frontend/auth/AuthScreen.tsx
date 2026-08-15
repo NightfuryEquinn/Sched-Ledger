@@ -1,4 +1,5 @@
 import { Brand } from "@/frontend/components/Brand";
+import { LoadingBloom } from "@/frontend/components/LoadingBloom";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, IdentityRecord } from "@/frontend/lib/types";
@@ -293,7 +294,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   if (mode === "create" && !draft) {
     return (
       <div className="auth-wrap"><div className="auth-card">
-        <div className="gen-load"><div className="spinner" /><p>Generating your keys…</p></div>
+        <div className="gen-load"><LoadingBloom label="Generating your keys…" /></div>
       </div></div>
     );
   }

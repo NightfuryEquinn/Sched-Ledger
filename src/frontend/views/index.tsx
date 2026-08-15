@@ -30,7 +30,7 @@ import {
   weekdayLabel,
 } from "@/frontend/lib/data";
 import { fetchFxRates, fxConvert, fxRateLabel } from "@/frontend/lib/fx";
-import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
 import {
   INCOME_MIN_EVENTS,
   INCOME_MIN_MONTHS,
@@ -465,6 +465,8 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
   );
   const [editId, setEditId] = useState(null);
   const [draft, setDraft] = useState("");
+  const draftEvaluated = useMemo(() => evaluateExpression(draft), [draft]);
+  const draftIsExpression = draftEvaluated !== null && !isPlainNumber(draft);
   const totalBudget = st.totalBudget;
   const totalSpent = st.spent;
   const totalHeld = st.totalHeld;
@@ -472,7 +474,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
 
   const startEdit = (id) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
   const commit = () => {
-    const v = Math.max(0, roundMoney(parseFloat(draft) || 0));
+    const v = Math.max(0, roundMoney(draftEvaluated ?? 0));
     setBudgets({ ...budgets, [editId]: v });
     setEditId(null);
   };
@@ -518,20 +520,20 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                   </div>
                   {editId === c.id ? (
                     <div className="be-edit">
+                      {draftIsExpression ? (
+                        <span className="amount-live-total">= {fmtMoney(draftEvaluated, { currency })}</span>
+                      ) : null}
                       <span className="be-cur">{getCurrency(currency).symbol}</span>
                       <input
                         autoFocus
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={draft}
-                        onChange={(e) => setDraft(stripNegativeInput(e.target.value))}
+                        onChange={(e) => setDraft(e.target.value)}
                         onKeyDown={(e) => {
-                          preventNegativeKeys(e);
                           if (e.key === "Enter") commit();
                           if (e.key === "Escape") setEditId(null);
                         }}
-                        onWheel={preventWheelChange}
                         onBlur={commit}
                       />
                     </div>

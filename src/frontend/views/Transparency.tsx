@@ -1,4 +1,5 @@
 import { ACCOUNT_STALE_DAYS } from "@/lib/account-retention";
+import { LoadingBloom } from "@/frontend/components/LoadingBloom";
 import { useEffect, useId, useRef, useState } from "react";
 
 /*
@@ -403,7 +404,7 @@ function MermaidDiagram({
 
   return (
     <div className="transparency-diagram" role="img" aria-label={label}>
-      {loading ? <p className="transparency-loading">Rendering diagram…</p> : null}
+      {loading ? <LoadingBloom label="Rendering diagram…" size="sm" /> : null}
       {error ? <p className="transparency-error">{error}</p> : null}
       <div ref={hostRef} className="transparency-mermaid" />
     </div>

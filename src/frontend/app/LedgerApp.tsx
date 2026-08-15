@@ -4,6 +4,7 @@ import type { LedgerBackupPlain } from "@/frontend/auth/lib/encrypted-backup";
 import type { EventImportRow } from "@/frontend/auth/lib/import-events";
 import type { TodoImportList } from "@/frontend/auth/lib/import-todos";
 import { restoreBackupToLedger } from "@/frontend/auth/lib/restore-backup";
+import { LoadingBloom } from "@/frontend/components/LoadingBloom";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { WalletManageModal, WalletSwitcher } from "@/frontend/components/Wallets";
 import {
@@ -114,7 +115,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   if (ledger.isLoading) {
     return (
       <div className="app app--loading">
-        <div className="loading-state">Loading your ledger…</div>
+        <LoadingBloom />
       </div>
     );
   }

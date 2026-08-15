@@ -30,7 +30,7 @@ import {
 } from "@/frontend/lib/data";
 import type { EventDay } from "@/frontend/lib/data";
 import { isActiveHoldOccurrence } from "@/frontend/lib/envelope-holds";
-import { preventNegativeKeys, preventWheelChange, stripNegativeInput } from "@/frontend/lib/number-input";
+import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
 import type { CategoryIndex, LedgerEvent } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
@@ -575,7 +575,9 @@ export function EventModal({
   };
 
   const customOk = catId !== "custom" || (customLabel.trim() && customGlyph);
-  const holdAmountNum = Math.max(0, Math.round(parseFloat(holdAmount) || 0));
+  const holdAmountEvaluated = evaluateExpression(holdAmount);
+  const holdAmountIsExpression = holdAmountEvaluated !== null && !isPlainNumber(holdAmount);
+  const holdAmountNum = Math.max(0, Math.round(holdAmountEvaluated ?? 0));
   const resolvedHoldCategoryId = holdCategoryId || categoryIndex?.expenseCategories[0]?.id || "";
   const holdValid = !holdEnabled || (holdAmountNum > 0 && resolvedHoldCategoryId);
   const valid =
@@ -810,18 +812,19 @@ export function EventModal({
               <div className="fld-2col tight hold-fields-grid">
                 <div className="hold-fields-grid__amount">
                   <label className="fld-label">Amount</label>
+                  {holdAmountIsExpression ? (
+                    <div className="amount-live-total">= {fmtMoney(holdAmountEvaluated, { cents: false, currency })}</div>
+                  ) : null}
                   <div className="hold-amt-row">
                     <span className="hold-cur">{getCurrency(currency).symbol}</span>
                     <input
                       className="text-in"
-                      type="number"
-                      min="0"
-                      step="1"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0"
                       value={holdAmount}
-                      onChange={(e) => setHoldAmount(stripNegativeInput(e.target.value))}
-                      onKeyDown={preventNegativeKeys}
-                      onWheel={preventWheelChange}
+                      onChange={(e) => setHoldAmount(e.target.value)}
+                      onBlur={() => { if (holdAmountIsExpression) setHoldAmount(String(holdAmountEvaluated)); }}
                     />
                   </div>
                 </div>
