@@ -2788,6 +2788,7 @@ h1, h2, h3 {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 0.25rem;
 }
 
 .rr-note {
@@ -4446,7 +4447,7 @@ h1, h2, h3 {
 .cal-wd-c {
   font-size: 11px;
   font-weight: 600;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: .04em;
   text-align: left;
@@ -4514,7 +4515,7 @@ h1, h2, h3 {
   font-family: var(--font-num);
   font-weight: 600;
   font-size: 13.5px;
-  color: var(--ink-soft);
+  color: var(--ink);
   line-height: 1;
 }
 
@@ -4598,7 +4599,7 @@ h1, h2, h3 {
 .cal-more {
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   padding: 0 2px;
 }
 
@@ -6671,28 +6672,8 @@ h1, h2, h3 {
   .fab-wrap {
     bottom: calc(88px + env(safe-area-inset-bottom));
   }
-  /* Mobile: actions fan out sideways from the FAB instead of stacking above it. */
-  .fab-actions {
-    right: calc(100% + 12px);
-    bottom: 0;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-  }
   .fab-wrap.open .fab-action-label {
     max-width: 90px;
-  }
-  .fab-action {
-    transform: translateX(10px) scale(.88);
-  }
-  .fab-wrap.open .fab-action {
-    transform: translateX(0) scale(1);
-  }
-  .fab-wrap.open .fab-action:nth-child(1) {
-    transition-delay: 80ms;
-  }
-  .fab-wrap.open .fab-action:nth-child(2) {
-    transition-delay: 40ms;
   }
   .scroll-pad {
     height: 104px;
