@@ -171,6 +171,7 @@ function Icon({ name, size = 20 }) {
     info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
     lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
     sparkle: <><path d="M10 2.5l2.1 5.4 5.4 2.1-5.4 2.1L10 17.5l-2.1-5.4L2.5 10l5.4-2.1L10 2.5z" /><path d="M17.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" /></>,
+    piggy: <><path d="M4 12.5a5.5 5.5 0 0 1 5.5-5.5h4a5.5 5.5 0 0 1 5 3.2l1.5.4a1 1 0 0 1 0 1.9l-1.5.5A5.5 5.5 0 0 1 13.5 17H12v2H9v-2a5.5 5.5 0 0 1-5-5.5z" /><circle cx="16" cy="11" r=".9" fill="currentColor" stroke="none" /><path d="M9 7.5V5.5M6.5 8.5 5 7M7 17v2" /></>,
   };
   return <svg viewBox="0 0 24 24" style={s}>{paths[name]}</svg>;
 }
@@ -191,6 +192,7 @@ export const NAV_ITEMS = [
   ["schedule", "Schedule", "calendar"],
   ["transactions", "Transactions", "list"],
   ["budgets", "Budgets", "budget"],
+  ["piggies", "Piggies", "piggy"],
   ["calculator", "Calculator", "calculator"],
   ["categories", "Categories", "tags"],
   ["recurring", "Recurring", "recurring"],
@@ -539,8 +541,16 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
 }
 
 // ── Add / edit expense modal ────────────────────────────────────────
-function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onSave, onClose, onDelete }) {
+/**
+ * `lockedSub` + `maxAmount` put the modal into piggy-withdraw mode: kind,
+ * wallet, category, subcategory and recurrence all stay fixed to what the
+ * caller prefilled in `initial`, and the amount cannot exceed the piggy's
+ * balance. Used by the Piggies view's "Withdraw" action so a withdrawal can
+ * only ever land back in the envelope it came from.
+ */
+function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onSave, onClose, onDelete, title, lockedSub, maxAmount }) {
   const editing = !!(initial && initial.id);
+  const locked = !!lockedSub;
   const initKind = initial?.kind ?? "expense";
   const { expenseCategories, incomeCategories, subById, catById } = categoryIndex;
   const firstSub = (catId) => catById[catId]?.subs[0]?.id ?? catId;
@@ -593,7 +603,8 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
   };
 
   const chooseCat = (id) => { setCatId(id); setSub(firstSub(id)); };
-  const valid = amountEvaluated != null && amountEvaluated > 0 && date;
+  const overMax = maxAmount != null && amountEvaluated != null && amountEvaluated > maxAmount;
+  const valid = amountEvaluated != null && amountEvaluated > 0 && date && !overMax;
   const submit = () => {
     if (!valid || !walletId) return;
     onSave({
@@ -623,19 +634,23 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
     <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
-          <h3>{editing ? "Edit Transaction" : "Add Transaction"}</h3>
+          <h3>{title ?? (editing ? "Edit Transaction" : "Add Transaction")}</h3>
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
 
         <div className="modal-body modal-scroll">
-          <label className="fld-label">Type</label>
-          <Segmented
-            options={[{ v: "expense", label: "Expense" }, { v: "income", label: "Income" }]}
-            value={kind}
-            onChange={switchKind}
-          />
+          {!locked ? (
+            <>
+              <label className="fld-label">Type</label>
+              <Segmented
+                options={[{ v: "expense", label: "Expense" }, { v: "income", label: "Income" }]}
+                value={kind}
+                onChange={switchKind}
+              />
+            </>
+          ) : null}
 
-          {wallets.length > 1 ? (
+          {!locked && wallets.length > 1 ? (
             <div className="txn-wallet-field">
               <label className="fld-label">Wallet</label>
               <WalletPicker
@@ -649,6 +664,9 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
 
           {amountIsExpression ? (
             <div className="amount-live-total">= {fmtMoney(amountEvaluated, { currency: selectedWallet?.currency })}</div>
+          ) : null}
+          {overMax ? (
+            <div className="amount-live-total is-down">Max {fmtMoney(maxAmount, { currency: selectedWallet?.currency })} available</div>
           ) : null}
           <div className={"amount-field" + (kind === "income" ? " amount-field--income" : "")}>
             <span className="amount-cur">{kind === "income" ? "+" : ""}{cur.symbol}</span>
@@ -664,27 +682,31 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
             />
           </div>
 
-          <div className="event-div" />
-          <label className="fld-label">{kind === "income" ? "Source" : "Category"}</label>
-          <div className="cat-grid">
-            {visibleCategories.map((c) => (
-              <button key={c.id} type="button" className={"cat-chip" + (catId === c.id ? " active" : "")}
-                style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
-                onClick={() => chooseCat(c.id)}>
-                <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>
-                <span className="cc-label">{c.name}</span>
-              </button>
-            ))}
-          </div>
+          {!locked ? (
+            <>
+              <div className="event-div" />
+              <label className="fld-label">{kind === "income" ? "Source" : "Category"}</label>
+              <div className="cat-grid">
+                {visibleCategories.map((c) => (
+                  <button key={c.id} type="button" className={"cat-chip" + (catId === c.id ? " active" : "")}
+                    style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
+                    onClick={() => chooseCat(c.id)}>
+                    <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>
+                    <span className="cc-label">{c.name}</span>
+                  </button>
+                ))}
+              </div>
 
-          <div className="event-div" />
-          <label className="fld-label">Subcategory</label>
-          <div className="sub-row">
-            {catById[catId]?.subs.map((s) => (
-              <button key={s.id} type="button" className={"sub-chip" + (sub === s.id ? " active" : "")} onClick={() => setSub(s.id)}>{s.name}</button>
-            ))}
-          </div>
-          <div className="event-div" />
+              <div className="event-div" />
+              <label className="fld-label">Subcategory</label>
+              <div className="sub-row">
+                {catById[catId]?.subs.map((s) => (
+                  <button key={s.id} type="button" className={"sub-chip" + (sub === s.id ? " active" : "")} onClick={() => setSub(s.id)}>{s.name}</button>
+                ))}
+              </div>
+              <div className="event-div" />
+            </>
+          ) : null}
 
           <div className="fld-2col">
             <div>
@@ -697,26 +719,30 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
             </div>
           </div>
 
-          <label className="toggle-line tight">
-            <input
-              type="checkbox"
-              checked={recurringOn}
-              onChange={(e) => setRecurringOn(e.target.checked)}
-            />
-            <span className="toggle-ui" /> <span>Recurring</span>
-          </label>
-          {recurringOn ? (
-            <div className="wallet-seg">
-              <Segmented
-                options={[
-                  { v: "monthly", label: "Monthly" },
-                  { v: "quarterly", label: "Quarterly" },
-                  { v: "yearly", label: "Yearly" },
-                ]}
-                value={recurringFreq}
-                onChange={setRecurringFreq}
-              />
-            </div>
+          {!locked ? (
+            <>
+              <label className="toggle-line tight">
+                <input
+                  type="checkbox"
+                  checked={recurringOn}
+                  onChange={(e) => setRecurringOn(e.target.checked)}
+                />
+                <span className="toggle-ui" /> <span>Recurring</span>
+              </label>
+              {recurringOn ? (
+                <div className="wallet-seg">
+                  <Segmented
+                    options={[
+                      { v: "monthly", label: "Monthly" },
+                      { v: "quarterly", label: "Quarterly" },
+                      { v: "yearly", label: "Yearly" },
+                    ]}
+                    value={recurringFreq}
+                    onChange={setRecurringFreq}
+                  />
+                </div>
+              ) : null}
+            </>
           ) : null}
         </div>
 
@@ -725,7 +751,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
           <div className="mf-right">
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>
-              {editing ? "Save Changes" : kind === "income" ? "Add Income" : "Add Expense"}
+              {locked ? "Withdraw" : editing ? "Save Changes" : kind === "income" ? "Add Income" : "Add Expense"}
             </button>
           </div>
         </div>

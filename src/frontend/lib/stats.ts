@@ -60,11 +60,12 @@ function flowTotals(expenses: Expense[], index?: CategoryIndex) {
   let earned = 0;
 
   for (const e of expenses) {
-    if (isIncome(e)) {
+    const cls = classifyTx(e, index);
+    if (cls === "withdrawal" || cls === "savings") continue;
+    if (cls === "income") {
       earned += e.amount;
       continue;
     }
-    if (isSavings(e, index)) continue;
     spent += e.amount;
   }
 
@@ -214,9 +215,9 @@ export function dayFlowSeries(
 
   for (const e of expenses) {
     if (!inMonth(e.date, monthKey)) continue;
-    const income = isIncome(e);
-    if (!income && isSavings(e, index)) continue;
-    const target = income ? earnByDay : spendByDay;
+    const cls = classifyTx(e, index);
+    if (cls === "withdrawal" || cls === "savings") continue;
+    const target = cls === "income" ? earnByDay : spendByDay;
     let bucket = target.get(e.date);
     if (!bucket) {
       bucket = new Map();
@@ -325,22 +326,23 @@ export function catOf(sub: string, index?: CategoryIndex) {
 }
 
 /** Which pool a transaction belongs to for every analytics calculation. */
-export type TxClass = "spend" | "savings" | "income";
+export type TxClass = "spend" | "savings" | "withdrawal" | "income";
 
 /**
  * Single source of truth for splitting transactions into spend / savings /
- * income, honouring user-created categories of all three types.
+ * withdrawal / income, honouring user-created categories of all three types.
  *
  * Resolution order matters:
  *
- * 1. `kind` is authoritative for income. The transaction form only offers
- *    income categories when kind is income, and the CSV importer rejects
- *    kind/type mismatches, so this needs no taxonomy lookup — and it keeps
- *    working when a category is later deleted.
- * 2. The taxonomy is authoritative for savings, via the category's `type`.
- *    This is what picks up user-created savings envelopes; the static
- *    `SUB_BY_ID` fallback below cannot see them, which is why callers that
- *    classify should always pass an index.
+ * 1. The taxonomy is checked first, via the category's `type`. This is what
+ *    picks up user-created savings envelopes; the static `SUB_BY_ID` fallback
+ *    below cannot see them, which is why callers that classify should always
+ *    pass an index.
+ * 2. `kind` then decides which side of a savings envelope a transaction is
+ *    on: an outgoing (`expense`) transaction against a savings sub is a
+ *    deposit, an incoming (`income`) transaction against a savings sub is a
+ *    withdrawal — money the user is taking back out. `kind` alone still
+ *    decides plain income vs. spend for every non-savings sub.
  * 3. Everything else is spend — including subcategories orphaned by a deleted
  *    category. An orphan's type is genuinely unrecoverable, so spend is both
  *    the safe default and the correct answer for the common case of a deleted
@@ -348,11 +350,11 @@ export type TxClass = "spend" | "savings" | "income";
  *    the index precisely so savings history does not fall through to here.
  */
 export function classifyTx(e: Expense, index?: CategoryIndex): TxClass {
-  if (isIncome(e)) return "income";
-
   const savings = index
     ? isSavingsSub(e.sub, index.subById, index.catById)
     : catOf(e.sub) === "savings";
+
+  if (isIncome(e)) return savings ? "withdrawal" : "income";
 
   return savings ? "savings" : "spend";
 }
@@ -366,23 +368,28 @@ export function isSpend(e: Expense, index?: CategoryIndex) {
   return classifyTx(e, index) === "spend";
 }
 
+/** True when the transaction takes money back out of a savings envelope. */
+export function isWithdrawal(e: Expense, index?: CategoryIndex) {
+  return classifyTx(e, index) === "withdrawal";
+}
+
 export type WalletFunding = Pick<FinancialWallet, "fundingMode" | "income" | "startingBalance">;
 
 export function walletBalance(expenses: Expense[], wallet: WalletFunding, index?: CategoryIndex) {
   let spent = 0;
   let saved = 0;
   let earned = 0;
+  let withdrawn = 0;
 
   for (const e of expenses) {
-    if (isIncome(e)) {
-      earned += e.amount;
-      continue;
-    }
-    if (isSavings(e, index)) saved += e.amount;
+    const cls = classifyTx(e, index);
+    if (cls === "income") earned += e.amount;
+    else if (cls === "withdrawal") withdrawn += e.amount;
+    else if (cls === "savings") saved += e.amount;
     else spent += e.amount;
   }
 
-  return wallet.startingBalance + earned - spent - saved;
+  return wallet.startingBalance + earned + withdrawn - spent - saved;
 }
 
 export function monthStats(
@@ -397,19 +404,32 @@ export function monthStats(
   let spent = 0;
   let saved = 0;
   let earned = 0;
+  let withdrawn = 0;
   const byCat: Record<string, number> = {};
 
   for (const e of expenses) {
     if (!inMonth(e.date, key)) continue;
     list.push(e);
-    if (isIncome(e)) {
+
+    const cls = classifyTx(e, index);
+
+    if (cls === "income") {
       earned += e.amount;
       continue;
     }
 
     const cat = catOf(e.sub, index);
 
-    if (isSavings(e, index)) {
+    if (cls === "withdrawal") {
+      withdrawn += e.amount;
+      // A withdrawal nets against the same category bucket a deposit fills,
+      // so the savings row (and the Budgets "saved" total) reflects what is
+      // still in the envelope, not lifetime deposits.
+      if (cat) byCat[cat] = (byCat[cat] || 0) - e.amount;
+      continue;
+    }
+
+    if (cls === "savings") {
       saved += e.amount;
       if (cat) byCat[cat] = (byCat[cat] || 0) + e.amount;
       continue;
@@ -442,10 +462,11 @@ export function monthStats(
   const byCatHeld = events ? holdsByCategory(events, key) : {};
   const totalHeld = events ? totalActiveHolds(events, key) : 0;
   const balance = walletBalance(expenses, wallet, index);
-  const monthlyPool = wallet.fundingMode === "monthly" ? wallet.income + earned : earned;
+  const monthlyPool =
+    wallet.fundingMode === "monthly" ? wallet.income + earned + withdrawn : earned + withdrawn;
   const remaining =
     wallet.fundingMode === "monthly"
-      ? wallet.income + earned - spent - saved
+      ? wallet.income + earned + withdrawn - spent - saved
       : balance;
 
   return {
@@ -453,6 +474,7 @@ export function monthStats(
     spent,
     saved,
     earned,
+    withdrawn,
     byCat,
     byCatHeld,
     totalHeld,

@@ -12,7 +12,10 @@ export type CategoryIndex = {
    */
   allCategories: Category[];
   catById: Record<string, Category>;
-  subById: Record<string, { id: string; name: string; catId: string; color: string }>;
+  subById: Record<
+    string,
+    { id: string; name: string; catId: string; color: string; target?: number; deadline?: string }
+  >;
   /** Non-income categories (spending + savings envelopes). */
   expenseCategories: Category[];
   /** True spending categories only (excludes savings and income). */

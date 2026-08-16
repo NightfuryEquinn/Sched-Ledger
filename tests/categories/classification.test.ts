@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolveImportSub } from "@/frontend/auth/lib/category-import";
 import { buildExpenseCsv } from "@/frontend/auth/lib/export";
-import { buildCategoryIndex } from "@/frontend/lib/categories";
+import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
 import { assessSpendingHabit, computeHabitMetrics, habitPeriodExpenses } from "@/frontend/lib/spendingHabits";
 import { classifyTx, isSavings, isSpend } from "@/frontend/lib/stats";
 import type { Category, Expense } from "@/frontend/lib/types";
@@ -103,6 +103,18 @@ describe("classifyTx", () => {
     );
 
     expect(classifyTx(tx("2026-07-01", 10, "sub_rainy_day"), archived)).toBe("savings");
+  });
+
+  test("an income-kind row against a savings sub is a withdrawal, not income", () => {
+    expect(classifyTx(tx("2026-07-01", 10, "sub_rainy_day", "income"), INDEX)).toBe("withdrawal");
+  });
+
+  test("an income-kind row against a non-savings sub is still plain income", () => {
+    expect(classifyTx(tx("2026-07-01", 10, "sub_consulting", "income"), INDEX)).toBe("income");
+  });
+
+  test("an orphaned sub on an income-kind row falls back to income, not withdrawal", () => {
+    expect(classifyTx(tx("2026-07-01", 10, "sub_deleted", "income"), INDEX)).toBe("income");
   });
 });
 
@@ -300,5 +312,69 @@ describe("CSV category type round-trip", () => {
     const live = result.categories.filter((c) => c.name === "Hobbies" && !c.archived);
     expect(live).toHaveLength(1);
     expect(live[0]!.id).not.toBe("cat_hobbies");
+  });
+});
+
+describe("withdrawal CSV round-trip", () => {
+  test("a withdrawal exports as Type=income, CategoryType=savings", () => {
+    const withdrawal = tx("2026-07-05", 200, "sub_rainy_day", "income");
+    const csv = buildExpenseCsv([withdrawal], [], INDEX);
+    const [header, row] = csv.trim().split("\n");
+    const cols = header!.split(",");
+    const values = row!.split(",");
+
+    expect(values[cols.indexOf("Type")]).toBe("income");
+    expect(values[cols.indexOf("CategoryType")]).toBe("savings");
+  });
+
+  test("re-importing a withdrawal row (income kind, savings type) resolves to the existing savings sub", () => {
+    const result = resolveImportSub(CATEGORIES, {
+      kind: "income",
+      catName: "Emergency Fund",
+      catId: "cat_emergency",
+      catType: "savings",
+      subName: "Rainy Day",
+      subId: "sub_rainy_day",
+    });
+
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.subId).toBe("sub_rainy_day");
+    expect(result.newCategory).toBe(false);
+    expect(result.newSubcategory).toBe(false);
+  });
+
+  test("a new withdrawal-only savings category can still be created from an income-kind row", () => {
+    const result = resolveImportSub(CATEGORIES, {
+      kind: "income",
+      catName: "New Envelope",
+      catId: "",
+      catType: "savings",
+      subName: "Starter",
+      subId: "",
+    });
+
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+
+    const created = result.categories.find((c) => c.name === "New Envelope");
+    expect(created?.type).toBe("savings");
+  });
+
+  test("a plain income-kind row (no savings declaration) still routes to the income category", () => {
+    const result = resolveImportSub(CATEGORIES, {
+      kind: "income",
+      catName: "",
+      catId: "",
+      subName: "Freelance",
+      subId: "",
+    });
+
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+
+    const index = buildCategoryIndex(result.categories);
+    const catId = index.subById[result.subId]?.catId;
+    expect(catId ? isIncomeCategory(index.catById[catId]!) : false).toBe(true);
   });
 });

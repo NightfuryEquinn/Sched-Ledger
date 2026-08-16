@@ -9,7 +9,8 @@ type HighlightIcon =
   | "download"
   | "sparkle"
   | "info"
-  | "budget";
+  | "budget"
+  | "piggy";
 
 export type ReleaseHighlight = {
   icon: HighlightIcon;
@@ -30,6 +31,41 @@ export type ReleaseNotes = {
  * re-announces the popup to every device that has not seen that version.
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
+  {
+    version: "2.0.0",
+    date: "August 2026",
+    lead: "Piggies: a one-glance tracker for every savings goal, plus a Saving Insights engine.",
+    highlights: [
+      {
+        icon: "piggy",
+        title: "Meet Piggies",
+        body:
+          "Every savings category is now a piggy with a real balance, an optional target and " +
+          "deadline, and a progress ring. Subcategories show as piglets inside it.",
+      },
+      {
+        icon: "sparkle",
+        title: "Saving Insights",
+        body:
+          "Streaks, best months, savings rate, and pace-vs-deadline projections, generated from " +
+          "your saving history and surfaced on both the Piggies and Insights views.",
+      },
+      {
+        icon: "wallet",
+        title: "Withdrawals, properly accounted",
+        body:
+          "Take money back out of a piggy without it being mistaken for income anywhere in the " +
+          "app — budgets, charts, and your savings rate all account for it correctly.",
+      },
+      {
+        icon: "budget",
+        title: "Connected everywhere",
+        body:
+          "Piggies link from Overview, Budgets, and Categories, and export to their own CSV " +
+          "alongside your transactions, schedule, and to-do lists.",
+      },
+    ],
+  },
   {
     version: "1.1.1",
     date: "August 2026",

@@ -312,7 +312,7 @@ export function computeIncomeMetrics(
     if (slot === undefined) continue;
 
     const cls = classifyTx(e, index);
-    if (cls === "savings") continue;
+    if (cls === "savings" || cls === "withdrawal") continue;
 
     if (cls === "spend") {
       spentByMonth[slot] = (spentByMonth[slot] ?? 0) + e.amount;

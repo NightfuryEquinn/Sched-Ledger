@@ -21,7 +21,7 @@ import {
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
-import { normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
+import { classifyTx, normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
 import type { Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
@@ -131,6 +131,7 @@ const keys = {
   wallets: (wallet: string) => ["wallets", wallet] as const,
   categories: (wallet: string) => ["categories", wallet] as const,
   expenses: (wallet: string) => ["expenses", wallet] as const,
+  savingsAll: (wallet: string) => ["savings-all", wallet] as const,
   events: (wallet: string, month: string) => ["events", wallet, month] as const,
   todoLists: (wallet: string) => ["todoLists", wallet] as const,
 };
@@ -280,6 +281,51 @@ export function useLedger(walletAddress: string) {
     () => (activeWallet ? allExpenses.filter((e) => e.walletId === activeWallet.id) : []),
     [allExpenses, activeWallet],
   );
+
+  /*
+   * Piggy balances are lifetime totals, so this query is unbounded — unlike
+   * `expensesQuery`, which only looks back EXPENSE_LOOKBACK_MONTHS. Savings
+   * deposits/withdrawals are a small slice of total transaction volume for
+   * most accounts, so a full-history fetch stays cheap in practice.
+   *
+   * ponytail: fetches full history and filters client-side (the server can't
+   * read ciphertext to filter by category). Fine at personal-ledger volume;
+   * add a plaintext "savings" marker on expense meta if accounts grow large.
+   */
+  const savingsAllQuery = useQuery({
+    queryKey: keys.savingsAll(wallet),
+    queryFn: async () => {
+      const cryptoKey = requireKey(wallet);
+      const collected: Awaited<ReturnType<typeof decodeExpense>>[] = [];
+      let before: string | undefined;
+
+      for (;;) {
+        const page = await api.expenses.list({ limit: LIST_PAGE_LIMIT, before });
+        const decoded = await Promise.all(page.expenses.map((e) => decodeExpense(e, cryptoKey)));
+        collected.push(...decoded);
+        if (!page.hasMore || !page.nextBefore) break;
+        before = page.nextBefore;
+        if (collected.length >= LIST_PAGE_LIMIT * 20) break;
+      }
+
+      return collected;
+    },
+    enabled: cryptoReady && !!profileQuery.data && wallets.length > 0 && categoriesQuery.data !== undefined,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const savingsTxns = useMemo(() => {
+    const all = (savingsAllQuery.data ?? []).map((e) => ({
+      ...e,
+      kind: e.kind ?? "expense",
+      recurring: normalizeRecurring(e.recurring),
+    }));
+    return all.filter((e) => {
+      if (activeWallet && e.walletId !== activeWallet.id) return false;
+      const cls = classifyTx(e, categoryIndex);
+      return cls === "savings" || cls === "withdrawal";
+    });
+  }, [savingsAllQuery.data, categoryIndex, activeWallet]);
 
   const eventsQuery = useQuery({
     queryKey: keys.events(wallet, month),
@@ -519,6 +565,7 @@ export function useLedger(walletAddress: string) {
         return next;
       })();
       queryClient.setQueryData<Expense[]>(keys.expenses(wallet), nextExpenses);
+      void queryClient.invalidateQueries({ queryKey: keys.savingsAll(wallet) });
       if (!variables.id) {
         setMonthMutation.mutate(expense.date.slice(0, 7));
       }
@@ -574,6 +621,7 @@ export function useLedger(walletAddress: string) {
         }
         return prev.filter((e) => e.id !== id);
       });
+      void queryClient.invalidateQueries({ queryKey: keys.savingsAll(wallet) });
     },
   });
 
@@ -767,6 +815,8 @@ export function useLedger(walletAddress: string) {
     activeWallet,
     allExpenses,
     expenses,
+    savingsTxns,
+    savingsLoading: savingsAllQuery.isLoading,
     events: eventsQuery.data ?? [],
     todoLists: todoListsQuery.data ?? [],
     budgets: activeWallet?.budgets ?? {},

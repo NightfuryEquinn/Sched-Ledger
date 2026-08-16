@@ -37,6 +37,7 @@ type AccountMenuProps = {
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
   activeWalletId?: string;
+  savingsTxns?: Expense[];
   onImportExpenses?: (
     rows: ExpenseImportRow[],
     categories?: Category[],
@@ -59,6 +60,7 @@ export function AccountMenu({
   wallets = [],
   categoryIndex,
   activeWalletId,
+  savingsTxns = [],
   onImportExpenses,
   onImportEvents,
   onImportTodos,
@@ -243,6 +245,7 @@ export function AccountMenu({
           wallets={wallets}
           categoryIndex={categoryIndex}
           activeWalletId={activeWalletId}
+          savingsTxns={savingsTxns}
           onImportExpenses={onImportExpenses}
           onImportEvents={onImportEvents}
           onImportTodos={onImportTodos}

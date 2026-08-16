@@ -31,7 +31,9 @@ import {
 import { EventModal, Schedule } from "@/frontend/views/Schedule";
 import { TodoListView } from "@/frontend/views/TodoList";
 import { Calculator } from "@/frontend/views/Calculator";
+import { Piggies } from "@/frontend/views/Piggies";
 import { Transparency } from "@/frontend/views/Transparency";
+import type { Piggy, Piglet } from "@/frontend/lib/piggies";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /*
@@ -56,6 +58,7 @@ const VIEW_TITLES: Record<ViewId, string> = {
   calculator: "Calculator",
   categories: "Categories",
   recurring: "Recurring",
+  piggies: "Piggies",
   insights: "Insights",
   transparency: "Transparency",
 };
@@ -63,7 +66,22 @@ const VIEW_TITLES: Record<ViewId, string> = {
 export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   const ledger = useLedger(account.address);
   const [view, setView] = useState<ViewId>("overview");
-  const [modal, setModal] = useState<Expense | { add: true; eventId?: string; date?: string; note?: string } | null>(null);
+  const [modal, setModal] = useState<
+    | Expense
+    | {
+        add: true;
+        eventId?: string;
+        date?: string;
+        note?: string;
+        sub?: string;
+        kind?: "expense" | "income";
+        /** Piggy-withdraw mode: locks kind/category/sub and caps the amount. */
+        lockedSub?: string;
+        maxAmount?: number;
+        title?: string;
+      }
+    | null
+  >(null);
   const [evModal, setEvModal] = useState<LedgerEvent | { add: true; date: string } | null>(null);
   const [evOccurrenceIso, setEvOccurrenceIso] = useState<string | undefined>(undefined);
   const [walletModal, setWalletModal] = useState(false);
@@ -316,6 +334,23 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     setEvModal(ev);
   };
 
+  /** Open the transaction modal prefilled to deposit into a piggy's subcategory. */
+  const addPiggyDeposit = (_piggy: Piggy, sub: Piglet) => {
+    setModal({ add: true, kind: "expense", sub: sub.subId });
+  };
+
+  /** Open the transaction modal locked to withdraw from a piggy's subcategory. */
+  const withdrawFromPiggy = (piggy: Piggy, sub: Piglet) => {
+    setModal({
+      add: true,
+      kind: "income",
+      sub: sub.subId,
+      lockedSub: sub.subId,
+      maxAmount: piggy.balance,
+      title: `Withdraw from ${piggy.name}`,
+    });
+  };
+
   const viewProps = { expenses, budgets, wallet, month, currency, categoryIndex: ledger.categoryIndex };
 
   return (
@@ -346,6 +381,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
                 wallets={wallets}
                 categoryIndex={ledger.categoryIndex}
                 activeWalletId={activeWallet?.id}
+                savingsTxns={ledger.savingsTxns}
                 onImportExpenses={importExpenses}
                 onImportEvents={importEvents}
                 onImportTodos={importTodos}
@@ -376,6 +412,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
               {...viewProps}
               todoLists={ledger.todoLists}
               events={events}
+              savingsTxns={ledger.savingsTxns}
               setView={setView}
               onEdit={setModal}
               onEditEvent={(ev: LedgerEvent) => openEvent(ev, TODAY_ISO)}
@@ -403,7 +440,9 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           {view === "transactions" && (
             <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
           )}
-          {view === "budgets" && <BudgetsView {...viewProps} events={events} setBudgets={setBudgets} />}
+          {view === "budgets" && (
+            <BudgetsView {...viewProps} events={events} setBudgets={setBudgets} setView={setView} />
+          )}
           {view === "calculator" && (
             <Calculator
               wallet={wallet}
@@ -421,6 +460,18 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
             />
           )}
           {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}
+          {view === "piggies" && (
+            <Piggies
+              savingsTxns={ledger.savingsTxns}
+              savingsLoading={ledger.savingsLoading}
+              allExpenses={allExpenses}
+              categoryIndex={ledger.categoryIndex}
+              currency={currency}
+              month={month}
+              onAddDeposit={addPiggyDeposit}
+              onWithdraw={withdrawFromPiggy}
+            />
+          )}
           {view === "insights" && <Insights {...viewProps} setMonth={setMonth} />}
           {view === "transparency" && <Transparency />}
           <div className="scroll-pad" />
@@ -488,11 +539,13 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         <AddExpenseModal
           initial={
             "add" in modal
-              ? modal.eventId || modal.date || modal.note
+              ? modal.eventId || modal.date || modal.note || modal.sub || modal.kind
                 ? {
                     eventId: modal.eventId,
                     date: modal.date,
                     note: modal.note,
+                    sub: modal.sub,
+                    kind: modal.kind,
                   }
                 : null
               : modal
@@ -503,6 +556,9 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           onSave={saveExpense}
           onClose={() => setModal(null)}
           onDelete={deleteExpense}
+          title={"add" in modal ? modal.title : undefined}
+          lockedSub={"add" in modal ? modal.lockedSub : undefined}
+          maxAmount={"add" in modal ? modal.maxAmount : undefined}
         />
       ) : null}
       {walletModal ? (

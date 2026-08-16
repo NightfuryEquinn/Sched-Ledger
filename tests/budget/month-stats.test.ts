@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { buildCategoryIndex, isSavingsCategory, resolveCategoryType } from "@/frontend/lib/categories";
-import { monthStats } from "@/frontend/lib/stats";
+import { monthStats, walletBalance } from "@/frontend/lib/stats";
 import type { Category, Expense } from "@/frontend/lib/types";
 
 const categories: Category[] = [
@@ -120,5 +120,49 @@ describe("monthStats category totals", () => {
 
     expect(st.spent).toBe(40);
     expect(st.byCat).toEqual({});
+  });
+});
+
+describe("withdrawals", () => {
+  const expenses = [
+    expense({ id: "food1", amount: 80, sub: "groceries" }),
+    expense({ id: "save1", amount: 250, sub: "saving" }),
+    expense({ id: "withdraw1", amount: 60, sub: "sub_emergency", kind: "income" }),
+    expense({ id: "inc1", amount: 500, sub: "sub_freelance", kind: "income" }),
+  ];
+
+  test("raises balance and remaining without inflating earned", () => {
+    const st = monthStats(
+      expenses,
+      { food: 500, savings: 300, cat_emergency_fund: 200 },
+      wallet,
+      "2026-07",
+      index,
+    );
+
+    expect(st.earned).toBe(500);
+    expect(st.withdrawn).toBe(60);
+    expect(st.saved).toBe(250);
+    expect(st.spent).toBe(80);
+    expect(st.remaining).toBe(3230); // income(3000) + earned(500) + withdrawn(60) - spent(80) - saved(250)
+    expect(st.monthlyPool).toBe(3560); // income(3000) + earned(500) + withdrawn(60)
+  });
+
+  test("nets the withdrawal against the savings category bucket", () => {
+    const st = monthStats(expenses, {}, wallet, "2026-07", index);
+
+    expect(st.byCat.cat_emergency_fund).toBe(-60);
+    expect(st.byCat.savings).toBe(250);
+  });
+
+  test("walletBalance adds withdrawals back and does not double-count as earned", () => {
+    const withWithdrawal = walletBalance(expenses, wallet, index);
+    const withoutWithdrawal = walletBalance(
+      expenses.filter((e) => e.id !== "withdraw1"),
+      wallet,
+      index,
+    );
+
+    expect(withWithdrawal - withoutWithdrawal).toBe(60);
   });
 });

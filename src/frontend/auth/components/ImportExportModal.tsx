@@ -16,6 +16,7 @@ import type { BackupRestoreResult } from "../lib/restore-backup";
 import { downloadEventsCsv } from "../lib/export-events";
 import { downloadTodosCsv } from "../lib/export-todos";
 import { downloadExpenseCsv } from "../lib/export";
+import { downloadPiggiesCsv } from "../lib/export-piggies";
 import { parseEventsCsv } from "../lib/import-events";
 import { parseTodosCsv, type TodoImportList } from "../lib/import-todos";
 import { parseExpenseCsv, type ExpenseImportRow } from "../lib/import";
@@ -28,6 +29,7 @@ type ImportExportModalProps = {
   wallets?: FinancialWallet[];
   categoryIndex?: CategoryIndex;
   activeWalletId?: string;
+  savingsTxns?: Expense[];
   onImportExpenses?: (
     rows: ExpenseImportRow[],
     categories?: Category[],
@@ -50,6 +52,7 @@ export function ImportExportModal({
   wallets = [],
   categoryIndex,
   activeWalletId,
+  savingsTxns = [],
   onImportExpenses,
   onImportEvents,
   onImportTodos,
@@ -59,6 +62,7 @@ export function ImportExportModal({
   const [txnExported, setTxnExported] = useState(false);
   const [schedExported, setSchedExported] = useState(false);
   const [todoExported, setTodoExported] = useState(false);
+  const [piggiesExported, setPiggiesExported] = useState(false);
   const [backupExported, setBackupExported] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupError, setBackupError] = useState("");
@@ -112,6 +116,12 @@ export function ImportExportModal({
   const exportTodos = () => {
     downloadTodosCsv(todoLists);
     flash(setTodoExported);
+  };
+
+  const exportPiggies = () => {
+    if (!categoryIndex) return;
+    downloadPiggiesCsv(savingsTxns, categoryIndex, wallets[0]?.currency);
+    flash(setPiggiesExported);
   };
 
   /** Download an encrypted full-ledger backup (client-only). */
@@ -439,6 +449,21 @@ export function ImportExportModal({
                 <p className="dm-note">{todoLists.length} list{todoLists.length === 1 ? "" : "s"} · {todoTaskCount} task{todoTaskCount === 1 ? "" : "s"}.</p>
               </>
             )}
+
+            {categoryIndex ? (
+              <>
+                <div className="dm-div" />
+
+                <p className="dm-subhead">Piggies</p>
+                <button className="primary-btn full" type="button" onClick={exportPiggies}>
+                  <Icon name={piggiesExported ? "check" : "download"} size={17} />
+                  {piggiesExported ? "Downloaded" : "Export Piggies"}
+                </button>
+                <p className="dm-note">
+                  Every savings category and subcategory with its current balance, target, and deadline. A report, not a re-importable source.
+                </p>
+              </>
+            ) : null}
           </div>
         </div>
       </div>

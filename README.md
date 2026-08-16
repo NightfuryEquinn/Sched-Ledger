@@ -11,6 +11,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 ### Ledger
 
 - **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress (including **Held** amounts reserved by schedule envelope holds)
+- **Piggies** — one-glance tracker for every savings category ("piggy") and its subcategories ("piglets"): lifetime balance derived from deposits minus withdrawals, an optional target and deadline with a progress ring, and a **Saving Insights** engine (savings rate, streak, best month, pace-vs-deadline projections) surfaced on both the Piggies and Insights views. Linked from Overview, Budgets, and Categories; exports to its own CSV
 - **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation; includes Malaysia-oriented presets (EPF / SOCSO / EIS / PCB ballpark / SST) that never leave the browser
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable expense and income category/subcategory taxonomy with glyphs and colors
@@ -98,10 +99,12 @@ src/
     │   ├── hooks/          # useLedger, useTheme
     │   ├── tour/           # guided tour steps and runner
     │   ├── whats-new/      # release notes, per-device seen state, auto-show gate
+    │   ├── piggies.ts        # savings balance model (deposits − withdrawals, targets)
+    │   ├── savingsInsights.ts # streaks, pace, projections for Piggies + Insights
     │   └── envelope-holds.ts  # schedule ↔ budget hold math
     ├── styles/           # ledger.css (theme tokens + layout)
     ├── views/            # Overview, Transactions, Budgets, Calculator, Categories,
-    │                     # Recurring, Insights, Schedule, TodoList, Transparency
+    │                     # Recurring, Insights, Piggies, Schedule, TodoList, Transparency
     └── main.tsx
 public/                   # PWA manifest + service worker (copied into dist/ on build)
 scripts/                  # MongoDB collection maintenance (drop/list, stale-user prune)
@@ -179,7 +182,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 |------------|-------------------------|----------------------------------------|
 | `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId` |
 | `financial_wallets` | `payload` (name, income, starting balance, budgets) via `enc` | `accountId`, `currency`, `fundingMode`, `isDefault` |
-| `category_taxonomies` | `payload` (full `categories[]` tree) via `enc` | `accountId` |
+| `category_taxonomies` | `payload` (full `categories[]` tree, incl. optional piggy `target`/`deadline` per category and sub) via `enc` | `accountId` |
 | `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on |
 | `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
 | `users` | — | `address` (SIWE login), notify prefs |

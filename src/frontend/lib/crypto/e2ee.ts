@@ -25,7 +25,11 @@ export type CategorySecrets = {
     glyph: string;
     type?: "expense" | "income" | "savings";
     builtin?: boolean;
-    subs: Array<{ id: string; name: string }>;
+    archived?: boolean;
+    /** Piggy goal. Meaningful only when type is "savings". */
+    target?: number;
+    deadline?: string;
+    subs: Array<{ id: string; name: string; target?: number; deadline?: string }>;
   }>;
 };
 

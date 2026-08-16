@@ -128,6 +128,38 @@ describe("gate", () => {
   });
 });
 
+describe("withdrawals", () => {
+  /** An income-kind transaction against a savings sub — money taken back out. */
+  function withdraw(date: string, amount: number, id = `wd-${date}-${amount}`): Expense {
+    return { id, walletId: "w1", kind: "income", date, sub: "sav_general", amount, note: "", recurring: false };
+  }
+
+  test("a withdrawal never counts toward the income gate", () => {
+    const rows = [inc("2026-06-25", 3000), withdraw("2026-07-25", 3000)];
+
+    expect(assessIncomeProfile(rows, ANCHOR, "6mo", INDEX).status).toBe("insufficient");
+  });
+
+  test("a withdrawal is excluded from total, sources, and the earned/spent split", () => {
+    const salary = monthlySalary(() => 4200);
+    const withWithdrawal = computeIncomeMetrics([...salary, withdraw("2026-07-10", 900)], ANCHOR, "6mo", INDEX).metrics;
+    const without = computeIncomeMetrics(salary, ANCHOR, "6mo", INDEX).metrics;
+
+    expect(withWithdrawal.total).toBe(without.total);
+    expect(withWithdrawal.txCount).toBe(without.txCount);
+    expect(withWithdrawal.sources.map((s) => s.id)).not.toContain("sav_general");
+    expect(withWithdrawal.meanMonthlySpend).toBe(without.meanMonthlySpend);
+  });
+
+  test("meanSavingsRate is unaffected by a withdrawal (not double-counted as income or spend)", () => {
+    const salary = monthlySalary(() => 4200);
+    const withWithdrawal = computeIncomeMetrics([...salary, withdraw("2026-07-10", 900)], ANCHOR, "6mo", INDEX).metrics;
+    const without = computeIncomeMetrics(salary, ANCHOR, "6mo", INDEX).metrics;
+
+    expect(withWithdrawal.meanSavingsRate).toBeCloseTo(without.meanSavingsRate, 6);
+  });
+});
+
 describe("archetypes", () => {
   test("identical monthly salary reads as salaried", () => {
     const scores = computeIncomeMetrics(monthlySalary(() => 4200), ANCHOR, "6mo", INDEX).scores;

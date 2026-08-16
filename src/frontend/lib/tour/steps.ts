@@ -87,7 +87,8 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("overview-today-schedule", "Recent Schedule", "Up to three remaining events for today, based on the current time when Overview loads.", '[data-tour="tour-overview-today-schedule"]'),
     step("overview-trend", "Spending & Earning Trend", "Track cumulative spending and earning against your total budget as the month progresses. Hover any day to see what you spent and earned, broken down by category.", '[data-tour="tour-overview-trend"]', "top"),
     step("overview-donut", "By Category", "Hover slices to see how spending breaks down across categories.", '[data-tour="tour-overview-donut"]', "left"),
-    lastStep("overview-recent", "Recent Transaction", "Up to three of your latest transactions. Tap one to edit, or See All for the full list.", '[data-tour="tour-overview-recent"]'),
+    step("overview-recent", "Recent Transaction", "Up to three of your latest transactions. Tap one to edit, or See All for the full list.", '[data-tour="tour-overview-recent"]'),
+    lastStep("overview-piggies", "Piggies", "Your top savings categories at a glance — tap See All for the full Piggies view.", '[data-tour="tour-overview-piggies"]'),
   ],
   todos: [
     step("todos-nav", "TO-DO List", "Organize tasks into separate lists — groceries, work, travel, and more.", navTarget("todos"), "right"),
@@ -130,6 +131,12 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("recurring-nav", "Recurring", "Fixed charges that repeat monthly, quarterly, or yearly.", navTarget("recurring"), "right"),
     step("recurring-summary", "This Month", "Total recurring due and the normalized monthly equivalent.", '[data-tour="tour-recurring-summary"]'),
     lastStep("recurring-list", "Scheduled Items", "Tap a row to edit the underlying transaction. Add new ones via Add Transaction with Recurring enabled.", '[data-tour="tour-recurring-list"]'),
+  ],
+  piggies: [
+    step("piggies-nav", "Piggies", "One glance at every savings category and its lifetime balance.", navTarget("piggies"), "right"),
+    step("piggies-summary", "Totals", "Total saved across every piggy, net flow, savings rate, and your current saving streak.", '[data-tour="tour-piggies-summary"]'),
+    step("piggies-insights", "Saving Insights", "Streaks, best months, and pace-vs-deadline callouts, generated from your saving history.", '[data-tour="tour-piggies-insights"]'),
+    lastStep("piggies-grid", "Piggy Cards", "Each card is a savings category — its progress ring, subcategories, and Add / Withdraw actions.", '[data-tour="tour-piggies-grid"]'),
   ],
   insights: [
     step("insights-nav", "Insights", "Longer-range trends, comparisons, and currency views.", navTarget("insights"), "right"),

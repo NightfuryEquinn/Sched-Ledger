@@ -3,6 +3,12 @@ import { z } from "zod";
 import { accountIdSchema } from "./ids";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
+// Duplicated from common.ts's isoDateSchema, not imported: common.ts imports
+// categoryIdSchema from this file, so importing back would create a cycle.
+const savingsDeadlineSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Date must be YYYY-MM-DD");
+
 export const categoryIdSchema = z
   .string()
   .trim()
@@ -22,6 +28,9 @@ export const categoryTypeSchema = z.enum(["expense", "income", "savings"]);
 export const subcategorySchema = z.object({
   id: subcategoryIdSchema,
   name: z.string().trim().min(1).max(60),
+  /** Piggy goal for this subcategory. Meaningful only under a savings category. */
+  target: z.number().nonnegative().optional(),
+  deadline: savingsDeadlineSchema.optional(),
 });
 
 export const categorySchema = z.object({
@@ -38,6 +47,9 @@ export const categorySchema = z.object({
    * whole history as spending.
    */
   archived: z.boolean().default(false),
+  /** Piggy goal for this category. Meaningful only when type is "savings". */
+  target: z.number().nonnegative().optional(),
+  deadline: savingsDeadlineSchema.optional(),
   subs: z.array(subcategorySchema).min(1),
 });
 
@@ -122,7 +134,9 @@ export function validateTaxonomy(
     id: string;
     type?: "expense" | "income" | "savings";
     archived?: boolean;
-    subs: Array<{ id: string }>;
+    target?: number;
+    deadline?: string;
+    subs: Array<{ id: string; target?: number; deadline?: string }>;
   }>,
 ): string | null {
   const catIds = new Set<string>();
@@ -140,6 +154,17 @@ export function validateTaxonomy(
         : cat.type === "savings" || cat.id === "savings"
           ? "savings"
           : "expense";
+
+    // A target/deadline only means something on a piggy; on any other
+    // category type it would render nowhere and confuse export.
+    if (type !== "savings") {
+      if (cat.target !== undefined || cat.deadline !== undefined) {
+        return `Category "${cat.id}" is not a savings category and cannot have a target or deadline`;
+      }
+      if (cat.subs.some((s) => s.target !== undefined || s.deadline !== undefined)) {
+        return `Category "${cat.id}" is not a savings category and its subcategories cannot have a target or deadline`;
+      }
+    }
 
     // Archived categories still occupy their ids, but cannot satisfy the
     // "at least one income / expense" rule — otherwise archiving the only

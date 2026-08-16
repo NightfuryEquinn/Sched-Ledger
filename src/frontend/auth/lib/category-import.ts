@@ -2,6 +2,7 @@ import {
   buildCategoryIndex,
   isArchivedCategory,
   isIncomeCategory,
+  isSavingsCategory,
   nextCategoryColor,
   slugId,
   type CategoryType,
@@ -35,11 +36,13 @@ function parseCategoryType(raw: string): CategoryType {
 
 /**
  * A row's declared category type must agree with its transaction kind.
- * Income is the only type tied to income kind — savings and expense BOTH pair
- * with expense kind, since putting money into a savings envelope is an
- * outgoing transaction.
+ * Income only ever pairs with income kind. Expense only ever pairs with
+ * expense kind. Savings pairs with BOTH: an expense-kind row is a deposit,
+ * an income-kind row is a withdrawal back out of the envelope.
  */
 function typeMatchesKind(type: CategoryType, kind: "expense" | "income"): boolean {
+  if (type === "savings") return true;
+
   return kind === "income" ? type === "income" : type !== "income";
 }
 
@@ -130,7 +133,10 @@ export function resolveImportSub(
   }
 
   /** Type for a category this import creates, honouring the CSV's declaration. */
-  const newCategoryType: CategoryType = opts.kind === "income" ? "income" : declaredType;
+  const newCategoryType: CategoryType =
+    opts.kind === "income" ? (declaredType === "savings" ? "savings" : "income") : declaredType;
+  /** An income-kind row declared savings is a withdrawal, not plain income. */
+  const isWithdrawal = opts.kind === "income" && declaredType === "savings";
 
   if (catId && !isValidTaxonomyId(catId)) {
     return { error: `Invalid category ID "${catId}".` };
@@ -146,14 +152,16 @@ export function resolveImportSub(
     const existing = buildCategoryIndex(next).subById[subId]!;
     const cat = findCategoryById(next, existing.catId);
     if (!cat) return { error: `Subcategory ID "${subId}" is invalid.` };
-    const kindOk = opts.kind === "income" ? categoryKind(cat) === "income" : categoryKind(cat) !== "income";
+    const kindOk =
+      isSavingsCategory(cat) ||
+      (opts.kind === "income" ? categoryKind(cat) === "income" : categoryKind(cat) !== "income");
     if (kindOk) {
       return { categories: next, subId, newCategory: false, newSubcategory: false };
     }
     return { error: `Subcategory ID "${subId}" belongs to a different category type.` };
   }
 
-  if (opts.kind === "income") {
+  if (opts.kind === "income" && !isWithdrawal) {
     const inc = incomeCategory(next);
     const existing = findSubInCategory(inc, subName, subId);
     if (existing) {

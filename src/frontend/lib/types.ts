@@ -80,6 +80,7 @@ export type ViewId =
   | "insights"
   | "recurring"
   | "todos"
+  | "piggies"
   | "transparency";
 
 export type MonthEntry = {
@@ -97,7 +98,10 @@ export type Category = {
   builtin?: boolean;
   /** Retired: hidden from pickers, still resolvable so history keeps its type. */
   archived?: boolean;
-  subs: { id: string; name: string }[];
+  /** Piggy goal. Meaningful only when type is "savings". */
+  target?: number;
+  deadline?: string;
+  subs: { id: string; name: string; target?: number; deadline?: string }[];
 };
 
 export type CategoryIndex = import("./categories").CategoryIndex;

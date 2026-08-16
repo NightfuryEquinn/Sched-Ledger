@@ -63,7 +63,7 @@ const COLLECTIONS: CollectionDoc[] = [
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
-      { key: "payload", value: "base64 AES-GCM", note: "categories[] tree" },
+      { key: "payload", value: "base64 AES-GCM", note: "categories[] tree, incl. piggy target/deadline" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },

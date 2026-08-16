@@ -396,13 +396,14 @@ h1, h2, h3 {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  background: var(--accent);
+  background: #7a6fa5;
   color: #fff;
   box-shadow: 0 2px 8px rgba(30, 40, 60, .18), 0 8px 24px -4px rgba(30, 40, 60, .28);
-  transition: filter .15s, transform var(--dur-fast) var(--ease);
+  transition: filter .15s, transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 
 :root[data-theme="dark"] .fab {
+  background: #8f84b8;
   box-shadow: 0 2px 8px rgba(0, 0, 0, .35), 0 8px 24px -4px rgba(0, 0, 0, .5);
 }
 
@@ -612,6 +613,31 @@ h1, h2, h3 {
 .primary-btn:disabled {
   opacity: .45;
   cursor: default;
+}
+
+/* Per-type add-category buttons: colour reads as the thing the button creates. */
+.primary-btn--expense {
+  background: #5b7a8a;
+}
+
+.primary-btn--savings {
+  background: #7a6fa5;
+}
+
+.primary-btn--income {
+  background: #6f8b6f;
+}
+
+:root[data-theme="dark"] .primary-btn--expense {
+  background: #6f92a4;
+}
+
+:root[data-theme="dark"] .primary-btn--savings {
+  background: #8f84b8;
+}
+
+:root[data-theme="dark"] .primary-btn--income {
+  background: #85a785;
 }
 
 .primary-btn.lg, .ghost-btn.lg {
@@ -3038,6 +3064,11 @@ h1, h2, h3 {
   white-space: nowrap;
 }
 
+.be-piggy-link {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
 .be-amt {
   font-family: var(--font-num);
   font-size: 14px;
@@ -4208,6 +4239,195 @@ h1, h2, h3 {
   }
 }
 
+/* ── 9d. Views: piggies (savings tracker) ─────────────────────────── */
+
+.piggy-headlines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.piggy-headline {
+  font-size: 13.5px;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+
+.piggy-headline--positive {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+
+.piggy-headline--warning {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.piggy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--gap);
+  margin-top: var(--gap);
+}
+
+.piggy-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--card-pad);
+  box-shadow: var(--shadow);
+}
+
+.piggy-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.piggy-card-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-lg);
+  font-size: 20px;
+}
+
+.piggy-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.piggy-card-title h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.piggy-tag {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 2px 6px;
+}
+
+.piggy-card-body {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.piggy-ring {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.piggy-ring-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.piggy-card-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.piggy-balance {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.piggy-target,
+.piggy-deadline {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.piggy-status {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.piggy-status--ok {
+  color: var(--ok);
+}
+
+.piggy-status--warn {
+  color: var(--danger);
+}
+
+.piggy-piglets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+.piglet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+
+.piglet-name {
+  color: var(--ink-soft);
+}
+
+.piglet-balance {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.piggy-card-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.piggy-card-actions .ghost-btn {
+  flex: 1;
+  justify-content: center;
+}
+
+@media (max-width: 560px) {
+  .piggy-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── 10. Views: schedule ──────────────────────────────────────────── */
 /* Calendar */
 .cal {
@@ -5067,6 +5287,10 @@ h1, h2, h3 {
   color: var(--accent);
   margin-bottom: 6px;
   animation: fade var(--dur-fast) var(--ease);
+}
+
+.amount-live-total.is-down {
+  color: var(--danger);
 }
 
 .amount-field {
@@ -6289,13 +6513,14 @@ h1, h2, h3 {
     width: auto;
   }
   .cat-toolbar-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: row;
     gap: 8px;
   }
   .cat-toolbar-actions .primary-btn {
+    flex: 1;
     justify-content: center;
-    padding: 10px 12px;
+    padding: 10px 8px;
   }
   .cat-block-head {
     display: grid;
@@ -6445,6 +6670,29 @@ h1, h2, h3 {
   }
   .fab-wrap {
     bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+  /* Mobile: actions fan out sideways from the FAB instead of stacking above it. */
+  .fab-actions {
+    right: calc(100% + 12px);
+    bottom: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .fab-wrap.open .fab-action-label {
+    max-width: 90px;
+  }
+  .fab-action {
+    transform: translateX(10px) scale(.88);
+  }
+  .fab-wrap.open .fab-action {
+    transform: translateX(0) scale(1);
+  }
+  .fab-wrap.open .fab-action:nth-child(1) {
+    transition-delay: 80ms;
+  }
+  .fab-wrap.open .fab-action:nth-child(2) {
+    transition-delay: 40ms;
   }
   .scroll-pad {
     height: 104px;
@@ -6752,8 +7000,10 @@ h1, h2, h3 {
   }
 
   /* Categories */
-  .cat-toolbar-actions {
-    grid-template-columns: 1fr;
+  .cat-toolbar-actions .primary-btn {
+    padding: 10px 4px;
+    font-size: 12.5px;
+    gap: 4px;
   }
   .cat-block-head {
     padding: 12px;

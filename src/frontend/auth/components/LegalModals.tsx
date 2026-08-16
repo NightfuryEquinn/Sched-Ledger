@@ -16,7 +16,7 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
         <div className="modal-body modal-scroll">
-          <p className="dm-lead">Last updated July 20, 2026. By using Sched Ledger you agree to these terms.</p>
+          <p className="dm-lead">Last updated August 15, 2026. By using Sched Ledger you agree to these terms.</p>
 
           <div className="dm-sec">
             <span className="fld-label">Service</span>

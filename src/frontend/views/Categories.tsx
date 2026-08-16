@@ -51,6 +51,8 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   const [name, setName] = useState("");
   const [glyph, setGlyph] = useState(DEFAULT_GLYPH);
   const [color, setColor] = useState("#4a6fa5");
+  const [target, setTarget] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -102,6 +104,8 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
     setName("");
     setGlyph(DEFAULT_GLYPH);
     setColor(nextCategoryColor(categories));
+    setTarget("");
+    setDeadline("");
     setError("");
   };
 
@@ -109,6 +113,8 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   const openAddSub = (catId: string) => {
     setEditor({ type: "add-sub", catId });
     setName("");
+    setTarget("");
+    setDeadline("");
     setError("");
   };
 
@@ -118,15 +124,26 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
     setName(cat.name);
     setGlyph(displayGlyph(cat.glyph, cat.id));
     setColor(cat.color);
+    setTarget(cat.target != null ? String(cat.target) : "");
+    setDeadline(cat.deadline ?? "");
     setError("");
   };
 
   /** Open the rename-subcategory editor. */
-  const openEditSub = (catId: string, sub: { id: string; name: string }) => {
+  const openEditSub = (catId: string, sub: { id: string; name: string; target?: number; deadline?: string }) => {
     setEditor({ type: "edit-sub", catId, subId: sub.id });
     setName(sub.name);
+    setTarget(sub.target != null ? String(sub.target) : "");
+    setDeadline(sub.deadline ?? "");
     setError("");
   };
+
+  /** Parse the target field into a nonnegative number, or undefined when unset/invalid. */
+  const parsedTarget = () => {
+    const n = Number(target.trim());
+    return target.trim() && Number.isFinite(n) && n >= 0 ? n : undefined;
+  };
+  const parsedDeadline = () => (deadline.trim() ? deadline.trim() : undefined);
 
   /**
    * Retire a non-builtin category. One with transaction history is archived,
@@ -190,6 +207,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
 
     if (editor.type === "add-cat") {
       const id = slugId("cat", name);
+      const isSavings = editor.catType === "savings";
       const cat: Category = {
         id,
         name: name.trim(),
@@ -197,6 +215,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
         glyph,
         type: editor.catType,
         builtin: false,
+        ...(isSavings ? { target: parsedTarget(), deadline: parsedDeadline() } : {}),
         subs: [{ id: slugId("sub", name), name: name.trim() }],
       };
       await persist([...categories, cat]);
@@ -206,7 +225,13 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
     }
 
     if (editor.type === "add-sub") {
-      const sub = { id: slugId("sub", name), name: name.trim() };
+      const parent = categories.find((c) => c.id === editor.catId);
+      const isSavings = parent ? resolveCategoryType(parent) === "savings" : false;
+      const sub = {
+        id: slugId("sub", name),
+        name: name.trim(),
+        ...(isSavings ? { target: parsedTarget(), deadline: parsedDeadline() } : {}),
+      };
       const next = categories.map((c) =>
         c.id === editor.catId ? { ...c, subs: [...c.subs, sub] } : c,
       );
@@ -216,21 +241,38 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
     }
 
     if (editor.type === "edit-cat") {
-      const next = categories.map((c) =>
-        c.id === editor.catId ? { ...c, name: name.trim(), color, glyph } : c,
-      );
+      const next = categories.map((c) => {
+        if (c.id !== editor.catId) return c;
+        const isSavings = resolveCategoryType(c) === "savings";
+
+        return {
+          ...c,
+          name: name.trim(),
+          color,
+          glyph,
+          ...(isSavings ? { target: parsedTarget(), deadline: parsedDeadline() } : {}),
+        };
+      });
       await persist(next);
 
       return;
     }
 
     if (editor.type === "edit-sub") {
+      const parent = categories.find((c) => c.id === editor.catId);
+      const isSavings = parent ? resolveCategoryType(parent) === "savings" : false;
       const next = categories.map((c) =>
         c.id === editor.catId
           ? {
               ...c,
               subs: c.subs.map((s) =>
-                s.id === editor.subId ? { ...s, name: name.trim() } : s,
+                s.id === editor.subId
+                  ? {
+                      ...s,
+                      name: name.trim(),
+                      ...(isSavings ? { target: parsedTarget(), deadline: parsedDeadline() } : {}),
+                    }
+                  : s,
               ),
             }
           : c,
@@ -238,6 +280,21 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
       await persist(next);
     }
   };
+
+  /** Whether the open editor is scoped to a savings category (target/deadline apply). */
+  const editorIsSavings = (() => {
+    if (!editor) return false;
+    if (editor.type === "add-cat") return editor.catType === "savings";
+    if (editor.type === "edit-cat") {
+      const cat = categories.find((c) => c.id === editor.catId);
+      return cat ? resolveCategoryType(cat) === "savings" : false;
+    }
+    if (editor.type === "add-sub" || editor.type === "edit-sub") {
+      const cat = categories.find((c) => c.id === editor.catId);
+      return cat ? resolveCategoryType(cat) === "savings" : false;
+    }
+    return false;
+  })();
 
   const editorTitle =
     editor?.type === "add-cat"
@@ -264,13 +321,13 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
           onChange={setFilter}
         />
         <div className="cat-toolbar-actions">
-          <button className="primary-btn" type="button" onClick={() => openAddCat("expense")}>
+          <button className="primary-btn primary-btn--expense" type="button" onClick={() => openAddCat("expense")}>
             <Icon name="plus" size={15} /> Expense
           </button>
-          <button className="primary-btn" type="button" onClick={() => openAddCat("savings")}>
+          <button className="primary-btn primary-btn--savings" type="button" onClick={() => openAddCat("savings")}>
             <Icon name="plus" size={15} /> Savings
           </button>
-          <button className="primary-btn" type="button" onClick={() => openAddCat("income")}>
+          <button className="primary-btn primary-btn--income" type="button" onClick={() => openAddCat("income")}>
             <Icon name="plus" size={15} /> Income
           </button>
         </div>
@@ -323,7 +380,11 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                       {cat.builtin ? <span className="wallet-badge">Built-in</span> : null}
                       <span className="wallet-badge">{typeLabel(catType)}</span>
                     </div>
-                    <div className="cat-block-meta">{cat.subs.length} subcategories</div>
+                    <div className="cat-block-meta">
+                      {cat.subs.length} subcategories
+                      {catType === "savings" && cat.target ? ` · goal ${cat.target}` : ""}
+                      {catType === "savings" && cat.deadline ? ` by ${cat.deadline}` : ""}
+                    </div>
                   </div>
                   <div className="cat-block-actions">
                     <button type="button" onClick={() => openEditCat(cat)} aria-label="Edit" tabIndex={filteredOut ? -1 : undefined}>
@@ -466,6 +527,31 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                         </button>
                       ))}
                     </div>
+                  </>
+                ) : null}
+
+                {editorIsSavings ? (
+                  <>
+                    <label className="fld-label" htmlFor="cat-target">Target Amount (optional)</label>
+                    <input
+                      id="cat-target"
+                      className="text-in wallet-field"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="No goal"
+                      value={target}
+                      onChange={(e) => setTarget(e.target.value)}
+                    />
+
+                    <label className="fld-label" htmlFor="cat-deadline">Deadline (optional)</label>
+                    <input
+                      id="cat-deadline"
+                      className="text-in wallet-field"
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                    />
                   </>
                 ) : null}
 

@@ -10,6 +10,8 @@ import {
   glyphTint,
 } from "@/frontend/components/ui";
 import { isSavingsCategory, isSpendingCategory, spendingCategoriesFor } from "@/frontend/lib/categories";
+import { buildPiggies } from "@/frontend/lib/piggies";
+import { computeSavingsInsights } from "@/frontend/lib/savingsInsights";
 import {
   CURRENT_DAY,
   CURRENT_MONTH_KEY,
@@ -54,6 +56,7 @@ import {
   chartActiveKey,
   chartBudgetForPeriod,
   chartSelectionMonth,
+  classifyTx,
   dayFlowSeries,
   isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
   recurringDueDay,
@@ -122,6 +125,7 @@ type OverviewProps = {
   categoryIndex: CategoryIndex;
   todoLists?: TodoList[];
   events?: LedgerEvent[];
+  savingsTxns?: Expense[];
   setView: (view: ViewId) => void;
   onEdit: (expense: Expense) => void;
   onEditEvent: (event: LedgerEvent) => void;
@@ -138,6 +142,7 @@ export function Overview({
   categoryIndex,
   todoLists = [],
   events = [],
+  savingsTxns = [],
   setView,
   onEdit,
   onEditEvent,
@@ -198,6 +203,13 @@ export function Overview({
   }, [dayFlows]);
 
   const recent = st.list.slice(0, 3);
+  const topPiggies = useMemo(
+    () =>
+      buildPiggies(savingsTxns, categoryIndex)
+        .sort((a, b) => b.balance - a.balance)
+        .slice(0, 3),
+    [savingsTxns, categoryIndex],
+  );
   const accent = getAccent();
   const spentPct = st.spendingBudget ? st.spent / st.spendingBudget : 0;
   const activeCat = hoverCat;
@@ -369,6 +381,30 @@ export function Overview({
           </div>
         </section>
       </div>
+
+      <section className="panel" data-tour="tour-overview-piggies">
+        <div className="panel-head">
+          <h2>Piggies</h2>
+          <button className="link-btn" onClick={() => setView("piggies")}>See All</button>
+        </div>
+        <div className="recent-list">
+          {topPiggies.length ? topPiggies.map((p) => (
+            <button key={p.catId} type="button" className="recent-row" onClick={() => setView("piggies")}>
+              <span className="rr-glyph" style={glyphTint(p.color)}>{displayGlyph(p.glyph, p.catId)}</span>
+              <span className="rr-main">
+                <span className="rr-note">{p.name}</span>
+                <span className="rr-sub">
+                  {fmtMoney(p.balance, { currency })}
+                  {p.target ? ` of ${fmtMoney(p.target, { currency })}` : ""}
+                </span>
+              </span>
+              {p.progress !== null ? (
+                <span className="rr-amt">{Math.round(Math.min(1, Math.max(0, p.progress)) * 100)}%</span>
+              ) : null}
+            </button>
+          )) : <EmptyState title="No Piggies Yet" sub="Add a savings category to start tracking one." />}
+        </div>
+      </section>
     </div>
   );
 }
@@ -458,7 +494,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
 }
 
 // ── Budgets ─────────────────────────────────────────────────────────
-export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency, categoryIndex, events = [] }) {
+export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency, categoryIndex, events = [], setView }) {
   const st = useMemo(
     () => monthStats(expenses, budgets, wallet, month, categoryIndex, events),
     [expenses, budgets, wallet, month, categoryIndex, events],
@@ -516,6 +552,11 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                         <Icon name="lock" size={11} />
                         {fmtMoney(held, { currency })}
                       </span>
+                    ) : null}
+                    {isSavingsCategory(c) && setView ? (
+                      <button type="button" className="link-btn be-piggy-link" onClick={() => setView("piggies")}>
+                        View Piggy
+                      </button>
                     ) : null}
                   </div>
                   {editId === c.id ? (
@@ -616,6 +657,25 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
   const chartMonths = useMemo(() => monthsWindow(month), [month]);
 
+  /*
+   * Insights only carries the wallet-scoped 36-month `expenses` window (not
+   * the all-time savingsTxns the Piggies view uses), so balances shown here
+   * are windowed rather than lifetime — fine for pace/streak analysis, not
+   * meant to be read as a piggy's true balance.
+   */
+  const savingsSlice = useMemo(
+    () => expenses.filter((e) => ["savings", "withdrawal"].includes(classifyTx(e, categoryIndex))),
+    [expenses, categoryIndex],
+  );
+  const windowedPiggies = useMemo(
+    () => buildPiggies(savingsSlice, categoryIndex),
+    [savingsSlice, categoryIndex],
+  );
+  const savingsInsights = useMemo(
+    () => computeSavingsInsights(savingsSlice, expenses, windowedPiggies, categoryIndex, month),
+    [savingsSlice, expenses, windowedPiggies, categoryIndex, month],
+  );
+
   /** Pre-aggregate spend and income by month and category once for Insights charts. */
   const monthlyAgg = useMemo(() => {
     const monthKeys = new Set(chartMonths.map((m) => m.key));
@@ -635,7 +695,9 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       const bucket = byMonth.get(key)!;
       const cat = catOf(e.sub, categoryIndex);
 
-      if (isIncome(e)) {
+      const cls = classifyTx(e, categoryIndex);
+      if (cls === "withdrawal") continue;
+      if (cls === "income") {
         bucket.earned += e.amount;
         bucket.byIncomeSub[e.sub] = (bucket.byIncomeSub[e.sub] || 0) + e.amount;
         continue;
@@ -732,7 +794,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const incomeBySub = (list: Expense[]) => {
     const totals: Record<string, number> = {};
     for (const e of list) {
-      if (!isIncome(e)) continue;
+      if (classifyTx(e, categoryIndex) !== "income") continue;
       totals[e.sub] = (totals[e.sub] || 0) + e.amount;
     }
 
@@ -1389,6 +1451,44 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           </section>
         </div>
       </div>
+
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Saving Insights</h2>
+            <p className="panel-sub">Trailing 12 months on this wallet</p>
+          </div>
+        </div>
+        <div className="summary-grid">
+          <SummaryCard
+            label="Savings Rate"
+            value={`${Math.round(savingsInsights.savingsRate * 100)}%`}
+            sub="of income saved"
+          />
+          <SummaryCard
+            label="Net This Window"
+            tone={savingsInsights.netFlow < 0 ? "danger" : "saved"}
+            value={money(savingsInsights.netFlow)}
+            sub="deposits minus withdrawals"
+          />
+          <SummaryCard
+            label="Streak"
+            value={String(savingsInsights.currentStreak)}
+            sub={savingsInsights.currentStreak === 1 ? "month saving" : "months saving"}
+          />
+        </div>
+        {savingsInsights.headlines.length ? (
+          <ul className="piggy-headlines" style={{ marginTop: "var(--sp-4)" }}>
+            {savingsInsights.headlines.map((h) => (
+              <li key={h.id} className={`piggy-headline piggy-headline--${h.tone}`}>{h.text}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="panel-sub" style={{ marginTop: "var(--sp-3)" }}>
+            Keep saving to unlock streaks, pace, and projections here.
+          </p>
+        )}
+      </section>
     </div>
   );
 }
