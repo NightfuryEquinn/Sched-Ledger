@@ -364,7 +364,9 @@ Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
 
 `.github/workflows/notify-release.yml` listens for GitHub's `deployment_status` event — which Vercel's GitHub integration posts automatically on every deploy — and on a successful **Production** deploy calls `POST /api/cron/notify-release` with the version from `package.json`, broadcasting a Web Push "app updated" notification to every subscribed device (needs the `VAPID_*` keys; silently no-ops if unset).
 
-Add the same `CRON_SECRET` used for reminders as a **GitHub Actions repository secret** (`Settings → Secrets and variables → Actions`) so the workflow can authenticate.
+Add the same `CRON_SECRET` used for reminders as a **GitHub Actions repository secret** (`Settings → Secrets and variables → Actions`) so the workflow can authenticate, and add `environment: Production` to the job (already set) so it can read a `CRON_SECRET` scoped to the `Production` GitHub environment instead.
+
+`github.event.deployment_status.target_url` is Vercel's unique per-deployment URL, not the production alias — if the project has Vercel Authentication (Deployment Protection) enabled, that URL 401s before the request reaches this app. Generate a token under Vercel Project Settings → Deployment Protection → **Protection Bypass for Automation**, and add it as the `VERCEL_AUTOMATION_BYPASS_SECRET` GitHub secret so the workflow's `x-vercel-protection-bypass` header can get past the wall.
 
 Manual test:
 
