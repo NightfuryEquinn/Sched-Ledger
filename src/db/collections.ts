@@ -22,6 +22,7 @@ export const COLLECTIONS = {
   budgetAlertLogs: "budget_alert_logs",
   pushSubscriptions: "push_subscriptions",
   todoLists: "todo_lists",
+  capitalPlans: "capital_plans",
   rateLimits: "rate_limits",
 } as const;
 
@@ -165,6 +166,15 @@ export type TodoListDocument = Omit<TodoList, "createdAt" | "updatedAt"> & {
   updatedAt: Date;
 };
 
+export type CapitalPlanDocument = {
+  _id: ObjectId;
+  accountId: string;
+  enc: 1;
+  payload: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type Collections = {
   users: Collection<UserDocument>;
   ledgerProfiles: Collection<LedgerProfileDocument>;
@@ -179,6 +189,7 @@ export type Collections = {
   budgetAlertLogs: Collection<BudgetAlertLogDocument>;
   pushSubscriptions: Collection<PushSubscriptionDocument>;
   todoLists: Collection<TodoListDocument>;
+  capitalPlans: Collection<CapitalPlanDocument>;
 };
 
 /** Get typed collection handles for the connected database. */
@@ -197,5 +208,6 @@ export function getCollections(db: Db): Collections {
     budgetAlertLogs: db.collection<BudgetAlertLogDocument>(COLLECTIONS.budgetAlertLogs),
     pushSubscriptions: db.collection<PushSubscriptionDocument>(COLLECTIONS.pushSubscriptions),
     todoLists: db.collection<TodoListDocument>(COLLECTIONS.todoLists),
+    capitalPlans: db.collection<CapitalPlanDocument>(COLLECTIONS.capitalPlans),
   };
 }

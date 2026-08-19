@@ -88,7 +88,8 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("overview-trend", "Spending & Earning Trend", "Track cumulative spending and earning against your total budget as the month progresses. Hover any day to see what you spent and earned, broken down by category.", '[data-tour="tour-overview-trend"]', "top"),
     step("overview-donut", "By Category", "Hover slices to see how spending breaks down across categories.", '[data-tour="tour-overview-donut"]', "left"),
     step("overview-recent", "Recent Transaction", "Up to three of your latest transactions. Tap one to edit, or See All for the full list.", '[data-tour="tour-overview-recent"]'),
-    lastStep("overview-piggies", "Piggies", "Your top savings categories at a glance — tap See All for the full Piggies view.", '[data-tour="tour-overview-piggies"]'),
+    step("overview-piggies", "Piggies", "Your top savings categories at a glance — tap See All for the full Piggies view.", '[data-tour="tour-overview-piggies"]'),
+    lastStep("overview-capitals", "Capitals", "Planning something big — a marriage, a trip, a loan? Capitals in the nav keeps a checklist and logs real payments back to your ledger.", navTarget("capitals"), "right"),
   ],
   todos: [
     step("todos-nav", "TO-DO List", "Organize tasks into separate lists — groceries, work, travel, and more.", navTarget("todos"), "right"),
@@ -137,6 +138,12 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("piggies-summary", "Totals", "Total saved across every piggy, net flow, savings rate, and your current saving streak.", '[data-tour="tour-piggies-summary"]'),
     step("piggies-insights", "Saving Insights", "Streaks, best months, and pace-vs-deadline callouts, generated from your saving history.", '[data-tour="tour-piggies-insights"]'),
     lastStep("piggies-grid", "Piggy Cards", "Each card is a savings category — its progress ring, subcategories, and Add / Withdraw actions.", '[data-tour="tour-piggies-grid"]'),
+  ],
+  capitals: [
+    step("capitals-nav", "Capitals", "Plan for big future expenses — marriage, trips, loans, or anything custom.", navTarget("capitals"), "right"),
+    step("capitals-summary", "Totals", "Total planned across every plan, total paid so far, and how many plans have an upcoming target date.", '[data-tour="tour-capitals-summary"]'),
+    step("capitals-toolbar", "New Plan", "Start from a template — marriage, trip, car loan, house loan — or build a fully custom plan.", '[data-tour="tour-capitals-toolbar"]', "bottom"),
+    lastStep("capitals-grid", "Plan Cards", "Each card is a plan — its progress ring, line items, and Log button to record a real payment in the ledger.", '[data-tour="tour-capitals-grid"]'),
   ],
   insights: [
     step("insights-nav", "Insights", "Longer-range trends, comparisons, and currency views.", navTarget("insights"), "right"),

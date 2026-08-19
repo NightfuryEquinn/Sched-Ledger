@@ -97,6 +97,46 @@ export async function sendPushToAccount(
 }
 
 /**
+ * Deliver a payload to every registered device, across all accounts.
+ * Used for release-broadcast notifications, not per-account reminders.
+ */
+export async function broadcastPush(payload: PushPayload): Promise<{ sent: number; errors: string[] }> {
+  if (!ensureVapid()) return { sent: 0, errors: ["VAPID keys not configured"] };
+
+  const { pushSubscriptions } = getCollections(getDb());
+  const subs = await pushSubscriptions.find({}).toArray();
+  if (!subs.length) return { sent: 0, errors: [] };
+
+  const body = JSON.stringify(payload);
+  const expired: string[] = [];
+  const errors: string[] = [];
+  let sent = 0;
+
+  await Promise.all(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, body);
+        sent++;
+      } catch (err) {
+        const status = (err as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410) {
+          expired.push(sub.endpoint);
+
+          return;
+        }
+        errors.push(`push ${status ?? "error"}: ${(err as Error).message}`);
+      }
+    }),
+  );
+
+  if (expired.length) {
+    await pushSubscriptions.deleteMany({ endpoint: { $in: expired } });
+  }
+
+  return { sent, errors };
+}
+
+/**
  * Build the reminder notification from the same content the email renders,
  * so the two channels never drift.
  */

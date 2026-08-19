@@ -2,11 +2,14 @@ import { api } from "@/frontend/lib/api";
 import { maybeNotifyBudgetAlerts } from "@/frontend/lib/budget/notify";
 import {
   buildReminderDetails,
+  decodeCapitalPlan,
   decodeCategories,
   decodeEvent,
   decodeExpense,
   decodeTodoList,
   decodeWallet,
+  encodeCapitalPlanCreate,
+  encodeCapitalPlanUpdate,
   encodeCategories,
   encodeEventCreate,
   encodeEventUpdate,
@@ -22,7 +25,7 @@ import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
 import { classifyTx, normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
-import type { Budgets, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
+import type { Budgets, CapitalPlan, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -134,6 +137,7 @@ const keys = {
   savingsAll: (wallet: string) => ["savings-all", wallet] as const,
   events: (wallet: string, month: string) => ["events", wallet, month] as const,
   todoLists: (wallet: string) => ["todoLists", wallet] as const,
+  capitalPlans: (wallet: string) => ["capitalPlans", wallet] as const,
 };
 
 export function useLedger(walletAddress: string) {
@@ -418,6 +422,16 @@ export function useLedger(walletAddress: string) {
           return decodeTodoList(wire, cryptoKey);
         }),
       );
+    },
+    enabled: cryptoReady && !!profileQuery.data,
+  });
+
+  const capitalPlansQuery = useQuery({
+    queryKey: keys.capitalPlans(wallet),
+    queryFn: async () => {
+      const { capitalPlans } = await api.capitalPlans.list();
+      const cryptoKey = requireKey(wallet);
+      return Promise.all(capitalPlans.map((wire) => decodeCapitalPlan(wire, cryptoKey)));
     },
     enabled: cryptoReady && !!profileQuery.data,
   });
@@ -793,6 +807,56 @@ export function useLedger(walletAddress: string) {
     },
   });
 
+  const saveCapitalPlanMutation = useMutation({
+    mutationFn: async (data: Partial<CapitalPlan> & { id?: string }) => {
+      const cryptoKey = requireKey(wallet);
+      const existing = queryClient.getQueryData<CapitalPlan[]>(keys.capitalPlans(wallet)) ?? [];
+
+      if (data.id) {
+        const current = existing.find((p) => p.id === data.id);
+        if (!current) throw new Error("Plan not found");
+        const merged: Omit<CapitalPlan, "id"> = {
+          name: data.name ?? current.name,
+          templateId: data.templateId ?? current.templateId,
+          glyph: data.glyph ?? current.glyph,
+          targetDate: data.targetDate ?? current.targetDate,
+          createdAt: current.createdAt,
+          items: data.items ?? current.items,
+        };
+        const encrypted = await encodeCapitalPlanUpdate(merged, cryptoKey);
+        const { capitalPlan } = await api.capitalPlans.update(data.id, encrypted);
+        return decodeCapitalPlan(capitalPlan, cryptoKey);
+      }
+
+      const fresh: Omit<CapitalPlan, "id"> = {
+        name: data.name ?? "",
+        templateId: data.templateId,
+        glyph: data.glyph ?? "🎯",
+        targetDate: data.targetDate,
+        createdAt: data.createdAt ?? new Date().toISOString(),
+        items: data.items ?? [],
+      };
+      const encrypted = await encodeCapitalPlanCreate(fresh, cryptoKey);
+      const { capitalPlan } = await api.capitalPlans.create(encrypted);
+      return decodeCapitalPlan(capitalPlan, cryptoKey);
+    },
+    onSuccess: (saved, variables) => {
+      queryClient.setQueryData<CapitalPlan[]>(keys.capitalPlans(wallet), (prev = []) => {
+        if (variables.id) return prev.map((p) => (p.id === saved.id ? saved : p));
+        return [...prev, saved];
+      });
+    },
+  });
+
+  const deleteCapitalPlanMutation = useMutation({
+    mutationFn: (id: string) => api.capitalPlans.remove(id),
+    onSuccess: (_res, id) => {
+      queryClient.setQueryData<CapitalPlan[]>(keys.capitalPlans(wallet), (prev = []) =>
+        prev.filter((p) => p.id !== id),
+      );
+    },
+  });
+
   const isLoading =
     !cryptoReady ||
     profileQuery.isLoading ||
@@ -800,14 +864,16 @@ export function useLedger(walletAddress: string) {
     categoriesQuery.isLoading ||
     expensesQuery.isLoading ||
     eventsQuery.isLoading ||
-    todoListsQuery.isLoading;
+    todoListsQuery.isLoading ||
+    capitalPlansQuery.isLoading;
   const error =
     profileQuery.error ??
     walletsQuery.error ??
     categoriesQuery.error ??
     expensesQuery.error ??
     eventsQuery.error ??
-    todoListsQuery.error;
+    todoListsQuery.error ??
+    capitalPlansQuery.error;
 
   return {
     profile: profileQuery.data,
@@ -819,6 +885,7 @@ export function useLedger(walletAddress: string) {
     savingsLoading: savingsAllQuery.isLoading,
     events: eventsQuery.data ?? [],
     todoLists: todoListsQuery.data ?? [],
+    capitalPlans: capitalPlansQuery.data ?? [],
     budgets: activeWallet?.budgets ?? {},
     wallet: activeWallet,
     currency: activeWallet?.currency ?? "MYR",
@@ -841,6 +908,8 @@ export function useLedger(walletAddress: string) {
       deleteEventMutation.mutateAsync({ id, opts }),
     saveTodoList: saveTodoListMutation.mutateAsync,
     deleteTodoList: deleteTodoListMutation.mutateAsync,
+    saveCapitalPlan: saveCapitalPlanMutation.mutateAsync,
+    deleteCapitalPlan: deleteCapitalPlanMutation.mutateAsync,
     isSaving:
       saveExpenseMutation.isPending ||
       deleteExpenseMutation.isPending ||
@@ -850,6 +919,8 @@ export function useLedger(walletAddress: string) {
       deleteWalletMutation.isPending ||
       saveCategoriesMutation.isPending ||
       saveTodoListMutation.isPending ||
-      deleteTodoListMutation.isPending,
+      deleteTodoListMutation.isPending ||
+      saveCapitalPlanMutation.isPending ||
+      deleteCapitalPlanMutation.isPending,
   };
 }

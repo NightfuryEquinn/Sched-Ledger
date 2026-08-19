@@ -1,5 +1,6 @@
 import type { Account, FinancialWallet } from "./types";
 import type {
+  CapitalPlanWire,
   CategoriesWire,
   EventWire,
   ExpenseWire,
@@ -325,6 +326,21 @@ export const api = {
     },
     remove(id: string) {
       return request<{ ok: boolean }>(`/todo-lists/${id}`, { method: "DELETE" });
+    },
+  },
+
+  capitalPlans: {
+    list() {
+      return request<{ capitalPlans: CapitalPlanWire[] }>("/capital-plans");
+    },
+    create(body: { enc: 1; payload: string }) {
+      return request<{ capitalPlan: CapitalPlanWire }>("/capital-plans", { method: "POST", body });
+    },
+    update(id: string, body: { enc: 1; payload: string }) {
+      return request<{ capitalPlan: CapitalPlanWire }>(`/capital-plans/${id}`, { method: "PATCH", body });
+    },
+    remove(id: string) {
+      return request<{ ok: boolean }>(`/capital-plans/${id}`, { method: "DELETE" });
     },
   },
 

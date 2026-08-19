@@ -50,6 +50,24 @@ export type TodoListSecrets = {
   tasks: Array<{ id: string; title: string; done: boolean }>;
 };
 
+export type CapitalPlanSecrets = {
+  name: string;
+  templateId?: string;
+  glyph: string;
+  targetDate?: string;
+  createdAt: string;
+  items: Array<{
+    id: string;
+    name: string;
+    estimatedCost: number;
+    actualCost?: number;
+    paid: boolean;
+    loggedExpenseId?: string;
+    notes?: string;
+    dueDate?: string;
+  }>;
+};
+
 export function buildDerivationMessage(address: string): string {
   return `${DERIVATION_MESSAGE_PREFIX}\n\nAddress: ${getAddress(address)}`;
 }

@@ -81,6 +81,7 @@ export type ViewId =
   | "recurring"
   | "todos"
   | "piggies"
+  | "capitals"
   | "transparency";
 
 export type MonthEntry = {
@@ -117,6 +118,30 @@ export type TodoList = {
   name: string;
   icon: string;
   tasks: TodoTask[];
+};
+
+export type CapitalTemplateId = "marriage" | "trip" | "car-loan" | "house-loan" | "custom";
+
+export type CapitalItem = {
+  id: string;
+  name: string;
+  estimatedCost: number;
+  actualCost?: number;
+  paid: boolean;
+  /** Set once "log to ledger" creates a real Expense for this item. */
+  loggedExpenseId?: string;
+  notes?: string;
+  dueDate?: string;
+};
+
+export type CapitalPlan = {
+  id: string;
+  name: string;
+  templateId?: CapitalTemplateId;
+  glyph: string;
+  targetDate?: string;
+  createdAt: string;
+  items: CapitalItem[];
 };
 
 /** On-device passphrase vault blob (no plaintext keys). */

@@ -153,6 +153,7 @@ export function Overview({
     [expenses, budgets, wallet, month, categoryIndex],
   );
   const [hoverCat, setHoverCat] = useState(null);
+  const [expandedCat, setExpandedCat] = useState<Record<string, boolean>>({});
   const recentTodos = useMemo(() => oldestTodoLists(todoLists, 3), [todoLists]);
   const todayEvents = useMemo(
     () => remainingTodayEvents(events, loadedAt, 3),
@@ -345,15 +346,55 @@ export function Overview({
                 <div className="dc-value">{fmtMoney(activeCat ? (st.byCat[activeCat] || 0) : totalAll, { currency })}</div>
               </div>
             </div>
-            <ul className="legend">
-              {donutData.map((d) => (
-                <li key={d.id} className={activeCat && activeCat !== d.id ? "dim" : ""}
-                  onMouseEnter={() => setHoverCat(d.id)} onMouseLeave={() => setHoverCat(null)}>
-                  <CatGlyph glyph={d.glyph} id={d.id} /> <span className="lg-name">{d.label}</span>
-                  <span className="lg-pct">{Math.round((d.value / totalAll) * 100)}%</span>
-                </li>
-              ))}
-            </ul>
+            {donutData.length ? (
+              <ul className="legend">
+                {donutData.map((d) => {
+                  const open = expandedCat[d.id] ?? false;
+                  const subs = categoryIndex.catById[d.id]?.subs ?? [];
+                  const subRows = subs
+                    .map((s) => ({ ...s, value: st.bySub[s.id] || 0 }))
+                    .filter((s) => s.value > 0)
+                    .sort((a, b) => b.value - a.value);
+
+                  return (
+                    <li key={d.id} className={"legend-block" + (activeCat && activeCat !== d.id ? " dim" : "")}>
+                      <div className="legend-row"
+                        onMouseEnter={() => setHoverCat(d.id)} onMouseLeave={() => setHoverCat(null)}>
+                        <button
+                          type="button"
+                          className="legend-expand"
+                          disabled={!subRows.length}
+                          aria-expanded={open}
+                          aria-label={`${open ? "Collapse" : "Expand"} ${d.label} subcategories`}
+                          onClick={() => setExpandedCat((e) => ({ ...e, [d.id]: !open }))}
+                        >
+                          {subRows.length ? <Icon name="chevD" size={14} /> : null}
+                        </button>
+                        <span className="lg-swatch">{d.glyph}</span>
+                        <span className="lg-name">{d.label}</span>
+                        <span className="lg-amt">{fmtMoney(d.value, { currency })}</span>
+                        <span className="lg-pct">{Math.round((d.value / totalAll) * 100)}%</span>
+                      </div>
+                      {subRows.length ? (
+                        <div className={"legend-sub-reveal" + (open ? "" : " is-collapsed")}>
+                          <ul className="legend-sub-list">
+                            {subRows.map((s) => (
+                              <li key={s.id}>
+                                <span className="lg-name">{s.name}</span>
+                                <span className="lg-amt lg-sub-amt">{fmtMoney(s.value, { currency })}</span>
+                                <span className="lg-pct">{Math.round((s.value / totalAll) * 100)}%</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EmptyState title="No Spending Yet" sub="Categories fill in as you log transactions." />
+            )}
           </div>
         </section>
 
@@ -413,8 +454,12 @@ export function Overview({
 export function Transactions({ expenses, month, currency, categoryIndex, onEdit, onDelete }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
+  const [subFilter, setSubFilter] = useState<string | null>(null);
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
 
-  const { list, netTotal, dates, groups } = useMemo(() => {
+  const filterCat = filter !== "all" && filter !== "income" ? categoryIndex.catById[filter] : undefined;
+
+  const { catFilteredRows, list, netTotal, dates, groups } = useMemo(() => {
     let rows = monthExpenses(expenses, month);
     if (filter === "income") rows = rows.filter(isIncome);
     else if (filter !== "all") rows = rows.filter((e) => catOf(e.sub, categoryIndex) === filter);
@@ -426,15 +471,17 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
         (categoryIndex.catById[catOf(e.sub, categoryIndex)]?.name ?? "").toLowerCase().includes(s),
       );
     }
-    const net = rows.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
-    const byDate: Record<string, typeof rows> = {};
-    rows.forEach((e) => {
+    const catRows = rows;
+    const subRows = subFilter ? rows.filter((e) => e.sub === subFilter) : rows;
+    const net = subRows.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
+    const byDate: Record<string, typeof subRows> = {};
+    subRows.forEach((e) => {
       (byDate[e.date] = byDate[e.date] || []).push(e);
     });
     const sortedDates = Object.keys(byDate).sort((a, b) => (a < b ? 1 : -1));
 
-    return { list: rows, netTotal: net, dates: sortedDates, groups: byDate };
-  }, [expenses, month, filter, q, categoryIndex]);
+    return { catFilteredRows: catRows, list: subRows, netTotal: net, dates: sortedDates, groups: byDate };
+  }, [expenses, month, filter, subFilter, q, categoryIndex]);
 
   const sortedCats = useMemo(
     () =>
@@ -443,6 +490,29 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
       ),
     [categoryIndex.categories],
   );
+
+  const subBreakdown = useMemo(() => {
+    if (!filterCat) return [];
+    const totals: Record<string, { count: number; amount: number }> = {};
+    catFilteredRows.forEach((e) => {
+      if (!e.sub) return;
+      const t = (totals[e.sub] = totals[e.sub] || { count: 0, amount: 0 });
+      t.count += 1;
+      t.amount += e.amount;
+    });
+    const catTotal = Object.values(totals).reduce((s, t) => s + t.amount, 0);
+
+    return filterCat.subs
+      .map((s: any) => ({ ...s, ...(totals[s.id] || { count: 0, amount: 0 }) }))
+      .filter((s: any) => s.count > 0)
+      .sort((a: any, b: any) => b.amount - a.amount)
+      .map((s: any) => ({ ...s, pct: catTotal ? Math.round((s.amount / catTotal) * 100) : 0 }));
+  }, [catFilteredRows, filterCat]);
+
+  const selectFilter = (key: string) => {
+    setFilter(key);
+    setSubFilter(null);
+  };
 
   return (
     <div className="view">
@@ -454,19 +524,58 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
         <div className="txn-count">{list.length} entries · {netTotal >= 0 ? "+" : "−"}{fmtMoney(Math.abs(netTotal), { currency })} net</div>
       </div>
       <div className="filter-chips" data-tour="tour-txn-filters">
-        <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => setFilter("all")}>All</button>
+        <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => selectFilter("all")}>All</button>
         {sortedCats.map((c) => {
           const key = c.type === "income" ? "income" : c.id;
 
           return (
-            <button key={c.id} className={"fchip" + (filter === key ? " active" : "")} onClick={() => setFilter(key)}>
+            <button key={c.id} className={"fchip" + (filter === key ? " active" : "")} onClick={() => selectFilter(key)}>
               <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
             </button>
           );
         })}
       </div>
 
-      <section key={filter + ":" + q} className="panel txn-panel txn-panel--filter" data-tour="tour-txn-list">
+      {filterCat ? (
+        <div className="filter-chips filter-chips--sub" data-tour="tour-txn-sub-filters">
+          <button className={"fchip" + (subFilter === null ? " active" : "")} onClick={() => setSubFilter(null)}>All Subs</button>
+          {filterCat.subs.map((s: any) => (
+            <button key={s.id} className={"fchip" + (subFilter === s.id ? " active" : "")} onClick={() => setSubFilter(s.id)}>
+              {s.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {filterCat && subBreakdown.length ? (
+        <section className="panel txn-breakdown">
+          <button
+            type="button"
+            className="txn-breakdown-head"
+            aria-expanded={breakdownOpen}
+            onClick={() => setBreakdownOpen((v) => !v)}
+          >
+            <h2>Breakdown</h2>
+            <Icon name="chevD" size={16} />
+          </button>
+          <div className={"txn-breakdown-reveal" + (breakdownOpen ? "" : " is-collapsed")}>
+            <ul className="txn-breakdown-list">
+              {subBreakdown.map((s: any) => (
+                <li key={s.id}>
+                  <button type="button" className="txn-breakdown-row" onClick={() => setSubFilter(s.id)}>
+                    <span className="lg-name">{s.name}</span>
+                    <span className="tb-count">{s.count} {s.count === 1 ? "txn" : "txns"}</span>
+                    <span className="lg-sub-amt">{fmtMoney(s.amount, { currency })}</span>
+                    <span className="lg-pct">{s.pct}%</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
+
+      <section key={filter + ":" + subFilter + ":" + q} className="panel txn-panel txn-panel--filter" data-tour="tour-txn-list">
         {dates.length ? dates.map((d) => (
           <div key={d} className="txn-group">
             <div className="txn-group-head">

@@ -13,6 +13,7 @@ const frontend = await Bun.build({
   minify: true,
   target: "browser",
   sourcemap: false,
+  splitting: true,
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
   },

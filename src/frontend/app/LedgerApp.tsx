@@ -19,22 +19,37 @@ import { releaseHoldForOccurrence, restoreHoldForOccurrence } from "@/frontend/l
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour } from "@/frontend/lib/tour";
 import { useWhatsNew } from "@/frontend/lib/whats-new";
-import type { Account, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
+import type { Account, CapitalItem, CapitalPlan, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
 import {
   Budgets as BudgetsView,
-  Categories as CategoriesView,
   Insights,
   Overview,
   Recurring,
   Transactions,
 } from "@/frontend/views";
 import { EventModal, Schedule } from "@/frontend/views/Schedule";
-import { TodoListView } from "@/frontend/views/TodoList";
-import { Calculator } from "@/frontend/views/Calculator";
-import { Piggies } from "@/frontend/views/Piggies";
-import { Transparency } from "@/frontend/views/Transparency";
 import type { Piggy, Piglet } from "@/frontend/lib/piggies";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+
+/* Own-file views, deferred until first opened — cuts their deps (mermaid, etc) from the initial load. */
+const CategoriesView = lazy(() =>
+  import("@/frontend/views/Categories").then((m) => ({ default: m.Categories })),
+);
+const TodoListView = lazy(() =>
+  import("@/frontend/views/TodoList").then((m) => ({ default: m.TodoListView })),
+);
+const Calculator = lazy(() =>
+  import("@/frontend/views/Calculator").then((m) => ({ default: m.Calculator })),
+);
+const Piggies = lazy(() =>
+  import("@/frontend/views/Piggies").then((m) => ({ default: m.Piggies })),
+);
+const Capitals = lazy(() =>
+  import("@/frontend/views/Capitals").then((m) => ({ default: m.Capitals })),
+);
+const Transparency = lazy(() =>
+  import("@/frontend/views/Transparency").then((m) => ({ default: m.Transparency })),
+);
 
 /*
  * LedgerApp — authenticated app shell
@@ -59,6 +74,7 @@ const VIEW_TITLES: Record<ViewId, string> = {
   categories: "Categories",
   recurring: "Recurring",
   piggies: "Piggies",
+  capitals: "Capitals",
   insights: "Insights",
   transparency: "Transparency",
 };
@@ -75,12 +91,17 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         note?: string;
         sub?: string;
         kind?: "expense" | "income";
+        amount?: number;
         /** Piggy-withdraw mode: locks kind/category/sub and caps the amount. */
         lockedSub?: string;
         maxAmount?: number;
         title?: string;
       }
     | null
+  >(null);
+  /** Set while the AddExpenseModal is open to log a capital plan item's payment. */
+  const [capitalLogTarget, setCapitalLogTarget] = useState<
+    { plan: CapitalPlan; item: CapitalItem } | null
   >(null);
   const [evModal, setEvModal] = useState<LedgerEvent | { add: true; date: string } | null>(null);
   const [evOccurrenceIso, setEvOccurrenceIso] = useState<string | undefined>(undefined);
@@ -168,7 +189,33 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         }
       }
     }
+    if (capitalLogTarget && saved?.expense) {
+      const { plan, item } = capitalLogTarget;
+      setCapitalLogTarget(null);
+      try {
+        const items = plan.items.map((i) =>
+          i.id === item.id
+            ? { ...i, paid: true, actualCost: saved.expense.amount, loggedExpenseId: saved.expense.id }
+            : i,
+        );
+        await ledger.saveCapitalPlan({ id: plan.id, items });
+      } catch {
+        /* Expense already saved; the plan can be marked paid manually if this fails. */
+      }
+    }
     setModal(null);
+  };
+
+  /** Open the transaction modal prefilled to log a capital plan item's payment. */
+  const logCapitalItem = (plan: CapitalPlan, item: CapitalItem) => {
+    setCapitalLogTarget({ plan, item });
+    setModal({
+      add: true,
+      kind: "expense",
+      note: item.name,
+      amount: item.estimatedCost || undefined,
+      title: `Log payment: ${item.name}`,
+    });
   };
 
   /** Open expense modal prefilled from a schedule event. */
@@ -407,6 +454,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         </header>
 
         <div className="scroll">
+        <Suspense fallback={<div className="view-loading"><LoadingBloom /></div>}>
           {view === "overview" && (
             <Overview
               {...viewProps}
@@ -472,9 +520,19 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
               onWithdraw={withdrawFromPiggy}
             />
           )}
+          {view === "capitals" && (
+            <Capitals
+              capitalPlans={ledger.capitalPlans}
+              currency={currency}
+              onSavePlan={ledger.saveCapitalPlan}
+              onDeletePlan={ledger.deleteCapitalPlan}
+              onLogItem={logCapitalItem}
+            />
+          )}
           {view === "insights" && <Insights {...viewProps} setMonth={setMonth} />}
           {view === "transparency" && <Transparency />}
           <div className="scroll-pad" />
+        </Suspense>
         </div>
       </main>
 
@@ -539,13 +597,14 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         <AddExpenseModal
           initial={
             "add" in modal
-              ? modal.eventId || modal.date || modal.note || modal.sub || modal.kind
+              ? modal.eventId || modal.date || modal.note || modal.sub || modal.kind || modal.amount
                 ? {
                     eventId: modal.eventId,
                     date: modal.date,
                     note: modal.note,
                     sub: modal.sub,
                     kind: modal.kind,
+                    amount: modal.amount,
                   }
                 : null
               : modal
@@ -554,7 +613,10 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           defaultWalletId={activeWallet.id}
           categoryIndex={ledger.categoryIndex}
           onSave={saveExpense}
-          onClose={() => setModal(null)}
+          onClose={() => {
+            setCapitalLogTarget(null);
+            setModal(null);
+          }}
           onDelete={deleteExpense}
           title={"add" in modal ? modal.title : undefined}
           lockedSub={"add" in modal ? modal.lockedSub : undefined}

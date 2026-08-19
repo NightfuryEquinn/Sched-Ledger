@@ -1,6 +1,6 @@
 import type { ViewId } from "@/frontend/lib/types";
 import type { Tour } from "shepherd.js";
-import Shepherd from "shepherd.js";
+import "shepherd.js/dist/css/shepherd.css";
 import { getViewTourSteps, SHELL_TOUR_STEPS } from "./steps";
 import { markTourSeen } from "./storage";
 
@@ -49,11 +49,13 @@ function bindButtons(tour: Tour, steps: ReturnType<typeof getViewTourSteps>) {
   }));
 }
 
-function createTour(kind: TourKind, onDone?: () => void): Tour {
+async function createTour(kind: TourKind, onDone?: () => void): Promise<Tour> {
   if (activeTour?.isActive()) {
     activeTour.cancel();
     activeTour = null;
   }
+
+  const { default: Shepherd } = await import("shepherd.js");
 
   const steps = kind === "shell" ? SHELL_TOUR_STEPS : getViewTourSteps(kind);
   const tour = new Shepherd.Tour({
@@ -84,8 +86,8 @@ function createTour(kind: TourKind, onDone?: () => void): Tour {
   return tour;
 }
 
-export function runTour(kind: TourKind, onDone?: () => void) {
-  const tour = createTour(kind, onDone);
+export async function runTour(kind: TourKind, onDone?: () => void) {
+  const tour = await createTour(kind, onDone);
   tour.start();
   return tour;
 }

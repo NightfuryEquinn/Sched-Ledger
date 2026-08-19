@@ -12,6 +12,8 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 - **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress (including **Held** amounts reserved by schedule envelope holds)
 - **Piggies** — one-glance tracker for every savings category ("piggy") and its subcategories ("piglets"): lifetime balance derived from deposits minus withdrawals, an optional target and deadline with a progress ring, and a **Saving Insights** engine (savings rate, streak, best month, pace-vs-deadline projections) surfaced on both the Piggies and Insights views. Linked from Overview, Budgets, and Categories; exports to its own CSV
+- **Capitals** — planner for big future expenses (marriage, trips, car/house loans, or a custom plan): start from a template or blank, check off line items as paid, and **Log** a real payment straight into a prefilled expense that links back to the item
+- **Subcategory breakdowns** — Overview's By Category card and Transactions both expand a category into its subcategories, with amounts and share of total
 - **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation; includes Malaysia-oriented presets (EPF / SOCSO / EIS / PCB ballpark / SST) that never leave the browser
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable expense and income category/subcategory taxonomy with glyphs and colors
@@ -79,7 +81,7 @@ src/
 │   │                     # expense-update, money, ids, serialize, errors
 │   ├── middleware/       # session, rate-limit (Mongo + memory fallback), security, db
 │   └── routes/           # auth, users, profile, wallets, categories,
-│                         # expenses, events, todo-lists, consent,
+│                         # expenses, events, todo-lists, capital-plans, consent,
 │                         # budget-alerts, push, fx, cron
 ├── db/                   # MongoDB client, collections, indexes, URI resolver
 ├── schemas/              # Zod schemas (shared API validation)
@@ -101,10 +103,12 @@ src/
     │   ├── whats-new/      # release notes, per-device seen state, auto-show gate
     │   ├── piggies.ts        # savings balance model (deposits − withdrawals, targets)
     │   ├── savingsInsights.ts # streaks, pace, projections for Piggies + Insights
+    │   ├── capitals.ts        # capital plan totals, progress, template instantiation
+    │   ├── capitalTemplates.ts # built-in Capitals templates (marriage, trip, car/house loan)
     │   └── envelope-holds.ts  # schedule ↔ budget hold math
     ├── styles/           # ledger.css (theme tokens + layout)
     ├── views/            # Overview, Transactions, Budgets, Calculator, Categories,
-    │                     # Recurring, Insights, Piggies, Schedule, TodoList, Transparency
+    │                     # Recurring, Insights, Piggies, Capitals, Schedule, TodoList, Transparency
     └── main.tsx
 public/                   # PWA manifest + service worker (copied into dist/ on build)
 scripts/                  # MongoDB collection maintenance (drop/list, stale-user prune)
@@ -168,6 +172,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
 | `events` | `events` | Schedule events (E2EE title/comments/holds; plaintext schedule + email for reminders, plus `notifyDetails` while notify is on) |
 | `todo_lists` | `todoLists` | Named to-do lists (E2EE name/icon/tasks) |
+| `capital_plans` | `capitalPlans` | Future-expense planners (E2EE name/template/items) |
 | `consent` | `consent` | Data-sharing opt-in flag |
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
@@ -185,6 +190,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `category_taxonomies` | `payload` (full `categories[]` tree, incl. optional piggy `target`/`deadline` per category and sub) via `enc` | `accountId` |
 | `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on |
 | `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
+| `capital_plans` | `payload` (name, templateId, glyph, targetDate, items) via `enc` | `accountId` |
 | `users` | — | `address` (SIWE login), notify prefs |
 | `push_subscriptions` | — | `accountId`, `endpoint`, and the browser's `p256dh` / `auth` keys — required verbatim to encrypt each push payload |
 | `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |
@@ -269,12 +275,14 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 | `CRUD /api/expenses` | Transactions (scoped by wallet; cursor list via `limit`/`before`; optional series delete scopes) |
 | `CRUD /api/events` | Schedule events (comments + budget holds live in the E2EE payload; cursor list via `limit`/`before`) |
 | `CRUD /api/todo-lists` | TO-DO lists and tasks |
+| `CRUD /api/capital-plans` | Capitals planners and their line items |
 | `GET/PATCH /api/consent` | Data-sharing consent |
 | `POST /api/budget-alerts` | Deliver client-evaluated budget alerts (email; deduped) |
 | `GET /api/fx/latest/:base` | Cached FX rates (requires `EXCHANGE_RATE_API_KEY`) |
 | `GET /api/push/public-key` | VAPID application server key for browser subscription |
 | `POST/DELETE /api/push/subscribe` | Register or remove this device's Web Push endpoint |
 | `GET /api/cron/reminders` | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminders (email + Web Push) and materializes recurring expense rows |
+| `POST /api/cron/notify-release` | Auth: `Authorization: Bearer $CRON_SECRET`. Body `{ "version": "3.0.0" }`. Broadcasts a Web Push "app updated" notification to every subscribed device — called by CI after a successful deploy, not on a schedule |
 
 All mutating routes require a valid session cookie. Auth endpoints have stricter rate limits.
 
@@ -351,6 +359,20 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" \
 ```
 
 Expect `{ "ok": true, "reminders": { ... }, "recurring": { ... } }`.
+
+### Release-update push (CI, not cron-job.org)
+
+`.github/workflows/notify-release.yml` listens for GitHub's `deployment_status` event — which Vercel's GitHub integration posts automatically on every deploy — and on a successful **Production** deploy calls `POST /api/cron/notify-release` with the version from `package.json`, broadcasting a Web Push "app updated" notification to every subscribed device (needs the `VAPID_*` keys; silently no-ops if unset).
+
+Add the same `CRON_SECRET` used for reminders as a **GitHub Actions repository secret** (`Settings → Secrets and variables → Actions`) so the workflow can authenticate.
+
+Manual test:
+
+```bash
+curl -sS -H "Authorization: Bearer $CRON_SECRET" -H "Content-Type: application/json" \
+  -d '{"version":"3.0.0"}' \
+  "https://<your-app>.vercel.app/api/cron/notify-release"
+```
 
 ### Verify after deploy
 

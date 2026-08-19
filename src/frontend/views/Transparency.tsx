@@ -115,6 +115,17 @@ const COLLECTIONS: CollectionDoc[] = [
     ],
   },
   {
+    name: "capital_plans",
+    purpose: "Future-expense planners (marriage, trips, loans, custom)",
+    encrypted: true,
+    fields: [
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
+      { key: "enc", value: "1", note: "E2EE version" },
+      { key: "payload", value: "base64 AES-GCM", note: "name, templateId, glyph, targetDate, items[]" },
+      { key: "createdAt / updatedAt", value: "ISO dates" },
+    ],
+  },
+  {
     name: "consent",
     purpose: "Third-party data-sharing opt-in",
     fields: [
@@ -195,6 +206,7 @@ const RELATIONSHIP_CHART = `flowchart TB
     Exp["expenses<br/>enc + payload"]
     Ev["events<br/>enc + payload"]
     Todos["todo_lists<br/>enc + payload"]
+    Caps["capital_plans<br/>enc + payload"]
     Consent["consent"]
     Auth["auth_nonces · sessions"]
     Logs["reminder_logs · budget_alert_logs"]
@@ -208,12 +220,14 @@ const RELATIONSHIP_CHART = `flowchart TB
   Key -->|"AES-256-GCM encrypt/decrypt"| Exp
   Key -->|"AES-256-GCM encrypt/decrypt"| Ev
   Key -->|"AES-256-GCM encrypt/decrypt"| Todos
+  Key -->|"AES-256-GCM encrypt/decrypt"| Caps
   Users -->|"owns"| Profile
   Users -->|"owns"| Wallets
   Users -->|"owns"| Cats
   Users -->|"owns"| Exp
   Users -->|"owns"| Ev
   Users -->|"owns"| Todos
+  Users -->|"owns"| Caps
   Users -->|"owns"| Consent
   Users --> Auth
   Ev --> Logs
@@ -240,6 +254,7 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     Exp["expenses<br/>enc + payload"]
     Ev["events<br/>enc + payload"]
     Todos["todo_lists<br/>enc + payload"]
+    Caps["capital_plans<br/>enc + payload"]
     Consent["consent"]
     Auth["auth_nonces · sessions"]
     Logs["reminder_logs · budget_alert_logs"]
@@ -249,6 +264,7 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     Users --> Exp
     Users --> Ev
     Users --> Todos
+    Users --> Caps
     Users --> Consent
     Users --> Auth
     Ev --> Logs

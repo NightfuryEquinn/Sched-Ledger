@@ -2,6 +2,7 @@ import {
   decryptJson,
   encryptJson,
   expenseSeriesKey,
+  type CapitalPlanSecrets,
   type CategorySecrets,
   type EventSecrets,
   type ExpenseSecrets,
@@ -10,6 +11,7 @@ import {
 } from "@/frontend/lib/crypto/e2ee";
 import type {
   Budgets,
+  CapitalPlan,
   Category,
   Expense,
   FinancialWallet,
@@ -519,5 +521,56 @@ export async function encodeTodoListUpdate(
       icon: data.icon,
       tasks: data.tasks ?? [],
     } satisfies TodoListSecrets),
+  };
+}
+
+export type CapitalPlanWire = {
+  id: string;
+  enc?: 1;
+  payload?: string;
+};
+
+/** Decrypt a capital plan wire. Capitals is E2EE-only — no legacy plaintext branch. */
+export async function decodeCapitalPlan(wire: CapitalPlanWire, key: CryptoKey): Promise<CapitalPlan> {
+  if (wire.enc !== 1 || !wire.payload) {
+    throw new Error("Capital plan is encrypted but no key is available");
+  }
+  const secrets = await decryptJson<CapitalPlanSecrets>(key, wire.payload);
+
+  return {
+    id: wire.id,
+    name: secrets.name,
+    templateId: secrets.templateId as CapitalPlan["templateId"],
+    glyph: secrets.glyph,
+    targetDate: secrets.targetDate,
+    createdAt: secrets.createdAt,
+    items: secrets.items,
+  };
+}
+
+function capitalPlanSecrets(data: Omit<CapitalPlan, "id">): CapitalPlanSecrets {
+  return {
+    name: data.name,
+    templateId: data.templateId,
+    glyph: data.glyph,
+    targetDate: data.targetDate,
+    createdAt: data.createdAt,
+    items: data.items,
+  };
+}
+
+/** Encrypt capital plan secrets for create. */
+export async function encodeCapitalPlanCreate(data: Omit<CapitalPlan, "id">, key: CryptoKey) {
+  return {
+    enc: 1 as const,
+    payload: await encryptJson(key, capitalPlanSecrets(data)),
+  };
+}
+
+/** Encrypt capital plan secrets for update. */
+export async function encodeCapitalPlanUpdate(data: Omit<CapitalPlan, "id">, key: CryptoKey) {
+  return {
+    enc: 1 as const,
+    payload: await encryptJson(key, capitalPlanSecrets(data)),
   };
 }

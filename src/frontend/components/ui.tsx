@@ -172,6 +172,7 @@ function Icon({ name, size = 20 }) {
     lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
     sparkle: <><path d="M10 2.5l2.1 5.4 5.4 2.1-5.4 2.1L10 17.5l-2.1-5.4L2.5 10l5.4-2.1L10 2.5z" /><path d="M17.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" /></>,
     piggy: <><path d="M4 12.5a5.5 5.5 0 0 1 5.5-5.5h4a5.5 5.5 0 0 1 5 3.2l1.5.4a1 1 0 0 1 0 1.9l-1.5.5A5.5 5.5 0 0 1 13.5 17H12v2H9v-2a5.5 5.5 0 0 1-5-5.5z" /><circle cx="16" cy="11" r=".9" fill="currentColor" stroke="none" /><path d="M9 7.5V5.5M6.5 8.5 5 7M7 17v2" /></>,
+    capital: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /></>,
   };
   return <svg viewBox="0 0 24 24" style={s}>{paths[name]}</svg>;
 }
@@ -193,6 +194,7 @@ export const NAV_ITEMS = [
   ["transactions", "Transactions", "list"],
   ["budgets", "Budgets", "budget"],
   ["piggies", "Piggies", "piggy"],
+  ["capitals", "Capitals", "capital"],
   ["calculator", "Calculator", "calculator"],
   ["categories", "Categories", "tags"],
   ["recurring", "Recurring", "recurring"],

@@ -1,0 +1,30 @@
+name: Notify release
+
+# Fires when Vercel reports a successful production deploy (Vercel's GitHub
+# integration posts deployment/deployment_status events automatically).
+# Broadcasts a Web Push notification to every subscribed device.
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Broadcast push notification
+        run: |
+          curl -sS -f -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"version\":\"${{ steps.version.outputs.value }}\"}" \
+            "${{ github.event.deployment_status.target_url }}/api/cron/notify-release"

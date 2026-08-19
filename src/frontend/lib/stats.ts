@@ -406,6 +406,7 @@ export function monthStats(
   let earned = 0;
   let withdrawn = 0;
   const byCat: Record<string, number> = {};
+  const bySub: Record<string, number> = {};
 
   for (const e of expenses) {
     if (!inMonth(e.date, key)) continue;
@@ -426,17 +427,20 @@ export function monthStats(
       // so the savings row (and the Budgets "saved" total) reflects what is
       // still in the envelope, not lifetime deposits.
       if (cat) byCat[cat] = (byCat[cat] || 0) - e.amount;
+      if (e.sub) bySub[e.sub] = (bySub[e.sub] || 0) - e.amount;
       continue;
     }
 
     if (cls === "savings") {
       saved += e.amount;
       if (cat) byCat[cat] = (byCat[cat] || 0) + e.amount;
+      if (e.sub) bySub[e.sub] = (bySub[e.sub] || 0) + e.amount;
       continue;
     }
 
     spent += e.amount;
     if (cat) byCat[cat] = (byCat[cat] || 0) + e.amount;
+    if (e.sub) bySub[e.sub] = (bySub[e.sub] || 0) + e.amount;
   }
 
   const envelopeBudgets = Object.fromEntries(
@@ -476,6 +480,7 @@ export function monthStats(
     earned,
     withdrawn,
     byCat,
+    bySub,
     byCatHeld,
     totalHeld,
     totalBudget,

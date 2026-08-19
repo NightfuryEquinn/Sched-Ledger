@@ -10,7 +10,8 @@ type HighlightIcon =
   | "sparkle"
   | "info"
   | "budget"
-  | "piggy";
+  | "piggy"
+  | "capital";
 
 export type ReleaseHighlight = {
   icon: HighlightIcon;
@@ -31,6 +32,41 @@ export type ReleaseNotes = {
  * re-announces the popup to every device that has not seen that version.
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
+  {
+    version: "3.0.0",
+    date: "August 2026",
+    lead: "Capitals: plan for the big stuff, plus subcategory breakdowns and a snappier app load.",
+    highlights: [
+      {
+        icon: "capital",
+        title: "Meet Capitals",
+        body:
+          "Plan for marriages, trips, loans, or anything custom with a template or a blank plan, " +
+          "check off line items as paid, and log a real payment straight into your ledger.",
+      },
+      {
+        icon: "budget",
+        title: "By Category, expanded",
+        body:
+          "Overview's By Category card and Transactions now break down every category into its " +
+          "subcategories, with amounts and share of total.",
+      },
+      {
+        icon: "sparkle",
+        title: "Faster to open",
+        body:
+          "Views now load on demand instead of all at once, so the app starts noticeably faster, " +
+          "especially on a cold cache.",
+      },
+      {
+        icon: "calendar",
+        title: "New Event picks up where you left off",
+        body:
+          "Select a day on the Schedule calendar first — New Event now defaults to that date " +
+          "instead of always today.",
+      },
+    ],
+  },
   {
     version: "2.0.0",
     date: "August 2026",

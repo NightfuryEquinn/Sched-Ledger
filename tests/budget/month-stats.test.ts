@@ -165,4 +165,12 @@ describe("withdrawals", () => {
 
     expect(withWithdrawal - withoutWithdrawal).toBe(60);
   });
+
+  test("bySub mirrors byCat's spend/savings/withdrawal branches at the subcategory grain", () => {
+    const st = monthStats(expenses, {}, wallet, "2026-07", index);
+
+    expect(st.bySub.groceries).toBe(80); // spend adds
+    expect(st.bySub.saving).toBe(250); // savings deposit adds
+    expect(st.bySub.sub_emergency).toBe(-60); // withdrawal subtracts
+  });
 });

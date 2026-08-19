@@ -404,7 +404,7 @@ export function Schedule({
             <h2>{monthLabel(month, true)}</h2>
             <p className="panel-sub">Click a day to view or add · click an event to edit</p>
           </div>
-          <button className="add-btn add-btn--top" onClick={() => onAddEvent(TODAY_ISO)}>
+          <button className="add-btn add-btn--top" onClick={() => onAddEvent(selectedDay ?? TODAY_ISO)}>
             <Icon name="plus" size={17} /> <span className="abt-txt">New Event</span>
           </button>
         </div>

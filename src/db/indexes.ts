@@ -90,6 +90,7 @@ export async function ensureIndexes(db: Db): Promise<void> {
       { unique: true },
     ),
     db.collection(COLLECTIONS.todoLists).createIndex({ accountId: 1, createdAt: 1 }),
+    db.collection(COLLECTIONS.capitalPlans).createIndex({ accountId: 1, createdAt: 1 }),
     /* Push subscriptions: one row per browser endpoint, fanned out per account. */
     db.collection(COLLECTIONS.pushSubscriptions).createIndex({ endpoint: 1 }, { unique: true }),
     db.collection(COLLECTIONS.pushSubscriptions).createIndex({ accountId: 1 }),
