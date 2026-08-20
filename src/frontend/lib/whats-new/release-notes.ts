@@ -33,6 +33,27 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "3.0.2",
+    date: "August 2026",
+    lead: "Capitals uses the same date picker as Events, plus tighter mobile modal spacing.",
+    highlights: [
+      {
+        icon: "capital",
+        title: "Capitals date picker",
+        body:
+          "New and edit plan modals now use the custom calendar picker — the same one on Events " +
+          "and Transactions — instead of the browser's native date field.",
+      },
+      {
+        icon: "sparkle",
+        title: "Roomier mobile modals",
+        body:
+          "On phones, every modal gets extra space under the action buttons so Cancel and Save " +
+          "no longer sit flush against the screen edge.",
+      },
+    ],
+  },
+  {
     version: "3.0.1",
     date: "August 2026",
     lead: "Every reminder now also fires right at the event — plus a fix for a blank-page load.",

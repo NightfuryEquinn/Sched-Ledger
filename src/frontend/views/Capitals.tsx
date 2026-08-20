@@ -1,4 +1,5 @@
 import { Donut } from "@/frontend/charts";
+import { DatePicker } from "@/frontend/components/DateTimePicker";
 import { EmptyState, Icon, SummaryCard } from "@/frontend/components/ui";
 import { newCapitalItem, planPaidTotal, planProgress, planTotal } from "@/frontend/lib/capitals";
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
@@ -253,16 +254,10 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
                 placeholder="e.g. Our Wedding, Bali Trip"
               />
 
-              <label className="fld-label" htmlFor="capital-plan-date">
+              <label className="fld-label">
                 Target date (optional)
               </label>
-              <input
-                id="capital-plan-date"
-                type="date"
-                className="text-in wallet-field"
-                value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
-              />
+              <DatePicker value={targetDate} onChange={setTargetDate} className="wallet-field" />
 
               <label className="fld-label">Icon</label>
               <div className="cat-glyph-row">

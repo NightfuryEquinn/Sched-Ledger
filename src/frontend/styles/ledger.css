@@ -4771,10 +4771,16 @@ h1, h2, h3 {
   flex: none;
   width: 22px;
   height: 22px;
+  padding: 0;
+  line-height: 0;
   display: grid;
   place-items: center;
   color: var(--ink-faint);
   border-radius: var(--r-sm);
+}
+
+.capital-item-remove svg {
+  display: block;
 }
 
 .capital-item-remove:hover {
@@ -6690,10 +6696,12 @@ h1, h2, h3 {
 
   .modal.sm {
     max-height: min(90dvh, calc(100dvh - 24px));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 
   .wn-modal {
     max-height: min(90dvh, calc(100dvh - 24px));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 
   .modal.sm .modal-head {
@@ -7179,6 +7187,7 @@ h1, h2, h3 {
   .modal {
     max-width: none;
     max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 8px));
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
   }
 
   .modal.sm {
@@ -7186,12 +7195,14 @@ h1, h2, h3 {
     max-width: none;
     border-radius: var(--r-2xl) var(--r-2xl) 0 0;
     max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 8px));
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
   }
 
   .wn-modal {
     width: 100%;
     max-width: none;
     max-height: min(92dvh, calc(100dvh - env(safe-area-inset-top) - 8px));
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
   }
 
   .modal.sm .modal-head {
@@ -7207,7 +7218,7 @@ h1, h2, h3 {
   }
 
   .modal.sm .modal-foot {
-    padding: var(--sp-3) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom));
+    padding: var(--sp-3) var(--sp-4) var(--sp-5);
     align-items: center;
   }
 

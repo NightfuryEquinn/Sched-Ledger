@@ -59,8 +59,12 @@ function getCalendarLayout(year: number, month: number) {
   return { daysInMonth, startOffset };
 }
 
+/** Format an ISO date as y/m/d, or a placeholder when empty. */
 function datePickerLabel(iso: string) {
+  if (!iso) return "Optional";
+
   const [y, m, d] = iso.split("-").map(Number);
+
   return `${y}/${m}/${d}`;
 }
 
@@ -90,12 +94,14 @@ type DatePickerProps = {
 
 export function DatePicker({ value, onChange, className }: DatePickerProps) {
   const { open, setOpen, rootRef, triggerRef, menuRef } = usePickerPortal();
-  const [y, m] = value.split("-").map(Number);
+  const seed = value || TODAY_ISO;
+  const [y, m] = seed.split("-").map(Number);
   const [viewY, setViewY] = useState(y);
   const [viewM, setViewM] = useState(m);
 
   useEffect(() => {
-    const [vy, vm] = value.split("-").map(Number);
+    const next = value || TODAY_ISO;
+    const [vy, vm] = next.split("-").map(Number);
     setViewY(vy);
     setViewM(vm);
   }, [value]);
@@ -171,7 +177,7 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
         aria-haspopup="dialog"
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="picker-trigger-label">
+        <span className={"picker-trigger-label" + (value ? "" : " is-placeholder")}>
           <PickerIcon name="calendar" />
           {datePickerLabel(value)}
         </span>
