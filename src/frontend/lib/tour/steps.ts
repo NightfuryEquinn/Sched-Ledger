@@ -102,7 +102,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("schedule-nav", "Schedule", "Plan events and reminders on a calendar tied to your selected month.", navTarget("schedule"), "right"),
     step("schedule-summary", "At a Glance", "See how many events you have, the next reminder, and email alerts queued.", '[data-tour="tour-schedule-summary"]'),
     step("schedule-cal", "Calendar", "Click a day to focus it in the agenda below. Click an event chip to edit.", '[data-tour="tour-schedule-cal"]', "top"),
-    lastStep("schedule-agenda", "Agenda", "Browse day by day, add events with New Event (optional email reminders), and review what's coming up.", '[data-tour="tour-schedule-agenda"]'),
+    lastStep("schedule-agenda", "Agenda", "Browse day by day, add events with New Event (optional email reminders — a reminder always fires at the event itself too), and review what's coming up.", '[data-tour="tour-schedule-agenda"]'),
   ],
   transactions: [
     step("transactions-nav", "Transactions", "Every expense and income entry for the month, grouped by day.", navTarget("transactions"), "right"),

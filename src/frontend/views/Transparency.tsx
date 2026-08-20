@@ -163,7 +163,7 @@ const COLLECTIONS: CollectionDoc[] = [
     fields: [
       { key: "eventId", value: "ObjectId" },
       { key: "occurrenceIso", value: "ISO datetime" },
-      { key: "lead", value: '"1d"' },
+      { key: "lead", value: '"1d" | "at" | "span"', note: "one row per reminder kind — the chosen lead, the always-on at-event send, and multi-day ongoing sends are logged separately" },
       { key: "email", value: '"you@mail.com"' },
       { key: "channels?", value: '["email"]' },
       { key: "sentAt", value: "Date" },

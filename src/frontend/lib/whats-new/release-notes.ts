@@ -33,6 +33,28 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "3.0.1",
+    date: "August 2026",
+    lead: "Every reminder now also fires right at the event — plus a fix for a blank-page load.",
+    highlights: [
+      {
+        icon: "bell",
+        title: "A reminder at the event, always",
+        body:
+          "Any event with reminders on now also sends one right at its own start — the clock " +
+          "time for a timed event, or 9:00 AM on the day for an all-day one — on top of whatever " +
+          "lead time you picked.",
+      },
+      {
+        icon: "shield",
+        title: "Fixed a blank-load bug",
+        body:
+          "Some deploys of 3.0.0 could load to a blank screen. The build now always ships the " +
+          "correct startup script.",
+      },
+    ],
+  },
+  {
     version: "3.0.0",
     date: "August 2026",
     lead: "Capitals: plan for the big stuff, plus subcategory breakdowns and a snappier app load.",

@@ -163,11 +163,14 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
   const when = formatOccurrenceWhen(doc, doc.date, prefs.timezone);
   const category = eventCategoryLabel(doc);
   const span = spanDays(doc);
+  /* Every notifying event also gets a reminder right at its own start — the chosen
+     lead is an extra early warning, not the only one — unless the chosen lead already
+     is "at" (see reminderTargets' dedupe in @/lib/schedule). */
+  const chosenLead = leadDescription(doc.lead as LeadId, doc.allDay);
+  const atLead = leadDescription("at" as LeadId, doc.allDay);
+  const leadSummary = doc.lead === "at" ? chosenLead : `${chosenLead}, and again ${atLead}`;
   /* Multi-day events also get a daily nudge, so say so up front. */
-  const lead =
-    span > 1
-      ? `${leadDescription(doc.lead as LeadId, doc.allDay)}, then each morning it is still running`
-      : leadDescription(doc.lead as LeadId, doc.allDay);
+  const lead = span > 1 ? `${leadSummary}, then each morning it is still running` : leadSummary;
   const { html, text, subject } = reminderEmailHtml({
     ...reminderContent(doc),
     when,
@@ -337,11 +340,14 @@ async function sendReminderOnce(
   const span = spanDays(ev);
   const when = formatOccurrenceWhen(ev, target.occurrenceIso, timezone);
   const category = eventCategoryLabel(ev);
-  /* A "still running" send is about today, not about a lead time. */
+  /* A "still running" send is about today, not about a lead time. Each `kind: "lead"`
+     target names its own lead (`target.logLead`) rather than `ev.lead`, since the
+     always-on at-event reminder (`logLead: "at"`) is a separate send from the user's
+     chosen lead and must not be mislabelled as it. */
   const lead =
     target.kind === "ongoing"
       ? `while this event is running (day ${dayNumberInSpan(target)} of ${span})`
-      : leadDescription(ev.lead as LeadId, ev.allDay);
+      : leadDescription(target.logLead as LeadId, ev.allDay);
 
   /* Both channels render from the same plaintext copy so they never drift. */
   const content = reminderContent(ev);

@@ -302,10 +302,13 @@ export type ReminderTarget = {
 /**
  * Every reminder this event wants delivered around `now`.
  *
- *   lead    — one per occurrence, at the configured lead before it starts.
+ *   lead    — one per occurrence, at the configured lead before it starts, PLUS an
+ *             always-on send right at the event's own start (`logLead: "at"`) — the
+ *             clock time for a timed event, 09:00 local for an all-day one. Deduped
+ *             into a single target when the chosen lead already is "at".
  *   ongoing — 09:00 local on each day a multi-day occurrence is still running.
  *
- * Single-day events produce exactly the one `lead` target they always have.
+ * Single-day events produce one or two `lead` targets (never more).
  * Callers still gate on `isReminderDueNow` and the reminder log.
  */
 export function reminderTargets(
@@ -328,6 +331,19 @@ export function reminderTargets(
       logLead: ev.lead,
     });
 
+    /* Always also remind right at the event's own start — the chosen lead is
+       an extra early warning, not a replacement for the day-of/at-time nudge. */
+    const atMs = eventTimeMs(startIso, ev.time, ev.allDay, timeZone);
+    if (atMs !== leadAt) {
+      out.push({
+        occurrenceIso: startIso,
+        dayIso: startIso,
+        kind: "lead",
+        remindAtMs: atMs,
+        logLead: "at",
+      });
+    }
+
     if (span === 1) continue;
 
     const endIso = occurrenceEndIso(ev, startIso);
@@ -339,8 +355,8 @@ export function reminderTargets(
       }
 
       const remindAt = zonedLocalToUtcMs(dayIso, ALL_DAY_REMINDER_TIME, timeZone);
-      /* Don't double-send when the lead reminder already lands at 09:00 today. */
-      if (dayIso === startIso && remindAt === leadAt) continue;
+      /* Don't double-send when the lead or at-event reminder already lands at 09:00 today. */
+      if (dayIso === startIso && (remindAt === leadAt || remindAt === atMs)) continue;
 
       out.push({
         occurrenceIso: startIso,

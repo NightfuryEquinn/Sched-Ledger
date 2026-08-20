@@ -352,12 +352,13 @@ describe("reminder targets", () => {
 
   const NOW = new Date("2026-08-10T00:00:00Z");
 
-  test("a single-day event produces exactly one lead target", () => {
-    expect(shape(schedule(), NOW)).toEqual(["2026-08-10/lead"]);
+  test("a single-day event with a lead produces the lead target plus the always-on at-event target", () => {
+    expect(shape(schedule(), NOW)).toEqual(["2026-08-10/lead", "2026-08-10/lead"]);
   });
 
   test("a multi-day run adds a 09:00 target for every day it is running", () => {
     expect(shape(schedule({ endDate: "2026-08-13" }), NOW)).toEqual([
+      "2026-08-10/lead",
       "2026-08-10/lead",
       "2026-08-10/ongoing",
       "2026-08-11/ongoing",
@@ -368,6 +369,7 @@ describe("reminder targets", () => {
 
   test("the closing day is skipped when the event ends before 09:00", () => {
     expect(shape(schedule({ endDate: "2026-08-13", endTime: "08:30" }), NOW)).toEqual([
+      "2026-08-10/lead",
       "2026-08-10/lead",
       "2026-08-10/ongoing",
       "2026-08-11/ongoing",
@@ -403,7 +405,7 @@ describe("reminder targets", () => {
     const targets = reminderTargets(schedule({ endDate: "2026-08-11" }), NOW, TZ);
     const startDay = targets.filter((t) => t.dayIso === "2026-08-10");
 
-    expect(startDay.map((t) => t.logLead)).toEqual(["1h", "span"]);
+    expect(startDay.map((t) => t.logLead)).toEqual(["1h", "at", "span"]);
   });
 
   test("every target carries the occurrence start, so content stays run-scoped", () => {

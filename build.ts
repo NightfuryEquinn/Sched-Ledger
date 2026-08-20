@@ -28,6 +28,30 @@ for (const output of frontend.outputs) {
   console.log(` ${path.relative(root, output.path)}  ${(output.size / 1024).toFixed(1)} KB`);
 }
 
+/*
+ * Bun's HTML bundler mis-references the entry chunk in the emitted <script src>
+ * under splitting:true — it can point at an unrelated chunk instead of the real
+ * entry-point, leaving the app unmounted (blank page) in production. Patch the
+ * script tag to the actual entry-point chunk after the fact.
+ */
+const jsEntries = frontend.outputs.filter((o) => o.kind === "entry-point" && o.path.endsWith(".js"));
+const htmlEntries = frontend.outputs.filter((o) => o.kind === "entry-point" && o.path.endsWith(".html"));
+if (jsEntries.length !== 1 || htmlEntries.length !== 1) {
+  console.error(
+    `Expected exactly one JS entry-point and one HTML entry-point, got ${jsEntries.length} JS / ${htmlEntries.length} HTML`,
+  );
+  process.exit(1);
+}
+const entryChunkName = path.basename(jsEntries[0]!.path);
+const htmlPath = htmlEntries[0]!.path;
+const html = await Bun.file(htmlPath).text();
+const patched = html.replace(/src="\.\/chunk-[^"]+\.js"/, `src="./${entryChunkName}"`);
+if (patched === html && !html.includes(`src="./${entryChunkName}"`)) {
+  console.error("Could not locate the entry <script src> to patch in index.html");
+  process.exit(1);
+}
+await Bun.write(htmlPath, patched);
+
 const apiDir = path.join(root, "api");
 await mkdir(apiDir, { recursive: true });
 await rm(path.join(apiDir, "index.js"), { force: true });
