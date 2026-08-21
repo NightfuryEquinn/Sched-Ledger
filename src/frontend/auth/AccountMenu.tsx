@@ -9,7 +9,7 @@ import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { ImportExportModal } from "./components/ImportExportModal";
 import { Identicon } from "./components/Identicon";
 import { CopyrightModal, TermsModal } from "./components/LegalModals";
-import { NotificationModal } from "./components/NotificationModal";
+import { PreferencesModal } from "./components/PreferencesModal";
 import { RecoveryReveal } from "./components/RecoveryReveal";
 import { copyText } from "./lib/clipboard";
 import { shortAddr } from "./lib/format";
@@ -71,7 +71,7 @@ export function AccountMenu({
   const [open, setOpen] = useState(false);
   const [reveal, setReveal] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [copyrightOpen, setCopyrightOpen] = useState(false);
@@ -182,8 +182,8 @@ export function AccountMenu({
               <Icon name="sparkle" size={16} /> What&apos;s New
             </button>
           ) : null}
-          <button className="am-item" type="button" onClick={() => { setNotifOpen(true); setOpen(false); }}>
-            <Icon name="bell" size={16} /> Notification
+          <button className="am-item" type="button" onClick={() => { setPrefsOpen(true); setOpen(false); }}>
+            <Icon name="bell" size={16} /> Preferences
           </button>
           <button className="am-item" type="button" onClick={() => { copyText(account.address); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>
             <Icon name={copied ? "check" : "copy"} size={16} /> {copied ? "Address Copied" : "Copy Address"}
@@ -253,7 +253,7 @@ export function AccountMenu({
           onClose={() => setCsvOpen(false)}
         />
       ) : null}
-      {notifOpen ? <NotificationModal onClose={() => setNotifOpen(false)} /> : null}
+      {prefsOpen ? <PreferencesModal account={account} onClose={() => setPrefsOpen(false)} /> : null}
       {termsOpen ? <TermsModal onClose={() => setTermsOpen(false)} /> : null}
       {copyrightOpen ? <CopyrightModal onClose={() => setCopyrightOpen(false)} /> : null}
     </div>

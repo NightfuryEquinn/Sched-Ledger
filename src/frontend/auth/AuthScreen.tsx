@@ -4,7 +4,7 @@ import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, IdentityRecord } from "@/frontend/lib/types";
 import { getAddress } from "ethers";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Identicon } from "./components/Identicon";
 import {
   checkQuizAnswers,
@@ -13,6 +13,14 @@ import {
   unwrapSecrets,
   wrapSecrets,
 } from "./lib/device-vault";
+import {
+  biometricEnrolled,
+  biometricSupported,
+  enrollBiometric,
+  markAskedToEnrollBiometric,
+  unlockWithBiometric,
+  wasAskedToEnrollBiometric,
+} from "./lib/biometric";
 import { copyText } from "./lib/clipboard";
 import { codenameFor } from "./lib/codename";
 import { shortAddr } from "./lib/format";
@@ -31,7 +39,7 @@ type AuthScreenProps = {
   onAuth: (account: Account) => void;
 };
 
-type AuthMode = "welcome" | "create" | "quiz" | "passphrase" | "restore" | "device-unlock";
+type AuthMode = "welcome" | "create" | "quiz" | "passphrase" | "restore" | "device-unlock" | "biometric-offer";
 
 /** Persist vaulted (or injected) identity, unlock E2EE, and enter the app. */
 async function finishAuth(
@@ -83,6 +91,11 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   const [passphrase2, setPassphrase2] = useState("");
   const [pendingIdn, setPendingIdn] = useState<IdentityRecord | null>(null);
   const [unlockPass, setUnlockPass] = useState("");
+  const [canBiometricUnlock, setCanBiometricUnlock] = useState(false);
+  const [offerSource, setOfferSource] = useState<"create" | "unlock" | null>(null);
+  const [offerBusy, setOfferBusy] = useState(false);
+  const [offerError, setOfferError] = useState("");
+  const [pendingUnlockSecrets, setPendingUnlockSecrets] = useState<{ mnemonic: string; privateKey: string } | null>(null);
   const identities = identityStorage.list();
 
   const words = useMemo(
@@ -104,7 +117,23 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     setPassphrase2("");
     setPendingIdn(null);
     setUnlockPass("");
+    setOfferSource(null);
+    setOfferBusy(false);
+    setOfferError("");
+    setPendingUnlockSecrets(null);
   };
+
+  useEffect(() => {
+    if (mode !== "device-unlock" || !pendingIdn) {
+      setCanBiometricUnlock(false);
+      return;
+    }
+    let live = true;
+    void biometricSupported().then((supported) => {
+      if (live) setCanBiometricUnlock(supported && biometricEnrolled(pendingIdn.address));
+    });
+    return () => { live = false; };
+  }, [mode, pendingIdn]);
 
   async function doGenerate() {
     setError("");
@@ -150,18 +179,9 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     setMode("passphrase");
   };
 
-  /** Wrap draft secrets and sign in. */
-  async function sealAndEnter() {
+  /** Wrap draft secrets and sign in (after any biometric offer is settled). */
+  async function completeSeal() {
     if (!draft) return;
-    setError("");
-    if (!isValidPassphrase(passphrase)) {
-      setError("Passphrase must be at least 8 characters.");
-      return;
-    }
-    if (passphrase !== passphrase2) {
-      setError("Passphrases do not match.");
-      return;
-    }
     setBusy(true);
     try {
       const vault = await wrapSecrets(passphrase, {
@@ -181,6 +201,27 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
       setError(e instanceof Error ? e.message : "Could not sign in.");
       setBusy(false);
     }
+  }
+
+  /** Validate the new passphrase, then offer Face ID once before sealing. */
+  async function sealAndEnter() {
+    if (!draft) return;
+    setError("");
+    if (!isValidPassphrase(passphrase)) {
+      setError("Passphrase must be at least 8 characters.");
+      return;
+    }
+    if (passphrase !== passphrase2) {
+      setError("Passphrases do not match.");
+      return;
+    }
+    if (await biometricSupported() && !wasAskedToEnrollBiometric(draft.address)) {
+      setOfferSource("create");
+      setOfferError("");
+      setMode("biometric-offer");
+      return;
+    }
+    await completeSeal();
   }
 
   /** Restore from typed recovery phrase → set device passphrase. */
@@ -252,13 +293,11 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     setError("This identity needs its recovery phrase restored on this device.");
   }
 
-  /** Unlock an existing vault with the device passphrase. */
-  async function unlockDeviceVault() {
+  /** Finish sign-in with already-unwrapped vault secrets. */
+  async function completeUnlock(secrets: { mnemonic: string; privateKey: string }) {
     if (!pendingIdn?.vault) return;
-    setError("");
     setBusy(true);
     try {
-      const secrets = await unwrapSecrets(unlockPass, pendingIdn.vault);
       await finishAuth(
         {
           ...pendingIdn,
@@ -269,9 +308,84 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         onAuth,
       );
     } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not sign in.");
+      setBusy(false);
+    }
+  }
+
+  /** Unlock an existing vault with the device passphrase (or Face ID). */
+  async function unlockDeviceVault(passphraseOverride?: string, viaBiometric = false) {
+    if (!pendingIdn?.vault) return;
+    setError("");
+    setBusy(true);
+    try {
+      const secrets = await unwrapSecrets(passphraseOverride ?? unlockPass, pendingIdn.vault);
+      if (!viaBiometric && await biometricSupported() && !wasAskedToEnrollBiometric(pendingIdn.address)) {
+        setBusy(false);
+        setPendingUnlockSecrets(secrets);
+        setOfferSource("unlock");
+        setOfferError("");
+        setMode("biometric-offer");
+        return;
+      }
+      await completeUnlock(secrets);
+    } catch (e) {
       setError(e instanceof Error ? e.message : "Could not unlock vault.");
       setBusy(false);
     }
+  }
+
+  /** Face ID button on the device-unlock screen. */
+  async function biometricUnlock() {
+    if (!pendingIdn) return;
+    setError("");
+    setBusy(true);
+    try {
+      const pass = await unlockWithBiometric(pendingIdn.address);
+      await unlockDeviceVault(pass, true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not unlock with Face ID.");
+      setBusy(false);
+    }
+  }
+
+  /** Continue past the one-time Face ID offer into the app. */
+  async function proceedAfterOffer() {
+    const source = offerSource;
+    setOfferSource(null);
+    if (source === "create") {
+      await completeSeal();
+    } else if (source === "unlock" && pendingUnlockSecrets) {
+      const secrets = pendingUnlockSecrets;
+      setPendingUnlockSecrets(null);
+      await completeUnlock(secrets);
+    }
+  }
+
+  async function acceptBiometricOffer() {
+    const address = offerSource === "create" ? draft?.address : pendingIdn?.address;
+    if (!address) { await proceedAfterOffer(); return; }
+    const codename = offerSource === "create"
+      ? codenameFor(address)
+      : (pendingIdn?.codename || codenameFor(address));
+    const passphraseValue = offerSource === "create" ? passphrase : unlockPass;
+    setOfferBusy(true);
+    setOfferError("");
+    try {
+      const ok = await enrollBiometric(address, codename, passphraseValue);
+      if (!ok) setOfferError("Face ID isn't available on this device. Continuing without it.");
+    } catch {
+      setOfferError("Could not set up Face ID. Continuing without it.");
+    }
+    markAskedToEnrollBiometric(address);
+    setOfferBusy(false);
+    await proceedAfterOffer();
+  }
+
+  function declineBiometricOffer() {
+    const address = offerSource === "create" ? draft?.address : pendingIdn?.address;
+    if (address) markAskedToEnrollBiometric(address);
+    void proceedAfterOffer();
   }
 
   async function connectInjected() {
@@ -409,7 +523,12 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
             <div className="ih-addr num">{shortAddr(pendingIdn.address)}</div>
           </div>
         </div>
-        <label className="fld-label">Device Passphrase
+        {canBiometricUnlock ? (
+          <button className="primary-btn lg full" type="button" disabled={busy} onClick={() => void biometricUnlock()}>
+            <Icon name="shield" size={17} /> Unlock with Face ID
+          </button>
+        ) : null}
+        <label className="fld-label">{canBiometricUnlock ? "Or enter your passphrase" : "Device Passphrase"}
           <input
             className="text-in"
             type="password"
@@ -420,8 +539,26 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
           />
         </label>
         {error ? <div className="auth-error">{error}</div> : null}
-        <button className="primary-btn lg full" type="button" disabled={busy || !unlockPass} onClick={() => void unlockDeviceVault()}>
+        <button className={canBiometricUnlock ? "ghost-btn lg full" : "primary-btn lg full"} type="button" disabled={busy || !unlockPass} onClick={() => void unlockDeviceVault()}>
           {busy ? "Unlocking…" : "Unlock & Sign In"}
+        </button>
+      </div></div>
+    );
+  }
+
+  if (mode === "biometric-offer") {
+    return (
+      <div className="auth-wrap"><div className="auth-card">
+        <h2 className="auth-h2">Use Face ID on this Device?</h2>
+        <p className="auth-lead">
+          Skip typing your passphrase next time — unlock Sched Ledger with Face ID or Touch ID on this browser. Your passphrase is encrypted with your biometric key and never leaves this device.
+        </p>
+        {offerError ? <div className="auth-error">{offerError}</div> : null}
+        <button className="primary-btn lg full" type="button" disabled={offerBusy} onClick={() => void acceptBiometricOffer()}>
+          <Icon name="shield" size={17} /> {offerBusy ? "Setting up…" : "Enable Face ID"}
+        </button>
+        <button className="ghost-btn lg full u-gap-top" type="button" disabled={offerBusy} onClick={declineBiometricOffer}>
+          Not Now
         </button>
       </div></div>
     );

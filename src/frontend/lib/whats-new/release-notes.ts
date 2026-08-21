@@ -33,6 +33,26 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "3.2.0",
+    date: "August 2026",
+    lead: "Unlock with Face ID, and the Notification menu is now Preferences.",
+    highlights: [
+      {
+        icon: "shield",
+        title: "Face ID / Touch ID unlock",
+        body:
+          "Skip typing your device passphrase — enable Face ID or Touch ID for this device from Account → Preferences, " +
+          "or when offered right after you unlock with your passphrase. Your passphrase is encrypted with a key tied to " +
+          "the biometric check and never leaves this device.",
+      },
+      {
+        icon: "bell",
+        title: "Notification → Preferences",
+        body: "The per-device Notification menu is now Preferences, home to push notifications and Face ID together.",
+      },
+    ],
+  },
+  {
     version: "3.1.2",
     date: "August 2026",
     lead: "Capitals plans get a total budget, a monthly save hint from budget minus paid, and a summary of savings across every plan.",

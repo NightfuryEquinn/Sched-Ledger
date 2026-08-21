@@ -26,13 +26,14 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Budget holds** — optional encrypted envelope holds on any schedule event (amount + category); active holds reserve budget until you log payment or release the occurrence; amounts never leave the E2EE payload
 - **Log payment** — from a bill/renewal event, open a prefilled expense and link `eventId` ↔ `expenseId` (plaintext metadata only); also releases that occurrence's budget hold when present
 - **Email reminders** — optional Resend emails with per-event lead times and user timezone; every notifying event also always gets a reminder right at its own start (the clock time, or 9:00 AM on the day for all-day events) on top of the chosen lead, deduped when the lead already is "at the time of the event"; confirmation when you enable notify; the reminder includes the event name, budget hold and comments, so turning notify on stores a readable copy (`notifyDetails`) that renders both the email and the push notification — switching it off deletes that copy and events without reminders stay fully encrypted
-- **Push notifications** — opt-in Web Push per device under **Account → Notification**, delivered on the same 15-minute poll as the reminder emails and carrying the same event name, time, hold and comments; each browser subscribes separately, and turning it off on one device leaves the others and your emails untouched
+- **Push notifications** — opt-in Web Push per device under **Account → Preferences**, delivered on the same 15-minute poll as the reminder emails and carrying the same event name, time, hold and comments; each browser subscribes separately, and turning it off on one device leaves the others and your emails untouched
 - **TO-DO lists** — multiple named lists with inline task management
 
 ### Identity & privacy
 
 - **Web3 identity** — create or restore an in-browser wallet (12- or 24-word recovery phrase); sign in with a cryptographic challenge (SIWE-style). Prefer a **ledger-only** key so the auth address is not correlated with on-chain activity
-- **Device passphrase vault** — recovery phrase quiz on create; in-app keys wrapped with a local passphrase (PBKDF2 + AES-GCM) instead of plaintext `localStorage`; WebAuthn wrapping can come later
+- **Device passphrase vault** — recovery phrase quiz on create; in-app keys wrapped with a local passphrase (PBKDF2 + AES-GCM) instead of plaintext `localStorage`
+- **Face ID / Touch ID unlock** — optional per-device biometric unlock via WebAuthn PRF; the passphrase is encrypted with a key derived from the biometric assertion and never stored in the clear. Offered once after your first passphrase unlock, or toggle anytime under **Account → Preferences**
 - **Dark mode** — system-aware theme toggle, persisted locally
 - **Sessions & privacy** — HttpOnly session cookies with sliding token rotation, revoke devices, clear local data, and third-party data-sharing consent under **Account → Data & privacy**
 - **Encrypted backup** — download/restore a full ledger pack encrypted with your ledger key (client-only; not stored on the server) via **Account → Exports & imports**
@@ -387,7 +388,7 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" -H "Content-Type: application/j
 7. **Transparency** — open the Transparency view and confirm hosting, inference, and collection maps render.
 8. **Log payment** — create a bill event, use **Log payment**, and confirm the expense links back to the event.
 9. **Budget hold** — enable a hold on a schedule event, confirm Budgets shows **Held**, then log payment and confirm the hold releases for that occurrence.
-10. **Push notifications** — open **Account → Notification**, enable push, and confirm the device registers (needs the `VAPID_*` keys; on iOS add the app to the Home Screen first).
+10. **Push notifications** — open **Account → Preferences**, enable push, and confirm the device registers (needs the `VAPID_*` keys; on iOS add the app to the Home Screen first).
 11. **What's New** — confirm the release notes open on a device that has not seen this version, and that **Account → What's New** reopens them afterwards.
 
 ### Serverless notes
