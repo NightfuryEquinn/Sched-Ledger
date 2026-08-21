@@ -4724,6 +4724,12 @@ h1, h2, h3 {
   color: var(--ink-faint);
 }
 
+.capital-monthly {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+
 .capital-item-list {
   display: flex;
   flex-direction: column;

@@ -820,6 +820,7 @@ export function useLedger(walletAddress: string) {
           templateId: data.templateId ?? current.templateId,
           glyph: data.glyph ?? current.glyph,
           targetDate: data.targetDate ?? current.targetDate,
+          initialBudget: data.initialBudget ?? current.initialBudget,
           createdAt: current.createdAt,
           items: data.items ?? current.items,
         };
@@ -833,6 +834,7 @@ export function useLedger(walletAddress: string) {
         templateId: data.templateId,
         glyph: data.glyph ?? "🎯",
         targetDate: data.targetDate,
+        initialBudget: data.initialBudget,
         createdAt: data.createdAt ?? new Date().toISOString(),
         items: data.items ?? [],
       };

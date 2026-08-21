@@ -33,6 +33,27 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "3.1.2",
+    date: "August 2026",
+    lead: "Capitals plans get an initial budget and a monthly save amount based on what's still unpaid.",
+    highlights: [
+      {
+        icon: "capital",
+        title: "Initial budget per plan",
+        body:
+          "Set aside what you already have for a Capitals plan. That amount reduces how much you still need " +
+          "to save toward unpaid line items.",
+      },
+      {
+        icon: "piggy",
+        title: "Monthly save hint",
+        body:
+          "When a plan has a target date, each card shows how much to save per month: unpaid items minus " +
+          "your initial budget, divided by the months left. Paid items drop out of the calculation.",
+      },
+    ],
+  },
+  {
     version: "3.0.2",
     date: "August 2026",
     lead: "Capitals uses the same date picker as Events, plus tighter mobile modal spacing.",

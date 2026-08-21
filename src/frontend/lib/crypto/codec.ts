@@ -543,6 +543,7 @@ export async function decodeCapitalPlan(wire: CapitalPlanWire, key: CryptoKey): 
     templateId: secrets.templateId as CapitalPlan["templateId"],
     glyph: secrets.glyph,
     targetDate: secrets.targetDate,
+    initialBudget: secrets.initialBudget,
     createdAt: secrets.createdAt,
     items: secrets.items,
   };
@@ -554,6 +555,7 @@ function capitalPlanSecrets(data: Omit<CapitalPlan, "id">): CapitalPlanSecrets {
     templateId: data.templateId,
     glyph: data.glyph,
     targetDate: data.targetDate,
+    initialBudget: data.initialBudget,
     createdAt: data.createdAt,
     items: data.items,
   };

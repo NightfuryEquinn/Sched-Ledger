@@ -12,7 +12,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 - **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress (including **Held** amounts reserved by schedule envelope holds)
 - **Piggies** — one-glance tracker for every savings category ("piggy") and its subcategories ("piglets"): lifetime balance derived from deposits minus withdrawals, an optional target and deadline with a progress ring, and a **Saving Insights** engine (savings rate, streak, best month, pace-vs-deadline projections) surfaced on both the Piggies and Insights views. Linked from Overview, Budgets, and Categories; exports to its own CSV
-- **Capitals** — planner for big future expenses (marriage, trips, car/house loans, or a custom plan): start from a template or blank, check off line items as paid, and **Log** a real payment straight into a prefilled expense that links back to the item
+- **Capitals** — planner for big future expenses (marriage, trips, car/house loans, or a custom plan): start from a template or blank, set an **initial budget**, check off line items as paid, see a **monthly save** hint from unpaid items ÷ months until the target date, and **Log** a real payment straight into a prefilled expense that links back to the item
 - **Subcategory breakdowns** — Overview's By Category card and Transactions both expand a category into its subcategories, with amounts and share of total
 - **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation; includes Malaysia-oriented presets (EPF / SOCSO / EIS / PCB ballpark / SST) that never leave the browser
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
@@ -103,7 +103,7 @@ src/
     │   ├── whats-new/      # release notes, per-device seen state, auto-show gate
     │   ├── piggies.ts        # savings balance model (deposits − withdrawals, targets)
     │   ├── savingsInsights.ts # streaks, pace, projections for Piggies + Insights
-    │   ├── capitals.ts        # capital plan totals, progress, template instantiation
+    │   ├── capitals.ts        # capital plan totals, unpaid/budget remaining, monthly save, templates
     │   ├── capitalTemplates.ts # built-in Capitals templates (marriage, trip, car/house loan)
     │   └── envelope-holds.ts  # schedule ↔ budget hold math
     ├── styles/           # ledger.css (theme tokens + layout)
@@ -172,7 +172,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
 | `events` | `events` | Schedule events (E2EE title/comments/holds; plaintext schedule + email for reminders, plus `notifyDetails` while notify is on) |
 | `todo_lists` | `todoLists` | Named to-do lists (E2EE name/icon/tasks) |
-| `capital_plans` | `capitalPlans` | Future-expense planners (E2EE name/template/items) |
+| `capital_plans` | `capitalPlans` | Future-expense planners (E2EE name/template/budget/items) |
 | `consent` | `consent` | Data-sharing opt-in flag |
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
@@ -190,7 +190,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `category_taxonomies` | `payload` (full `categories[]` tree, incl. optional piggy `target`/`deadline` per category and sub) via `enc` | `accountId` |
 | `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on |
 | `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
-| `capital_plans` | `payload` (name, templateId, glyph, targetDate, items) via `enc` | `accountId` |
+| `capital_plans` | `payload` (name, templateId, glyph, targetDate, initialBudget, items) via `enc` | `accountId` |
 | `users` | — | `address` (SIWE login), notify prefs |
 | `push_subscriptions` | — | `accountId`, `endpoint`, and the browser's `p256dh` / `auth` keys — required verbatim to encrypt each push payload |
 | `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |

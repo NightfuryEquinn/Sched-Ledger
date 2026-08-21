@@ -140,6 +140,8 @@ export type CapitalPlan = {
   templateId?: CapitalTemplateId;
   glyph: string;
   targetDate?: string;
+  /** Money already set aside for this plan; reduces monthly save need. */
+  initialBudget?: number;
   createdAt: string;
   items: CapitalItem[];
 };

@@ -55,6 +55,7 @@ export type CapitalPlanSecrets = {
   templateId?: string;
   glyph: string;
   targetDate?: string;
+  initialBudget?: number;
   createdAt: string;
   items: Array<{
     id: string;

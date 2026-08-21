@@ -1,7 +1,13 @@
 import { Donut } from "@/frontend/charts";
 import { DatePicker } from "@/frontend/components/DateTimePicker";
 import { EmptyState, Icon, SummaryCard } from "@/frontend/components/ui";
-import { newCapitalItem, planPaidTotal, planProgress, planTotal } from "@/frontend/lib/capitals";
+import {
+  newCapitalItem,
+  planMonthlySave,
+  planPaidTotal,
+  planProgress,
+  planTotal,
+} from "@/frontend/lib/capitals";
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
 import { dayLabel, fmtMoney } from "@/frontend/lib/data";
 import type { CapitalItem, CapitalPlan, CapitalTemplateId } from "@/frontend/lib/types";
@@ -12,9 +18,10 @@ import { useEffect, useMemo, useState } from "react";
  * Capitals — future financial planner
  * ────────────────────────────────────
  * Standalone checklists for big life expenses (marriage, trips, loans, or
- * fully custom plans). Each line item can optionally be "logged" into the
- * real ledger when actually paid, but plans exist independently of it —
- * pure hypothetical planning is a first-class mode.
+ * fully custom plans). Each plan can carry an initial budget and target date;
+ * unpaid items drive a monthly save hint. Line items can optionally be
+ * "logged" into the real ledger when actually paid, but plans exist
+ * independently of it — pure hypothetical planning is a first-class mode.
  */
 
 type CapitalsProps = {
@@ -36,6 +43,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
   const [name, setName] = useState("");
   const [glyph, setGlyph] = useState("🎯");
   const [targetDate, setTargetDate] = useState("");
+  const [initialBudget, setInitialBudget] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [itemDraftFor, setItemDraftFor] = useState<string | null>(null);
@@ -77,6 +85,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
     setName("");
     setGlyph("🎯");
     setTargetDate("");
+    setInitialBudget("");
     setError("");
   };
 
@@ -85,6 +94,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
     setName(plan.name);
     setGlyph(plan.glyph);
     setTargetDate(plan.targetDate ?? "");
+    setInitialBudget(plan.initialBudget != null && plan.initialBudget > 0 ? String(plan.initialBudget) : "");
     setError("");
   };
 
@@ -113,11 +123,13 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
         const template = CAPITAL_TEMPLATES.find((t) => t.id === templateId);
         for (const itemName of template?.items ?? []) items.push(newCapitalItem(itemName, items));
       }
+      const budget = Number(initialBudget) || 0;
       const saved = await persistPlan({
         name: name.trim(),
         glyph,
         templateId,
         targetDate: targetDate || undefined,
+        initialBudget: budget > 0 ? budget : undefined,
         createdAt: new Date().toISOString(),
         items,
       });
@@ -125,11 +137,13 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
       return;
     }
 
+    const budget = Number(initialBudget) || 0;
     const saved = await persistPlan({
       id: editor.planId,
       name: name.trim(),
       glyph,
       targetDate: targetDate || undefined,
+      initialBudget: budget > 0 ? budget : 0,
     });
     if (saved) setEditor(null);
   };
@@ -188,7 +202,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
   if (!plans.length && !editor) {
     return (
       <div className="view">
-        <EmptyState title="No Plans Yet" sub="Start a plan for a big future expense — marriage, a trip, a loan, or anything custom." />
+        <EmptyState title="No Plans Yet" sub="Start a plan for a big future expense — set a budget and target date to see how much to save each month." />
         <div className="todo-empty-action">
           <button className="primary-btn" type="button" onClick={openAddPlan}>
             <Icon name="plus" size={15} /> New Plan
@@ -259,6 +273,19 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
               </label>
               <DatePicker value={targetDate} onChange={setTargetDate} className="wallet-field" />
 
+              <label className="fld-label" htmlFor="capital-plan-budget">
+                Initial budget (optional)
+              </label>
+              <input
+                id="capital-plan-budget"
+                className="text-in wallet-field"
+                type="text"
+                inputMode="decimal"
+                value={initialBudget}
+                onChange={(e) => setInitialBudget(e.target.value)}
+                placeholder="0"
+              />
+
               <label className="fld-label">Icon</label>
               <div className="cat-glyph-row">
                 {ICONS.map((g) => (
@@ -316,6 +343,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
           const total = planTotal(plan);
           const paid = planPaidTotal(plan);
           const progress = planProgress(plan);
+          const monthlySave = planMonthlySave(plan);
           const donutData = total
             ? [
                 { id: "paid", value: paid, color: "var(--saved)" },
@@ -351,6 +379,9 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
                 <div className="capital-card-stats">
                   <div className="capital-total">{money(total)}</div>
                   <div className="capital-paid">{money(paid)} paid</div>
+                  {monthlySave !== null ? (
+                    <div className="capital-monthly">Save {money(monthlySave)}/mo</div>
+                  ) : null}
                 </div>
               </div>
 

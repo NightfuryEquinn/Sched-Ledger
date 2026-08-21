@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { instantiateFromTemplate, planPaidTotal, planProgress, planTotal } from "@/frontend/lib/capitals";
+import {
+  instantiateFromTemplate,
+  planMonthlySave,
+  planMonthsUntilTarget,
+  planPaidTotal,
+  planProgress,
+  planRemainingNeed,
+  planTotal,
+  planUnpaidTotal,
+} from "@/frontend/lib/capitals";
 import type { CapitalPlan } from "@/frontend/lib/types";
 
 function plan(overrides: Partial<CapitalPlan> = {}): CapitalPlan {
@@ -32,6 +41,79 @@ describe("planPaidTotal", () => {
   test("returns 0 when nothing is paid", () => {
     const p = plan({ items: [{ id: "i1", name: "Venue", estimatedCost: 5000, paid: false }] });
     expect(planPaidTotal(p)).toBe(0);
+  });
+});
+
+describe("planUnpaidTotal", () => {
+  test("sums estimated cost for unpaid items only", () => {
+    expect(planUnpaidTotal(plan())).toBe(3000);
+  });
+
+  test("returns 0 when everything is paid", () => {
+    const p = plan({
+      items: [{ id: "i1", name: "Venue", estimatedCost: 5000, paid: true }],
+    });
+    expect(planUnpaidTotal(p)).toBe(0);
+  });
+});
+
+describe("planRemainingNeed", () => {
+  test("subtracts initial budget from unpaid total", () => {
+    expect(planRemainingNeed(plan({ initialBudget: 1000 }))).toBe(2000);
+  });
+
+  test("clamps at 0 when budget covers unpaid", () => {
+    expect(planRemainingNeed(plan({ initialBudget: 5000 }))).toBe(0);
+  });
+
+  test("treats missing initial budget as 0", () => {
+    expect(planRemainingNeed(plan())).toBe(3000);
+  });
+});
+
+describe("planMonthsUntilTarget", () => {
+  const today = new Date(2026, 7, 21); // Aug 21, 2026
+
+  test("returns null when there is no target date", () => {
+    expect(planMonthsUntilTarget(plan(), today)).toBeNull();
+  });
+
+  test("returns null when the target month is in the past", () => {
+    expect(planMonthsUntilTarget(plan({ targetDate: "2026-06-15" }), today)).toBeNull();
+  });
+
+  test("is at least 1 when the target is the current month", () => {
+    expect(planMonthsUntilTarget(plan({ targetDate: "2026-08-31" }), today)).toBe(1);
+  });
+
+  test("counts whole calendar months until a future target", () => {
+    expect(planMonthsUntilTarget(plan({ targetDate: "2026-11-01" }), today)).toBe(3);
+  });
+});
+
+describe("planMonthlySave", () => {
+  const today = new Date(2026, 7, 21); // Aug 21, 2026
+
+  test("divides remaining need by months until target", () => {
+    // unpaid 3000 − budget 0 = 3000; Aug → Nov = 3 months → 1000/mo
+    expect(planMonthlySave(plan({ targetDate: "2026-11-01" }), today)).toBe(1000);
+  });
+
+  test("excludes paid items and applies initial budget", () => {
+    // unpaid 3000 − budget 1200 = 1800; 3 months → 600/mo
+    expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 1200 }), today)).toBe(600);
+  });
+
+  test("returns 0 when budget covers unpaid", () => {
+    expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 5000 }), today)).toBe(0);
+  });
+
+  test("returns null without a target date", () => {
+    expect(planMonthlySave(plan(), today)).toBeNull();
+  });
+
+  test("returns null when the target month is past", () => {
+    expect(planMonthlySave(plan({ targetDate: "2026-01-01" }), today)).toBeNull();
   });
 });
 

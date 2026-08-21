@@ -116,12 +116,12 @@ const COLLECTIONS: CollectionDoc[] = [
   },
   {
     name: "capital_plans",
-    purpose: "Future-expense planners (marriage, trips, loans, custom)",
+    purpose: "Future-expense planners (marriage, trips, loans, custom) with optional initial budget",
     encrypted: true,
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
-      { key: "payload", value: "base64 AES-GCM", note: "name, templateId, glyph, targetDate, items[]" },
+      { key: "payload", value: "base64 AES-GCM", note: "name, templateId, glyph, targetDate, initialBudget, items[]" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
