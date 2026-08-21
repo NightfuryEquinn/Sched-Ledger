@@ -9,7 +9,6 @@ import {
   planMonthlySave,
   planPaidTotal,
   planProgress,
-  planTotal,
   plansTotalMonthlySave,
 } from "@/frontend/lib/capitals";
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
@@ -61,7 +60,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
   }, [capitalPlans]);
 
   const money = (n: number) => fmtMoney(n, { currency });
-  const totalPlanned = useMemo(() => plans.reduce((s, p) => s + planTotal(p), 0), [plans]);
+  const totalPlanned = useMemo(() => plans.reduce((s, p) => s + planBudget(p), 0), [plans]);
   const totalPaid = useMemo(() => plans.reduce((s, p) => s + planPaidTotal(p), 0), [plans]);
   const upcoming = useMemo(
     () => plans.filter((p) => p.targetDate && planProgress(p) !== 1).length,
