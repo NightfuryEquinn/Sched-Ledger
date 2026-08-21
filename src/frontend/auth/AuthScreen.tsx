@@ -524,7 +524,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
           </div>
         </div>
         {canBiometricUnlock ? (
-          <button className="primary-btn lg full" type="button" disabled={busy} onClick={() => void biometricUnlock()}>
+          <button className="primary-btn lg full face-id-btn" type="button" disabled={busy} onClick={() => void biometricUnlock()}>
             <Icon name="shield" size={17} /> Unlock with Face ID
           </button>
         ) : null}

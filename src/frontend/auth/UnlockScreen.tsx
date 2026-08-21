@@ -187,7 +187,7 @@ export function UnlockScreen({ account, onUnlocked, onSignOut }: UnlockScreenPro
               : "Your encryption key will be derived from your wallet."}
         </p>
         {canBiometricUnlock ? (
-          <button type="button" className="primary-btn lg full" disabled={busy} onClick={() => void biometricUnlock()}>
+          <button type="button" className="primary-btn lg full face-id-btn" disabled={busy} onClick={() => void biometricUnlock()}>
             <Icon name="shield" size={17} /> Unlock with Face ID
           </button>
         ) : null}
