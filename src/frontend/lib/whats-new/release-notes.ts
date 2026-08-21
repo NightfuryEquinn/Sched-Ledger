@@ -35,21 +35,21 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
   {
     version: "3.1.2",
     date: "August 2026",
-    lead: "Capitals plans get an initial budget and a monthly save amount based on what's still unpaid.",
+    lead: "Capitals plans get a total budget, a monthly save hint from budget minus paid, and a summary of savings across every plan.",
     highlights: [
       {
         icon: "capital",
-        title: "Initial budget per plan",
+        title: "Total budget per plan",
         body:
-          "Set aside what you already have for a Capitals plan. That amount reduces how much you still need " +
-          "to save toward unpaid line items.",
+          "Set the total budget for a Capitals plan. Paid line items count against it. The donut shows paid as a " +
+          "percent of that budget — and flips to Overpaid when you spend past it.",
       },
       {
         icon: "piggy",
-        title: "Monthly save hint",
+        title: "Monthly save + totals",
         body:
-          "When a plan has a target date, each card shows how much to save per month: unpaid items minus " +
-          "your initial budget, divided by the months left. Paid items drop out of the calculation.",
+          "With a target date, each card shows how much to save per month: (budget − paid) ÷ months left. " +
+          "A new Monthly Saving summary card totals that amount across every plan.",
       },
     ],
   },

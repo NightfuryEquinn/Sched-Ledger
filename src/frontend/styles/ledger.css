@@ -1864,12 +1864,17 @@ h1, h2, h3 {
 }
 
 .summary-grid.sg-2,
-.summary-grid.sg-3 {
+.summary-grid.sg-3,
+.summary-grid.sg-4 {
   display: grid;
 }
 
 .summary-grid.sg-3 {
   grid-template-columns: repeat(3, 1fr);
+}
+
+.summary-grid.sg-4 {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .summary-grid.sg-2 {
@@ -4730,6 +4735,11 @@ h1, h2, h3 {
   font-family: var(--font-mono);
 }
 
+.capital-overpaid {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .capital-item-list {
   display: flex;
   flex-direction: column;
@@ -6665,6 +6675,9 @@ h1, h2, h3 {
   .summary-grid.sg-3 {
     grid-template-columns: repeat(3, 1fr);
   }
+  .summary-grid.sg-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 
   /* Panel subheaders */
   .panel-head {
@@ -7093,6 +7106,9 @@ h1, h2, h3 {
     font-size: 11.5px;
   }
   .summary-grid.sg-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .summary-grid.sg-4 {
     grid-template-columns: repeat(2, 1fr);
   }
   .summary-grid.sg-2 {

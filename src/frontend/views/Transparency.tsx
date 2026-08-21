@@ -116,7 +116,7 @@ const COLLECTIONS: CollectionDoc[] = [
   },
   {
     name: "capital_plans",
-    purpose: "Future-expense planners (marriage, trips, loans, custom) with optional initial budget",
+    purpose: "Future-expense planners (marriage, trips, loans, custom) with total budget and monthly save",
     encrypted: true,
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   instantiateFromTemplate,
+  planBudgetProgress,
+  planIsOverbudget,
   planMonthlySave,
   planMonthsUntilTarget,
   planPaidTotal,
@@ -8,6 +10,7 @@ import {
   planRemainingNeed,
   planTotal,
   planUnpaidTotal,
+  plansTotalMonthlySave,
 } from "@/frontend/lib/capitals";
 import type { CapitalPlan } from "@/frontend/lib/types";
 
@@ -58,16 +61,52 @@ describe("planUnpaidTotal", () => {
 });
 
 describe("planRemainingNeed", () => {
-  test("subtracts initial budget from unpaid total", () => {
-    expect(planRemainingNeed(plan({ initialBudget: 1000 }))).toBe(2000);
+  test("is budget minus paid", () => {
+    // paid 6800, budget 10000 → 3200 left
+    expect(planRemainingNeed(plan({ initialBudget: 10000 }))).toBe(3200);
   });
 
-  test("clamps at 0 when budget covers unpaid", () => {
+  test("still counts remaining budget when every item is paid", () => {
+    const p = plan({
+      initialBudget: 10000,
+      items: [
+        { id: "i1", name: "Venue", estimatedCost: 5000, paid: true, actualCost: 5000 },
+        { id: "i2", name: "Catering", estimatedCost: 3000, paid: true, actualCost: 3000 },
+      ],
+    });
+    expect(planRemainingNeed(p)).toBe(2000);
+  });
+
+  test("clamps at 0 when paid meets or exceeds budget", () => {
     expect(planRemainingNeed(plan({ initialBudget: 5000 }))).toBe(0);
   });
 
-  test("treats missing initial budget as 0", () => {
-    expect(planRemainingNeed(plan())).toBe(3000);
+  test("treats missing budget as 0", () => {
+    expect(planRemainingNeed(plan())).toBe(0);
+  });
+});
+
+describe("planIsOverbudget", () => {
+  test("is true when paid exceeds budget", () => {
+    expect(planIsOverbudget(plan({ initialBudget: 5000 }))).toBe(true);
+  });
+
+  test("is false when paid is within budget", () => {
+    expect(planIsOverbudget(plan({ initialBudget: 10000 }))).toBe(false);
+  });
+});
+
+describe("planBudgetProgress", () => {
+  test("is paid divided by budget", () => {
+    expect(planBudgetProgress(plan({ initialBudget: 10000 }))).toBeCloseTo(0.68);
+  });
+
+  test("is null when there is no budget", () => {
+    expect(planBudgetProgress(plan())).toBeNull();
+  });
+
+  test("can exceed 1 when overbudget", () => {
+    expect(planBudgetProgress(plan({ initialBudget: 5000 }))).toBeCloseTo(1.36);
   });
 });
 
@@ -94,26 +133,60 @@ describe("planMonthsUntilTarget", () => {
 describe("planMonthlySave", () => {
   const today = new Date(2026, 7, 21); // Aug 21, 2026
 
-  test("divides remaining need by months until target", () => {
-    // unpaid 3000 − budget 0 = 3000; Aug → Nov = 3 months → 1000/mo
-    expect(planMonthlySave(plan({ targetDate: "2026-11-01" }), today)).toBe(1000);
+  test("divides (budget − paid) by months until target", () => {
+    // budget 10000 − paid 6800 = 3200; Aug → Nov = 3 months → ~1066.67/mo
+    expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 10000 }), today)).toBeCloseTo(3200 / 3);
   });
 
-  test("excludes paid items and applies initial budget", () => {
-    // unpaid 3000 − budget 1200 = 1800; 3 months → 600/mo
-    expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 1200 }), today)).toBe(600);
+  test("still saves monthly when all items are paid but budget remains", () => {
+    const p = plan({
+      targetDate: "2026-11-01",
+      initialBudget: 10000,
+      items: [
+        { id: "i1", name: "Venue", estimatedCost: 5000, paid: true, actualCost: 4000 },
+        { id: "i2", name: "Catering", estimatedCost: 3000, paid: true, actualCost: 2000 },
+      ],
+    });
+    // remaining 4000 / 3 months
+    expect(planMonthlySave(p, today)).toBeCloseTo(4000 / 3);
   });
 
-  test("returns 0 when budget covers unpaid", () => {
-    expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 5000 }), today)).toBe(0);
+  test("returns null when overbudget (UI shows Overpaid)", () => {
+    expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 5000 }), today)).toBeNull();
+  });
+
+  test("returns 0 when paid exactly equals budget", () => {
+    const p = plan({
+      targetDate: "2026-11-01",
+      initialBudget: 6800,
+    });
+    expect(planMonthlySave(p, today)).toBe(0);
   });
 
   test("returns null without a target date", () => {
-    expect(planMonthlySave(plan(), today)).toBeNull();
+    expect(planMonthlySave(plan({ initialBudget: 10000 }), today)).toBeNull();
   });
 
   test("returns null when the target month is past", () => {
-    expect(planMonthlySave(plan({ targetDate: "2026-01-01" }), today)).toBeNull();
+    expect(planMonthlySave(plan({ targetDate: "2026-01-01", initialBudget: 10000 }), today)).toBeNull();
+  });
+});
+
+describe("plansTotalMonthlySave", () => {
+  const today = new Date(2026, 7, 21);
+
+  test("sums monthly save across plans and skips overbudget", () => {
+    const a = plan({ id: "a", targetDate: "2026-11-01", initialBudget: 10000 });
+    const b = plan({ id: "b", targetDate: "2026-11-01", initialBudget: 5000 }); // overbudget
+    const c = plan({
+      id: "c",
+      targetDate: "2026-11-01",
+      initialBudget: 9000,
+      items: [{ id: "i1", name: "Trip", estimatedCost: 3000, paid: true, actualCost: 3000 }],
+    });
+
+    // a: 3200/3, b: 0 (overbudget), c: 6000/3 = 2000
+    expect(plansTotalMonthlySave([a, b, c], today)).toBeCloseTo(3200 / 3 + 2000);
   });
 });
 

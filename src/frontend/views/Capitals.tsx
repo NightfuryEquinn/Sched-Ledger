@@ -3,10 +3,14 @@ import { DatePicker } from "@/frontend/components/DateTimePicker";
 import { EmptyState, Icon, SummaryCard } from "@/frontend/components/ui";
 import {
   newCapitalItem,
+  planBudget,
+  planBudgetProgress,
+  planIsOverbudget,
   planMonthlySave,
   planPaidTotal,
   planProgress,
   planTotal,
+  plansTotalMonthlySave,
 } from "@/frontend/lib/capitals";
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
 import { dayLabel, fmtMoney } from "@/frontend/lib/data";
@@ -18,10 +22,10 @@ import { useEffect, useMemo, useState } from "react";
  * Capitals — future financial planner
  * ────────────────────────────────────
  * Standalone checklists for big life expenses (marriage, trips, loans, or
- * fully custom plans). Each plan can carry an initial budget and target date;
- * unpaid items drive a monthly save hint. Line items can optionally be
- * "logged" into the real ledger when actually paid, but plans exist
- * independently of it — pure hypothetical planning is a first-class mode.
+ * fully custom plans). Each plan carries a total budget and optional target
+ * date; monthly save is (budget − paid) ÷ months left. Overbudget plans show
+ * Overpaid. Line items can optionally be "logged" into the real ledger when
+ * paid, but plans exist independently of it.
  */
 
 type CapitalsProps = {
@@ -63,6 +67,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
     () => plans.filter((p) => p.targetDate && planProgress(p) !== 1).length,
     [plans],
   );
+  const totalMonthlySave = useMemo(() => plansTotalMonthlySave(plans), [plans]);
 
   const persistPlan = async (data: Partial<CapitalPlan> & { id?: string }) => {
     setBusy(true);
@@ -274,7 +279,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
               <DatePicker value={targetDate} onChange={setTargetDate} className="wallet-field" />
 
               <label className="fld-label" htmlFor="capital-plan-budget">
-                Initial budget (optional)
+                Total budget (optional)
               </label>
               <input
                 id="capital-plan-budget"
@@ -324,9 +329,10 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
 
   return (
     <div className="view">
-      <div className="summary-grid sg-3" data-tour="tour-capitals-summary">
+      <div className="summary-grid sg-4" data-tour="tour-capitals-summary">
         <SummaryCard label="Total Planned" value={money(totalPlanned)} sub={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`} />
         <SummaryCard label="Total Paid" tone="saved" value={money(totalPaid)} sub={totalPlanned ? `${Math.round((totalPaid / totalPlanned) * 100)}% of planned` : ""} />
+        <SummaryCard label="Monthly Saving" tone="ok" value={money(totalMonthlySave)} sub="across all plans" />
         <SummaryCard label="Upcoming" value={String(upcoming)} sub="plans with a target date" />
       </div>
 
@@ -340,14 +346,15 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
 
       <div className="capital-grid" data-tour="tour-capitals-grid">
         {plans.map((plan) => {
-          const total = planTotal(plan);
+          const budget = planBudget(plan);
           const paid = planPaidTotal(plan);
-          const progress = planProgress(plan);
+          const progress = planBudgetProgress(plan);
+          const overbudget = planIsOverbudget(plan);
           const monthlySave = planMonthlySave(plan);
-          const donutData = total
+          const donutData = budget > 0
             ? [
-                { id: "paid", value: paid, color: "var(--saved)" },
-                { id: "remain", value: Math.max(total - paid, 0), color: "var(--hair)" },
+                { id: "paid", value: Math.min(paid, budget), color: overbudget ? "var(--danger)" : "var(--saved)" },
+                { id: "remain", value: Math.max(budget - paid, 0), color: "var(--hair)" },
               ]
             : [{ id: "empty", value: 1, color: "var(--hair)" }];
 
@@ -377,9 +384,11 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
                   </div>
                 </div>
                 <div className="capital-card-stats">
-                  <div className="capital-total">{money(total)}</div>
+                  <div className="capital-total">{money(budget)}</div>
                   <div className="capital-paid">{money(paid)} paid</div>
-                  {monthlySave !== null ? (
+                  {overbudget ? (
+                    <div className="capital-monthly capital-overpaid">Overpaid</div>
+                  ) : monthlySave !== null ? (
                     <div className="capital-monthly">Save {money(monthlySave)}/mo</div>
                   ) : null}
                 </div>

@@ -89,7 +89,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("overview-donut", "By Category", "Hover slices to see how spending breaks down across categories.", '[data-tour="tour-overview-donut"]', "left"),
     step("overview-recent", "Recent Transaction", "Up to three of your latest transactions. Tap one to edit, or See All for the full list.", '[data-tour="tour-overview-recent"]'),
     step("overview-piggies", "Piggies", "Your top savings categories at a glance — tap See All for the full Piggies view.", '[data-tour="tour-overview-piggies"]'),
-    lastStep("overview-capitals", "Capitals", "Planning something big — a marriage, a trip, a loan? Capitals tracks an initial budget, unpaid items, and a monthly save amount toward your target date.", navTarget("capitals"), "right"),
+    lastStep("overview-capitals", "Capitals", "Planning something big — a marriage, a trip, a loan? Capitals tracks a total budget, paid progress, and a monthly save amount toward your target date.", navTarget("capitals"), "right"),
   ],
   todos: [
     step("todos-nav", "TO-DO List", "Organize tasks into separate lists — groceries, work, travel, and more.", navTarget("todos"), "right"),
@@ -140,10 +140,10 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     lastStep("piggies-grid", "Piggy Cards", "Each card is a savings category — its progress ring, subcategories, and Add / Withdraw actions.", '[data-tour="tour-piggies-grid"]'),
   ],
   capitals: [
-    step("capitals-nav", "Capitals", "Plan for big future expenses — marriage, trips, loans, or anything custom. Set an initial budget and a target date to see how much to save each month.", navTarget("capitals"), "right"),
-    step("capitals-summary", "Totals", "Total planned across every plan, total paid so far, and how many plans have an upcoming target date.", '[data-tour="tour-capitals-summary"]'),
-    step("capitals-toolbar", "New Plan", "Start from a template — marriage, trip, car loan, house loan — or build a fully custom plan. You can set an initial budget and optional target date.", '[data-tour="tour-capitals-toolbar"]', "bottom"),
-    lastStep("capitals-grid", "Plan Cards", "Each card shows progress, line items, a monthly save hint when a target date is set, and Log to record a real payment in the ledger.", '[data-tour="tour-capitals-grid"]'),
+    step("capitals-nav", "Capitals", "Plan for big future expenses — marriage, trips, loans, or anything custom. Set a total budget and a target date to see how much to save each month.", navTarget("capitals"), "right"),
+    step("capitals-summary", "Totals", "Total planned, total paid, monthly saving across every plan, and how many plans have an upcoming target date.", '[data-tour="tour-capitals-summary"]'),
+    step("capitals-toolbar", "New Plan", "Start from a template — marriage, trip, car loan, house loan — or build a fully custom plan. You can set a total budget and optional target date.", '[data-tour="tour-capitals-toolbar"]', "bottom"),
+    lastStep("capitals-grid", "Plan Cards", "Each card shows paid vs budget on the ring, a monthly save hint (or Overpaid), line items, and Log to record a real payment in the ledger.", '[data-tour="tour-capitals-grid"]'),
   ],
   insights: [
     step("insights-nav", "Insights", "Longer-range trends, comparisons, and currency views.", navTarget("insights"), "right"),

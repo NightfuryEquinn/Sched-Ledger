@@ -21,9 +21,34 @@ export function planUnpaidTotal(plan: CapitalPlan): number {
     .reduce((s, i) => s + i.estimatedCost, 0);
 }
 
-/** Unpaid total minus initial budget, floored at zero. */
+/** Plan budget (initialBudget), treating missing as 0. */
+export function planBudget(plan: CapitalPlan): number {
+  return plan.initialBudget ?? 0;
+}
+
+/** True when paid items exceed the plan budget. */
+export function planIsOverbudget(plan: CapitalPlan): boolean {
+  return planPaidTotal(plan) > planBudget(plan);
+}
+
+/**
+ * Remaining budget to save: max(0, budget − paid).
+ * Paid items reduce the budget even when every line item is checked off.
+ */
 export function planRemainingNeed(plan: CapitalPlan): number {
-  return Math.max(0, planUnpaidTotal(plan) - (plan.initialBudget ?? 0));
+  return Math.max(0, planBudget(plan) - planPaidTotal(plan));
+}
+
+/**
+ * Paid ÷ budget for the donut label.
+ * Null when there is no budget yet.
+ */
+export function planBudgetProgress(plan: CapitalPlan): number | null {
+  const budget = planBudget(plan);
+
+  if (budget <= 0) return null;
+
+  return planPaidTotal(plan) / budget;
 }
 
 /** YYYY-MM key for a Date. */
@@ -55,15 +80,26 @@ export function planMonthsUntilTarget(plan: CapitalPlan, today: Date = new Date(
 }
 
 /**
- * Monthly amount still needed: remaining need ÷ months until target.
- * Null when months cannot be computed (no/past target).
+ * Monthly amount still needed: (budget − paid) ÷ months until target.
+ * Null when overbudget, or when months cannot be computed (no/past target).
  */
 export function planMonthlySave(plan: CapitalPlan, today: Date = new Date()): number | null {
+  if (planIsOverbudget(plan)) return null;
+
   const months = planMonthsUntilTarget(plan, today);
 
   if (months === null) return null;
 
   return planRemainingNeed(plan) / months;
+}
+
+/** Sum of monthly save across plans (overbudget plans contribute 0). */
+export function plansTotalMonthlySave(plans: CapitalPlan[], today: Date = new Date()): number {
+  return plans.reduce((sum, p) => {
+    const monthly = planMonthlySave(p, today);
+
+    return sum + (monthly ?? 0);
+  }, 0);
 }
 
 /** Fraction of items marked paid, or null when the plan has no items yet. */
