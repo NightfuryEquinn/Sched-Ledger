@@ -174,7 +174,7 @@ h1, h2, h3 {
   z-index: 10;
   width: 248px;
   height: 100dvh;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg);
   border-right: 1px solid var(--border);
   display: flex;
@@ -187,6 +187,7 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   padding: 6px 4px 22px;
+  flex: none;
 }
 
 .brand--auth {
@@ -231,6 +232,8 @@ h1, h2, h3 {
   flex-direction: column;
   gap: 3px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .nav-item {
