@@ -103,6 +103,11 @@ export function planMonthsUntilTarget(plan: CapitalPlan, today: Date = new Date(
   return Math.max(1, diff);
 }
 
+/** True when the plan has a target date in the current month or later. */
+export function planIsUpcoming(plan: CapitalPlan, today: Date = new Date()): boolean {
+  return planMonthsUntilTarget(plan, today) !== null;
+}
+
 /**
  * Monthly amount still needed: (budget − paid − unspent) ÷ months until target.
  * Null when overbudget, or when months cannot be computed (no/past target).

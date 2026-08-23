@@ -1897,6 +1897,7 @@ h1, h2, h3 {
   box-shadow: var(--shadow);
   flex: 1 1 200px;
   min-width: 0;
+  container-type: inline-size;
 }
 
 .sc-label {
@@ -1910,11 +1911,13 @@ h1, h2, h3 {
 .sc-value {
   font-family: var(--font-num);
   font-weight: 600;
-  font-size: 30px;
+  font-size: clamp(14px, 7.5cqi, 30px);
   letter-spacing: -1px;
   margin-top: 10px;
   font-feature-settings: "tnum";
   line-height: 1.05;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .sc-sub {
@@ -7135,7 +7138,7 @@ h1, h2, h3 {
     flex-basis: 140px;
   }
   .sc-value {
-    font-size: 25px;
+    font-size: clamp(14px, 7.5cqi, 25px);
   }
 
   /* Topbar */
