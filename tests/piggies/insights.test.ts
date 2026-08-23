@@ -144,3 +144,59 @@ describe("computeSavingsInsights pace and projection", () => {
     expect(insights.currentStreak).toBe(0); // July net is negative, breaking the streak from the end
   });
 });
+
+describe("computeSavingsInsights capital allocation", () => {
+  test("capital-assigned deposits are excluded from net flow, rate, and streak", () => {
+    const income = tx("2026-07-01", 5000, "salary", "income");
+    const piggyDeposit = tx("2026-07-01", 200, "sub_rainy_day");
+    const capitalDeposit = {
+      ...tx("2026-07-02", 300, "sub_rainy_day"),
+      capitalPlanId: "plan_wedding",
+    };
+    const txns = [income, piggyDeposit, capitalDeposit];
+    const piggies = buildPiggies(txns, INDEX);
+    const insights = computeSavingsInsights(txns, txns, piggies, INDEX, ANCHOR, 1);
+
+    expect(insights.netFlow).toBe(200);
+    expect(insights.savingsRate).toBe(0.04); // 200 / 5000
+    expect(insights.currentStreak).toBe(1);
+  });
+
+  test("capital-assigned deposits do not inflate monthly pace or recurring pledges", () => {
+    const unassigned = [
+      tx("2026-05-01", 100, "sub_rainy_day"),
+      tx("2026-06-01", 100, "sub_rainy_day"),
+      tx("2026-07-01", 100, "sub_rainy_day"),
+    ];
+    const capitalOnly = [
+      ...unassigned,
+      { ...tx("2026-07-02", 500, "sub_rainy_day"), capitalPlanId: "plan_wedding" },
+    ];
+    const capitalRecurring = [
+      ...unassigned,
+      {
+        ...tx("2026-07-02", 600, "sub_rainy_day"),
+        capitalPlanId: "plan_wedding",
+        recurring: true,
+      },
+    ];
+
+    const piggies = buildPiggies(capitalOnly, INDEX);
+    const insights = computeSavingsInsights(capitalOnly, capitalOnly, piggies, INDEX, ANCHOR, 3);
+    const emergency = insights.perPiggy.find((p) => p.catId === "cat_emergency")!;
+
+    expect(emergency.monthlyPace).toBe(100);
+
+    const recurringInsights = computeSavingsInsights(
+      capitalRecurring,
+      capitalRecurring,
+      piggies,
+      INDEX,
+      ANCHOR,
+      3,
+    );
+    const recurringEmergency = recurringInsights.perPiggy.find((p) => p.catId === "cat_emergency")!;
+
+    expect(recurringEmergency.monthlyPace).toBe(100);
+  });
+});

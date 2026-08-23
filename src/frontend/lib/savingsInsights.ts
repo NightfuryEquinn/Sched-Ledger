@@ -59,7 +59,8 @@ function monthsBetween(fromKey: string, toKey: string): number {
 /**
  * Net monthly deposits (savings − withdrawals) for one category across a
  * window of months, keyed by month. Also used by the Piggies view to draw
- * each card's contribution sparkline.
+ * each card's contribution sparkline. Capital-assigned transactions are
+ * excluded — they count as Capitals Unspent, not Piggies.
  */
 export function monthlyNetForCat(
   txns: Expense[],
@@ -70,6 +71,7 @@ export function monthlyNetForCat(
   const byMonth = new Map(months.map((m) => [m.key, 0]));
 
   for (const e of txns) {
+    if (e.capitalPlanId) continue;
     if (index.subById[e.sub]?.catId !== catId) continue;
     const monthKey = e.date.slice(0, 7);
     if (!byMonth.has(monthKey)) continue;
@@ -92,6 +94,7 @@ function recurringPledgeForCat(txns: Expense[], catId: string, index: CategoryIn
   let total = 0;
 
   for (const e of txns) {
+    if (e.capitalPlanId) continue;
     if (classifyTx(e, index) !== "savings") continue;
     if (!isRecurring(e)) continue;
     if (index.subById[e.sub]?.catId !== catId) continue;
@@ -210,7 +213,9 @@ function buildHeadlines(
  *
  * `savingsTxns` must already be filtered to savings deposits/withdrawals
  * (e.g. `useLedger().savingsTxns`); `allExpenses` is the full transaction set,
- * needed only to size `savingsRate` against income.
+ * needed only to size `savingsRate` against income. Transactions assigned to
+ * a Capitals plan (`capitalPlanId`) are excluded — they show as Unspent on
+ * that plan instead of contributing to Piggies analytics.
  */
 export function computeSavingsInsights(
   savingsTxns: Expense[],
@@ -225,6 +230,7 @@ export function computeSavingsInsights(
 
   const netByMonth = new Map(windowMonths.map((m) => [m.key, 0]));
   for (const e of savingsTxns) {
+    if (e.capitalPlanId) continue;
     const mo = e.date.slice(0, 7);
     if (!windowKeys.has(mo)) continue;
     const cls = classifyTx(e, index);
