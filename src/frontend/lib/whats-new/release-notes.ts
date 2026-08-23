@@ -33,6 +33,34 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "3.3.0",
+    date: "August 2026",
+    lead: "Route savings to a Capital plan as Unspent, pick savings deadlines with the same calendar as Events, and cleaner category rows.",
+    highlights: [
+      {
+        icon: "capital",
+        title: "Unspent on Capitals",
+        body:
+          "When you add a savings deposit, optionally assign it to a Capital plan — it shows as Unspent on that plan's card " +
+          "and reduces the monthly save hint. Leave it on Piggies when no plan is selected.",
+      },
+      {
+        icon: "piggy",
+        title: "Piggies vs Capitals",
+        body:
+          "Unassigned savings still land in Piggies as before. Capital-assigned deposits are excluded from piggy balances " +
+          "so the same money is never counted twice.",
+      },
+      {
+        icon: "sparkle",
+        title: "Savings deadline picker + category layout",
+        body:
+          "Add Savings Category now uses the custom date picker (same as Capitals and Transactions). " +
+          "Category rows in the tree use a flex layout for name, tags, and meta.",
+      },
+    ],
+  },
+  {
     version: "3.2.0",
     date: "August 2026",
     lead: "Unlock with Face ID, and the Notification menu is now Preferences.",

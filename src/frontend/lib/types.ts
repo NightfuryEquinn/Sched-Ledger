@@ -13,6 +13,8 @@ export type Expense = {
   recurring: RecurringInterval | false;
   /** Optional link to a schedule event (plaintext metadata). */
   eventId?: string;
+  /** Optional link to a Capitals plan when savings is assigned (plaintext metadata). */
+  capitalPlanId?: string;
 };
 
 export type FinancialWallet = {

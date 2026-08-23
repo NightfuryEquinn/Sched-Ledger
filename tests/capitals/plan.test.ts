@@ -10,9 +10,43 @@ import {
   planRemainingNeed,
   planTotal,
   planUnpaidTotal,
+  planUnspentTotal,
   plansTotalMonthlySave,
 } from "@/frontend/lib/capitals";
-import type { CapitalPlan } from "@/frontend/lib/types";
+import { buildCategoryIndex } from "@/frontend/lib/categories";
+import type { CapitalPlan, Category, Expense } from "@/frontend/lib/types";
+
+const SAVINGS_CATEGORIES: Category[] = [
+  {
+    id: "cat_emergency",
+    name: "Emergency Fund",
+    color: "#7a6fa5",
+    glyph: "🛟",
+    type: "savings",
+    subs: [{ id: "sub_rainy_day", name: "Rainy Day" }],
+  },
+];
+
+const INDEX = buildCategoryIndex(SAVINGS_CATEGORIES);
+
+function savingsTx(
+  date: string,
+  amount: number,
+  capitalPlanId?: string,
+  kind: "expense" | "income" = "expense",
+): Expense {
+  return {
+    id: `${date}-${amount}-${capitalPlanId ?? "piggy"}`,
+    walletId: "w1",
+    kind,
+    date,
+    sub: "sub_rainy_day",
+    amount,
+    note: "",
+    recurring: false,
+    ...(capitalPlanId ? { capitalPlanId } : {}),
+  };
+}
 
 function plan(overrides: Partial<CapitalPlan> = {}): CapitalPlan {
   return {
@@ -64,6 +98,13 @@ describe("planRemainingNeed", () => {
   test("is budget minus paid", () => {
     // paid 6800, budget 10000 → 3200 left
     expect(planRemainingNeed(plan({ initialBudget: 10000 }))).toBe(3200);
+  });
+
+  test("subtracts unspent savings assigned to the plan", () => {
+    const p = plan({ id: "p1", initialBudget: 10000 });
+    const txns = [savingsTx("2026-06-01", 1000, "p1")];
+
+    expect(planRemainingNeed(p, txns, INDEX)).toBe(2200);
   });
 
   test("still counts remaining budget when every item is paid", () => {
@@ -133,6 +174,13 @@ describe("planMonthsUntilTarget", () => {
 describe("planMonthlySave", () => {
   const today = new Date(2026, 7, 21); // Aug 21, 2026
 
+  test("divides (budget − paid − unspent) by months until target", () => {
+    const p = plan({ id: "p1", targetDate: "2026-11-01", initialBudget: 10000 });
+    const txns = [savingsTx("2026-06-01", 600, "p1")];
+
+    expect(planMonthlySave(p, today, txns, INDEX)).toBeCloseTo((3200 - 600) / 3);
+  });
+
   test("divides (budget − paid) by months until target", () => {
     // budget 10000 − paid 6800 = 3200; Aug → Nov = 3 months → ~1066.67/mo
     expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 10000 }), today)).toBeCloseTo(3200 / 3);
@@ -197,6 +245,43 @@ describe("planProgress", () => {
 
   test("is null for a plan with no items yet", () => {
     expect(planProgress(plan({ items: [] }))).toBeNull();
+  });
+});
+
+describe("planUnspentTotal", () => {
+  test("sums deposits minus withdrawals for matching capitalPlanId", () => {
+    const p = plan({ id: "p1" });
+    const txns = [
+      savingsTx("2026-06-01", 500, "p1"),
+      savingsTx("2026-06-15", 300, "p1"),
+      savingsTx("2026-07-01", 100, "p1", "income"),
+      savingsTx("2026-07-02", 200, "p2"),
+    ];
+
+    expect(planUnspentTotal(p, txns, INDEX)).toBe(700);
+  });
+
+  test("ignores non-savings transactions even with capitalPlanId", () => {
+    const p = plan({ id: "p1" });
+    const txns = [
+      {
+        ...savingsTx("2026-06-01", 500, "p1"),
+        sub: "groceries",
+      },
+    ];
+    const spendingIndex = buildCategoryIndex([
+      {
+        id: "food",
+        name: "Food",
+        color: "#5b7a8a",
+        glyph: "🍽️",
+        type: "expense",
+        subs: [{ id: "groceries", name: "Groceries" }],
+      },
+      ...SAVINGS_CATEGORIES,
+    ]);
+
+    expect(planUnspentTotal(p, txns, spendingIndex)).toBe(0);
   });
 });
 

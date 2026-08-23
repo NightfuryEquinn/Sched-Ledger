@@ -32,6 +32,7 @@ export type ExpenseWire = {
   payload?: string;
   seriesKey?: string;
   eventId?: string;
+  capitalPlanId?: string;
   /** Legacy plaintext fields (pre-E2EE or migration). */
   sub?: string;
   amount?: number;
@@ -58,6 +59,7 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
       date: wire.date,
       recurring: normalizeRecurring(wire.recurring),
       ...(wire.eventId ? { eventId: wire.eventId } : {}),
+      ...(wire.capitalPlanId ? { capitalPlanId: wire.capitalPlanId } : {}),
       ...secrets,
     };
   }
@@ -74,11 +76,12 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
     note: wire.note ?? "",
     recurring: normalizeRecurring(wire.recurring),
     ...(wire.eventId ? { eventId: wire.eventId } : {}),
+    ...(wire.capitalPlanId ? { capitalPlanId: wire.capitalPlanId } : {}),
   };
 }
 
 export async function encodeExpenseCreate(
-  expense: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring" | "eventId">,
+  expense: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring" | "eventId" | "capitalPlanId">,
   key: CryptoKey,
 ) {
   const payload = await encryptJson(key, {
@@ -105,6 +108,7 @@ export async function encodeExpenseCreate(
     payload,
     ...(seriesKey ? { seriesKey } : {}),
     ...(expense.eventId ? { eventId: expense.eventId } : {}),
+    ...(expense.capitalPlanId ? { capitalPlanId: expense.capitalPlanId } : {}),
   };
 }
 
@@ -122,6 +126,7 @@ export async function encodeExpenseUpdate(
   if (expense.kind) patch.kind = expense.kind;
   if (expense.date) patch.date = expense.date;
   if (expense.eventId !== undefined) patch.eventId = expense.eventId || null;
+  if (expense.capitalPlanId !== undefined) patch.capitalPlanId = expense.capitalPlanId || null;
   if (expense.recurring !== undefined) {
     patch.recurring = normalizeRecurring(expense.recurring);
     const recurring = patch.recurring as RecurringField | false;

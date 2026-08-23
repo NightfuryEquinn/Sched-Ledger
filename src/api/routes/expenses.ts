@@ -95,6 +95,7 @@ expensesRoutes.post("/", zValidator("json", createExpenseSchema), async (c) => {
     payload: body.payload,
     seriesKey: body.seriesKey,
     ...(body.eventId ? { eventId: new ObjectId(body.eventId) } : {}),
+    ...(body.capitalPlanId ? { capitalPlanId: new ObjectId(body.capitalPlanId) } : {}),
     createdAt: now,
     updatedAt: now,
   });

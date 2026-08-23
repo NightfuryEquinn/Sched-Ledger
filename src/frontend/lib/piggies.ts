@@ -40,7 +40,9 @@ function progressOf(balance: number, target: number | undefined): number | null 
 /**
  * Build one Piggy per savings category, each broken into its subcategory
  * Piglets. Balances are derived from transaction history: `classifyTx`
- * "savings" rows are deposits, "withdrawal" rows subtract.
+ * "savings" rows are deposits, "withdrawal" rows subtract. Transactions
+ * assigned to a Capitals plan (`capitalPlanId`) are excluded — they show as
+ * Unspent on that plan instead.
  *
  * Walks every savings-typed category via `allCategories` (not
  * `index.savingsCategories`, which drops archived entries) so a retired
@@ -79,6 +81,7 @@ export function buildPiggies(txns: Expense[], index: CategoryIndex, walletId?: s
 
   for (const e of txns) {
     if (walletId && e.walletId !== walletId) continue;
+    if (e.capitalPlanId) continue;
     const cls = classifyTx(e, index);
     if (cls !== "savings" && cls !== "withdrawal") continue;
 

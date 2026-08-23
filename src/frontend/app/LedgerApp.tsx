@@ -523,6 +523,8 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           {view === "capitals" && (
             <Capitals
               capitalPlans={ledger.capitalPlans}
+              savingsTxns={ledger.savingsTxns}
+              categoryIndex={ledger.categoryIndex}
               currency={currency}
               onSavePlan={ledger.saveCapitalPlan}
               onDeletePlan={ledger.deleteCapitalPlan}
@@ -612,6 +614,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           wallets={wallets}
           defaultWalletId={activeWallet.id}
           categoryIndex={ledger.categoryIndex}
+          capitalPlans={ledger.capitalPlans}
           onSave={saveExpense}
           onClose={() => {
             setCapitalLogTarget(null);

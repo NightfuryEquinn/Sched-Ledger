@@ -81,6 +81,7 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "payload", value: "base64 AES-GCM", note: "sub, amount, note" },
       { key: "seriesKey?", value: "sha256 hex", note: "recurring series id" },
       { key: "eventId?", value: "ObjectId", note: "optional link to a schedule event (plaintext)" },
+      { key: "capitalPlanId?", value: "ObjectId", note: "optional link to a Capitals plan when savings is assigned (plaintext)" },
       { key: "skipped?", value: "false", note: "soft-delete for recurring cron" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
@@ -116,7 +117,7 @@ const COLLECTIONS: CollectionDoc[] = [
   },
   {
     name: "capital_plans",
-    purpose: "Future-expense planners (marriage, trips, loans, custom) with total budget and monthly save",
+    purpose: "Future-expense planners (marriage, trips, loans, custom) with total budget, monthly save, and unspent savings assigned via linked transactions",
     encrypted: true,
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
@@ -504,7 +505,8 @@ export function Transparency() {
               <code>notifyDetails</code> — the name, budget hold and comments that the email itself carries. It is
               written only while that event has reminders on and an address set, and deleted the moment either goes
               away; events without reminders keep everything in the payload. Linking a bill payment stores plaintext{" "}
-              <code>eventId</code> / <code>expenseId</code> references only.
+              <code>eventId</code> / <code>expenseId</code> references only; assigning savings to a Capitals plan stores{" "}
+              <code>capitalPlanId</code> on the expense (link id only, not amounts).
             </p>
             <p className="panel-sub" style={{ marginTop: "0.75rem" }}>
               If the same auth key is ever used on-chain, chain analysis can correlate it with this account. Prefer a{" "}

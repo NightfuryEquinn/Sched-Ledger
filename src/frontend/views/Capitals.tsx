@@ -9,11 +9,12 @@ import {
   planMonthlySave,
   planPaidTotal,
   planProgress,
+  planUnspentTotal,
   plansTotalMonthlySave,
 } from "@/frontend/lib/capitals";
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
 import { dayLabel, fmtMoney } from "@/frontend/lib/data";
-import type { CapitalItem, CapitalPlan, CapitalTemplateId } from "@/frontend/lib/types";
+import type { CapitalItem, CapitalPlan, CapitalTemplateId, CategoryIndex, Expense } from "@/frontend/lib/types";
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import { useEffect, useMemo, useState } from "react";
 
@@ -22,13 +23,16 @@ import { useEffect, useMemo, useState } from "react";
  * ────────────────────────────────────
  * Standalone checklists for big life expenses (marriage, trips, loans, or
  * fully custom plans). Each plan carries a total budget and optional target
- * date; monthly save is (budget − paid) ÷ months left. Overbudget plans show
- * Overpaid. Line items can optionally be "logged" into the real ledger when
- * paid, but plans exist independently of it.
+ * date; monthly save is (budget − paid − unspent) ÷ months left. Savings
+ * deposits can optionally be assigned to a plan as Unspent (otherwise Piggies).
+ * Overbudget plans show Overpaid. Line items can optionally be "logged" into
+ * the real ledger when paid.
  */
 
 type CapitalsProps = {
   capitalPlans: CapitalPlan[];
+  savingsTxns: Expense[];
+  categoryIndex: CategoryIndex;
   currency: string;
   onSavePlan: (data: Partial<CapitalPlan> & { id?: string }) => Promise<CapitalPlan>;
   onDeletePlan: (id: string) => Promise<unknown>;
@@ -39,7 +43,15 @@ type EditorMode = { type: "add-plan" } | { type: "edit-plan"; planId: string } |
 
 const ICONS = TODO_ICON_OPTIONS;
 
-export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onLogItem }: CapitalsProps) {
+export function Capitals({
+  capitalPlans,
+  savingsTxns,
+  categoryIndex,
+  currency,
+  onSavePlan,
+  onDeletePlan,
+  onLogItem,
+}: CapitalsProps) {
   const [plans, setPlans] = useState(capitalPlans);
   const [editor, setEditor] = useState<EditorMode>(null);
   const [templateId, setTemplateId] = useState<CapitalTemplateId>("custom");
@@ -66,7 +78,14 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
     () => plans.filter((p) => p.targetDate && planProgress(p) !== 1).length,
     [plans],
   );
-  const totalMonthlySave = useMemo(() => plansTotalMonthlySave(plans), [plans]);
+  const totalMonthlySave = useMemo(
+    () => plansTotalMonthlySave(plans, new Date(), savingsTxns, categoryIndex),
+    [plans, savingsTxns, categoryIndex],
+  );
+  const totalUnspent = useMemo(
+    () => plans.reduce((s, p) => s + planUnspentTotal(p, savingsTxns, categoryIndex), 0),
+    [plans, savingsTxns, categoryIndex],
+  );
 
   const persistPlan = async (data: Partial<CapitalPlan> & { id?: string }) => {
     setBusy(true);
@@ -328,9 +347,10 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
 
   return (
     <div className="view">
-      <div className="summary-grid sg-4" data-tour="tour-capitals-summary">
+      <div className="summary-grid sg-5" data-tour="tour-capitals-summary">
         <SummaryCard label="Total Planned" value={money(totalPlanned)} sub={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`} />
         <SummaryCard label="Total Paid" tone="saved" value={money(totalPaid)} sub={totalPlanned ? `${Math.round((totalPaid / totalPlanned) * 100)}% of planned` : ""} />
+        <SummaryCard label="Total Unspent" tone="ok" value={money(totalUnspent)} sub="assigned from savings" />
         <SummaryCard label="Monthly Saving" tone="ok" value={money(totalMonthlySave)} sub="across all plans" />
         <SummaryCard label="Upcoming" value={String(upcoming)} sub="plans with a target date" />
       </div>
@@ -347,9 +367,10 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
         {plans.map((plan) => {
           const budget = planBudget(plan);
           const paid = planPaidTotal(plan);
+          const unspent = planUnspentTotal(plan, savingsTxns, categoryIndex);
           const progress = planBudgetProgress(plan);
           const overbudget = planIsOverbudget(plan);
-          const monthlySave = planMonthlySave(plan);
+          const monthlySave = planMonthlySave(plan, new Date(), savingsTxns, categoryIndex);
           const donutData = budget > 0
             ? [
                 { id: "paid", value: Math.min(paid, budget), color: overbudget ? "var(--danger)" : "var(--saved)" },
@@ -385,6 +406,7 @@ export function Capitals({ capitalPlans, currency, onSavePlan, onDeletePlan, onL
                 <div className="capital-card-stats">
                   <div className="capital-total">{money(budget)}</div>
                   <div className="capital-paid">{money(paid)} paid</div>
+                  {unspent > 0 ? <div className="capital-unspent">{money(unspent)} unspent</div> : null}
                   {overbudget ? (
                     <div className="capital-monthly capital-overpaid">Overpaid</div>
                   ) : monthlySave !== null ? (

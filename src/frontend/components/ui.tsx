@@ -14,8 +14,9 @@ import {
   weekdayLabel
 } from "@/frontend/lib/data";
 import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
+import { isSavingsCategory } from "@/frontend/lib/categories";
 import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
-import type { FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
+import type { CapitalPlan, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -549,8 +550,11 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
  * caller prefilled in `initial`, and the amount cannot exceed the piggy's
  * balance. Used by the Piggies view's "Withdraw" action so a withdrawal can
  * only ever land back in the envelope it came from.
+ *
+ * On savings deposits (`kind === "expense"` + savings category), an optional
+ * Capital picker assigns the amount to a plan as Unspent; default is Piggies.
  */
-function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onSave, onClose, onDelete, title, lockedSub, maxAmount }) {
+function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, capitalPlans = [], onSave, onClose, onDelete, title, lockedSub, maxAmount }) {
   const editing = !!(initial && initial.id);
   const locked = !!lockedSub;
   const initKind = initial?.kind ?? "expense";
@@ -580,9 +584,12 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
     initRecurring !== false ? initRecurring : "monthly",
   );
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [capitalPlanId, setCapitalPlanId] = useState(initial?.capitalPlanId ?? "");
   const selectedWallet = wallets.find((w) => w.id === walletId) ?? wallets[0];
   const cur = getCurrency(selectedWallet?.currency);
   const visibleCategories = kind === "income" ? incomeCategories : expenseCategories;
+  const showCapitalPicker =
+    !locked && kind === "expense" && isSavingsCategory(catById[catId]) && capitalPlans.length > 0;
   const amtRef = useRef(null);
 
   useEffect(() => { if (amtRef.current) amtRef.current.focus(); }, []);
@@ -593,6 +600,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
 
   const switchKind = (next) => {
     setKind(next);
+    setCapitalPlanId("");
     if (next === "income") {
       const first = incomeCategories[0];
       setCatId(first?.id ?? "income");
@@ -604,12 +612,16 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
     }
   };
 
-  const chooseCat = (id) => { setCatId(id); setSub(firstSub(id)); };
+  const chooseCat = (id) => {
+    setCatId(id);
+    setSub(firstSub(id));
+    if (!isSavingsCategory(catById[id])) setCapitalPlanId("");
+  };
   const overMax = maxAmount != null && amountEvaluated != null && amountEvaluated > maxAmount;
   const valid = amountEvaluated != null && amountEvaluated > 0 && date && !overMax;
   const submit = () => {
     if (!valid || !walletId) return;
-    onSave({
+    const payload = {
       id: initial && initial.id,
       walletId,
       kind,
@@ -619,7 +631,12 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
       note: note.trim() || subById[sub]?.name || "Transaction",
       recurring: recurringOn ? recurringFreq : false,
       ...(initial?.eventId ? { eventId: initial.eventId } : {}),
-    });
+    };
+    if (showCapitalPicker) {
+      if (capitalPlanId) payload.capitalPlanId = capitalPlanId;
+      else if (editing) payload.capitalPlanId = "";
+    }
+    onSave(payload);
   };
 
   /** Start delete — ask for scope when editing a recurring transaction. */
@@ -704,6 +721,32 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, onS
               <div className="sub-row">
                 {catById[catId]?.subs.map((s) => (
                   <button key={s.id} type="button" className={"sub-chip" + (sub === s.id ? " active" : "")} onClick={() => setSub(s.id)}>{s.name}</button>
+                ))}
+              </div>
+              <div className="event-div" />
+            </>
+          ) : null}
+
+          {showCapitalPicker ? (
+            <>
+              <label className="fld-label">Allocate to</label>
+              <div className="sub-row">
+                <button
+                  type="button"
+                  className={"sub-chip" + (!capitalPlanId ? " active" : "")}
+                  onClick={() => setCapitalPlanId("")}
+                >
+                  Piggies
+                </button>
+                {capitalPlans.map((plan: CapitalPlan) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    className={"sub-chip" + (capitalPlanId === plan.id ? " active" : "")}
+                    onClick={() => setCapitalPlanId(plan.id)}
+                  >
+                    {plan.glyph} {plan.name}
+                  </button>
                 ))}
               </div>
               <div className="event-div" />

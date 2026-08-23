@@ -1,6 +1,8 @@
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
-import { slugId } from "@/frontend/lib/categories";
-import type { CapitalItem, CapitalPlan, CapitalTemplateId } from "@/frontend/lib/types";
+import { slugId, type CategoryIndex } from "@/frontend/lib/categories";
+import { roundMoney } from "@/frontend/lib/data";
+import { classifyTx } from "@/frontend/lib/stats";
+import type { CapitalItem, CapitalPlan, CapitalTemplateId, Expense } from "@/frontend/lib/types";
 
 /** Sum of every item's estimated cost. */
 export function planTotal(plan: CapitalPlan): number {
@@ -32,11 +34,33 @@ export function planIsOverbudget(plan: CapitalPlan): boolean {
 }
 
 /**
- * Remaining budget to save: max(0, budget − paid).
- * Paid items reduce the budget even when every line item is checked off.
+ * Net savings assigned to a plan: deposits minus withdrawals with matching capitalPlanId.
  */
-export function planRemainingNeed(plan: CapitalPlan): number {
-  return Math.max(0, planBudget(plan) - planPaidTotal(plan));
+export function planUnspentTotal(plan: CapitalPlan, txns: Expense[], index?: CategoryIndex): number {
+  let total = 0;
+
+  for (const e of txns) {
+    if (e.capitalPlanId !== plan.id) continue;
+    const cls = classifyTx(e, index);
+    if (cls !== "savings" && cls !== "withdrawal") continue;
+    total += cls === "savings" ? e.amount : -e.amount;
+  }
+
+  return roundMoney(total);
+}
+
+/**
+ * Remaining budget to save: max(0, budget − paid − unspent).
+ * Paid items and capital-assigned savings both reduce the monthly save need.
+ */
+export function planRemainingNeed(
+  plan: CapitalPlan,
+  txns: Expense[] = [],
+  index?: CategoryIndex,
+): number {
+  const unspent = txns.length ? planUnspentTotal(plan, txns, index) : 0;
+
+  return Math.max(0, planBudget(plan) - planPaidTotal(plan) - unspent);
 }
 
 /**
@@ -80,23 +104,33 @@ export function planMonthsUntilTarget(plan: CapitalPlan, today: Date = new Date(
 }
 
 /**
- * Monthly amount still needed: (budget − paid) ÷ months until target.
+ * Monthly amount still needed: (budget − paid − unspent) ÷ months until target.
  * Null when overbudget, or when months cannot be computed (no/past target).
  */
-export function planMonthlySave(plan: CapitalPlan, today: Date = new Date()): number | null {
+export function planMonthlySave(
+  plan: CapitalPlan,
+  today: Date = new Date(),
+  txns: Expense[] = [],
+  index?: CategoryIndex,
+): number | null {
   if (planIsOverbudget(plan)) return null;
 
   const months = planMonthsUntilTarget(plan, today);
 
   if (months === null) return null;
 
-  return planRemainingNeed(plan) / months;
+  return planRemainingNeed(plan, txns, index) / months;
 }
 
 /** Sum of monthly save across plans (overbudget plans contribute 0). */
-export function plansTotalMonthlySave(plans: CapitalPlan[], today: Date = new Date()): number {
+export function plansTotalMonthlySave(
+  plans: CapitalPlan[],
+  today: Date = new Date(),
+  txns: Expense[] = [],
+  index?: CategoryIndex,
+): number {
   return plans.reduce((sum, p) => {
-    const monthly = planMonthlySave(p, today);
+    const monthly = planMonthlySave(p, today, txns, index);
 
     return sum + (monthly ?? 0);
   }, 0);

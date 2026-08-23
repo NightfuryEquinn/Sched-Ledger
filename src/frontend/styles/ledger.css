@@ -1868,7 +1868,8 @@ h1, h2, h3 {
 
 .summary-grid.sg-2,
 .summary-grid.sg-3,
-.summary-grid.sg-4 {
+.summary-grid.sg-4,
+.summary-grid.sg-5 {
   display: grid;
 }
 
@@ -1878,6 +1879,10 @@ h1, h2, h3 {
 
 .summary-grid.sg-4 {
   grid-template-columns: repeat(4, 1fr);
+}
+
+.summary-grid.sg-5 {
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .summary-grid.sg-2 {
@@ -3624,24 +3629,20 @@ h1, h2, h3 {
 .cat-block-main {
   flex: 1;
   min-width: 0;
-  display: grid;
-  grid-template-columns: auto auto;
-  grid-template-areas: "name tags" "meta meta";
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   column-gap: 8px;
   row-gap: 2px;
-  justify-content: start;
 }
 
 .cat-block-name {
-  grid-area: name;
   font-weight: 600;
   font-size: 14.5px;
   min-width: 0;
 }
 
 .cat-block-tags {
-  grid-area: tags;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -3649,7 +3650,7 @@ h1, h2, h3 {
 }
 
 .cat-block-meta {
-  grid-area: meta;
+  flex-basis: 100%;
   font-size: 12px;
   color: var(--ink-soft);
 }
@@ -4730,6 +4731,12 @@ h1, h2, h3 {
 .capital-paid {
   font-size: 12px;
   color: var(--ink-faint);
+}
+
+.capital-unspent {
+  font-size: 12px;
+  color: var(--saved);
+  font-family: var(--font-mono);
 }
 
 .capital-monthly {
@@ -6683,6 +6690,9 @@ h1, h2, h3 {
     grid-template-columns: repeat(3, 1fr);
   }
   .summary-grid.sg-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .summary-grid.sg-5 {
     grid-template-columns: repeat(2, 1fr);
   }
 

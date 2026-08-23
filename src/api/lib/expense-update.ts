@@ -29,6 +29,7 @@ export function buildExpenseUpdate(
   /* null means "drop the series membership" and is handled by $unset below. */
   if (body.seriesKey != null) $set.seriesKey = body.seriesKey;
   if (body.eventId) $set.eventId = new ObjectId(body.eventId);
+  if (body.capitalPlanId) $set.capitalPlanId = new ObjectId(body.capitalPlanId);
 
   const $unset: Record<string, ""> = {};
   if (body.payload !== undefined) {
@@ -39,6 +40,7 @@ export function buildExpenseUpdate(
   }
   if (body.seriesKey === null) $unset.seriesKey = "";
   if (body.eventId === null) $unset.eventId = "";
+  if (body.capitalPlanId === null) $unset.capitalPlanId = "";
 
   return Object.keys($unset).length > 0 ? { $set, $unset } : { $set };
 }

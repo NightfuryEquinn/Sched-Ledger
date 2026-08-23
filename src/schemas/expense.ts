@@ -35,6 +35,8 @@ const expenseMetaSchema = z.object({
   seriesKey: seriesKeySchema.optional(),
   /** Optional schedule event this expense was logged from. */
   eventId: objectIdSchema.optional(),
+  /** Optional Capitals plan this savings deposit is assigned to. */
+  capitalPlanId: objectIdSchema.optional(),
 });
 
 export const createExpenseSchema = expenseMetaSchema;
@@ -49,6 +51,7 @@ export const updateExpenseSchema = z
     payload: encryptedPayloadSchema,
     seriesKey: seriesKeySchema.nullable().optional(),
     eventId: objectIdSchema.nullable().optional(),
+    capitalPlanId: objectIdSchema.nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
@@ -64,6 +67,7 @@ const expenseSchema = z.object({
   payload: encryptedPayloadSchema.optional(),
   seriesKey: seriesKeySchema.optional(),
   eventId: objectIdSchema.optional(),
+  capitalPlanId: objectIdSchema.optional(),
   /** Soft-deleted occurrence kept so cron does not rematerialize it. */
   skipped: z.boolean().optional().default(false),
   /** Legacy plaintext fields. */
