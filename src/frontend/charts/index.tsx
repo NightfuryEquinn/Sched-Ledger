@@ -32,6 +32,7 @@ function Donut({ data, size = 220, thickness = 30, onHover, activeId }) {
               style={{ transition: "opacity .2s, stroke-width .2s, r .2s", cursor: "pointer" }}
               onMouseEnter={() => onHover && onHover(s.id)}
               onMouseLeave={() => onHover && onHover(null)}
+              onTouchStart={() => onHover && onHover(s.id)}
             />
           );
         })}

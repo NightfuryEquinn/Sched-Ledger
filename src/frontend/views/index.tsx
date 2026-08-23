@@ -116,6 +116,28 @@ function remainingTodayEvents(events: LedgerEvent[], now: Date, limit = 3) {
     .slice(0, limit);
 }
 
+const MOBILE_MQ = "(max-width: 860px)";
+
+/** Track whether the viewport matches the tablet/mobile breakpoint. */
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(MOBILE_MQ).matches : false,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MQ);
+    /** Sync React state when the media query flips. */
+    const onChange = () => setMobile(mq.matches);
+
+    onChange();
+    mq.addEventListener("change", onChange);
+
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return mobile;
+}
+
 type OverviewProps = {
   expenses: Expense[];
   budgets: Budgets;
@@ -154,6 +176,9 @@ export function Overview({
   );
   const [hoverCat, setHoverCat] = useState(null);
   const [expandedCat, setExpandedCat] = useState<Record<string, boolean>>({});
+  const isMobile = useIsMobile();
+  const donutSize = isMobile ? 168 : 188;
+  const donutThickness = isMobile ? 24 : 26;
   const recentTodos = useMemo(() => oldestTodoLists(todoLists, 3), [todoLists]);
   const todayEvents = useMemo(
     () => remainingTodayEvents(events, loadedAt, 3),
@@ -340,7 +365,7 @@ export function Overview({
           <div className="panel-head"><h2>By Category</h2></div>
           <div className="donut-wrap">
             <div className="donut-stage">
-              <Donut data={donutData} size={188} thickness={26} onHover={setHoverCat} activeId={activeCat} />
+              <Donut data={donutData} size={donutSize} thickness={donutThickness} onHover={setHoverCat} activeId={activeCat} />
               <div className="donut-center">
                 <div className="dc-label">{activeCat ? categoryIndex.catById[activeCat].name : "Total"}</div>
                 <div className="dc-value">{fmtMoney(activeCat ? (st.byCat[activeCat] || 0) : totalAll, { currency })}</div>
@@ -359,7 +384,8 @@ export function Overview({
                   return (
                     <li key={d.id} className={"legend-block" + (activeCat && activeCat !== d.id ? " dim" : "")}>
                       <div className="legend-row"
-                        onMouseEnter={() => setHoverCat(d.id)} onMouseLeave={() => setHoverCat(null)}>
+                        onMouseEnter={() => setHoverCat(d.id)} onMouseLeave={() => setHoverCat(null)}
+                        onTouchStart={() => setHoverCat(d.id)}>
                         <button
                           type="button"
                           className="legend-expand"

@@ -86,7 +86,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("overview-oldest-todo", "Recent To-Do", "Up to three of your oldest to-do lists — tap to open TO-DO List.", '[data-tour="tour-overview-oldest-todo"]'),
     step("overview-today-schedule", "Recent Schedule", "Up to three remaining events for today, based on the current time when Overview loads.", '[data-tour="tour-overview-today-schedule"]'),
     step("overview-trend", "Spending & Earning Trend", "Track cumulative spending and earning against your total budget as the month progresses. Hover any day to see what you spent and earned, broken down by category.", '[data-tour="tour-overview-trend"]', "top"),
-    step("overview-donut", "By Category", "Hover slices to see how spending breaks down across categories.", '[data-tour="tour-overview-donut"]', "left"),
+    step("overview-donut", "By Category", "Tap or hover slices to see how spending breaks down across categories.", '[data-tour="tour-overview-donut"]', "left"),
     step("overview-recent", "Recent Transaction", "Up to three of your latest transactions. Tap one to edit, or See All for the full list.", '[data-tour="tour-overview-recent"]'),
     step("overview-piggies", "Piggies", "Your top savings categories at a glance — tap See All for the full Piggies view.", '[data-tour="tour-overview-piggies"]'),
     lastStep("overview-capitals", "Capitals", "Planning something big — a marriage, a trip, a loan? Capitals tracks a total budget, paid progress, Unspent from assigned savings, and a monthly save amount toward your target date.", navTarget("capitals"), "right"),
