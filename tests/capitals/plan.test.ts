@@ -5,6 +5,7 @@ import {
   planIsOverbudget,
   planMonthlySave,
   planMonthsUntilTarget,
+  planIsUpcoming,
   planPaidTotal,
   planProgress,
   planRemainingNeed,
@@ -168,6 +169,34 @@ describe("planMonthsUntilTarget", () => {
 
   test("counts whole calendar months until a future target", () => {
     expect(planMonthsUntilTarget(plan({ targetDate: "2026-11-01" }), today)).toBe(3);
+  });
+});
+
+describe("planIsUpcoming", () => {
+  const today = new Date(2026, 7, 21); // Aug 21, 2026
+
+  test("is true for a future target date even when all items are paid", () => {
+    const p = plan({
+      targetDate: "2026-11-01",
+      items: [
+        { id: "i1", name: "Venue", estimatedCost: 5000, paid: true, actualCost: 5000 },
+        { id: "i2", name: "Catering", estimatedCost: 3000, paid: true, actualCost: 3000 },
+      ],
+    });
+
+    expect(planIsUpcoming(p, today)).toBe(true);
+  });
+
+  test("is false when there is no target date", () => {
+    expect(planIsUpcoming(plan(), today)).toBe(false);
+  });
+
+  test("is false when the target month is in the past", () => {
+    expect(planIsUpcoming(plan({ targetDate: "2026-06-15" }), today)).toBe(false);
+  });
+
+  test("is true when the target is the current month", () => {
+    expect(planIsUpcoming(plan({ targetDate: "2026-08-31" }), today)).toBe(true);
   });
 });
 

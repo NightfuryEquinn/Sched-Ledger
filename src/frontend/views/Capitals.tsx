@@ -8,7 +8,7 @@ import {
   planIsOverbudget,
   planMonthlySave,
   planPaidTotal,
-  planProgress,
+  planIsUpcoming,
   planUnspentTotal,
   plansTotalMonthlySave,
 } from "@/frontend/lib/capitals";
@@ -75,7 +75,7 @@ export function Capitals({
   const totalPlanned = useMemo(() => plans.reduce((s, p) => s + planBudget(p), 0), [plans]);
   const totalPaid = useMemo(() => plans.reduce((s, p) => s + planPaidTotal(p), 0), [plans]);
   const upcoming = useMemo(
-    () => plans.filter((p) => p.targetDate && planProgress(p) !== 1).length,
+    () => plans.filter((p) => planIsUpcoming(p)).length,
     [plans],
   );
   const totalMonthlySave = useMemo(
@@ -352,7 +352,7 @@ export function Capitals({
         <SummaryCard label="Total Paid" tone="saved" value={money(totalPaid)} sub={totalPlanned ? `${Math.round((totalPaid / totalPlanned) * 100)}% of planned` : ""} />
         <SummaryCard label="Total Unspent" tone="ok" value={money(totalUnspent)} sub="assigned from savings" />
         <SummaryCard label="Monthly Saving" tone="ok" value={money(totalMonthlySave)} sub="across all plans" />
-        <SummaryCard label="Upcoming" value={String(upcoming)} sub="plans with a target date" />
+        <SummaryCard label="Upcoming" value={String(upcoming)} sub="plans with a future target date" />
       </div>
 
       <div className="todo-toolbar" data-tour="tour-capitals-toolbar">
