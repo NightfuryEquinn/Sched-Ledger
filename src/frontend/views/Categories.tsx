@@ -1,4 +1,5 @@
 import { EmptyState, Icon, Segmented, glyphTint } from "@/frontend/components/ui";
+import { DatePicker } from "@/frontend/components/DateTimePicker";
 import {
   nextCategoryColor,
   resolveCategoryType,
@@ -14,7 +15,8 @@ import { useEffect, useState } from "react";
  * ───────────────
  * Category / subcategory taxonomy editor: expandable tree with a
  * single modal editor covering add-category, add-subcategory,
- * edit-category and rename-subcategory modes.
+ * edit-category and rename-subcategory modes. Savings deadlines use the
+ * custom DatePicker (same as Capitals and Transactions).
  */
 
 type CategoriesViewProps = {
@@ -545,13 +547,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                     />
 
                     <label className="fld-label" htmlFor="cat-deadline">Deadline (optional)</label>
-                    <input
-                      id="cat-deadline"
-                      className="text-in wallet-field"
-                      type="date"
-                      value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                    />
+                    <DatePicker value={deadline} onChange={setDeadline} className="wallet-field" />
                   </>
                 ) : null}
 

@@ -29,6 +29,9 @@ export function serializeDoc<T extends { _id: ObjectId }>(
   if ("eventId" in out && out.eventId instanceof ObjectId) {
     out.eventId = toApiId(out.eventId as ObjectId);
   }
+  if ("capitalPlanId" in out && out.capitalPlanId instanceof ObjectId) {
+    out.capitalPlanId = toApiId(out.capitalPlanId as ObjectId);
+  }
   if ("expenseId" in out && out.expenseId instanceof ObjectId) {
     out.expenseId = toApiId(out.expenseId as ObjectId);
   }

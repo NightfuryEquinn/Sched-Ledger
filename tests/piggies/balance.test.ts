@@ -144,4 +144,15 @@ describe("buildPiggies balance", () => {
 
     expect(piggy!.balance).toBe(500);
   });
+
+  test("capital-assigned savings deposits are excluded from piggy balance", () => {
+    const txns = [
+      tx("2026-06-01", 500, "sub_rainy_day"),
+      { ...tx("2026-06-02", 300, "sub_rainy_day"), capitalPlanId: "plan_wedding" },
+    ];
+    const [piggy] = buildPiggies(txns, INDEX).filter((p) => p.catId === "cat_emergency");
+
+    expect(piggy!.balance).toBe(500);
+    expect(piggy!.deposited).toBe(500);
+  });
 });

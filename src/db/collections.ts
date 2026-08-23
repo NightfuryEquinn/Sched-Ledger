@@ -67,11 +67,12 @@ export type CategoryTaxonomyDocument = Omit<CategoryTaxonomy, "createdAt" | "upd
  */
 export type ExpenseDocument = Omit<
   Expense,
-  "createdAt" | "updatedAt" | "walletId" | "eventId" | "recurring" | "skipped"
+  "createdAt" | "updatedAt" | "walletId" | "eventId" | "capitalPlanId" | "recurring" | "skipped"
 > & {
   _id: ObjectId;
   walletId?: ObjectId | string;
   eventId?: ObjectId | string;
+  capitalPlanId?: ObjectId | string;
   recurring: Expense["recurring"] | true;
   skipped?: boolean;
   createdAt: Date;
