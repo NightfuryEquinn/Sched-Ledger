@@ -2751,8 +2751,8 @@ h1, h2, h3 {
 .legend-expand {
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 18px !important;
+  height: 18px !important;
   flex: none;
   color: var(--ink-faint);
 }
