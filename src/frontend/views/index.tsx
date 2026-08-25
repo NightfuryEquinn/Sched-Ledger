@@ -695,24 +695,26 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                     ) : null}
                   </div>
                   {editId === c.id ? (
-                    <div className="be-edit">
+                    <>
                       {draftIsExpression ? (
                         <span className="amount-live-total">= {fmtMoney(draftEvaluated, { currency })}</span>
                       ) : null}
-                      <span className="be-cur">{getCurrency(currency).symbol}</span>
-                      <input
-                        autoFocus
-                        type="text"
-                        inputMode="decimal"
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") commit();
-                          if (e.key === "Escape") setEditId(null);
-                        }}
-                        onBlur={commit}
-                      />
-                    </div>
+                      <div className="be-edit">
+                        <span className="be-cur">{getCurrency(currency).symbol}</span>
+                        <input
+                          autoFocus
+                          type="text"
+                          inputMode="text"
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commit();
+                            if (e.key === "Escape") setEditId(null);
+                          }}
+                          onBlur={commit}
+                        />
+                      </div>
+                    </>
                   ) : (
                     <button className={"be-amt" + (over ? " over" : "")} onClick={() => startEdit(c.id)}>
                       {fmtMoney(spent, { currency })} <span className="br-of">/ {fmtBudgetLimit(budget, { currency })}</span>

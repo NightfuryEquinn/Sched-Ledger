@@ -692,7 +692,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, cap
             <input
               ref={amtRef}
               type="text"
-              inputMode="decimal"
+              inputMode="text"
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}

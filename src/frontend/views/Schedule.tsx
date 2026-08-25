@@ -825,7 +825,7 @@ export function EventModal({
                     <input
                       className="text-in"
                       type="text"
-                      inputMode="decimal"
+                      inputMode="text"
                       placeholder="0"
                       value={holdAmount}
                       onChange={(e) => setHoldAmount(e.target.value)}
