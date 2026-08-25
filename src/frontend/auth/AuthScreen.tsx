@@ -27,7 +27,13 @@ import { shortAddr } from "./lib/format";
 import { identityStorage } from "./lib/identity-storage";
 import { sessionSecrets } from "./lib/session-secrets";
 import { unlockLedgerKey } from "@/frontend/lib/crypto/unlock";
+import {
+  hasSharingChoiceMade,
+  markSharingChoiceMade,
+  setConsent,
+} from "./lib/consent";
 import { walletClient } from "./lib/wallet";
+import { TermsModal } from "./components/LegalModals";
 
 type DraftWallet = {
   address: string;
@@ -35,16 +41,29 @@ type DraftWallet = {
   privateKey: string;
 };
 
+type AuthIdn = IdentityRecord & { mnemonic?: string; privateKey?: string };
+
 type AuthScreenProps = {
   onAuth: (account: Account) => void;
 };
 
-type AuthMode = "welcome" | "create" | "quiz" | "passphrase" | "restore" | "device-unlock" | "biometric-offer";
+type AuthMode =
+  | "welcome"
+  | "create"
+  | "quiz"
+  | "passphrase"
+  | "restore"
+  | "device-unlock"
+  | "biometric-offer"
+  | "consent-choice";
+
+type SharingChoice = "in" | "out";
 
 /** Persist vaulted (or injected) identity, unlock E2EE, and enter the app. */
 async function finishAuth(
-  idn: IdentityRecord & { mnemonic?: string; privateKey?: string },
+  idn: AuthIdn,
   onAuth: (account: Account) => void,
+  sharingOptIn?: boolean,
 ) {
   const { message } = await api.auth.challenge(idn.address);
   let signature = await walletClient.sign(idn, message);
@@ -52,6 +71,12 @@ async function finishAuth(
   await api.auth.verify({ address: idn.address, message, signature });
   const codename = codenameFor(idn.address);
   await api.users.upsert({ address: idn.address, codename, notifyEmail: "" });
+
+  if (sharingOptIn !== undefined) {
+    await api.consent.update(sharingOptIn);
+    setConsent(idn.address, sharingOptIn);
+    markSharingChoiceMade(idn.address);
+  }
 
   const stored: IdentityRecord = {
     address: idn.address,
@@ -96,6 +121,10 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   const [offerBusy, setOfferBusy] = useState(false);
   const [offerError, setOfferError] = useState("");
   const [pendingUnlockSecrets, setPendingUnlockSecrets] = useState<{ mnemonic: string; privateKey: string } | null>(null);
+  const [pendingAuth, setPendingAuth] = useState<AuthIdn | null>(null);
+  const [sharingChoice, setSharingChoice] = useState<SharingChoice | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
   const identities = identityStorage.list();
 
   const words = useMemo(
@@ -121,7 +150,48 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     setOfferBusy(false);
     setOfferError("");
     setPendingUnlockSecrets(null);
+    setPendingAuth(null);
+    setSharingChoice(null);
+    setTermsAccepted(false);
+    setTermsOpen(false);
   };
+
+  /**
+   * Enter the app, prompting for Terms + sharing choice when this browser
+   * has not completed that step for the address yet.
+   */
+  async function enterWithConsentGate(idn: AuthIdn) {
+    if (hasSharingChoiceMade(idn.address)) {
+      setBusy(true);
+      try {
+        await finishAuth(idn, onAuth);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not sign in.");
+        setBusy(false);
+      }
+      return;
+    }
+
+    setPendingAuth(idn);
+    setSharingChoice(null);
+    setTermsAccepted(false);
+    setError("");
+    setMode("consent-choice");
+  }
+
+  /** Persist the signup sharing choice and finish authentication. */
+  async function confirmConsentAndEnter() {
+    if (!pendingAuth || sharingChoice === null || !termsAccepted) return;
+
+    setBusy(true);
+    setError("");
+    try {
+      await finishAuth(pendingAuth, onAuth, sharingChoice === "in");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not sign in.");
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (mode !== "device-unlock" || !pendingIdn) {
@@ -188,15 +258,13 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         mnemonic: draft.mnemonic,
         privateKey: draft.privateKey,
       });
-      await finishAuth(
-        {
-          address: draft.address,
-          mnemonic: draft.mnemonic,
-          privateKey: draft.privateKey,
-          vault,
-        },
-        onAuth,
-      );
+      setBusy(false);
+      await enterWithConsentGate({
+        address: draft.address,
+        mnemonic: draft.mnemonic,
+        privateKey: draft.privateKey,
+        vault,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not sign in.");
       setBusy(false);
@@ -245,28 +313,17 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   async function selectKnown(idn: IdentityRecord) {
     setError("");
     if (idn.injected) {
-      setBusy(true);
-      try {
-        await finishAuth(idn, onAuth);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not sign in.");
-        setBusy(false);
-      }
+      await enterWithConsentGate(idn);
       return;
     }
 
     const session = sessionSecrets.get(idn.address);
     if (session) {
-      setBusy(true);
-      try {
-        await finishAuth(
-          { ...idn, mnemonic: session.mnemonic, privateKey: session.privateKey },
-          onAuth,
-        );
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not sign in.");
-        setBusy(false);
-      }
+      await enterWithConsentGate({
+        ...idn,
+        mnemonic: session.mnemonic,
+        privateKey: session.privateKey,
+      });
       return;
     }
 
@@ -296,21 +353,13 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   /** Finish sign-in with already-unwrapped vault secrets. */
   async function completeUnlock(secrets: { mnemonic: string; privateKey: string }) {
     if (!pendingIdn?.vault) return;
-    setBusy(true);
-    try {
-      await finishAuth(
-        {
-          ...pendingIdn,
-          mnemonic: secrets.mnemonic,
-          privateKey: secrets.privateKey,
-          vault: pendingIdn.vault,
-        },
-        onAuth,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not sign in.");
-      setBusy(false);
-    }
+    setBusy(false);
+    await enterWithConsentGate({
+      ...pendingIdn,
+      mnemonic: secrets.mnemonic,
+      privateKey: secrets.privateKey,
+      vault: pendingIdn.vault,
+    });
   }
 
   /** Unlock an existing vault with the device passphrase (or Face ID). */
@@ -397,8 +446,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     try {
       const accs = await window.ethereum!.request({ method: "eth_requestAccounts" });
       const address = getAddress(accs[0]!);
-      setBusy(true);
-      await finishAuth({ address, injected: true }, onAuth);
+      await enterWithConsentGate({ address, injected: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Wallet connection was cancelled.");
       setBusy(false);
@@ -561,6 +609,81 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
           Not Now
         </button>
       </div></div>
+    );
+  }
+
+  if (mode === "consent-choice" && pendingAuth) {
+    const canContinue = termsAccepted && sharingChoice !== null && !busy;
+
+    return (
+      <>
+        <div className="auth-wrap"><div className="auth-card">
+          <h2 className="auth-h2">Before You Enter</h2>
+          <p className="auth-lead">
+            Sched Ledger is free on the official host with full features. We are a freemium, customer-based app —
+            optional anonymized insights help us keep the lights on. Your encrypted amounts, titles, and notes stay
+            private either way.
+          </p>
+
+          <div className="consent-card auth-share-card">
+            <div className="consent-title">Optional data sharing</div>
+            <p className="consent-desc">
+              Opt in to share de-identified category totals with vetted research and advertising partners — not your
+              name, wallet address, notes, or decrypted ledger amounts. You can change this anytime under Account →
+              Data &amp; privacy.
+            </p>
+            <div className="auth-share-choices" role="radiogroup" aria-label="Data sharing choice">
+              <button
+                type="button"
+                className={`auth-share-choice${sharingChoice === "in" ? " is-selected" : ""}`}
+                aria-pressed={sharingChoice === "in"}
+                disabled={busy}
+                onClick={() => setSharingChoice("in")}
+              >
+                <span className="auth-share-choice-label">Opt in</span>
+                <span className="auth-share-choice-hint">Share anonymized category totals</span>
+              </button>
+              <button
+                type="button"
+                className={`auth-share-choice${sharingChoice === "out" ? " is-selected" : ""}`}
+                aria-pressed={sharingChoice === "out"}
+                disabled={busy}
+                onClick={() => setSharingChoice("out")}
+              >
+                <span className="auth-share-choice-label">Opt out</span>
+                <span className="auth-share-choice-hint">Do not share — free features unchanged</span>
+              </button>
+            </div>
+          </div>
+
+          <label className="toggle-line auth-terms-line">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              disabled={busy}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+            />
+            <span className="toggle-ui" />
+            <span>
+              I agree to the{" "}
+              <button type="button" className="link-btn auth-terms-link" onClick={() => setTermsOpen(true)}>
+                Terms &amp; Conditions
+              </button>
+            </span>
+          </label>
+
+          {error ? <div className="auth-error">{error}</div> : null}
+          <button
+            className="primary-btn lg full"
+            type="button"
+            disabled={!canContinue}
+            onClick={() => void confirmConsentAndEnter()}
+          >
+            {busy ? "Signing…" : "Continue to Ledger"}
+          </button>
+        </div></div>
+        {termsOpen ? <TermsModal onClose={() => setTermsOpen(false)} /> : null}
+      </>
     );
   }
 

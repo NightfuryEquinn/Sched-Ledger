@@ -3,7 +3,7 @@ import { api, type ApiSession } from "@/frontend/lib/api";
 import type { Account } from "@/frontend/lib/types";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getConsent, setConsent } from "../lib/consent";
+import { getConsent, markSharingChoiceMade, setConsent } from "../lib/consent";
 import { clearAllLocalData } from "../lib/identity-storage";
 
 /*
@@ -78,6 +78,7 @@ export function DataPrivacyModal({
       const { consent: record } = await api.consent.update(next);
       setConsentState(record.optedIn);
       setConsent(account.address, record.optedIn);
+      markSharingChoiceMade(account.address);
     } catch {
       setConsentState(!next); // revert on failure
     } finally {
@@ -281,8 +282,13 @@ export function DataPrivacyModal({
             <div className="consent-card">
               <div className="consent-top">
                 <div>
-                  <div className="consent-title">Sell Anonymized Spending Data to Partners</div>
-                  <p className="consent-desc">When on, we share a de-identified copy of your category totals with vetted research &amp; advertising partners, who pay for the insight. Your name, address and notes are never included. Off by default — opt in or out anytime.</p>
+                  <div className="consent-title">Share Anonymized Category Totals</div>
+                  <p className="consent-desc">
+                    Sched Ledger is free on the official host with full features. We are a freemium, customer-based app and
+                    may fund the service with optional insights. When on, we share de-identified category totals with vetted
+                    research &amp; advertising partners — not your name, wallet address, notes, or decrypted amounts (those
+                    stay end-to-end encrypted). Opt in or out anytime; free features stay the same either way.
+                  </p>
                 </div>
                 <label className="switch">
                   <input type="checkbox" checked={consent} disabled={consentBusy} onChange={toggleConsent} />
@@ -294,7 +300,7 @@ export function DataPrivacyModal({
                 {consent ? "Opted in — sharing is active" : "Opted out — nothing is shared"}
               </div>
             </div>
-            <p className="dm-note">Your choice is saved to your account and applies on every device. Withdrawing consent stops sharing immediately for future periods.</p>
+            <p className="dm-note">Your choice is saved to your account and applies on every device. Turning this off stops sharing for future periods.</p>
           </div>
 
           <div className="dm-div" />

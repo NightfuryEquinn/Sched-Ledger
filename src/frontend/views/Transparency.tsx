@@ -310,12 +310,14 @@ const E2EE_CHART_MOBILE = `flowchart TB
 /** Hosting and scheduler roles — free-tier stack. */
 const SYSTEM_CHART = `flowchart LR
   Browser["Browser<br/>unlock · encrypt · PWA cache"]
+  Fonts["Google Fonts<br/>Young Serif · Schibsted Grotesk · Azeret Mono"]
   Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
   Cron["cron-job.org<br/>HTTP poll every ~15 min"]
   Resend["Resend<br/>reminder / alert email"]
 
   Browser -->|"HTTPS session"| Vercel
+  Browser -.->|"typefaces only"| Fonts
   Vercel -->|"read/write docs"| Atlas
   Cron -->|"GET /api/cron/reminders"| Vercel
   Vercel -->|"send email"| Resend
@@ -323,12 +325,14 @@ const SYSTEM_CHART = `flowchart LR
 
 const SYSTEM_CHART_MOBILE = `flowchart TB
   Browser["Browser<br/>unlock · encrypt · PWA cache"]
+  Fonts["Google Fonts<br/>Young Serif · Schibsted Grotesk · Azeret Mono"]
   Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
   Cron["cron-job.org<br/>HTTP poll every ~15 min"]
   Resend["Resend<br/>reminder / alert email"]
 
   Browser --> Vercel --> Atlas
+  Browser -.-> Fonts
   Cron --> Vercel
   Vercel --> Resend
 `;
@@ -468,8 +472,10 @@ export function Transparency() {
               (plus Analytics / Speed Insights) but does not run cron. cron-job.org is the only scheduler — it polls
               <code> GET /api/cron/reminders </code>
               about every five minutes for email reminders and recurring expense rows. Optional email uses Resend.
-              A device passphrase wraps your in-app recovery key on this browser; encrypted backups download to your
-              machine only. The installable PWA may cache ciphertext locally for offline reads — saves still need the network.
+              UI typefaces (Young Serif, Schibsted Grotesk, Azeret Mono) load from Google Fonts — font files only, no
+              ledger data. A device passphrase wraps your in-app recovery key on this browser; encrypted backups
+              download to your machine only. The installable PWA may cache ciphertext locally for offline reads —
+              saves still need the network.
             </p>
           </div>
         </div>
@@ -479,7 +485,7 @@ export function Transparency() {
         <div className="panel-head panel-head--stack">
           <div>
             <h2>Hosting &amp; Jobs</h2>
-            <p className="panel-sub">Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules</p>
+            <p className="panel-sub">Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules; Google Fonts serves typefaces only</p>
           </div>
         </div>
         <MermaidDiagram

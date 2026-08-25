@@ -16,7 +16,7 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
         <div className="modal-body modal-scroll">
-          <p className="dm-lead">Last updated August 15, 2026. By using Sched Ledger you agree to these terms.</p>
+          <p className="dm-lead">Last updated August 25, 2026. By using Sched Ledger you agree to these terms.</p>
 
           <div className="dm-sec">
             <span className="fld-label">Service</span>
@@ -25,6 +25,19 @@ export function TermsModal({ onClose }: LegalModalProps) {
               We do not require an email or password. You are responsible for safeguarding your wallet keys and recovery phrase.
               Prefer creating a ledger-only identity in the app rather than reconnecting a funded exchange or hot wallet, so the
               login address is less likely to be correlated with on-chain activity.
+            </p>
+          </div>
+
+          <div className="dm-div" />
+
+          <div className="dm-sec">
+            <span className="fld-label">Hosted service</span>
+            <p className="legal-p">
+              The public may use the Licensor&apos;s official hosted app free of charge with full features.
+              That free path applies only to the official host. Self-hosting, rebranding, claiming Sched Ledger as your
+              product, or offering a competing product or hosted service requires a written commercial agreement with the
+              Licensor (monthly fee, collaboration, or copyright buyout). Contact{" "}
+              <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.
             </p>
           </div>
 
@@ -43,6 +56,19 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <div className="dm-div" />
 
           <div className="dm-sec">
+            <span className="fld-label">Freemium &amp; optional data sharing</span>
+            <p className="legal-p">
+              Sched Ledger is free on the official host. We are a freemium, customer-based product and may fund the service
+              through optional insights. With your consent, we may share de-identified category totals with vetted research
+              and advertising partners — not your name, wallet address, notes, or decrypted ledger amounts. Transaction
+              amounts, titles, and notes remain end-to-end encrypted. You choose opt-in or opt-out at signup and may change
+              that choice anytime under Account → Data &amp; privacy. Opting out does not reduce free hosted features.
+            </p>
+          </div>
+
+          <div className="dm-div" />
+
+          <div className="dm-sec">
             <span className="fld-label">Acceptable use</span>
             <p className="legal-p">
               Use the service only for lawful expense tracking and scheduling.
@@ -55,12 +81,10 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <div className="dm-sec">
             <span className="fld-label">Software license</span>
             <p className="legal-p">
-              The Sched Ledger source code is licensed under the Business Source License 1.1 (BSL 1.1).
-              Using this hosted service does not grant you rights to copy, modify, redistribute, self-host,
-              or offer Sched Ledger as a competing commercial product or hosted service except as allowed by
-              that license or a separate commercial agreement with the Licensor.
-              See the project LICENSE file and Copyright notice for full terms, including the Change Date
-              when the work becomes available under the Apache License, Version 2.0.
+              The Sched Ledger source code is proprietary (Sched Ledger Proprietary License). The repository is public for
+              transparency and evaluation. Using this hosted service does not grant you rights to copy, modify, redistribute,
+              self-host, rebrand, or offer Sched Ledger as a competing commercial product or hosted service except under a
+              separate written commercial agreement with the Licensor. See the project LICENSE file and Copyright notice.
             </p>
           </div>
 
@@ -80,7 +104,8 @@ export function TermsModal({ onClose }: LegalModalProps) {
             <span className="fld-label">Changes</span>
             <p className="legal-p">
               We may update these terms from time to time. Continued use after an update means you accept the revised terms.
-              Questions about these terms can be raised via the project repository.
+              Questions about these terms:{" "}
+              <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a> or the project repository.
             </p>
           </div>
         </div>
@@ -102,17 +127,20 @@ export function CopyrightModal({ onClose }: LegalModalProps) {
         <div className="modal-body modal-scroll">
           <div className="dm-sec">
             <p className="legal-p legal-p--lead">
-              © 2026 Sched Ledger. All rights reserved except where the project license grants otherwise.
+              © 2026 Yip Zi Xian / Sched Ledger. All rights reserved except where a written agreement grants otherwise.
             </p>
             <p className="legal-p">
-              Sched Ledger and its accompanying materials are licensed under the
-              Business Source License 1.1 (BSL 1.1). Source is available for use under
-              the terms of that license; production use is allowed except when offering
-              a competing commercial product or hosted service.
+              Sched Ledger and its accompanying materials are licensed under the Sched Ledger Proprietary License.
+              The source repository is public for transparency and private evaluation. You may use the Licensor&apos;s
+              official hosted app free of charge with full features under the Terms &amp; Conditions.
             </p>
             <p className="legal-p">
-              On the Change Date stated in the LICENSE file (or sooner as required by BSL),
-              the Licensed Work will become available under the Apache License, Version 2.0.
+              You may not claim Sched Ledger as your product, self-host it, redistribute it for others to use, or offer it
+              as a competing product or hosted service without a written commercial agreement (monthly fee, collaboration,
+              or copyright buyout). Contact{" "}
+              <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.
+            </p>
+            <p className="legal-p">
               The software is provided as-is, without warranty of any kind.
             </p>
             <p className="dm-note">The full license text is available in the project <span className="num">LICENSE</span> file.</p>

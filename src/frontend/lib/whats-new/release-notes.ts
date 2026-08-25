@@ -33,6 +33,27 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "3.3.1",
+    date: "August 2026",
+    lead: "A quieter type system shared by the app and marketing site, plus summary cards that keep large amounts readable on phones.",
+    highlights: [
+      {
+        icon: "sparkle",
+        title: "Type refresh",
+        body:
+          "Headlines use Young Serif, UI copy uses Schibsted Grotesk, and amounts use Azeret Mono — " +
+          "the same stack on the marketing site. Tracking is opened slightly for easier reading.",
+      },
+      {
+        icon: "budget",
+        title: "Summary cards that fit",
+        body:
+          "Summary amounts stay between 20px and 24px. On tablet and phone the grid reflows " +
+          "(including five-card Budgets and Capitals rows) so 8–9 digit figures do not overflow.",
+      },
+    ],
+  },
+  {
     version: "3.3.0",
     date: "August 2026",
     lead: "Route savings to a Capital plan as Unspent, pick savings deadlines with the same calendar as Events, and cleaner category rows.",
