@@ -6943,12 +6943,23 @@ h1, h2, h3 {
   .agenda-head-main .panel-sub {
     font-size: 12px;
   }
-  .agenda-date {
-    display: none;
-  }
   .agenda-group {
-    gap: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     padding: 12px 0;
+  }
+  .agenda-date {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    width: auto;
+    flex: none;
+    text-align: left;
+    padding-top: 0;
+  }
+  .agenda-dnum {
+    display: inline;
   }
   .agenda-items {
     width: 100%;
