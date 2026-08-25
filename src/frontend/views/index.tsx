@@ -703,7 +703,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                       <input
                         autoFocus
                         type="text"
-                        inputMode="decimal"
+                        inputMode="text"
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
                         onKeyDown={(e) => {

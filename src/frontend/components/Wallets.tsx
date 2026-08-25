@@ -221,7 +221,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
                     <input
                       type="text"
-                      inputMode="decimal"
+                      inputMode="text"
                       placeholder="0"
                       value={income}
                       onChange={(e) => setIncome(e.target.value)}
@@ -239,7 +239,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
                     <input
                       type="text"
-                      inputMode="decimal"
+                      inputMode="text"
                       placeholder="0"
                       value={startingBalance}
                       onChange={(e) => setStartingBalance(e.target.value)}
