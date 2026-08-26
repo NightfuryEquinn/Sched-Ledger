@@ -19,7 +19,8 @@ import { releaseHoldForOccurrence, restoreHoldForOccurrence } from "@/frontend/l
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour } from "@/frontend/lib/tour";
 import { useWhatsNew } from "@/frontend/lib/whats-new";
-import type { Account, CapitalItem, CapitalPlan, Category, Expense, LedgerEvent, ViewId } from "@/frontend/lib/types";
+import type { Account, CapitalItem, CapitalPlan, Category, Expense, FuelFill, LedgerEvent, Vehicle, ViewId } from "@/frontend/lib/types";
+import { VEHICLE_TYPES } from "@/frontend/lib/fuelInsights";
 import {
   Budgets as BudgetsView,
   Insights,
@@ -46,6 +47,9 @@ const Piggies = lazy(() =>
 );
 const Capitals = lazy(() =>
   import("@/frontend/views/Capitals").then((m) => ({ default: m.Capitals })),
+);
+const Vehicles = lazy(() =>
+  import("@/frontend/views/Vehicles").then((m) => ({ default: m.Vehicles })),
 );
 const Transparency = lazy(() =>
   import("@/frontend/views/Transparency").then((m) => ({ default: m.Transparency })),
@@ -75,6 +79,7 @@ const VIEW_TITLES: Record<ViewId, string> = {
   recurring: "Recurring",
   piggies: "Piggies",
   capitals: "Capitals",
+  vehicles: "Vehicles",
   insights: "Insights",
   transparency: "Transparency",
 };
@@ -102,6 +107,10 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
   /** Set while the AddExpenseModal is open to log a capital plan item's payment. */
   const [capitalLogTarget, setCapitalLogTarget] = useState<
     { plan: CapitalPlan; item: CapitalItem } | null
+  >(null);
+  /** Set while the AddExpenseModal is open to log a fuel fill's payment. */
+  const [fillLogTarget, setFillLogTarget] = useState<
+    { vehicle: Vehicle; fill: FuelFill } | null
   >(null);
   const [evModal, setEvModal] = useState<LedgerEvent | { add: true; date: string } | null>(null);
   const [evOccurrenceIso, setEvOccurrenceIso] = useState<string | undefined>(undefined);
@@ -203,6 +212,15 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
         /* Expense already saved; the plan can be marked paid manually if this fails. */
       }
     }
+    if (fillLogTarget && saved?.expense) {
+      const { fill } = fillLogTarget;
+      setFillLogTarget(null);
+      try {
+        await ledger.saveVehicleFill({ ...fill, expenseId: saved.expense.id });
+      } catch {
+        /* Expense already saved; the fill stays unlinked if this fails. */
+      }
+    }
     setModal(null);
   };
 
@@ -215,6 +233,20 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
       note: item.name,
       amount: item.estimatedCost || undefined,
       title: `Log payment: ${item.name}`,
+    });
+  };
+
+  /** Open the transaction modal prefilled to log a fuel fill's payment. */
+  const logFuelFill = (vehicle: Vehicle, fill: FuelFill) => {
+    const meta = VEHICLE_TYPES[vehicle.type];
+    setFillLogTarget({ vehicle, fill });
+    setModal({
+      add: true,
+      kind: "expense",
+      date: fill.date,
+      note: `${meta.fillVerb} · ${vehicle.name}`,
+      amount: fill.price,
+      title: `Log ${meta.fillNoun}: ${vehicle.name}`,
     });
   };
 
@@ -531,6 +563,19 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
               onLogItem={logCapitalItem}
             />
           )}
+          {view === "vehicles" && (
+            <Vehicles
+              vehicles={ledger.vehicles}
+              fills={ledger.vehicleFills}
+              fillsLoading={ledger.vehicleFillsLoading}
+              currency={currency}
+              onSaveVehicle={ledger.saveVehicle}
+              onDeleteVehicle={ledger.deleteVehicle}
+              onSaveFill={ledger.saveVehicleFill}
+              onDeleteFill={ledger.deleteVehicleFill}
+              onLogFill={logFuelFill}
+            />
+          )}
           {view === "insights" && <Insights {...viewProps} setMonth={setMonth} />}
           {view === "transparency" && <Transparency />}
           <div className="scroll-pad" />
@@ -618,6 +663,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
           onSave={saveExpense}
           onClose={() => {
             setCapitalLogTarget(null);
+            setFillLogTarget(null);
             setModal(null);
           }}
           onDelete={deleteExpense}

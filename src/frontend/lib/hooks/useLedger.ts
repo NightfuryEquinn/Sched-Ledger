@@ -7,6 +7,8 @@ import {
   decodeEvent,
   decodeExpense,
   decodeTodoList,
+  decodeVehicle,
+  decodeVehicleFill,
   decodeWallet,
   encodeCapitalPlanCreate,
   encodeCapitalPlanUpdate,
@@ -17,6 +19,10 @@ import {
   encodeExpenseUpdate,
   encodeTodoListCreate,
   encodeTodoListUpdate,
+  encodeVehicleCreate,
+  encodeVehicleFillCreate,
+  encodeVehicleFillUpdate,
+  encodeVehicleUpdate,
   encodeWalletFinancials,
   type EventWire,
   type ReminderContext,
@@ -25,7 +31,7 @@ import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
 import { classifyTx, normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
-import type { Budgets, CapitalPlan, Category, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
+import type { Budgets, CapitalPlan, Category, Expense, FinancialWallet, FuelFill, LedgerEvent, TodoList, Vehicle } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -138,6 +144,8 @@ const keys = {
   events: (wallet: string, month: string) => ["events", wallet, month] as const,
   todoLists: (wallet: string) => ["todoLists", wallet] as const,
   capitalPlans: (wallet: string) => ["capitalPlans", wallet] as const,
+  vehicles: (wallet: string) => ["vehicles", wallet] as const,
+  vehicleFills: (wallet: string) => ["vehicleFills", wallet] as const,
 };
 
 export function useLedger(walletAddress: string) {
@@ -432,6 +440,42 @@ export function useLedger(walletAddress: string) {
       const { capitalPlans } = await api.capitalPlans.list();
       const cryptoKey = requireKey(wallet);
       return Promise.all(capitalPlans.map((wire) => decodeCapitalPlan(wire, cryptoKey)));
+    },
+    enabled: cryptoReady && !!profileQuery.data,
+  });
+
+  const vehiclesQuery = useQuery({
+    queryKey: keys.vehicles(wallet),
+    queryFn: async () => {
+      const { vehicles } = await api.vehicles.list();
+      const cryptoKey = requireKey(wallet);
+      return Promise.all(vehicles.map((wire) => decodeVehicle(wire, cryptoKey)));
+    },
+    enabled: cryptoReady && !!profileQuery.data,
+  });
+
+  /*
+   * Vehicles are account-scoped, not wallet-scoped, and fuel history is small
+   * relative to transaction volume — an unbounded fetch stays cheap in practice,
+   * same reasoning as the savingsAllQuery above.
+   */
+  const vehicleFillsQuery = useQuery({
+    queryKey: keys.vehicleFills(wallet),
+    queryFn: async () => {
+      const cryptoKey = requireKey(wallet);
+      const collected: Awaited<ReturnType<typeof decodeVehicleFill>>[] = [];
+      let before: string | undefined;
+
+      for (;;) {
+        const page = await api.vehicles.fills.list({ limit: LIST_PAGE_LIMIT, before });
+        const decoded = await Promise.all(page.fills.map((f) => decodeVehicleFill(f, cryptoKey)));
+        collected.push(...decoded);
+        if (!page.hasMore || !page.nextBefore) break;
+        before = page.nextBefore;
+        if (collected.length >= LIST_PAGE_LIMIT * 5) break;
+      }
+
+      return collected;
     },
     enabled: cryptoReady && !!profileQuery.data,
   });
@@ -859,6 +903,69 @@ export function useLedger(walletAddress: string) {
     },
   });
 
+  const saveVehicleMutation = useMutation({
+    mutationFn: async (data: Omit<Vehicle, "id" | "createdAt"> & { id?: string }) => {
+      const cryptoKey = requireKey(wallet);
+      const { id, ...rest } = data;
+      if (id) {
+        const body = await encodeVehicleUpdate(rest, cryptoKey);
+        const { vehicle } = await api.vehicles.update(id, body);
+        return decodeVehicle(vehicle, cryptoKey);
+      }
+      const body = await encodeVehicleCreate(rest, cryptoKey);
+      const { vehicle } = await api.vehicles.create(body);
+      return decodeVehicle(vehicle, cryptoKey);
+    },
+    onSuccess: (saved, variables) => {
+      queryClient.setQueryData<Vehicle[]>(keys.vehicles(wallet), (prev = []) => {
+        if (variables.id) return prev.map((v) => (v.id === saved.id ? saved : v));
+        return [...prev, saved];
+      });
+    },
+  });
+
+  const deleteVehicleMutation = useMutation({
+    mutationFn: (id: string) => api.vehicles.remove(id),
+    onSuccess: (_res, id) => {
+      queryClient.setQueryData<Vehicle[]>(keys.vehicles(wallet), (prev = []) =>
+        prev.filter((v) => v.id !== id),
+      );
+      queryClient.setQueryData<FuelFill[]>(keys.vehicleFills(wallet), (prev = []) =>
+        prev.filter((f) => f.vehicleId !== id),
+      );
+    },
+  });
+
+  const saveVehicleFillMutation = useMutation({
+    mutationFn: async (data: Omit<FuelFill, "id"> & { id?: string }) => {
+      const cryptoKey = requireKey(wallet);
+      const { id, ...rest } = data;
+      if (id) {
+        const body = await encodeVehicleFillUpdate(rest, cryptoKey);
+        const { fill } = await api.vehicles.fills.update(id, body);
+        return decodeVehicleFill(fill, cryptoKey);
+      }
+      const body = await encodeVehicleFillCreate(rest, cryptoKey);
+      const { fill } = await api.vehicles.fills.create(body);
+      return decodeVehicleFill(fill, cryptoKey);
+    },
+    onSuccess: (saved, variables) => {
+      queryClient.setQueryData<FuelFill[]>(keys.vehicleFills(wallet), (prev = []) => {
+        if (variables.id) return prev.map((f) => (f.id === saved.id ? saved : f));
+        return [...prev, saved];
+      });
+    },
+  });
+
+  const deleteVehicleFillMutation = useMutation({
+    mutationFn: (id: string) => api.vehicles.fills.remove(id),
+    onSuccess: (_res, id) => {
+      queryClient.setQueryData<FuelFill[]>(keys.vehicleFills(wallet), (prev = []) =>
+        prev.filter((f) => f.id !== id),
+      );
+    },
+  });
+
   const isLoading =
     !cryptoReady ||
     profileQuery.isLoading ||
@@ -867,7 +974,8 @@ export function useLedger(walletAddress: string) {
     expensesQuery.isLoading ||
     eventsQuery.isLoading ||
     todoListsQuery.isLoading ||
-    capitalPlansQuery.isLoading;
+    capitalPlansQuery.isLoading ||
+    vehiclesQuery.isLoading;
   const error =
     profileQuery.error ??
     walletsQuery.error ??
@@ -875,7 +983,8 @@ export function useLedger(walletAddress: string) {
     expensesQuery.error ??
     eventsQuery.error ??
     todoListsQuery.error ??
-    capitalPlansQuery.error;
+    capitalPlansQuery.error ??
+    vehiclesQuery.error;
 
   return {
     profile: profileQuery.data,
@@ -888,6 +997,9 @@ export function useLedger(walletAddress: string) {
     events: eventsQuery.data ?? [],
     todoLists: todoListsQuery.data ?? [],
     capitalPlans: capitalPlansQuery.data ?? [],
+    vehicles: vehiclesQuery.data ?? [],
+    vehicleFills: vehicleFillsQuery.data ?? [],
+    vehicleFillsLoading: vehicleFillsQuery.isLoading,
     budgets: activeWallet?.budgets ?? {},
     wallet: activeWallet,
     currency: activeWallet?.currency ?? "MYR",
@@ -912,6 +1024,10 @@ export function useLedger(walletAddress: string) {
     deleteTodoList: deleteTodoListMutation.mutateAsync,
     saveCapitalPlan: saveCapitalPlanMutation.mutateAsync,
     deleteCapitalPlan: deleteCapitalPlanMutation.mutateAsync,
+    saveVehicle: saveVehicleMutation.mutateAsync,
+    deleteVehicle: deleteVehicleMutation.mutateAsync,
+    saveVehicleFill: saveVehicleFillMutation.mutateAsync,
+    deleteVehicleFill: deleteVehicleFillMutation.mutateAsync,
     isSaving:
       saveExpenseMutation.isPending ||
       deleteExpenseMutation.isPending ||
@@ -923,6 +1039,10 @@ export function useLedger(walletAddress: string) {
       saveTodoListMutation.isPending ||
       deleteTodoListMutation.isPending ||
       saveCapitalPlanMutation.isPending ||
-      deleteCapitalPlanMutation.isPending,
+      deleteCapitalPlanMutation.isPending ||
+      saveVehicleMutation.isPending ||
+      deleteVehicleMutation.isPending ||
+      saveVehicleFillMutation.isPending ||
+      deleteVehicleFillMutation.isPending,
   };
 }

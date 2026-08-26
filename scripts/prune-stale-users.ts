@@ -24,8 +24,12 @@ const OWNED_BY_ACCOUNT_ID = [
   COLLECTIONS.expenses,
   COLLECTIONS.events,
   COLLECTIONS.todoLists,
+  COLLECTIONS.capitalPlans,
+  COLLECTIONS.vehicles,
+  COLLECTIONS.vehicleFills,
   COLLECTIONS.consent,
   COLLECTIONS.budgetAlertLogs,
+  COLLECTIONS.pushSubscriptions,
   COLLECTIONS.sessions,
 ] as const;
 

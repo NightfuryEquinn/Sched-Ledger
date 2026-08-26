@@ -2117,6 +2117,91 @@ h1, h2, h3 {
   color: var(--ink-faint);
 }
 
+/* ── InsightFeed: ranked findings, shared by Transaction and Fuel Insights ── */
+
+.insight-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.insight-feed-empty {
+  margin: 0;
+}
+
+.insight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border-left: 3px solid var(--insight-tone, var(--ink-faint));
+}
+
+.insight-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px var(--sp-3);
+}
+
+.insight-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.insight-card-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-num);
+}
+
+.insight-card-metric-label {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-faint);
+}
+
+.insight-card-metric-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.insight-card-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.insight-card.tone-positive {
+  --insight-tone: var(--ok);
+}
+
+.insight-card.tone-neutral {
+  --insight-tone: var(--ink-faint);
+}
+
+.insight-card.tone-warning {
+  --insight-tone: var(--danger);
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface-2));
+}
+
+.insight-card.tone-critical {
+  --insight-tone: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, var(--surface-2));
+}
+
+.insight-card.tone-critical .insight-card-title {
+  color: var(--danger);
+}
+
 .profile-temperament {
   margin: 0;
   font-size: 12px;
@@ -4841,6 +4926,19 @@ h1, h2, h3 {
   .capital-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── 9e. Views: vehicles ──────────────────────────────────────────── */
+
+/* Vehicles reuses the Capitals card grid; the only addition is selection state. */
+.capital-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow);
+  cursor: pointer;
+}
+
+.capital-card:not(.is-selected) {
+  cursor: pointer;
 }
 
 /* ── 10. Views: schedule ──────────────────────────────────────────── */

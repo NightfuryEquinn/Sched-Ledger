@@ -15,6 +15,7 @@ import {
 } from "@/frontend/lib/data";
 import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
 import { isSavingsCategory } from "@/frontend/lib/categories";
+import type { Insight } from "@/frontend/lib/insights/types";
 import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
 import type { CapitalPlan, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
@@ -174,6 +175,7 @@ function Icon({ name, size = 20 }) {
     sparkle: <><path d="M10 2.5l2.1 5.4 5.4 2.1-5.4 2.1L10 17.5l-2.1-5.4L2.5 10l5.4-2.1L10 2.5z" /><path d="M17.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" /></>,
     piggy: <><path d="M4 12.5a5.5 5.5 0 0 1 5.5-5.5h4a5.5 5.5 0 0 1 5 3.2l1.5.4a1 1 0 0 1 0 1.9l-1.5.5A5.5 5.5 0 0 1 13.5 17H12v2H9v-2a5.5 5.5 0 0 1-5-5.5z" /><circle cx="16" cy="11" r=".9" fill="currentColor" stroke="none" /><path d="M9 7.5V5.5M6.5 8.5 5 7M7 17v2" /></>,
     capital: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /></>,
+    car: <><path d="M4 16V11l2-4.5A2 2 0 0 1 7.85 5h8.3a2 2 0 0 1 1.85 1.5L20 11v5" /><rect x="3" y="16" width="18" height="3.5" rx="1.2" /><circle cx="7.5" cy="16" r="1.4" fill="currentColor" stroke="none" /><circle cx="16.5" cy="16" r="1.4" fill="currentColor" stroke="none" /><path d="M4 12h16" /></>,
   };
   return <svg viewBox="0 0 24 24" style={s}>{paths[name]}</svg>;
 }
@@ -196,6 +198,7 @@ export const NAV_ITEMS = [
   ["budgets", "Budgets", "budget"],
   ["piggies", "Piggies", "piggy"],
   ["capitals", "Capitals", "capital"],
+  ["vehicles", "Vehicles", "car"],
   ["calculator", "Calculator", "calculator"],
   ["categories", "Categories", "tags"],
   ["recurring", "Recurring", "recurring"],
@@ -438,6 +441,43 @@ function Segmented({ options, value, onChange }) {
 // ── EmptyState: centered placeholder for empty lists ────────────────
 function EmptyState({ title, sub }) {
   return <div className="empty"><div className="empty-mark">◌</div><div className="empty-title">{title}</div>{sub ? <div className="empty-sub">{sub}</div> : null}</div>;
+}
+
+// ── InsightFeed: ranked findings, shared by Transaction and Fuel Insights ──
+/** One ranked finding card — tone stripe, optional metric chip, confidence pill. */
+function InsightCard({ insight }: { insight: Insight }) {
+  return (
+    <div className={"insight-card tone-" + insight.tone}>
+      <div className="insight-card-head">
+        <span className="insight-card-title">{insight.title}</span>
+        <span className={"profile-confidence conf-" + insight.confidence.level}>
+          {insight.confidence.level}
+        </span>
+      </div>
+      {insight.metric ? (
+        <div className="insight-card-metric">
+          <span className="insight-card-metric-label">{insight.metric.label}</span>
+          <span className="insight-card-metric-value">{insight.metric.value}</span>
+        </div>
+      ) : null}
+      <p className="insight-card-body">{insight.body}</p>
+    </div>
+  );
+}
+
+/** Render a ranked insight feed, or a quiet empty state when nothing stands out. */
+function InsightFeed({ insights, emptyLabel = "Nothing stands out right now." }: { insights: Insight[]; emptyLabel?: string }) {
+  if (!insights.length) {
+    return <p className="panel-sub insight-feed-empty">{emptyLabel}</p>;
+  }
+
+  return (
+    <div className="insight-feed">
+      {insights.map((insight) => (
+        <InsightCard key={insight.id} insight={insight} />
+      ))}
+    </div>
+  );
 }
 
 type WalletPickerProps = {
@@ -816,5 +856,5 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, cap
 }
 
 export {
-  AddExpenseModal, CatGlyph, DeleteScopeDialog, EmptyState, Icon, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
+  AddExpenseModal, CatGlyph, DeleteScopeDialog, EmptyState, Icon, InsightFeed, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
 };

@@ -23,6 +23,8 @@ export const COLLECTIONS = {
   pushSubscriptions: "push_subscriptions",
   todoLists: "todo_lists",
   capitalPlans: "capital_plans",
+  vehicles: "vehicles",
+  vehicleFills: "vehicle_fills",
   rateLimits: "rate_limits",
 } as const;
 
@@ -176,6 +178,31 @@ export type CapitalPlanDocument = {
   updatedAt: Date;
 };
 
+export type VehicleTypeId = "car" | "ev" | "bike" | "van";
+
+export type VehicleDocument = {
+  _id: ObjectId;
+  accountId: string;
+  type: VehicleTypeId;
+  enc: 1;
+  payload: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type VehicleFillDocument = {
+  _id: ObjectId;
+  accountId: string;
+  vehicleId: ObjectId;
+  date: string;
+  partial: boolean;
+  expenseId?: ObjectId;
+  enc: 1;
+  payload: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type Collections = {
   users: Collection<UserDocument>;
   ledgerProfiles: Collection<LedgerProfileDocument>;
@@ -191,6 +218,8 @@ export type Collections = {
   pushSubscriptions: Collection<PushSubscriptionDocument>;
   todoLists: Collection<TodoListDocument>;
   capitalPlans: Collection<CapitalPlanDocument>;
+  vehicles: Collection<VehicleDocument>;
+  vehicleFills: Collection<VehicleFillDocument>;
 };
 
 /** Get typed collection handles for the connected database. */
@@ -210,5 +239,7 @@ export function getCollections(db: Db): Collections {
     pushSubscriptions: db.collection<PushSubscriptionDocument>(COLLECTIONS.pushSubscriptions),
     todoLists: db.collection<TodoListDocument>(COLLECTIONS.todoLists),
     capitalPlans: db.collection<CapitalPlanDocument>(COLLECTIONS.capitalPlans),
+    vehicles: db.collection<VehicleDocument>(COLLECTIONS.vehicles),
+    vehicleFills: db.collection<VehicleFillDocument>(COLLECTIONS.vehicleFills),
   };
 }

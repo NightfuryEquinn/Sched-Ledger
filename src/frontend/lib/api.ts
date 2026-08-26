@@ -5,6 +5,8 @@ import type {
   EventWire,
   ExpenseWire,
   TodoListWire,
+  VehicleFillWire,
+  VehicleWire,
   WalletWire,
 } from "@/frontend/lib/crypto/codec";
 import { getCipherCache, putCipherCache } from "@/frontend/lib/pwa/cipher-cache";
@@ -63,6 +65,7 @@ const CACHEABLE_GET_PREFIXES = [
   "/events",
   "/todo-lists",
   "/profile",
+  "/vehicles",
 ];
 
 /** Whether a GET path may fall back to the local ciphertext cache. */
@@ -341,6 +344,45 @@ export const api = {
     },
     remove(id: string) {
       return request<{ ok: boolean }>(`/capital-plans/${id}`, { method: "DELETE" });
+    },
+  },
+
+  vehicles: {
+    list() {
+      return request<{ vehicles: VehicleWire[] }>("/vehicles");
+    },
+    create(body: { type: string; enc: 1; payload: string }) {
+      return request<{ vehicle: VehicleWire }>("/vehicles", { method: "POST", body });
+    },
+    update(id: string, body: { type?: string; enc: 1; payload: string }) {
+      return request<{ vehicle: VehicleWire }>(`/vehicles/${id}`, { method: "PATCH", body });
+    },
+    remove(id: string) {
+      return request<{ ok: boolean }>(`/vehicles/${id}`, { method: "DELETE" });
+    },
+    fills: {
+      list(params: { vehicleId?: string; limit?: number; before?: string } = {}) {
+        const qs = new URLSearchParams();
+        if (params.vehicleId) qs.set("vehicleId", params.vehicleId);
+        if (params.limit) qs.set("limit", String(params.limit));
+        if (params.before) qs.set("before", params.before);
+        const suffix = qs.toString() ? `?${qs.toString()}` : "";
+        return request<{ fills: VehicleFillWire[]; hasMore: boolean; nextBefore: string | null }>(
+          `/vehicles/fills${suffix}`,
+        );
+      },
+      create(body: { vehicleId: string; date: string; partial: boolean; expenseId?: string; enc: 1; payload: string }) {
+        return request<{ fill: VehicleFillWire }>("/vehicles/fills", { method: "POST", body });
+      },
+      update(
+        id: string,
+        body: { vehicleId?: string; date?: string; partial?: boolean; expenseId?: string | null; enc: 1; payload: string },
+      ) {
+        return request<{ fill: VehicleFillWire }>(`/vehicles/fills/${id}`, { method: "PATCH", body });
+      },
+      remove(id: string) {
+        return request<{ ok: boolean }>(`/vehicles/fills/${id}`, { method: "DELETE" });
+      },
     },
   },
 

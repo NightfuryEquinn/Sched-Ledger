@@ -127,6 +127,33 @@ const COLLECTIONS: CollectionDoc[] = [
     ],
   },
   {
+    name: "vehicles",
+    purpose: "Tracked vehicles — car, EV, bike, or van",
+    encrypted: true,
+    fields: [
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
+      { key: "type", value: '"car" | "ev" | "bike" | "van"' },
+      { key: "enc", value: "1", note: "E2EE version" },
+      { key: "payload", value: "base64 AES-GCM", note: "name, model, plate, glyph, odometerStart, tankCapacity, notes" },
+      { key: "createdAt / updatedAt", value: "ISO dates" },
+    ],
+  },
+  {
+    name: "vehicle_fills",
+    purpose: "Fuel fills or charging sessions for a vehicle",
+    encrypted: true,
+    fields: [
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
+      { key: "vehicleId", value: "ObjectId" },
+      { key: "date", value: '"2026-07-16"' },
+      { key: "partial", value: "false", note: "true when the tank/battery was not filled to full" },
+      { key: "expenseId?", value: "ObjectId", note: "optional link once Log to ledger runs" },
+      { key: "enc", value: "1", note: "E2EE version" },
+      { key: "payload", value: "base64 AES-GCM", note: "price, quantity, odometer, station" },
+      { key: "createdAt / updatedAt", value: "ISO dates" },
+    ],
+  },
+  {
     name: "consent",
     purpose: "Third-party data-sharing opt-in",
     fields: [
@@ -208,6 +235,8 @@ const RELATIONSHIP_CHART = `flowchart TB
     Ev["events<br/>enc + payload"]
     Todos["todo_lists<br/>enc + payload"]
     Caps["capital_plans<br/>enc + payload"]
+    Vehicles["vehicles<br/>enc + payload"]
+    Fills["vehicle_fills<br/>enc + payload"]
     Consent["consent"]
     Auth["auth_nonces · sessions"]
     Logs["reminder_logs · budget_alert_logs"]
@@ -222,6 +251,8 @@ const RELATIONSHIP_CHART = `flowchart TB
   Key -->|"AES-256-GCM encrypt/decrypt"| Ev
   Key -->|"AES-256-GCM encrypt/decrypt"| Todos
   Key -->|"AES-256-GCM encrypt/decrypt"| Caps
+  Key -->|"AES-256-GCM encrypt/decrypt"| Vehicles
+  Key -->|"AES-256-GCM encrypt/decrypt"| Fills
   Users -->|"owns"| Profile
   Users -->|"owns"| Wallets
   Users -->|"owns"| Cats
@@ -229,8 +260,11 @@ const RELATIONSHIP_CHART = `flowchart TB
   Users -->|"owns"| Ev
   Users -->|"owns"| Todos
   Users -->|"owns"| Caps
+  Users -->|"owns"| Vehicles
   Users -->|"owns"| Consent
   Users --> Auth
+  Vehicles -->|"owns"| Fills
+  Fills -.->|"optional link"| Exp
   Ev --> Logs
   Wallets --> Logs
 `;
@@ -256,6 +290,8 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     Ev["events<br/>enc + payload"]
     Todos["todo_lists<br/>enc + payload"]
     Caps["capital_plans<br/>enc + payload"]
+    Vehicles["vehicles<br/>enc + payload"]
+    Fills["vehicle_fills<br/>enc + payload"]
     Consent["consent"]
     Auth["auth_nonces · sessions"]
     Logs["reminder_logs · budget_alert_logs"]
@@ -266,8 +302,10 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     Users --> Ev
     Users --> Todos
     Users --> Caps
+    Users --> Vehicles
     Users --> Consent
     Users --> Auth
+    Vehicles --> Fills
     Ev --> Logs
     Wallets --> Logs
   end
@@ -512,7 +550,9 @@ export function Transparency() {
               written only while that event has reminders on and an address set, and deleted the moment either goes
               away; events without reminders keep everything in the payload. Linking a bill payment stores plaintext{" "}
               <code>eventId</code> / <code>expenseId</code> references only; assigning savings to a Capitals plan stores{" "}
-              <code>capitalPlanId</code> on the expense (link id only, not amounts).
+              <code>capitalPlanId</code> on the expense (link id only, not amounts). A fuel fill's vehicle type stays
+              plaintext for the vocabulary switch (car/EV/bike/van), and logging it to the ledger stores a plaintext{" "}
+              <code>expenseId</code> on the fill — again a link id only, never amounts.
             </p>
             <p className="panel-sub" style={{ marginTop: "0.75rem" }}>
               If the same auth key is ever used on-chain, chain analysis can correlate it with this account. Prefer a{" "}
@@ -544,7 +584,8 @@ export function Transparency() {
           <div>
             <h2>Encrypted Write Path</h2>
             <p className="panel-sub">
-              Categories, events, todos, expenses, and wallet names/budgets are AES-256-GCM encrypted client-side before save
+              Categories, events, todos, expenses, capital plans, vehicles/fills, and wallet names/budgets are AES-256-GCM
+              encrypted client-side before save
             </p>
           </div>
         </div>

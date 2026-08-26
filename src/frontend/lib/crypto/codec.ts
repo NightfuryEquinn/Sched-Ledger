@@ -7,6 +7,8 @@ import {
   type EventSecrets,
   type ExpenseSecrets,
   type TodoListSecrets,
+  type VehicleFillSecrets,
+  type VehicleSecrets,
   type WalletSecrets,
 } from "@/frontend/lib/crypto/e2ee";
 import type {
@@ -15,8 +17,10 @@ import type {
   Category,
   Expense,
   FinancialWallet,
+  FuelFill,
   LedgerEvent,
   TodoList,
+  Vehicle,
 } from "@/frontend/lib/types";
 import { normalizeRecurring } from "@/frontend/lib/stats";
 import type { RecurringField } from "@/lib/recurring";
@@ -579,5 +583,133 @@ export async function encodeCapitalPlanUpdate(data: Omit<CapitalPlan, "id">, key
   return {
     enc: 1 as const,
     payload: await encryptJson(key, capitalPlanSecrets(data)),
+  };
+}
+
+export type VehicleWire = {
+  id: string;
+  type: Vehicle["type"];
+  createdAt: string;
+  enc?: 1;
+  payload?: string;
+};
+
+/** Decrypt a vehicle wire. Vehicles is E2EE-only — no legacy plaintext branch. */
+export async function decodeVehicle(wire: VehicleWire, key: CryptoKey): Promise<Vehicle> {
+  if (wire.enc !== 1 || !wire.payload) {
+    throw new Error("Vehicle is encrypted but no key is available");
+  }
+  const secrets = await decryptJson<VehicleSecrets>(key, wire.payload);
+
+  return {
+    id: wire.id,
+    type: wire.type,
+    createdAt: wire.createdAt,
+    name: secrets.name,
+    model: secrets.model,
+    plate: secrets.plate,
+    glyph: secrets.glyph,
+    odometerStart: secrets.odometerStart,
+    tankCapacity: secrets.tankCapacity,
+    notes: secrets.notes,
+  };
+}
+
+function vehicleSecrets(data: Omit<Vehicle, "id" | "createdAt">): VehicleSecrets {
+  return {
+    name: data.name,
+    model: data.model,
+    plate: data.plate,
+    glyph: data.glyph,
+    odometerStart: data.odometerStart,
+    tankCapacity: data.tankCapacity,
+    notes: data.notes,
+  };
+}
+
+/** Encrypt vehicle secrets for create. */
+export async function encodeVehicleCreate(
+  data: Omit<Vehicle, "id" | "createdAt">,
+  key: CryptoKey,
+) {
+  return {
+    type: data.type,
+    enc: 1 as const,
+    payload: await encryptJson(key, vehicleSecrets(data)),
+  };
+}
+
+/** Encrypt vehicle secrets for update. */
+export async function encodeVehicleUpdate(
+  data: Omit<Vehicle, "id" | "createdAt">,
+  key: CryptoKey,
+) {
+  return {
+    type: data.type,
+    enc: 1 as const,
+    payload: await encryptJson(key, vehicleSecrets(data)),
+  };
+}
+
+export type VehicleFillWire = {
+  id: string;
+  vehicleId: string;
+  date: string;
+  partial: boolean;
+  expenseId?: string;
+  enc?: 1;
+  payload?: string;
+};
+
+/** Decrypt a fuel fill wire. Fills are E2EE-only — no legacy plaintext branch. */
+export async function decodeVehicleFill(wire: VehicleFillWire, key: CryptoKey): Promise<FuelFill> {
+  if (wire.enc !== 1 || !wire.payload) {
+    throw new Error("Fill is encrypted but no key is available");
+  }
+  const secrets = await decryptJson<VehicleFillSecrets>(key, wire.payload);
+
+  return {
+    id: wire.id,
+    vehicleId: wire.vehicleId,
+    date: wire.date,
+    partial: wire.partial,
+    expenseId: wire.expenseId,
+    price: secrets.price,
+    quantity: secrets.quantity,
+    odometer: secrets.odometer,
+    station: secrets.station,
+  };
+}
+
+function vehicleFillSecrets(data: Omit<FuelFill, "id">): VehicleFillSecrets {
+  return {
+    price: data.price,
+    quantity: data.quantity,
+    odometer: data.odometer,
+    station: data.station,
+  };
+}
+
+/** Encrypt fuel fill secrets for create. */
+export async function encodeVehicleFillCreate(data: Omit<FuelFill, "id">, key: CryptoKey) {
+  return {
+    vehicleId: data.vehicleId,
+    date: data.date,
+    partial: data.partial,
+    ...(data.expenseId ? { expenseId: data.expenseId } : {}),
+    enc: 1 as const,
+    payload: await encryptJson(key, vehicleFillSecrets(data)),
+  };
+}
+
+/** Encrypt fuel fill secrets for update. */
+export async function encodeVehicleFillUpdate(data: Omit<FuelFill, "id">, key: CryptoKey) {
+  return {
+    vehicleId: data.vehicleId,
+    date: data.date,
+    partial: data.partial,
+    expenseId: data.expenseId ?? null,
+    enc: 1 as const,
+    payload: await encryptJson(key, vehicleFillSecrets(data)),
   };
 }
