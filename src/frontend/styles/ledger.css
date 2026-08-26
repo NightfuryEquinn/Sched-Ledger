@@ -2370,6 +2370,7 @@ h1, h2, h3 {
   align-items: center;
   gap: 4px;
   height: 100%;
+  min-width: 0;
   padding: 0;
   border: none;
   background: none;
@@ -2401,12 +2402,20 @@ h1, h2, h3 {
 
 .ptrl-label {
   margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11.5px;
   color: var(--ink-faint);
 }
 
 .ptrl-style {
   margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
