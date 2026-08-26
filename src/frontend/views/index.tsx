@@ -1541,7 +1541,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           )}
         </section>
 
-        <div className="summary-grid">
+        <div className="summary-grid sg-4">
           <SummaryCard label="Income This Month" tone="saved" value={money(cur.earned)} sub={monthLabel(month)} />
           <SummaryCard
             label="Vs Last Month"
@@ -1614,7 +1614,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
             <p className="panel-sub">Trailing 12 months on this wallet</p>
           </div>
         </div>
-        <div className="summary-grid">
+        <div className="summary-grid sg-3">
           <SummaryCard
             label="Savings Rate"
             value={`${Math.round(savingsInsights.savingsRate * 100)}%`}

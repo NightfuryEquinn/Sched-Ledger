@@ -6,19 +6,21 @@ import {
   monthLabel,
   pad,
 } from "@/frontend/lib/data";
+import { CalendarBlank, CaretDown, CaretLeft, CaretRight, Clock } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+const PICKER_ICONS = {
+  calendar: CalendarBlank,
+  clock: Clock,
+  chevL: CaretLeft,
+  chevR: CaretRight,
+  chevD: CaretDown,
+};
+
 function PickerIcon({ name, size = 16 }: { name: "calendar" | "clock" | "chevL" | "chevR" | "chevD"; size?: number }) {
-  const s = { width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  const paths = {
-    calendar: <><rect x="3" y="4.5" width="18" height="16" rx="2.5" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></>,
-    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></>,
-    chevL: <path d="M15 6l-6 6 6 6" />,
-    chevR: <path d="M9 6l6 6-6 6" />,
-    chevD: <path d="M6 9l6 6 6-6" />,
-  };
-  return <svg viewBox="0 0 24 24" style={s}>{paths[name]}</svg>;
+  const Glyph = PICKER_ICONS[name];
+  return <Glyph size={size} />;
 }
 
 const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
