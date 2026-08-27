@@ -11,7 +11,8 @@ type HighlightIcon =
   | "info"
   | "budget"
   | "piggy"
-  | "capital";
+  | "capital"
+  | "car";
 
 export type ReleaseHighlight = {
   icon: HighlightIcon;
@@ -32,6 +33,36 @@ export type ReleaseNotes = {
  * re-announces the popup to every device that has not seen that version.
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
+  {
+    version: "4.0.0",
+    date: "August 2026",
+    lead: "Meet Vehicles and Fuel Insights, plus a ranked \"What Stands Out\" feed that forecasts and flags anomalies in Transaction Insights.",
+    highlights: [
+      {
+        icon: "car",
+        title: "Meet Vehicles",
+        body:
+          "Track fuel or charging costs per vehicle — car, EV, bike, or van. Log fill-ups or charges with price, quantity, " +
+          "odometer, and station, and optionally link one to a real ledger transaction with Log.",
+      },
+      {
+        icon: "car",
+        title: "Fuel Insights",
+        body:
+          "Once a vehicle has enough fill history, see consumption vs your own baseline, price timing, running-cost " +
+          "projections, and cadence — generated on the Vehicles view. EVs automatically read as kWh, charge, and kWh/100km " +
+          "instead of litres and fill-ups.",
+      },
+      {
+        icon: "sparkle",
+        title: "What Stands Out",
+        body:
+          "A new ranked feed on Insights surfaces month-end spend forecasts with a confidence band, over-budget categories " +
+          "before the month ends, unusually large charges, category spend that has drifted, and recurring charges that are " +
+          "new, gone quiet, or creeping up in price.",
+      },
+    ],
+  },
   {
     version: "3.3.1",
     date: "August 2026",

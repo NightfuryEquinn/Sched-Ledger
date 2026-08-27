@@ -145,9 +145,17 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("capitals-toolbar", "New Plan", "Start from a template — marriage, trip, car loan, house loan — or build a fully custom plan. You can set a total budget and optional target date.", '[data-tour="tour-capitals-toolbar"]', "bottom"),
     lastStep("capitals-grid", "Plan Cards", "Each card shows paid vs budget on the ring, Unspent from assigned savings, a monthly save hint (or Overpaid), line items, and Log to record a real payment in the ledger.", '[data-tour="tour-capitals-grid"]'),
   ],
+  vehicles: [
+    step("vehicles-nav", "Vehicles", "Track fuel or charging costs per vehicle — cars, EVs, bikes, and vans each get their own history and Fuel Insights.", navTarget("vehicles"), "right"),
+    step("vehicles-summary", "Totals", "Vehicle count, total spend across your fleet, cost per km for the selected vehicle, and when you last logged a fill or charge.", '[data-tour="tour-vehicles-summary"]'),
+    step("vehicles-grid", "Vehicle Cards", "Tap a card to select it. EVs automatically switch every label to kWh, charge, and kWh/100km.", '[data-tour="tour-vehicles-grid"]'),
+    step("vehicles-log", "Fill / Charge Log", "Every fill-up or charge for the selected vehicle, with price, quantity, odometer, and an optional Log to record it as a real transaction.", '[data-tour="tour-vehicles-log"]'),
+    lastStep("vehicles-insights", "Fuel Insights", "Consumption trend, price timing, running cost projection, and cadence — generated once a vehicle has enough fill history.", '[data-tour="tour-vehicles-insights"]', "top"),
+  ],
   insights: [
     step("insights-nav", "Insights", "Longer-range trends, comparisons, and currency views.", navTarget("insights"), "right"),
     step("insights-fx", "Currency View", "Preview amounts in another currency using live exchange rates.", '[data-tour="tour-insights-fx"]'),
+    step("insights-standout", "What Stands Out", "A ranked feed of forecasts, budget risk, and anomalies — generated from your spending, not just described after the fact.", '[data-tour="tour-insights-standout"]'),
     step("insights-habits", "Spending Habit", "After five transaction days, see your month or year spending style — clockwork, burst, dripper, and more.", '[data-tour="tour-insights-habits"]'),
     step("insights-chart", "Month Over Month", "Switch between daily, monthly, quarterly, and yearly bars. Hover a bar for its total spend and income, or tap it to jump to that period.", '[data-tour="tour-insights-chart"]', "top"),
     step("insights-trends", "Breakdowns", "Category trends vs last month and your top subcategories this month.", '[data-tour="tour-insights-trends"]'),

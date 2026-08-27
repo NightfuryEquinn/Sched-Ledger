@@ -7,6 +7,7 @@ import {
   SummaryCard,
   glyphTint,
 } from "@/frontend/components/ui";
+import { CaretDown } from "@phosphor-icons/react";
 import {
   CURRENT_MONTH_KEY,
   EVENT_CATS,
@@ -54,21 +55,7 @@ function normalizeLead(lead: string, allDay: boolean): string {
 }
 
 function ChevDown({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
+  return <CaretDown size={size} aria-hidden />;
 }
 
 type LeadPickerProps = {

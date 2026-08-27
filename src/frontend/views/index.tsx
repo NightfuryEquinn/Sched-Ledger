@@ -4,12 +4,14 @@ import {
   CatGlyph,
   EmptyState,
   Icon,
+  InsightFeed,
   Segmented,
   SummaryCard,
   TransactionRow,
   glyphTint,
 } from "@/frontend/components/ui";
 import { isSavingsCategory, isSpendingCategory, spendingCategoriesFor } from "@/frontend/lib/categories";
+import { computeTxInsights } from "@/frontend/lib/insights/txInsights";
 import { buildPiggies } from "@/frontend/lib/piggies";
 import { computeSavingsInsights } from "@/frontend/lib/savingsInsights";
 import {
@@ -70,7 +72,7 @@ import {
 import { getAccent } from "@/frontend/lib/theme";
 import type { Budgets, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export { Categories } from "./Categories";
 
@@ -794,6 +796,14 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const totalBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
   const chartMonths = useMemo(() => monthsWindow(month), [month]);
 
+  const txInsights = useMemo(
+    () => computeTxInsights(expenses, budgets, month, categoryIndex, Number(totalBudget), { money }),
+    // `money` is a fresh closure every render — depend on its real inputs instead, so an
+    // unrelated re-render doesn't rebuild the whole ranked feed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [expenses, budgets, month, categoryIndex, totalBudget, currency, displayCurrency, fxRates],
+  );
+
   /*
    * Insights only carries the wallet-scoped 36-month `expenses` window (not
    * the all-time savingsTxns the Piggies view uses), so balances shown here
@@ -1084,6 +1094,14 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         <p className={"insights-fx-note" + (fxStatus === "error" ? " is-error" : "")}>{fxNote}</p>
       </div>
 
+      <section className="panel" data-tour="tour-insights-standout">
+        <div className="panel-head">
+          <h2>What Stands Out</h2>
+          <p className="panel-sub">Forecasts, budget risk, and anomalies, generated from {monthLabel(month, true)}.</p>
+        </div>
+        <InsightFeed insights={txInsights} emptyLabel="Nothing stands out this month." />
+      </section>
+
       <section className="panel insights-habits" data-tour="tour-insights-habits">
         <div className="panel-head profile-head">
           <div>
@@ -1226,10 +1244,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
             <div className="profile-trajectory">
               <p className="ptrl-note">{habitStory?.shift}</p>
-              <div
-                className="ptrl-grid"
-                style={{ "--ptrl-cols": habitTrail.length } as CSSProperties}
-              >
+              <div className="ptrl-grid">
                 {habitTrail.map((pt) => {
                   const isReady = pt.status === "ready";
                   return (
@@ -1485,10 +1500,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
               <div className="profile-trajectory">
                 <p className="ptrl-note">{incomeStory?.trend}</p>
-                <div
-                  className="ptrl-grid"
-                  style={{ "--ptrl-cols": incomeProfile.metrics.monthly.length } as CSSProperties}
-                >
+                <div className="ptrl-grid">
                   {incomeProfile.metrics.monthly.map((pt) => (
                     <button
                       key={pt.monthKey}
@@ -1523,7 +1535,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           )}
         </section>
 
-        <div className="summary-grid">
+        <div className="summary-grid sg-4">
           <SummaryCard label="Income This Month" tone="saved" value={money(cur.earned)} sub={monthLabel(month)} />
           <SummaryCard
             label="Vs Last Month"
@@ -1596,7 +1608,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
             <p className="panel-sub">Trailing 12 months on this wallet</p>
           </div>
         </div>
-        <div className="summary-grid">
+        <div className="summary-grid sg-3">
           <SummaryCard
             label="Savings Rate"
             value={`${Math.round(savingsInsights.savingsRate * 100)}%`}

@@ -84,6 +84,7 @@ export type ViewId =
   | "todos"
   | "piggies"
   | "capitals"
+  | "vehicles"
   | "transparency";
 
 export type MonthEntry = {
@@ -146,6 +147,40 @@ export type CapitalPlan = {
   initialBudget?: number;
   createdAt: string;
   items: CapitalItem[];
+};
+
+export type VehicleType = "car" | "ev" | "bike" | "van";
+
+export type Vehicle = {
+  id: string;
+  name: string;
+  model: string;
+  type: VehicleType;
+  plate?: string;
+  glyph: string;
+  /** Odometer at the point tracking started; anchors the first distance segment. */
+  odometerStart?: number;
+  /** Litres, or kWh of usable battery on an EV. Enables tank-share hints. */
+  tankCapacity?: number;
+  notes?: string;
+  createdAt: string;
+};
+
+export type FuelFill = {
+  id: string;
+  vehicleId: string;
+  date: string;
+  /** Total paid, in the active wallet's currency. */
+  price: number;
+  /** Litres for combustion, kWh for an EV. */
+  quantity: number;
+  /** Odometer at the fill, in km. Absent when the user skipped it. */
+  odometer?: number;
+  station: string;
+  /** True when the tank/battery was not filled to full — breaks the distance segment. */
+  partial: boolean;
+  /** Optional link to a Capitals-style ledger expense created via "Log to ledger". */
+  expenseId?: string;
 };
 
 /** On-device passphrase vault blob (no plaintext keys). */

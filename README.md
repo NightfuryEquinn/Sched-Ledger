@@ -18,7 +18,8 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable expense and income category/subcategory taxonomy with glyphs and colors; savings categories use the custom DatePicker for optional deadline goals
 - **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron-job.org; delete scopes for one occurrence, this-and-future, or the whole series
-- **Insights** — FX conversion, month-over-month charts (daily/monthly/quarterly/yearly), an earnings line plotted against spending on the overview trend, per-category hover breakdowns on charts and recent rows, and spending habits (unlock after five active transaction days)
+- **Insights** — FX conversion, a ranked **What Stands Out** feed (month-end spend forecast with a confidence band, over-budget categories before the month ends, unusually large charges, category spend drift, and new/stopped/creeping recurring charges), month-over-month charts (daily/monthly/quarterly/yearly), an earnings line plotted against spending on the overview trend, per-category hover breakdowns on charts and recent rows, and spending habits (unlock after five active transaction days)
+- **Vehicles** — track fuel or charging costs per vehicle (car, EV, bike, or van): log fill-ups or charges with price, quantity, odometer, and station, with an optional partial-fill flag and **Log** to link one to a real ledger transaction. An EV automatically switches every label to kWh, charge, and kWh/100km instead of litres and fill-ups. A **Fuel Insights** engine (same ranked-card model as Transaction Insights) surfaces consumption trend, price timing, running-cost projection, and cadence once a vehicle has logged enough history
 
 ### Schedule & tasks
 
@@ -52,7 +53,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - Ownership uses opaque `accountId` (`users._id`); the SIWE address stays on `users` for login only
 - New document ids are random ObjectIds (no embedded creation timestamp)
 - Signature verification, Mongo-backed rate limiting (in-memory fallback), security headers, in-memory profile cache
-- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, budget-alert evaluation, envelope holds, multi-day and recurring schedule math, push dedupe, and the release-notes gate (`bun test`)
+- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, budget-alert evaluation, envelope holds, multi-day and recurring schedule math, push dedupe, the ranked-insight model, transaction and fuel insights, vehicle routes, and the release-notes gate (`bun test`)
 
 ## Tech stack
 
@@ -83,8 +84,8 @@ src/
 │   │                     # expense-update, money, ids, serialize, errors
 │   ├── middleware/       # session, rate-limit (Mongo + memory fallback), security, db
 │   └── routes/           # auth, users, profile, wallets, categories,
-│                         # expenses, events, todo-lists, capital-plans, consent,
-│                         # budget-alerts, push, fx, cron
+│                         # expenses, events, todo-lists, capital-plans, vehicles,
+│                         # consent, budget-alerts, push, fx, cron
 ├── db/                   # MongoDB client, collections, indexes, URI resolver
 ├── schemas/              # Zod schemas (shared API validation)
 ├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts,
@@ -98,6 +99,7 @@ src/
     ├── lib/
     │   ├── budget/         # in-tab budget-alert notifications
     │   ├── crypto/         # E2EE codec, key derivation, unlock flow
+    │   ├── insights/       # shared ranked-card model (types, rank, txInsights)
     │   ├── push/           # Web Push permission + subscription lifecycle
     │   ├── pwa/            # service worker registration + IndexedDB cipher cache
     │   ├── hooks/          # useLedger, useTheme
@@ -105,16 +107,18 @@ src/
     │   ├── whats-new/      # release notes, per-device seen state, auto-show gate
     │   ├── piggies.ts        # savings balance model (deposits − withdrawals, targets)
     │   ├── savingsInsights.ts # streaks, pace, projections for Piggies + Insights
+    │   ├── fuelInsights.ts    # per-vehicle fuel/power metrics, vocabulary, ranked insights
     │   ├── capitals.ts        # capital plan totals, unpaid/budget remaining, monthly save, templates
     │   ├── capitalTemplates.ts # built-in Capitals templates (marriage, trip, car/house loan)
     │   └── envelope-holds.ts  # schedule ↔ budget hold math
     ├── styles/           # ledger.css (theme tokens + layout)
     ├── views/            # Overview, Transactions, Budgets, Calculator, Categories,
-    │                     # Recurring, Insights, Piggies, Capitals, Schedule, TodoList, Transparency
+    │                     # Recurring, Insights, Piggies, Capitals, Vehicles, Schedule, TodoList, Transparency
     └── main.tsx
 public/                   # PWA manifest + service worker (copied into dist/ on build)
 scripts/                  # MongoDB collection maintenance (drop/list, stale-user prune)
-tests/                    # auth, crypto, calculator, spending, schedule, budget/holds, whats-new
+tests/                    # auth, crypto, calculator, spending, schedule, budget/holds, whats-new,
+                          # insights, vehicles
 build.ts                  # Production build (dist/ + api/index.js)
 ```
 
@@ -175,6 +179,8 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `events` | `events` | Schedule events (E2EE title/comments/holds; plaintext schedule + email for reminders, plus `notifyDetails` while notify is on) |
 | `todo_lists` | `todoLists` | Named to-do lists (E2EE name/icon/tasks) |
 | `capital_plans` | `capitalPlans` | Future-expense planners (E2EE name/template/budget/items) |
+| `vehicles` | `vehicles` | Tracked vehicles — car/EV/bike/van (E2EE name/model/plate/odometer/tank) |
+| `vehicle_fills` | `vehicleFills` | Fuel fills or charges per vehicle (E2EE price/quantity/odometer/station) |
 | `consent` | `consent` | Data-sharing opt-in flag |
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
@@ -193,6 +199,8 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on |
 | `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
 | `capital_plans` | `payload` (name, templateId, glyph, targetDate, initialBudget, items) via `enc` | `accountId` |
+| `vehicles` | `payload` (name, model, plate, glyph, odometerStart, tankCapacity, notes) via `enc` | `accountId`, `type` |
+| `vehicle_fills` | `payload` (price, quantity, odometer, station) via `enc` | `accountId`, `vehicleId`, `date`, `partial`, optional `expenseId` |
 | `users` | — | `address` (SIWE login), notify prefs |
 | `push_subscriptions` | — | `accountId`, `endpoint`, and the browser's `p256dh` / `auth` keys — required verbatim to encrypt each push payload |
 | `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |
@@ -214,7 +222,8 @@ The in-app **Transparency** view documents hosting roles, what the server can in
 ```bash
 bun dev
 bun test   # crypto, reminders, calculator, spending habits, session auth, budget alerts,
-           # envelope holds, schedule recurrence/multi-day, push dedupe, release-notes gate
+           # envelope holds, schedule recurrence/multi-day, push dedupe, ranked insights,
+           # transaction/fuel insights, vehicle routes, release-notes gate
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).
@@ -278,6 +287,8 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 | `CRUD /api/events` | Schedule events (comments + budget holds live in the E2EE payload; cursor list via `limit`/`before`) |
 | `CRUD /api/todo-lists` | TO-DO lists and tasks |
 | `CRUD /api/capital-plans` | Capitals planners and their line items |
+| `CRUD /api/vehicles` | Tracked vehicles (car/EV/bike/van) |
+| `CRUD /api/vehicles/fills` | Fuel fills or charges (cursor list via `limit`/`before`, filterable by `vehicleId`) |
 | `GET/PATCH /api/consent` | Data-sharing consent |
 | `POST /api/budget-alerts` | Deliver client-evaluated budget alerts (email; deduped) |
 | `GET /api/fx/latest/:base` | Cached FX rates (requires `EXCHANGE_RATE_API_KEY`) |

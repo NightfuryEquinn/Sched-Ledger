@@ -69,6 +69,23 @@ export type CapitalPlanSecrets = {
   }>;
 };
 
+export type VehicleSecrets = {
+  name: string;
+  model: string;
+  plate?: string;
+  glyph: string;
+  odometerStart?: number;
+  tankCapacity?: number;
+  notes?: string;
+};
+
+export type VehicleFillSecrets = {
+  price: number;
+  quantity: number;
+  odometer?: number;
+  station: string;
+};
+
 export function buildDerivationMessage(address: string): string {
   return `${DERIVATION_MESSAGE_PREFIX}\n\nAddress: ${getAddress(address)}`;
 }

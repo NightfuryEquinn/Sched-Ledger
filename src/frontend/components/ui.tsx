@@ -15,6 +15,51 @@ import {
 } from "@/frontend/lib/data";
 import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
 import { isSavingsCategory } from "@/frontend/lib/categories";
+import type { Insight } from "@/frontend/lib/insights/types";
+import {
+  Archive,
+  ArrowsClockwise,
+  Bell,
+  Calculator as CalculatorIcon,
+  CalendarBlank,
+  Car,
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  CaretUp,
+  ChartBar,
+  ChartPieSlice,
+  Check,
+  ChatCircle,
+  Clock,
+  Copy,
+  Database,
+  DownloadSimple,
+  File,
+  Info,
+  Key,
+  ListBullets,
+  ListChecks,
+  Lock,
+  MagnifyingGlass,
+  Moon,
+  PaperPlaneTilt,
+  PencilSimple,
+  PiggyBank,
+  Plus,
+  Repeat,
+  ShieldCheck,
+  SignOut,
+  Sparkle,
+  SquaresFour,
+  Sun,
+  Tag,
+  Target,
+  Trash,
+  Wallet as WalletIcon,
+  X,
+  type Icon as PhosphorIcon,
+} from "@phosphor-icons/react";
 import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
 import type { CapitalPlan, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
@@ -130,52 +175,55 @@ function glyphTint(color: string) {
   return { color, background: color + "1f" };
 }
 
-// ── Icon: minimal line icons (simple geometry only) ─────────────────
+// ── Icon: Phosphor icon set, looked up by name ───────────────────────
+const ICON_MAP: Record<string, PhosphorIcon> = {
+  overview: SquaresFour,
+  list: ListBullets,
+  budget: ChartPieSlice,
+  calculator: CalculatorIcon,
+  insights: ChartBar,
+  recurring: ArrowsClockwise,
+  plus: Plus,
+  close: X,
+  chevL: CaretLeft,
+  chevR: CaretRight,
+  edit: PencilSimple,
+  trash: Trash,
+  archive: Archive,
+  search: MagnifyingGlass,
+  repeat: Repeat,
+  shield: ShieldCheck,
+  key: Key,
+  copy: Copy,
+  check: Check,
+  wallet: WalletIcon,
+  logout: SignOut,
+  chevD: CaretDown,
+  chevU: CaretUp,
+  download: DownloadSimple,
+  database: Database,
+  calendar: CalendarBlank,
+  clock: Clock,
+  bell: Bell,
+  comment: ChatCircle,
+  send: PaperPlaneTilt,
+  checklist: ListChecks,
+  tags: Tag,
+  moon: Moon,
+  sun: Sun,
+  file: File,
+  info: Info,
+  lock: Lock,
+  sparkle: Sparkle,
+  piggy: PiggyBank,
+  capital: Target,
+  car: Car,
+};
+
 function Icon({ name, size = 20 }) {
-  const s = { width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" };
-  const paths = {
-    overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
-    list: <><path d="M8 6h13M8 12h13M8 18h13" /><circle cx="3.5" cy="6" r="1.2" /><circle cx="3.5" cy="12" r="1.2" /><circle cx="3.5" cy="18" r="1.2" /></>,
-    budget: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-    calculator: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 7h8M8 12h2M12 12h2M16 12h2M8 16h2M12 16h2M16 16h2" /></>,
-    insights: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
-    recurring: <><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></>,
-    plus: <><path d="M12 5v14M5 12h14" /></>,
-    close: <><path d="M6 6l12 12M18 6L6 18" /></>,
-    chevL: <path d="M15 6l-6 6 6 6" />,
-    chevR: <path d="M9 6l6 6-6 6" />,
-    edit: <><path d="M4 20h4L18.5 9.5a2 2 0 0 0-3-3L5 17v3z" /><path d="M13.5 6.5l3 3" /></>,
-    trash: <><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13" /></>,
-    archive: <><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" /></>,
-    search: <><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></>,
-    repeat: <><path d="M17 2l3 3-3 3" /><path d="M20 5H8a4 4 0 0 0-4 4v1" /><path d="M7 22l-3-3 3-3" /><path d="M4 19h12a4 4 0 0 0 4-4v-1" /></>,
-    shield: <><path d="M12 3l7 3v5.5c0 4.4-3 7.6-7 8.5-4-.9-7-4.1-7-8.5V6l7-3z" /><path d="M9 12l2 2 4-4.5" /></>,
-    key: <><circle cx="8" cy="15" r="4" /><path d="M11 12l8.5-8.5M16.5 5.5l2 2M14 8l2 2" /></>,
-    copy: <><rect x="9" y="9" width="11" height="11" rx="2.5" /><path d="M5 15V6a2 2 0 0 1 2-2h8" /></>,
-    check: <path d="M5 13l4 4 10-11" />,
-    wallet: <><rect x="3" y="6" width="18" height="13" rx="3" /><path d="M21 10.5h-4a2 2 0 0 0 0 4h4" /></>,
-    logout: <><path d="M15 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2" /><path d="M10 12h9" /><path d="M16 9l3 3-3 3" /></>,
-    chevD: <path d="M6 9l6 6 6-6" />,
-    chevU: <path d="M6 15l6-6 6 6" />,
-    download: <><path d="M12 4v11" /><path d="M8 11l4 4 4-4" /><path d="M5 19h14" /></>,
-    database: <><ellipse cx="12" cy="6" rx="7" ry="3" /><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" /><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" /></>,
-    calendar: <><rect x="3" y="4.5" width="18" height="16" rx="2.5" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></>,
-    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></>,
-    bell: <><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" /><path d="M10.5 19a1.6 1.6 0 0 0 3 0" /></>,
-    comment: <><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V16.5H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5z" /></>,
-    send: <><path d="M4 12l16-7-7 16-2.5-6.5L4 12z" /></>,
-    checklist: <><path d="M9 6h11M9 12h11M9 18h6" /><path d="M5 6l1.5 1.5L8 5M5 12l1.5 1.5L8 11M5 18l1.5 1.5L8 17" /></>,
-    tags: <><path d="M5 7.5a2.5 2.5 0 0 1 5 0v1.8l6.2 6.2a2 2 0 0 1 0 2.8l-1.5 1.5a2 2 0 0 1-2.8 0L6.3 13.1V7.5z" /><circle cx="7.5" cy="7.5" r="1.1" /></>,
-    moon: <><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 8.5 8.5 0 1 0 20.5 14.5z" /></>,
-    sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
-    file: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></>,
-    info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
-    lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
-    sparkle: <><path d="M10 2.5l2.1 5.4 5.4 2.1-5.4 2.1L10 17.5l-2.1-5.4L2.5 10l5.4-2.1L10 2.5z" /><path d="M17.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" /></>,
-    piggy: <><path d="M4 12.5a5.5 5.5 0 0 1 5.5-5.5h4a5.5 5.5 0 0 1 5 3.2l1.5.4a1 1 0 0 1 0 1.9l-1.5.5A5.5 5.5 0 0 1 13.5 17H12v2H9v-2a5.5 5.5 0 0 1-5-5.5z" /><circle cx="16" cy="11" r=".9" fill="currentColor" stroke="none" /><path d="M9 7.5V5.5M6.5 8.5 5 7M7 17v2" /></>,
-    capital: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /></>,
-  };
-  return <svg viewBox="0 0 24 24" style={s}>{paths[name]}</svg>;
+  const Glyph = ICON_MAP[name];
+  if (!Glyph) return null;
+  return <Glyph size={size} />;
 }
 
 // ── CatGlyph: category / type emoji marker ──────────────────────────
@@ -196,6 +244,7 @@ export const NAV_ITEMS = [
   ["budgets", "Budgets", "budget"],
   ["piggies", "Piggies", "piggy"],
   ["capitals", "Capitals", "capital"],
+  ["vehicles", "Vehicles", "car"],
   ["calculator", "Calculator", "calculator"],
   ["categories", "Categories", "tags"],
   ["recurring", "Recurring", "recurring"],
@@ -438,6 +487,43 @@ function Segmented({ options, value, onChange }) {
 // ── EmptyState: centered placeholder for empty lists ────────────────
 function EmptyState({ title, sub }) {
   return <div className="empty"><div className="empty-mark">◌</div><div className="empty-title">{title}</div>{sub ? <div className="empty-sub">{sub}</div> : null}</div>;
+}
+
+// ── InsightFeed: ranked findings, shared by Transaction and Fuel Insights ──
+/** One ranked finding card — tone stripe, optional metric chip, confidence pill. */
+function InsightCard({ insight }: { insight: Insight }) {
+  return (
+    <div className={"insight-card tone-" + insight.tone}>
+      <div className="insight-card-head">
+        <span className="insight-card-title">{insight.title}</span>
+        <span className={"profile-confidence conf-" + insight.confidence.level}>
+          {insight.confidence.level}
+        </span>
+      </div>
+      {insight.metric ? (
+        <div className="insight-card-metric">
+          <span className="insight-card-metric-label">{insight.metric.label}</span>
+          <span className="insight-card-metric-value">{insight.metric.value}</span>
+        </div>
+      ) : null}
+      <p className="insight-card-body">{insight.body}</p>
+    </div>
+  );
+}
+
+/** Render a ranked insight feed, or a quiet empty state when nothing stands out. */
+function InsightFeed({ insights, emptyLabel = "Nothing stands out right now." }: { insights: Insight[]; emptyLabel?: string }) {
+  if (!insights.length) {
+    return <p className="panel-sub insight-feed-empty">{emptyLabel}</p>;
+  }
+
+  return (
+    <div className="insight-feed">
+      {insights.map((insight) => (
+        <InsightCard key={insight.id} insight={insight} />
+      ))}
+    </div>
+  );
 }
 
 type WalletPickerProps = {
@@ -816,5 +902,5 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, cap
 }
 
 export {
-  AddExpenseModal, CatGlyph, DeleteScopeDialog, EmptyState, Icon, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
+  AddExpenseModal, CatGlyph, DeleteScopeDialog, EmptyState, Icon, InsightFeed, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
 };

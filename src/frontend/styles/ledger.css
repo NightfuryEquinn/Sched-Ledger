@@ -142,6 +142,15 @@ input {
   font-family: inherit;
 }
 
+/* Inline SVGs default to `inline`, which leaves a few px of descender gap
+   below them and — more importantly — makes `display` an inline style set
+   by every chart component just to avoid it. Reset it here instead, so a
+   later responsive rule (e.g. hiding a sparkline on narrow rows) can
+   actually win the cascade instead of losing to an inline style. */
+svg {
+  display: block;
+}
+
 h1, h2, h3 {
   margin: 0;
   font-weight: 600;
@@ -2070,6 +2079,10 @@ h1, h2, h3 {
 
 .profile-result {
   display: grid;
+  /* Pin the single implicit column to the container width — otherwise a wide
+     descendant (e.g. the 12-month trajectory) sizes this "auto" track to its
+     own min-content and stretches every row above it past the panel edge. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   padding: 2px 0;
 }
@@ -2115,6 +2128,91 @@ h1, h2, h3 {
 
 .profile-confidence.conf-low {
   color: var(--ink-faint);
+}
+
+/* ── InsightFeed: ranked findings, shared by Transaction and Fuel Insights ── */
+
+.insight-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.insight-feed-empty {
+  margin: 0;
+}
+
+.insight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border-left: 3px solid var(--insight-tone, var(--ink-faint));
+}
+
+.insight-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px var(--sp-3);
+}
+
+.insight-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.insight-card-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-num);
+}
+
+.insight-card-metric-label {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-faint);
+}
+
+.insight-card-metric-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.insight-card-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.insight-card.tone-positive {
+  --insight-tone: var(--ok);
+}
+
+.insight-card.tone-neutral {
+  --insight-tone: var(--ink-faint);
+}
+
+.insight-card.tone-warning {
+  --insight-tone: var(--danger);
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface-2));
+}
+
+.insight-card.tone-critical {
+  --insight-tone: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, var(--surface-2));
+}
+
+.insight-card.tone-critical .insight-card-title {
+  color: var(--danger);
 }
 
 .profile-temperament {
@@ -2226,6 +2324,7 @@ h1, h2, h3 {
 .pdrv-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
   align-items: center;
   gap: 10px;
 }
@@ -2240,7 +2339,12 @@ h1, h2, h3 {
 }
 
 .pdrv-bar {
+  /* Row must be explicit: with only grid-column set, auto-placement can't
+     fit this full-width bar into row 1 (icon+name already sit there), so
+     it claims row 2 on its own — then .pdrv-amt, also unpositioned, gets
+     pushed to a new row 3 instead of sitting beside the name. */
   grid-column: 1 / -1;
+  grid-row: 2;
   height: 4px;
   border-radius: 999px;
   background: var(--surface-3);
@@ -2260,6 +2364,7 @@ h1, h2, h3 {
 }
 
 .profile-trajectory {
+  min-width: 0;
   padding-top: 14px;
   border-top: 1px solid var(--hair);
 }
@@ -2272,8 +2377,18 @@ h1, h2, h3 {
 
 .ptrl-grid {
   display: grid;
-  /* Column count is set per panel — 6 for the habit trail, 6 or 12 for income. */
-  grid-template-columns: repeat(var(--ptrl-cols, 6), minmax(0, 1fr));
+  /*
+   * Columns size themselves (6 for the habit trail, 6 or 12 for income) rather
+   * than dividing a fixed track count — a fixed `repeat(N, minmax(0,1fr))`
+   * still lets each column shrink below a usable width at N=12, which both
+   * ellipsizes every amount and, since a grid item's own min-width defaults to
+   * its content size, can blow out the panel itself. Auto-flow with a floor
+   * width fills the row evenly when everything fits and scrolls in place
+   * — inside the panel, not past it — when it doesn't.
+   */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(64px, 1fr);
+  overflow-x: auto;
   align-items: end;
   gap: 8px;
   min-height: 68px;
@@ -2285,6 +2400,7 @@ h1, h2, h3 {
   align-items: center;
   gap: 4px;
   height: 100%;
+  min-width: 0;
   padding: 0;
   border: none;
   background: none;
@@ -2316,12 +2432,20 @@ h1, h2, h3 {
 
 .ptrl-label {
   margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11.5px;
   color: var(--ink-faint);
 }
 
 .ptrl-style {
   margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -3325,14 +3449,22 @@ h1, h2, h3 {
 }
 
 /* Insights */
+/*
+ * .cat-trend-list holds the shared column tracks; each .ctrow subgrids into
+ * them. Without this, every .ctrow would be its own independent grid sizing
+ * "auto" columns to only its own content — so a row with "RM831.82" and a
+ * row with "RM0.00" would each pick a different amount-column width, and the
+ * amounts/deltas would never share a right edge, unlike a real table.
+ */
 .cat-trend-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
 }
 
 .ctrow {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   gap: 14px;
   padding: 11px 2px;
@@ -4841,6 +4973,19 @@ h1, h2, h3 {
   .capital-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── 9e. Views: vehicles ──────────────────────────────────────────── */
+
+/* Vehicles reuses the Capitals card grid; the only addition is selection state. */
+.capital-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow);
+  cursor: pointer;
+}
+
+.capital-card:not(.is-selected) {
+  cursor: pointer;
 }
 
 /* ── 10. Views: schedule ──────────────────────────────────────────── */
@@ -6809,6 +6954,9 @@ h1, h2, h3 {
     white-space: normal;
     font-size: 18px;
   }
+  .insights-section-head h2 {
+    font-size: 18px;
+  }
   .panel-head--todo h2 {
     white-space: nowrap;
     font-size: 18px;
@@ -6869,7 +7017,7 @@ h1, h2, h3 {
     align-self: stretch;
   }
   .profile-top {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
   .profile-signals {
@@ -6878,13 +7026,12 @@ h1, h2, h3 {
   .ptrl-style {
     display: none;
   }
-  /* Twelve months never fit across a phone. Give every column a floor width
-     and let the row scroll, rather than crushing each bar to a sliver. */
+  /* Twelve months never fit across a phone. With the amount hidden above,
+     only the month abbreviation needs to fit, so the floor can shrink from
+     the base rule's 64px down to 30px. Auto-flow/overflow are already set
+     by the base .ptrl-grid rule. */
   .ptrl-grid {
-    grid-template-columns: none;
-    grid-auto-flow: column;
     grid-auto-columns: minmax(30px, 1fr);
-    overflow-x: auto;
   }
   .profile-title {
     font-size: 20px;
@@ -7547,13 +7694,19 @@ h1, h2, h3 {
   .panel-head h2 {
     font-size: 17px;
   }
+  .insights-section-head h2 {
+    font-size: 17px;
+  }
   .panel-sub {
     font-size: 12px;
   }
 
-  /* Category trends */
-  .ctrow {
+  /* Category trends — .ctrow keeps subgrid from the base rule, so it
+     inherits whichever column count .cat-trend-list defines here. */
+  .cat-trend-list {
     grid-template-columns: 1fr auto;
+  }
+  .ctrow {
     grid-template-rows: auto auto;
     gap: 4px 12px;
     padding: 12px 0;

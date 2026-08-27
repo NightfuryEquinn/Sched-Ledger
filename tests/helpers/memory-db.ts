@@ -96,6 +96,10 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
         continue;
       }
     }
+    if (value instanceof ObjectId) {
+      if (!(doc[key] instanceof ObjectId) || !(doc[key] as ObjectId).equals(value)) return false;
+      continue;
+    }
     if (doc[key] !== value) return false;
   }
   return true;
