@@ -2324,6 +2324,7 @@ h1, h2, h3 {
 .pdrv-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
   align-items: center;
   gap: 10px;
 }
@@ -2338,7 +2339,12 @@ h1, h2, h3 {
 }
 
 .pdrv-bar {
+  /* Row must be explicit: with only grid-column set, auto-placement can't
+     fit this full-width bar into row 1 (icon+name already sit there), so
+     it claims row 2 on its own — then .pdrv-amt, also unpositioned, gets
+     pushed to a new row 3 instead of sitting beside the name. */
   grid-column: 1 / -1;
+  grid-row: 2;
   height: 4px;
   border-radius: 999px;
   background: var(--surface-3);
