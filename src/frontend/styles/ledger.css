@@ -2070,6 +2070,10 @@ h1, h2, h3 {
 
 .profile-result {
   display: grid;
+  /* Pin the single implicit column to the container width — otherwise a wide
+     descendant (e.g. the 12-month trajectory) sizes this "auto" track to its
+     own min-content and stretches every row above it past the panel edge. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   padding: 2px 0;
 }
@@ -2345,6 +2349,7 @@ h1, h2, h3 {
 }
 
 .profile-trajectory {
+  min-width: 0;
   padding-top: 14px;
   border-top: 1px solid var(--hair);
 }
@@ -2357,8 +2362,18 @@ h1, h2, h3 {
 
 .ptrl-grid {
   display: grid;
-  /* Column count is set per panel — 6 for the habit trail, 6 or 12 for income. */
-  grid-template-columns: repeat(var(--ptrl-cols, 6), minmax(0, 1fr));
+  /*
+   * Columns size themselves (6 for the habit trail, 6 or 12 for income) rather
+   * than dividing a fixed track count — a fixed `repeat(N, minmax(0,1fr))`
+   * still lets each column shrink below a usable width at N=12, which both
+   * ellipsizes every amount and, since a grid item's own min-width defaults to
+   * its content size, can blow out the panel itself. Auto-flow with a floor
+   * width fills the row evenly when everything fits and scrolls in place
+   * — inside the panel, not past it — when it doesn't.
+   */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(64px, 1fr);
+  overflow-x: auto;
   align-items: end;
   gap: 8px;
   min-height: 68px;
@@ -6916,6 +6931,9 @@ h1, h2, h3 {
     white-space: normal;
     font-size: 18px;
   }
+  .insights-section-head h2 {
+    font-size: 18px;
+  }
   .panel-head--todo h2 {
     white-space: nowrap;
     font-size: 18px;
@@ -6976,7 +6994,7 @@ h1, h2, h3 {
     align-self: stretch;
   }
   .profile-top {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
   .profile-signals {
@@ -6985,13 +7003,12 @@ h1, h2, h3 {
   .ptrl-style {
     display: none;
   }
-  /* Twelve months never fit across a phone. Give every column a floor width
-     and let the row scroll, rather than crushing each bar to a sliver. */
+  /* Twelve months never fit across a phone. With the amount hidden above,
+     only the month abbreviation needs to fit, so the floor can shrink from
+     the base rule's 64px down to 30px. Auto-flow/overflow are already set
+     by the base .ptrl-grid rule. */
   .ptrl-grid {
-    grid-template-columns: none;
-    grid-auto-flow: column;
     grid-auto-columns: minmax(30px, 1fr);
-    overflow-x: auto;
   }
   .profile-title {
     font-size: 20px;
@@ -7652,6 +7669,9 @@ h1, h2, h3 {
 
   /* Panel subheaders */
   .panel-head h2 {
+    font-size: 17px;
+  }
+  .insights-section-head h2 {
     font-size: 17px;
   }
   .panel-sub {

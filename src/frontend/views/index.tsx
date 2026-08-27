@@ -72,7 +72,7 @@ import {
 import { getAccent } from "@/frontend/lib/theme";
 import type { Budgets, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export { Categories } from "./Categories";
 
@@ -1244,10 +1244,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
             <div className="profile-trajectory">
               <p className="ptrl-note">{habitStory?.shift}</p>
-              <div
-                className="ptrl-grid"
-                style={{ "--ptrl-cols": habitTrail.length } as CSSProperties}
-              >
+              <div className="ptrl-grid">
                 {habitTrail.map((pt) => {
                   const isReady = pt.status === "ready";
                   return (
@@ -1503,10 +1500,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
               <div className="profile-trajectory">
                 <p className="ptrl-note">{incomeStory?.trend}</p>
-                <div
-                  className="ptrl-grid"
-                  style={{ "--ptrl-cols": incomeProfile.metrics.monthly.length } as CSSProperties}
-                >
+                <div className="ptrl-grid">
                   {incomeProfile.metrics.monthly.map((pt) => (
                     <button
                       key={pt.monthKey}
