@@ -14,7 +14,7 @@ function Donut({ data, size = 220, thickness = 30, onHover, activeId }) {
     return seg;
   });
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <g transform={`rotate(-90 ${R} ${R})`}>
         {segs.map((s) => {
           const dim = activeId && activeId !== s.id;
@@ -209,7 +209,7 @@ function AreaTrend({
   const bandW = points.length > 1 ? innerW / (points.length - 1) : innerW;
 
   const chart = (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={accent} stopOpacity="0.26" />
@@ -321,7 +321,7 @@ function MoMBars({
 
   return (
     <div className="chart-hoverable" onMouseLeave={() => setHover(null)}>
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
         <AxisGrid padL={padL} padR={padR} padT={padT} innerH={innerH} width={W} max={nice} />
         {budget ? (
           <line x1={padL} x2={W - padR} y1={y(budget)} y2={y(budget)}
@@ -383,7 +383,7 @@ function MiniSpark({ values, color, width = 90, height = 28 }) {
   const y = (v) => height - 2 - ((v - min) / rng) * (height - 4);
   const d = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   return (
-    <svg width={width} height={height} style={{ display: "block" }}>
+    <svg width={width} height={height}>
       <path d={d} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

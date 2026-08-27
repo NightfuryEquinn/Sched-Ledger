@@ -142,6 +142,15 @@ input {
   font-family: inherit;
 }
 
+/* Inline SVGs default to `inline`, which leaves a few px of descender gap
+   below them and — more importantly — makes `display` an inline style set
+   by every chart component just to avoid it. Reset it here instead, so a
+   later responsive rule (e.g. hiding a sparkline on narrow rows) can
+   actually win the cascade instead of losing to an inline style. */
+svg {
+  display: block;
+}
+
 h1, h2, h3 {
   margin: 0;
   font-weight: 600;
@@ -3434,14 +3443,22 @@ h1, h2, h3 {
 }
 
 /* Insights */
+/*
+ * .cat-trend-list holds the shared column tracks; each .ctrow subgrids into
+ * them. Without this, every .ctrow would be its own independent grid sizing
+ * "auto" columns to only its own content — so a row with "RM831.82" and a
+ * row with "RM0.00" would each pick a different amount-column width, and the
+ * amounts/deltas would never share a right edge, unlike a real table.
+ */
 .cat-trend-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
 }
 
 .ctrow {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   gap: 14px;
   padding: 11px 2px;
@@ -7678,9 +7695,12 @@ h1, h2, h3 {
     font-size: 12px;
   }
 
-  /* Category trends */
-  .ctrow {
+  /* Category trends — .ctrow keeps subgrid from the base rule, so it
+     inherits whichever column count .cat-trend-list defines here. */
+  .cat-trend-list {
     grid-template-columns: 1fr auto;
+  }
+  .ctrow {
     grid-template-rows: auto auto;
     gap: 4px 12px;
     padding: 12px 0;
