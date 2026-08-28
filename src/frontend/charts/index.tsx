@@ -1,4 +1,5 @@
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useFadeIn } from "@/frontend/lib/animate";
 
 type DonutDatum = { id: string; value: number; color: string; label?: string };
 
@@ -9,6 +10,26 @@ type DonutProps = {
   onHover?: (id: string | null) => void;
   activeId?: string | null;
 };
+
+/** Fade-in wrapper for chart hover tooltips. */
+function ChartTip({
+  className,
+  style,
+  children,
+}: {
+  className?: string;
+  style?: CSSProperties;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useFadeIn(ref);
+
+  return (
+    <div ref={ref} className={className} style={style}>
+      {children}
+    </div>
+  );
+}
 
 function Donut({ data, size = 220, thickness = 30, onHover, activeId }: DonutProps) {
   // data: [{id,label,value,color}]
@@ -286,13 +307,13 @@ function AreaTrend({
     <div className="chart-hoverable" onMouseLeave={() => setHover(null)}>
       {chart}
       {detail ? (
-        <div className="chart-tip" style={tipAnchor(x(hoverIdx!) / W)}>
+        <ChartTip className="chart-tip" style={tipAnchor(x(hoverIdx!) / W)}>
           <div className="ctip-day">{detail.label}</div>
           <TipSection title="Spent" total={detail.spent} entries={detail.spend}
             dotColor={accent} empty="Nothing spent" format={format} />
           <TipSection title="Earned" total={detail.earned} entries={detail.earn}
             dotClass="trend-dot--earn" empty="Nothing earned" format={format} />
-        </div>
+        </ChartTip>
       ) : null}
     </div>
   );
@@ -364,7 +385,7 @@ function MoMBars({
         })}
       </svg>
       {hovered ? (
-        <div className="chart-tip chart-tip--brief" style={tipAnchor(hoveredX / W)}>
+        <ChartTip className="chart-tip chart-tip--brief" style={tipAnchor(hoveredX / W)}>
           <div className="ctip-day">{hovered.label}</div>
           <div className="ctip-line">
             <span className="ctip-key"><i className="trend-dot" style={{ background: accent }} /> Total Spend</span>
@@ -380,7 +401,7 @@ function MoMBars({
               {format((hovered.earned || 0) - hovered.spent)}
             </span>
           </div>
-        </div>
+        </ChartTip>
       ) : null}
     </div>
   );

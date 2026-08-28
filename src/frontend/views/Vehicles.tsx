@@ -1,6 +1,7 @@
 import { DatePicker } from "@/frontend/components/DateTimePicker";
 import { EmptyState, Icon, InsightFeed, SummaryCard } from "@/frontend/components/ui";
 import { dayLabel, fmtMoney, roundMoney } from "@/frontend/lib/data";
+import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
 import {
   assessVehicleFuel,
   computeFuelInsights,
@@ -8,7 +9,7 @@ import {
   VEHICLE_TYPES,
 } from "@/frontend/lib/fuelInsights";
 import type { FuelFill, Vehicle, VehicleType } from "@/frontend/lib/types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /*
  * Vehicles — fleet tracker + Fuel Insights
@@ -58,6 +59,22 @@ export function Vehicles({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [removingFillId, setRemovingFillId] = useState<string | null>(null);
+  const vehicleScrimRef = useRef<HTMLDivElement>(null);
+  const vehiclePanelRef = useRef<HTMLDivElement>(null);
+  const fillScrimRef = useRef<HTMLDivElement>(null);
+  const fillPanelRef = useRef<HTMLDivElement>(null);
+  const vehicleEditorOpen = !!editor && (editor.type === "add-vehicle" || editor.type === "edit-vehicle");
+  const fillEditorOpen = !!editor && (editor.type === "add-fill" || editor.type === "edit-fill");
+  const { requestClose: requestCloseVehicle } = useModalMotion(vehicleScrimRef, vehiclePanelRef, {
+    variant: "center",
+    active: vehicleEditorOpen,
+  });
+  const { requestClose: requestCloseFill } = useModalMotion(fillScrimRef, fillPanelRef, {
+    variant: "center",
+    active: fillEditorOpen,
+  });
+  const closeEditor = () => requestCloseVehicle(() => setEditor(null));
+  const closeFillEditor = () => requestCloseFill(() => setEditor(null));
 
   const [name, setName] = useState("");
   const [model, setModel] = useState("");
@@ -254,10 +271,14 @@ export function Vehicles({
       setRemovingFillId(null);
     }
   };
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   if (!vehicleList.length && !editor) {
     return (
-      <div className="view">
+      <div ref={viewRef} className="view">
         <EmptyState title="No Vehicles Yet" sub="Add a car, EV, bike, or van to start tracking fuel or charging costs." />
         <div className="todo-empty-action">
           <button className="primary-btn" type="button" onClick={openAddVehicle}>
@@ -274,11 +295,11 @@ export function Vehicles({
 
     if (editor.type === "add-vehicle" || editor.type === "edit-vehicle") {
       return (
-        <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) setEditor(null); }}>
-          <div className="modal sm" role="dialog" aria-modal="true">
+        <div ref={vehicleScrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeEditor(); }}>
+          <div ref={vehiclePanelRef} className="modal sm" role="dialog" aria-modal="true">
             <div className="modal-head">
               <h3>{editor.type === "add-vehicle" ? "Add Vehicle" : "Edit Vehicle"}</h3>
-              <button className="icon-btn" type="button" onClick={() => setEditor(null)} aria-label="Close">
+              <button className="icon-btn" type="button" onClick={closeEditor} aria-label="Close" disabled={busy}>
                 <Icon name="close" size={18} />
               </button>
             </div>
@@ -352,7 +373,7 @@ export function Vehicles({
                 {error ? <p className="auth-error">{error}</p> : null}
 
                 <div className="wallet-form-actions">
-                  <button className="ghost-btn full" type="button" onClick={() => setEditor(null)}>Cancel</button>
+                  <button className="ghost-btn full" type="button" onClick={closeEditor} disabled={busy}>Cancel</button>
                   <button
                     className="primary-btn full"
                     type="button"
@@ -371,11 +392,11 @@ export function Vehicles({
 
     const meta = VEHICLE_TYPES[selectedVehicle?.type ?? "car"];
     return (
-      <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) setEditor(null); }}>
-        <div className="modal sm" role="dialog" aria-modal="true">
+      <div ref={fillScrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeFillEditor(); }}>
+        <div ref={fillPanelRef} className="modal sm" role="dialog" aria-modal="true">
           <div className="modal-head">
             <h3>{editor.type === "add-fill" ? meta.fillVerb : `Edit ${meta.fillNoun}`}</h3>
-            <button className="icon-btn" type="button" onClick={() => setEditor(null)} aria-label="Close">
+            <button className="icon-btn" type="button" onClick={closeFillEditor} aria-label="Close" disabled={busy}>
               <Icon name="close" size={18} />
             </button>
           </div>
@@ -433,7 +454,7 @@ export function Vehicles({
               {error ? <p className="auth-error">{error}</p> : null}
 
               <div className="wallet-form-actions">
-                <button className="ghost-btn full" type="button" onClick={() => setEditor(null)}>Cancel</button>
+                <button className="ghost-btn full" type="button" onClick={closeFillEditor} disabled={busy}>Cancel</button>
                 <button
                   className="primary-btn full"
                   type="button"
@@ -451,8 +472,8 @@ export function Vehicles({
   }
 
   return (
-    <div className="view">
-      <div className="summary-grid sg-4" data-tour="tour-vehicles-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid sg-4" data-tour="tour-vehicles-summary">
         <SummaryCard label="Vehicles" value={String(vehicleList.length)} />
         <SummaryCard label="Total Spend" value={money(totalSpend)} sub="across all vehicles" />
         <SummaryCard

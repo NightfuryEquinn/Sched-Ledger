@@ -1,5 +1,7 @@
 import { DatePicker, TimePicker } from "@/frontend/components/DateTimePicker";
 import { CategoryPicker } from "@/frontend/components/CategoryPicker";
+import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
+import { FadeIn } from "@/frontend/components/FadeIn";
 import {
   DeleteScopeDialog,
   EmptyState,
@@ -72,7 +74,10 @@ type LeadPickerProps = {
 function LeadPicker({ options, value, onChange }: LeadPickerProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "picker", active: open });
   const selected = options.find((option) => option.id === value) ?? options[0];
 
   useEffect(() => {
@@ -100,12 +105,13 @@ function LeadPicker({ options, value, onChange }: LeadPickerProps) {
 
   const menu = open ? (
     <div
+      ref={scrimRef}
       className="picker-scrim"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) setOpen(false);
+        if (e.target === e.currentTarget) requestClose(() => setOpen(false));
       }}
     >
-      <div className="picker-menu picker-menu--lead" role="listbox" aria-label="Reminder lead time">
+      <div ref={panelRef} className="picker-menu picker-menu--lead" role="listbox" aria-label="Reminder lead time">
         <div className="picker-timezone-list">
           {options.map((option) => {
             const active = option.id === selected.id;
@@ -304,10 +310,14 @@ export function Schedule({
   const canPrevDay = !showFullUpcoming && navAnchor > monthStart;
   const canNextDay = !showFullUpcoming && navAnchor < monthEnd;
   const upcomingTitle = isCurrent ? "Upcoming" : "Agenda";
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   return (
-    <div className="view">
-      <div className="summary-grid sg-3" data-tour="tour-schedule-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid sg-3" data-tour="tour-schedule-summary">
         <SummaryCard label="Events this Month" value={String(occStarts.length)} sub={monthLabel(month, true)} />
         <SummaryCard label="Next Reminder" tone="ok"
           value={nextRem ? dayLabel(nextRem.iso) : "—"}
@@ -520,6 +530,10 @@ export function EventModal({
   const [scopeOpen, setScopeOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const busy = saving || deleting;
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
   const [holdEnabled, setHoldEnabled] = useState(Boolean(initial?.budgetHoldEnabled));
   const [holdAmount, setHoldAmount] = useState(
     initial?.budgetHoldAmount ? String(initial.budgetHoldAmount) : "",
@@ -558,9 +572,9 @@ export function EventModal({
   const titleRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen) onClose(); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !busy) requestClose(onClose); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [scopeOpen]);
+  }, [scopeOpen, busy, onClose, requestClose]);
 
   const handleAllDayChange = (checked: boolean) => {
     setAllDay(checked);
@@ -647,11 +661,11 @@ export function EventModal({
   };
 
   return (
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen) onClose(); }}>
-      <div className="modal sm" role="dialog" aria-modal="true">
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !busy) requestClose(onClose); }}>
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{editing ? "Edit Event" : "New Event"}</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={busy}><Icon name="close" size={18} /></button>
         </div>
 
         <div className="modal-body modal-scroll">
@@ -838,7 +852,7 @@ export function EventModal({
                 <div className="hold-fields-grid__amount">
                   <label className="fld-label">Amount</label>
                   {holdAmountIsExpression ? (
-                    <div className="amount-live-total">= {fmtMoney(holdAmountEvaluated, { cents: false, currency })}</div>
+                    <FadeIn className="amount-live-total">= {fmtMoney(holdAmountEvaluated, { cents: false, currency })}</FadeIn>
                   ) : null}
                   <div className="hold-amt-row">
                     <span className="hold-cur">{getCurrency(currency).symbol}</span>
@@ -907,7 +921,7 @@ export function EventModal({
             editing ? <button className="ghost-btn danger" type="button" disabled={deleting} onClick={requestDelete}>{deleting ? "Deleting…" : "Delete"}</button> : <span />
           )}
           <div className="mf-right">
-            <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
+            <button className="ghost-btn" type="button" onClick={() => requestClose(onClose)} disabled={busy}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid || saving} onClick={submit}>{saving ? "Saving…" : editing ? "Save Changes" : "Add Event"}</button>
           </div>
         </div>

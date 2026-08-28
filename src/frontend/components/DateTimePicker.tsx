@@ -1,3 +1,4 @@
+import { useModalMotion } from "@/frontend/lib/animate";
 import {
   MAX_MONTH_KEY,
   MIN_MONTH_KEY,
@@ -105,6 +106,8 @@ type DatePickerProps = {
 
 export function DatePicker({ value, onChange, className }: DatePickerProps) {
   const { open, setOpen, rootRef, triggerRef, menuRef } = usePickerPortal();
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, menuRef, { variant: "picker", active: open });
   const seed = value || TODAY_ISO;
   const { y, m } = parseYearMonth(seed);
   const [viewY, setViewY] = useState(y);
@@ -138,8 +141,9 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
 
   const menu = open ? (
     <div
+      ref={scrimRef}
       className="picker-scrim"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose(() => setOpen(false)); }}
     >
       <div ref={menuRef} className="picker-menu picker-menu--date" role="dialog" aria-modal="true">
         <div className="picker-cal-head">
@@ -210,6 +214,8 @@ type TimePickerProps = {
 
 export function TimePicker({ value, onChange, className, disabled, placeholder }: TimePickerProps) {
   const { open, setOpen, rootRef, triggerRef, menuRef } = usePickerPortal();
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, menuRef, { variant: "picker", active: open && !disabled });
   const parsed = parseTime24(value);
   const hourRef = useRef<HTMLButtonElement>(null);
   const minRef = useRef<HTMLButtonElement>(null);
@@ -226,8 +232,9 @@ export function TimePicker({ value, onChange, className, disabled, placeholder }
 
   const menu = open && !disabled ? (
     <div
+      ref={scrimRef}
       className="picker-scrim"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose(() => setOpen(false)); }}
     >
       <div ref={menuRef} className="picker-menu picker-menu--time" role="dialog" aria-modal="true">
         <div className="picker-time-cols">

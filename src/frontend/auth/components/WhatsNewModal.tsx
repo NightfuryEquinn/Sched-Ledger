@@ -1,5 +1,7 @@
 import { Icon } from "@/frontend/components/ui";
+import { useModalMotion } from "@/frontend/lib/animate";
 import { RELEASE_NOTES, type ReleaseNotes } from "@/frontend/lib/whats-new";
+import { useRef } from "react";
 import { createPortal } from "react-dom";
 
 type WhatsNewModalProps = {
@@ -36,17 +38,22 @@ function ReleaseSection({ notes }: { notes: ReleaseNotes }) {
 
 /** Version changelog: one long scroll, with Got It fixed at the bottom. */
 export function WhatsNewModal({ onClose }: WhatsNewModalProps) {
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
+
   return createPortal(
     <div
+      ref={scrimRef}
       className="modal-scrim center"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) requestClose(onClose);
       }}
     >
-      <div className="modal sm wn-modal" role="dialog" aria-modal="true" aria-labelledby="whatsnew-title">
+      <div ref={panelRef} className="modal sm wn-modal" role="dialog" aria-modal="true" aria-labelledby="whatsnew-title">
         <div className="modal-head">
           <h3 id="whatsnew-title">What&apos;s New</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
         <div className="modal-body modal-scroll">
           {RELEASE_NOTES.map((notes) => (
@@ -54,7 +61,7 @@ export function WhatsNewModal({ onClose }: WhatsNewModalProps) {
           ))}
         </div>
         <div className="modal-foot">
-          <button className="primary-btn full" type="button" onClick={onClose}>Got It</button>
+          <button className="primary-btn full" type="button" onClick={() => requestClose(onClose)}>Got It</button>
         </div>
       </div>
     </div>,

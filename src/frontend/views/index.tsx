@@ -1,3 +1,5 @@
+import { useEnter, useStagger } from "@/frontend/lib/animate";
+import { FadeIn } from "@/frontend/components/FadeIn";
 import { AreaTrend, Donut, MiniSpark, MoMBars } from "@/frontend/charts";
 import { CurrencyPicker } from "@/frontend/components/CurrencyPicker";
 import {
@@ -74,7 +76,7 @@ import { getAccent } from "@/frontend/lib/theme";
 import type { Budgets, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import type { DeleteScope } from "@/lib/delete-scope";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /*
  * Ledger views
@@ -252,10 +254,14 @@ export function Overview({
     : st.earned
       ? `${fmtMoney(wallet?.income ?? 0, { currency })} + ${fmtMoney(st.earned, { currency })} earned`
       : monthLabel(month, true);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   return (
-    <div className="view">
-      <div className="summary-grid" data-tour="tour-overview-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid" data-tour="tour-overview-summary">
         <SummaryCard label={poolLabel} value={fmtMoney(poolValue, { currency })} sub={poolSub} />
         <SummaryCard label="Spent" tone="spent" value={fmtMoney(st.spent, { currency })}
           sub={`${Math.round(spentPct * 100)}% of budget`} />
@@ -558,9 +564,13 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
     setFilter(key);
     setSubFilter(null);
   };
+  const viewRef = useRef<HTMLDivElement>(null);
+  const filterPanelRef = useRef<HTMLElement>(null);
+  useEnter(viewRef);
+  useEnter(filterPanelRef);
 
   return (
-    <div className="view">
+    <div ref={viewRef} className="view">
       <div className="txn-toolbar" data-tour="tour-txn-toolbar">
         <div className="search">
           <Icon name="search" size={17} />
@@ -620,7 +630,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
         </section>
       ) : null}
 
-      <section key={filter + ":" + subFilter + ":" + q} className="panel txn-panel txn-panel--filter" data-tour="tour-txn-list">
+      <section key={filter + ":" + subFilter + ":" + q} ref={filterPanelRef} className="panel txn-panel txn-panel--filter" data-tour="tour-txn-list">
         {dates.length ? dates.map((d) => {
           // `dates` is Object.keys(groups), so this is always populated — the
           // fallback only appeases noUncheckedIndexedAccess.
@@ -693,10 +703,14 @@ export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, 
     const v = Math.max(0, roundMoney(draftEvaluated ?? 0));
     setBudgets({ ...budgets, [id]: v });
   };
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   return (
-    <div className="view">
-      <div className="summary-grid sg-5" data-tour="tour-budgets-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid sg-5" data-tour="tour-budgets-summary">
         <SummaryCard label="Total Budget" value={fmtMoney(totalBudget, { currency })} sub="across all categories" />
         <SummaryCard label="Spent so Far" tone="spent" value={fmtMoney(totalSpent, { currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
         <SummaryCard
@@ -741,7 +755,7 @@ export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, 
                   {editId === c.id ? (
                     <>
                       {draftIsExpression ? (
-                        <span className="amount-live-total">= {fmtMoney(draftEvaluated, { currency })}</span>
+                        <FadeIn className="amount-live-total">= {fmtMoney(draftEvaluated, { currency })}</FadeIn>
                       ) : null}
                       <div className="be-edit">
                         <span className="be-cur">{getCurrency(currency).symbol}</span>
@@ -1130,9 +1144,13 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       : habitPeriod === "year"
         ? `Based on outgoing spend in ${habit.periodLabel} · updates with the selected year`
         : `Based on outgoing spend in ${habit.periodLabel} · rolling window, ignores month boundaries`;
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   return (
-    <div className="view">
+    <div ref={viewRef} className="view">
       <div className="insights-fx" data-tour="tour-insights-fx">
         <div className="insights-fx-main">
           <label className="fld-label" htmlFor="insights-currency">View in</label>
@@ -1327,7 +1345,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         )}
       </section>
 
-      <div className="summary-grid sg-3">
+      <div ref={gridRef} className="summary-grid sg-3">
         <SummaryCard label="This Month" tone="spent" value={money(cur.spent)} sub={monthLabel(month, false)} />
         <SummaryCard label="Vs Last Month" tone={prev && cur.spent > prev.spent ? "danger" : "saved"}
           value={prev ? (cur.spent >= prev.spent ? "+" : "−") + money(Math.abs(cur.spent - prev.spent)) : "—"}
@@ -1708,9 +1726,14 @@ export function Recurring({ expenses, month, currency, categoryIndex, onEdit }: 
   const list = recurringSchedulesForMonth(expenses, month);
   const total = roundMoney(list.reduce((s, e) => s + e.amount, 0));
   const monthlyEq = roundMoney(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
+
   return (
-    <div className="view">
-      <div className="summary-grid sg-2" data-tour="tour-recurring-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid sg-2" data-tour="tour-recurring-summary">
         <SummaryCard label="Recurring this Month" value={fmtMoney(total, { currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
         <SummaryCard label="Monthly Equivalent" tone="spent" value={fmtMoney(monthlyEq, { currency })} sub="normalized across intervals" />
       </div>

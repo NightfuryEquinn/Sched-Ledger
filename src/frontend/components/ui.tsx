@@ -1,5 +1,9 @@
 import { Brand } from "@/frontend/components/Brand";
 import { DatePicker } from "@/frontend/components/DateTimePicker";
+import { FadeIn } from "@/frontend/components/FadeIn";
+import { useFadeIn, useModalMotion } from "@/frontend/lib/animate";
+import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
+import { isSavingsCategory } from "@/frontend/lib/categories";
 import {
   CURRENT_MONTH_KEY,
   MAX_MONTH_KEY,
@@ -11,10 +15,8 @@ import {
   monthLabel,
   monthRangeBounds,
   pad,
-  weekdayLabel
+  weekdayLabel,
 } from "@/frontend/lib/data";
-import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
-import { isSavingsCategory } from "@/frontend/lib/categories";
 import type { Insight } from "@/frontend/lib/insights/types";
 import {
   Archive,
@@ -107,14 +109,17 @@ function DeleteScopeDialog({
 }) {
   const [scope, setScope] = useState<DeleteScope>("this");
   const [busy, setBusy] = useState(false);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !busy) onCancel();
+      if (e.key === "Escape" && !busy) requestClose(onCancel);
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [busy, onCancel]);
+  }, [busy, onCancel, requestClose]);
 
   /** Confirm the selected delete scope. */
   const confirm = async () => {
@@ -129,15 +134,16 @@ function DeleteScopeDialog({
 
   return createPortal(
     <div
+      ref={scrimRef}
       className="modal-scrim center"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !busy) onCancel();
+        if (e.target === e.currentTarget && !busy) requestClose(onCancel);
       }}
     >
-      <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby="delete-scope-title">
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="delete-scope-title">
         <div className="modal-head">
           <h3 id="delete-scope-title">{title}</h3>
-          <button className="icon-btn" type="button" onClick={onCancel} aria-label="Close" disabled={busy}>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onCancel)} aria-label="Close" disabled={busy}>
             <Icon name="close" size={18} />
           </button>
         </div>
@@ -162,7 +168,7 @@ function DeleteScopeDialog({
           </div>
         </div>
         <div className="modal-foot">
-          <button className="ghost-btn" type="button" onClick={onCancel} disabled={busy}>
+          <button className="ghost-btn" type="button" onClick={() => requestClose(onCancel)} disabled={busy}>
             Cancel
           </button>
           <button className="ghost-btn danger" type="button" onClick={confirm} disabled={busy}>
@@ -406,6 +412,7 @@ function MonthSwitcher({
 
   const canPrevYear = pickY > minY;
   const canNextYear = pickY < maxY;
+  useFadeIn(menuRef, { active: open });
 
   const picker = open ? (
     <div ref={menuRef} className="month-pick-menu" style={menuStyle} role="dialog" aria-modal="true">
@@ -671,6 +678,8 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
     };
   }, [open]);
 
+  useFadeIn(menuRef, { active: open });
+
   if (!selected) return null;
 
   const menu = open ? (
@@ -799,12 +808,15 @@ function AddExpenseModal({
   const showCapitalPicker =
     !locked && kind === "expense" && isSavingsCategory(catById[catId]) && capitalPlans.length > 0;
   const amtRef = useRef<HTMLInputElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   useEffect(() => { if (amtRef.current) amtRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !busy) onClose(); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !busy) requestClose(onClose); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [scopeOpen, busy]);
+  }, [scopeOpen, busy, onClose, requestClose]);
 
   const switchKind = (next: "expense" | "income") => {
     setKind(next);
@@ -868,11 +880,11 @@ function AddExpenseModal({
   };
 
   return (
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !busy) onClose(); }}>
-      <div className="modal sm" role="dialog" aria-modal="true">
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !busy) requestClose(onClose); }}>
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title ?? (editing ? "Edit Transaction" : "Add Transaction")}</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close" disabled={busy}><Icon name="close" size={18} /></button>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={busy}><Icon name="close" size={18} /></button>
         </div>
 
         <div className="modal-body modal-scroll">
@@ -900,10 +912,10 @@ function AddExpenseModal({
           ) : null}
 
           {amountIsExpression ? (
-            <div className="amount-live-total">= {fmtMoney(amountEvaluated, { currency: selectedWallet?.currency })}</div>
+            <FadeIn className="amount-live-total">= {fmtMoney(amountEvaluated, { currency: selectedWallet?.currency })}</FadeIn>
           ) : null}
           {overMax ? (
-            <div className="amount-live-total is-down">Max {fmtMoney(maxAmount, { currency: selectedWallet?.currency })} available</div>
+            <FadeIn className="amount-live-total is-down">Max {fmtMoney(maxAmount, { currency: selectedWallet?.currency })} available</FadeIn>
           ) : null}
           <div className={"amount-field" + (kind === "income" ? " amount-field--income" : "")}>
             <span className="amount-cur">{kind === "income" ? "+" : ""}{cur.symbol}</span>
@@ -1016,7 +1028,7 @@ function AddExpenseModal({
             </button>
           ) : <span />}
           <div className="mf-right">
-            <button className="ghost-btn" type="button" onClick={onClose} disabled={busy}>Cancel</button>
+            <button className="ghost-btn" type="button" onClick={() => requestClose(onClose)} disabled={busy}>Cancel</button>
             <button className="primary-btn" type="button" disabled={!valid || busy} onClick={submit}>
               {saving ? "Saving…" : locked ? "Withdraw" : editing ? "Save Changes" : kind === "income" ? "Add Income" : "Add Expense"}
             </button>

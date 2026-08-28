@@ -1,8 +1,9 @@
 import { CsvImportPanel, type CsvImportPreview } from "@/frontend/auth/components/CsvImportPanel";
 import { Icon } from "@/frontend/components/ui";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
+import { useModalMotion } from "@/frontend/lib/animate";
 import type { Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   buildBackupPlain,
@@ -75,6 +76,10 @@ export function ImportExportModal({
   const [txnBusy, setTxnBusy] = useState(false);
   const [schedBusy, setSchedBusy] = useState(false);
   const [todoBusy, setTodoBusy] = useState(false);
+  const modalBusy = backupBusy || txnBusy || schedBusy || todoBusy;
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   const [txnResult, setTxnResult] = useState<{
     imported: number;
@@ -302,11 +307,11 @@ export function ImportExportModal({
     : null;
 
   return createPortal(
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby="ie-modal-title">
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !modalBusy) requestClose(onClose); }}>
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="ie-modal-title">
         <div className="modal-head">
           <h3 id="ie-modal-title">Exports &amp; Imports</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={modalBusy}><Icon name="close" size={18} /></button>
         </div>
 
         <div className="modal-body modal-scroll">

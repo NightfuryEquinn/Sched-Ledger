@@ -1,6 +1,7 @@
 import { Icon } from "@/frontend/components/ui";
+import { useModalMotion } from "@/frontend/lib/animate";
 import type { IdentityRecord } from "@/frontend/lib/types";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { unwrapSecrets } from "../lib/device-vault";
 import { copyText } from "../lib/clipboard";
@@ -20,6 +21,9 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
   const words = mnemonic.split(/\s+/).filter(Boolean);
   const needsPass = !mnemonic && !!identity.vault;
 
@@ -40,11 +44,11 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
   }
 
   return createPortal(
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal sm" role="dialog" aria-modal="true">
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) requestClose(onClose); }}>
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>Recovery Phrase</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={20} /></button>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={busy}><Icon name="close" size={20} /></button>
         </div>
         <div className="modal-body">
           <p className="rec-note2">Anyone with these words controls your ledger. Never share them or enter them on another site.</p>

@@ -1,4 +1,5 @@
 import { Icon } from "@/frontend/components/ui";
+import { useModalMotion } from "@/frontend/lib/animate";
 import {
   disablePush,
   enablePush,
@@ -6,7 +7,7 @@ import {
   type PushStatus,
 } from "@/frontend/lib/push/subscribe";
 import type { Account } from "@/frontend/lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   biometricEnrolled,
@@ -120,13 +121,17 @@ export function PreferencesModal({ account, onClose }: PreferencesModalProps) {
 
   const on = status?.subscribed === true;
   const unsupported = status !== null && !status.supported;
+  const modalBusy = busy || bioBusy;
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   return createPortal(
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal sm" role="dialog" aria-modal="true">
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !modalBusy) requestClose(onClose); }}>
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>Preferences</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={modalBusy}><Icon name="close" size={18} /></button>
         </div>
 
         <div className="modal-body modal-scroll">

@@ -1,3 +1,4 @@
+import { useModalMotion } from "@/frontend/lib/animate";
 import {
   timezoneOptions,
   timezoneShortName,
@@ -32,8 +33,10 @@ export function TimezonePicker({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "picker", active: open && !disabled });
   const options = useMemo(() => timezoneOptions(value), [value]);
   const offset = timezoneShortName(value);
   const city = timezoneCity(value);
@@ -64,13 +67,14 @@ export function TimezonePicker({
 
   const menu = open && !disabled ? (
     <div
+      ref={scrimRef}
       className="picker-scrim"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) setOpen(false);
+        if (e.target === e.currentTarget) requestClose(() => setOpen(false));
       }}
     >
       <div
-        ref={menuRef}
+        ref={panelRef}
         className="picker-menu picker-menu--timezone"
         role="listbox"
         aria-label="Timezone"

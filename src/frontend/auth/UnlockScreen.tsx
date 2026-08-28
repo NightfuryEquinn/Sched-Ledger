@@ -1,3 +1,4 @@
+import { useEnter } from "@/frontend/lib/animate";
 import { Brand } from "@/frontend/components/Brand";
 import { Icon } from "@/frontend/components/ui";
 import { identityStorage } from "@/frontend/auth/lib/identity-storage";
@@ -15,7 +16,7 @@ import { sessionSecrets } from "@/frontend/auth/lib/session-secrets";
 import { walletClient } from "@/frontend/auth/lib/wallet";
 import { unlockLedgerKey } from "@/frontend/lib/crypto/unlock";
 import type { Account, IdentityRecord } from "@/frontend/lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type UnlockScreenProps = {
   account: Account;
@@ -85,6 +86,8 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
   const needsWalletSign = !!idn?.injected || (!session && !idn?.privateKey && !idn?.vault);
   const needsPassphrase = !!idn && !idn.injected && !session && (!!idn.vault || !!idn.privateKey);
   const migrating = !!idn && !idn.injected && !idn.vault && !!idn.privateKey && !!idn.mnemonic;
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEnter(cardRef);
 
   useEffect(() => {
     if (!idn || idn.injected) { setCanBiometricUnlock(false); return; }
@@ -154,7 +157,7 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
   if (showOffer) {
     return (
       <div className="auth-wrap">
-        <div className="auth-card">
+        <div ref={cardRef} className="auth-card">
           <Brand />
           <h1>Use Face ID on this Device?</h1>
           <p className="auth-lead">
@@ -174,7 +177,7 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
 
   return (
     <div className="auth-wrap">
-      <div className="auth-card">
+      <div ref={cardRef} className="auth-card">
         <Brand />
         <h1>Unlock Your Ledger</h1>
         <p className="auth-lead">

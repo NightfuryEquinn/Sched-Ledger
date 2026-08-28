@@ -530,21 +530,6 @@ h1, h2, h3 {
   color: var(--accent);
 }
 
-.page-title--anim {
-  animation: page-title-in var(--dur) var(--ease);
-}
-
-@keyframes page-title-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 .scroll {
   flex: 1;
   overflow-y: auto;
@@ -976,7 +961,6 @@ h1, h2, h3 {
   border-radius: var(--r-xl);
   box-shadow: var(--shadow);
   padding: var(--sp-2);
-  animation: fade .12s ease;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -1118,7 +1102,6 @@ h1, h2, h3 {
   box-shadow: var(--shadow);
   padding: var(--sp-2);
   z-index: 40;
-  animation: fade .12s ease;
   max-height: min(32rem, calc(100svh - 6.5rem));
   overflow-x: hidden;
   overflow-y: auto;
@@ -1327,7 +1310,6 @@ h1, h2, h3 {
   border-radius: var(--r-xl);
   box-shadow: var(--shadow);
   padding: var(--sp-3);
-  animation: fade var(--dur-fast) var(--ease);
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -1446,7 +1428,6 @@ h1, h2, h3 {
   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
-  animation: fade .12s ease;
 }
 
 .picker-menu {
@@ -1455,7 +1436,6 @@ h1, h2, h3 {
   border-radius: var(--r-xl);
   box-shadow: var(--shadow);
   padding: var(--sp-3);
-  animation: fade .12s ease;
   width: min(100%, 320px);
   margin: auto;
   flex-shrink: 0;
@@ -2617,17 +2597,6 @@ h1, h2, h3 {
   background: var(--surface);
   box-shadow: var(--shadow);
   pointer-events: none;
-  animation: chart-tip-in var(--dur-fast) var(--ease);
-}
-
-@keyframes chart-tip-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
 }
 
 .chart-tip--brief {
@@ -3206,21 +3175,6 @@ h1, h2, h3 {
 
 .txn-panel {
   padding-top: 6px;
-}
-
-.txn-panel--filter {
-  animation: filter-panel-in var(--dur) var(--ease);
-}
-
-@keyframes filter-panel-in {
-  from {
-    opacity: .55;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
 }
 
 .txn-group {
@@ -4190,6 +4144,18 @@ h1, h2, h3 {
   border-radius: var(--r-lg);
   background: var(--surface-2);
   border: 1px solid var(--border);
+}
+
+.transparency-diagram-stack {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) * 1.5);
+}
+
+.transparency-diagram-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .transparency-mermaid {
@@ -5578,7 +5544,6 @@ h1, h2, h3 {
   justify-content: center;
   z-index: 50;
   padding: 0;
-  animation: fade .15s ease;
 }
 
 .modal-scrim.center {
@@ -5592,12 +5557,6 @@ h1, h2, h3 {
   -webkit-overflow-scrolling: touch;
 }
 
-@keyframes fade {
-  from {
-    opacity: 0;
-  }
-}
-
 .modal {
   background: var(--surface);
   width: 100%;
@@ -5608,14 +5567,6 @@ h1, h2, h3 {
   max-height: min(92vh, calc(100dvh - 16px));
   overflow-x: hidden;
   overflow-y: auto;
-  animation: slideup .26s cubic-bezier(.32, .72, 0, 1);
-}
-
-@keyframes slideup {
-  from {
-    transform: translateY(24px);
-    opacity: .6;
-  }
 }
 
 .modal.sm {
@@ -5628,15 +5579,7 @@ h1, h2, h3 {
   padding: 0;
   overflow: hidden;
   box-shadow: 0 16px 48px -12px rgba(0, 0, 0, .28);
-  animation: modalfade .2s var(--ease);
   min-width: 0;
-}
-
-@keyframes modalfade {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(.98);
-  }
 }
 
 .modal.sm .modal-head {
@@ -5833,7 +5776,6 @@ h1, h2, h3 {
   font-weight: 600;
   color: var(--accent);
   margin-bottom: 6px;
-  animation: fade var(--dur-fast) var(--ease);
 }
 
 .amount-live-total.is-down {

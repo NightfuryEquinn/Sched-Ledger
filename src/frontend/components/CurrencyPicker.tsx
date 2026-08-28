@@ -1,3 +1,4 @@
+import { useModalMotion } from "@/frontend/lib/animate";
 import { CURRENCIES, getCurrency } from "@/frontend/lib/data";
 import { CaretDown } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
@@ -28,8 +29,10 @@ export function CurrencyPicker({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "picker", active: open && !disabled });
   const selected = getCurrency(value);
 
   useEffect(() => {
@@ -58,13 +61,14 @@ export function CurrencyPicker({
 
   const menu = open && !disabled ? (
     <div
+      ref={scrimRef}
       className="picker-scrim"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) setOpen(false);
+        if (e.target === e.currentTarget) requestClose(() => setOpen(false));
       }}
     >
       <div
-        ref={menuRef}
+        ref={panelRef}
         className="picker-menu picker-menu--currency"
         role="listbox"
         aria-label="Currency"

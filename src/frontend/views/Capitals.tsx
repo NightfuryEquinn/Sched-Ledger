@@ -14,9 +14,10 @@ import {
 } from "@/frontend/lib/capitals";
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
 import { dayLabel, fmtMoney } from "@/frontend/lib/data";
+import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
 import type { CapitalItem, CapitalPlan, CapitalTemplateId, CategoryIndex, Expense } from "@/frontend/lib/types";
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /*
  * Capitals — future financial planner
@@ -67,6 +68,10 @@ export function Capitals({
   const [editingCost, setEditingCost] = useState<string | null>(null);
   const [costDraft, setCostDraft] = useState("");
   const [itemBusy, setItemBusy] = useState(false);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: !!editor });
+  const closeEditor = () => requestClose(() => setEditor(null));
 
   useEffect(() => {
     setPlans(capitalPlans);
@@ -87,6 +92,10 @@ export function Capitals({
     () => plans.reduce((s, p) => s + planUnspentTotal(p, savingsTxns, categoryIndex), 0),
     [plans, savingsTxns, categoryIndex],
   );
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   const persistPlan = async (data: Partial<CapitalPlan> & { id?: string }) => {
     setBusy(true);
@@ -258,7 +267,7 @@ export function Capitals({
 
   if (!plans.length && !editor) {
     return (
-      <div className="view">
+      <div ref={viewRef} className="view">
         <EmptyState title="No Plans Yet" sub="Start a plan for a big future expense — set a budget and target date to see how much to save each month." />
         <div className="todo-empty-action">
           <button className="primary-btn" type="button" onClick={openAddPlan}>
@@ -274,15 +283,16 @@ export function Capitals({
     if (!editor) return null;
     return (
       <div
+        ref={scrimRef}
         className="modal-scrim center"
         onMouseDown={(e) => {
-          if (e.target === e.currentTarget) setEditor(null);
+          if (e.target === e.currentTarget && !busy) closeEditor();
         }}
       >
-        <div className="modal sm" role="dialog" aria-modal="true">
+        <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
           <div className="modal-head">
             <h3>{editorTitle}</h3>
-            <button className="icon-btn" type="button" onClick={() => setEditor(null)} aria-label="Close">
+            <button className="icon-btn" type="button" onClick={closeEditor} aria-label="Close" disabled={busy}>
               <Icon name="close" size={18} />
             </button>
           </div>
@@ -360,9 +370,7 @@ export function Capitals({
               {error ? <p className="auth-error">{error}</p> : null}
 
               <div className="wallet-form-actions">
-                <button className="ghost-btn full" type="button" onClick={() => setEditor(null)}>
-                  Cancel
-                </button>
+                <button className="ghost-btn full" type="button" onClick={closeEditor} disabled={busy}>Cancel</button>
                 <button
                   className="primary-btn full"
                   type="button"
@@ -380,8 +388,8 @@ export function Capitals({
   }
 
   return (
-    <div className="view">
-      <div className="summary-grid sg-5" data-tour="tour-capitals-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid sg-5" data-tour="tour-capitals-summary">
         <SummaryCard label="Total Planned" value={money(totalPlanned)} sub={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`} />
         <SummaryCard label="Total Paid" tone="saved" value={money(totalPaid)} sub={totalPlanned ? `${Math.round((totalPaid / totalPlanned) * 100)}% of planned` : ""} />
         <SummaryCard label="Total Unspent" tone="ok" value={money(totalUnspent)} sub="assigned from savings" />

@@ -1,5 +1,7 @@
 import { ACCOUNT_STALE_DAYS } from "@/lib/account-retention";
 import { Icon } from "@/frontend/components/ui";
+import { useModalMotion } from "@/frontend/lib/animate";
+import { useRef } from "react";
 import { createPortal } from "react-dom";
 
 type LegalModalProps = {
@@ -8,12 +10,16 @@ type LegalModalProps = {
 
 /** Terms & Conditions modal for account menu legal links. */
 export function TermsModal({ onClose }: LegalModalProps) {
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
+
   return createPortal(
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby="tnc-title">
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose(onClose); }}>
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="tnc-title">
         <div className="modal-head">
           <h3 id="tnc-title">Terms &amp; Conditions</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
         <div className="modal-body modal-scroll">
           <p className="dm-lead">Last updated August 25, 2026. By using Sched Ledger you agree to these terms.</p>
@@ -117,12 +123,16 @@ export function TermsModal({ onClose }: LegalModalProps) {
 
 /** Copyright and project license modal for account menu legal links. */
 export function CopyrightModal({ onClose }: LegalModalProps) {
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
+
   return createPortal(
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby="copyright-title">
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose(onClose); }}>
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="copyright-title">
         <div className="modal-head">
           <h3 id="copyright-title">Copyright</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close"><Icon name="close" size={18} /></button>
         </div>
         <div className="modal-body modal-scroll">
           <div className="dm-sec">

@@ -1,10 +1,11 @@
+import { useEnter } from "@/frontend/lib/animate";
 import { Brand } from "@/frontend/components/Brand";
 import { LoadingBloom } from "@/frontend/components/LoadingBloom";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, IdentityRecord } from "@/frontend/lib/types";
 import { getAddress } from "ethers";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Identicon } from "./components/Identicon";
 import {
   checkQuizAnswers,
@@ -126,6 +127,8 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const identities = identityStorage.list();
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEnter(cardRef);
 
   const words = useMemo(
     () => (draft?.mnemonic ? draft.mnemonic.split(" ") : []),
@@ -459,7 +462,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "create" && !draft) {
     return (
-      <div className="auth-wrap"><div className="auth-card">
+      <div className="auth-wrap"><div ref={cardRef} className="auth-card">
         <div className="gen-load"><LoadingBloom label="Generating your keys…" /></div>
       </div></div>
     );
@@ -467,7 +470,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "create" && draft) {
     return (
-      <div className="auth-wrap"><div className="auth-card">
+      <div className="auth-wrap"><div ref={cardRef} className="auth-card">
         <button className="auth-back" type="button" onClick={reset}>← Back</button>
         <h2 className="auth-h2">Meet Your New Identity</h2>
         <div className="identity-hero">
@@ -499,7 +502,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "quiz" && draft) {
     return (
-      <div className="auth-wrap"><div className="auth-card">
+      <div className="auth-wrap"><div ref={cardRef} className="auth-card">
         <button className="auth-back" type="button" onClick={() => { setMode("create"); setError(""); }}>← Back</button>
         <h2 className="auth-h2">Confirm Your Phrase</h2>
         <p className="auth-lead">Enter the requested words from your recovery phrase to make sure you wrote them down.</p>
@@ -526,7 +529,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "passphrase" && draft) {
     return (
-      <div className="auth-wrap"><div className="auth-card">
+      <div className="auth-wrap"><div ref={cardRef} className="auth-card">
         <button className="auth-back" type="button" onClick={() => {
           setMode(quizIndices.length ? "quiz" : "restore");
           setError("");
@@ -564,7 +567,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "device-unlock" && pendingIdn) {
     return (
-      <div className="auth-wrap"><div className="auth-card">
+      <div className="auth-wrap"><div ref={cardRef} className="auth-card">
         <button className="auth-back" type="button" onClick={() => { setMode("restore"); setPendingIdn(null); setError(""); }}>← Back</button>
         <h2 className="auth-h2">Unlock this Device</h2>
         <p className="auth-lead">Enter the passphrase that encrypts your key on this browser.</p>
@@ -600,7 +603,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "biometric-offer") {
     return (
-      <div className="auth-wrap"><div className="auth-card">
+      <div className="auth-wrap"><div ref={cardRef} className="auth-card">
         <h2 className="auth-h2">Use Face ID on this Device?</h2>
         <p className="auth-lead">
           Skip typing your passphrase next time — unlock Sched Ledger with Face ID or Touch ID on this browser. Your passphrase is encrypted with your biometric key and never leaves this device.
@@ -621,7 +624,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
     return (
       <>
-        <div className="auth-wrap"><div className="auth-card">
+        <div className="auth-wrap"><div ref={cardRef} className="auth-card">
           <h2 className="auth-h2">Before You Enter</h2>
           <p className="auth-lead">
             Sched Ledger is free on the official host with full features. We are a freemium, customer-based app —
@@ -693,7 +696,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "restore") {
     return (
-      <div className="auth-wrap"><div className="auth-card">
+      <div className="auth-wrap"><div ref={cardRef} className="auth-card">
         <button className="auth-back" type="button" onClick={reset}>← Back</button>
         <h2 className="auth-h2">Welcome Back</h2>
         {identities.length ? (
@@ -721,7 +724,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   }
 
   return (
-    <div className="auth-wrap"><div className="auth-card">
+    <div className="auth-wrap"><div ref={cardRef} className="auth-card">
       <Brand variant="auth" />
       <h1 className="auth-h1">Private by Design.</h1>
       <p className="auth-lead">No email. No password. Just a cryptographic key only you hold.</p>

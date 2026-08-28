@@ -1,3 +1,4 @@
+import { useFadeIn } from "@/frontend/lib/animate";
 import { ACCOUNT_STALE_DAYS } from "@/lib/account-retention";
 import { APP_VERSION } from "@/lib/version";
 import { TimezonePicker } from "@/frontend/components/TimezonePicker";
@@ -82,6 +83,8 @@ export function AccountMenu({
   const [timezoneSaved, setTimezoneSaved] = useState(false);
   const [tzBusy, setTzBusy] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useFadeIn(menuRef, { active: open });
 
   useEffect(() => {
     api.users
@@ -149,7 +152,7 @@ export function AccountMenu({
         <Icon name="chevD" size={15} />
       </button>
       {open ? (
-        <div className="acct-menu">
+        <div ref={menuRef} className="acct-menu">
           <div className="am-head">
             <Identicon address={account.address} size={40} />
             <div>

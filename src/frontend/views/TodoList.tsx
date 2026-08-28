@@ -1,3 +1,4 @@
+import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
 import { EmptyState, Icon } from "@/frontend/components/ui";
 import { slugId } from "@/frontend/lib/categories";
 import type { TodoList, TodoTask } from "@/frontend/lib/types";
@@ -41,6 +42,10 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const taskSaveRef = useRef(false);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: !!editor });
+  const closeEditor = () => requestClose(() => setEditor(null));
 
   useEffect(() => {
     setLists(todoLists);
@@ -172,10 +177,14 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
   };
 
   const editorTitle = editor?.type === "add-list" ? "New List" : editor ? "Edit List" : "";
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   return (
-    <div className="view">
-      <div className="summary-grid sg-3" data-tour="tour-todos-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid sg-3" data-tour="tour-todos-summary">
         <div className="summary-card">
           <div className="sc-label">Lists</div>
           <div className="sc-value">{stats.lists}</div>
@@ -321,19 +330,21 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
 
       {editor ? (
         <div
+          ref={scrimRef}
           className="modal-scrim center"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setEditor(null);
+            if (e.target === e.currentTarget && !busy) closeEditor();
           }}
         >
-          <div className="modal sm" role="dialog" aria-modal="true">
+          <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
             <div className="modal-head">
               <h3>{editorTitle}</h3>
               <button
                 className="icon-btn"
                 type="button"
-                onClick={() => setEditor(null)}
+                onClick={closeEditor}
                 aria-label="Close"
+                disabled={busy}
               >
                 <Icon name="close" size={18} />
               </button>
@@ -369,7 +380,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                 {error ? <p className="auth-error">{error}</p> : null}
 
                 <div className="wallet-form-actions">
-                  <button className="ghost-btn full" type="button" onClick={() => setEditor(null)}>
+                  <button className="ghost-btn full" type="button" onClick={closeEditor} disabled={busy}>
                     Cancel
                   </button>
                   <button

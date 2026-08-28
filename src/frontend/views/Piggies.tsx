@@ -1,10 +1,11 @@
+import { useEnter, useStagger } from "@/frontend/lib/animate";
 import { Donut, MiniSpark } from "@/frontend/charts";
 import { CatGlyph, EmptyState, Icon, SummaryCard, glyphTint } from "@/frontend/components/ui";
 import { dayLabel, fmtMoney, monthsWindow } from "@/frontend/lib/data";
 import { buildPiggies, type Piggy, type Piglet } from "@/frontend/lib/piggies";
 import { computeSavingsInsights, monthlyNetForCat } from "@/frontend/lib/savingsInsights";
 import type { CategoryIndex, Expense } from "@/frontend/lib/types";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 const SPARK_MONTHS = 6;
 
@@ -43,10 +44,14 @@ export function Piggies({
 
   const money = (n: number) => fmtMoney(n, { currency });
   const totalBalance = piggies.reduce((s, p) => s + p.balance, 0);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   if (!piggies.length) {
     return (
-      <div className="view">
+      <div ref={viewRef} className="view">
         {savingsLoading ? (
           <EmptyState title="Loading piggies…" sub="Fetching your savings history." />
         ) : (
@@ -60,8 +65,8 @@ export function Piggies({
   }
 
   return (
-    <div className="view">
-      <div className="summary-grid" data-tour="tour-piggies-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid" data-tour="tour-piggies-summary">
         <SummaryCard
           label="Total Saved"
           tone="saved"

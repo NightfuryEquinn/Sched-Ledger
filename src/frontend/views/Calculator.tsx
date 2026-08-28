@@ -1,3 +1,4 @@
+import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
 import {
   CatGlyph,
   EmptyState,
@@ -20,7 +21,7 @@ import {
   stripNegativeInput,
 } from "@/frontend/lib/number-input";
 import type { Budgets, CategoryIndex, FinancialWallet } from "@/frontend/lib/types";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 /*
  * Calculator — budgeting helper
@@ -77,6 +78,10 @@ export function Calculator({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [applied, setApplied] = useState(false);
   const titleId = useId();
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: confirmOpen });
+  const closeConfirm = () => requestClose(() => setConfirmOpen(false));
 
   /** Prefill income from the active wallet when the wallet changes. */
   useEffect(() => {
@@ -166,10 +171,14 @@ export function Calculator({
 
   const remainingAlloc = 100 - allocSum;
   const cur = getCurrency(currency);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+  useStagger(gridRef, ".summary-card");
 
   return (
-    <div className="view">
-      <div className="summary-grid sg-3" data-tour="tour-calculator-summary">
+    <div ref={viewRef} className="view">
+      <div ref={gridRef} className="summary-grid sg-3" data-tour="tour-calculator-summary">
         <SummaryCard
           label="Gross Income"
           value={fmtMoney(gross, { currency })}
@@ -385,18 +394,19 @@ export function Calculator({
 
       {confirmOpen ? (
         <div
+          ref={scrimRef}
           className="modal-scrim center"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !budgetsSaving) setConfirmOpen(false);
+            if (e.target === e.currentTarget && !budgetsSaving) closeConfirm();
           }}
         >
-          <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+          <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby={titleId}>
             <div className="modal-head">
               <h3 id={titleId}>Apply Calculator Budgets?</h3>
               <button
                 className="icon-btn"
                 type="button"
-                onClick={() => setConfirmOpen(false)}
+                onClick={closeConfirm}
                 disabled={budgetsSaving}
                 aria-label="Close"
               >
@@ -424,7 +434,7 @@ export function Calculator({
             <div className="modal-foot">
               <span />
               <div className="mf-right">
-                <button type="button" className="ghost-btn" disabled={budgetsSaving} onClick={() => setConfirmOpen(false)}>
+                <button type="button" className="ghost-btn" disabled={budgetsSaving} onClick={closeConfirm}>
                   Cancel
                 </button>
                 <button type="button" className="primary-btn" disabled={budgetsSaving} onClick={applyBudgets}>

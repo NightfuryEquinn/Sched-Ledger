@@ -1,9 +1,11 @@
 import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
+import { useModalMotion } from "@/frontend/lib/animate";
 import { fmtMoney, getCurrency } from "@/frontend/lib/data";
 import type { FinancialWallet } from "@/frontend/lib/types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CurrencyPicker } from "./CurrencyPicker";
+import { FadeIn } from "@/frontend/components/FadeIn";
 import { Icon, Segmented, WalletPicker } from "./ui";
 
 /*
@@ -48,12 +50,15 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   const startingBalanceIsExpression = startingBalanceEvaluated !== null && !isPlainNumber(startingBalance);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) requestClose(onClose); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
+  }, [busy, onClose, requestClose]);
 
   const startAdd = () => {
     setMode("add");
@@ -119,11 +124,11 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   const title = mode === "list" ? "Wallets" : mode === "add" ? "Add Wallet" : "Edit Wallet";
 
   return createPortal(
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal sm" role="dialog" aria-modal="true">
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) requestClose(onClose); }}>
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close">
+          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={busy}>
             <Icon name="close" size={18} />
           </button>
         </div>
@@ -215,7 +220,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                 <>
                   <label className="fld-label">Monthly Income</label>
                   {incomeIsExpression ? (
-                    <div className="amount-live-total">= {fmtMoney(incomeEvaluated, { currency })}</div>
+                    <FadeIn className="amount-live-total" as="div">= {fmtMoney(incomeEvaluated, { currency })}</FadeIn>
                   ) : null}
                   <div className="amount-field compact wallet-amount">
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
@@ -233,7 +238,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                 <>
                   <label className="fld-label">Starting Balance</label>
                   {startingBalanceIsExpression ? (
-                    <div className="amount-live-total">= {fmtMoney(startingBalanceEvaluated, { currency })}</div>
+                    <FadeIn className="amount-live-total" as="div">= {fmtMoney(startingBalanceEvaluated, { currency })}</FadeIn>
                   ) : null}
                   <div className="amount-field compact wallet-amount">
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>

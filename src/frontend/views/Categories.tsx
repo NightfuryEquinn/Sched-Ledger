@@ -1,3 +1,4 @@
+import { useEnter, useModalMotion } from "@/frontend/lib/animate";
 import { EmptyState, Icon, Segmented, glyphTint } from "@/frontend/components/ui";
 import { DatePicker } from "@/frontend/components/DateTimePicker";
 import {
@@ -8,7 +9,7 @@ import {
 } from "@/frontend/lib/categories";
 import type { Category, CategoryIndex } from "@/frontend/lib/types";
 import { CATEGORY_GLYPH_OPTIONS, DEFAULT_GLYPH, displayGlyph } from "@/lib/glyphs";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /*
  * Categories view
@@ -57,6 +58,10 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   const [deadline, setDeadline] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: !!editor });
+  const closeEditor = () => requestClose(() => setEditor(null));
 
   useEffect(() => {
     setCategories(categoryIndex.allCategories);
@@ -309,8 +314,11 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
             ? "Rename Subcategory"
             : "";
 
+  const viewRef = useRef<HTMLDivElement>(null);
+  useEnter(viewRef);
+
   return (
-    <div className="view">
+    <div ref={viewRef} className="view">
       <div className="cat-toolbar" data-tour="tour-categories-toolbar">
         <Segmented
           options={[
@@ -489,11 +497,11 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
       ) : null}
 
       {editor ? (
-        <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget) setEditor(null); }}>
-          <div className="modal sm" role="dialog" aria-modal="true">
+        <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeEditor(); }}>
+          <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
             <div className="modal-head">
               <h3>{editorTitle}</h3>
-              <button className="icon-btn" type="button" onClick={() => setEditor(null)} aria-label="Close">
+              <button className="icon-btn" type="button" onClick={closeEditor} aria-label="Close" disabled={busy}>
                 <Icon name="close" size={18} />
               </button>
             </div>
@@ -556,7 +564,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                 {error ? <p className="auth-error">{error}</p> : null}
 
                 <div className="wallet-form-actions">
-                  <button className="ghost-btn full" type="button" onClick={() => setEditor(null)}>Cancel</button>
+                  <button className="ghost-btn full" type="button" onClick={closeEditor} disabled={busy}>Cancel</button>
                   <button className="primary-btn full" type="button" disabled={busy || !name.trim()} onClick={submitEditor}>
                     {busy ? "Saving…" : "Save"}
                   </button>

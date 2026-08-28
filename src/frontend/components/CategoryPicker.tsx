@@ -1,3 +1,4 @@
+import { useModalMotion } from "@/frontend/lib/animate";
 import type { Category } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import { CaretDown } from "@phosphor-icons/react";
@@ -29,8 +30,10 @@ export function CategoryPicker({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "picker", active: open && !disabled });
   const selected = categories.find((c) => c.id === value) ?? categories[0];
 
   useEffect(() => {
@@ -66,13 +69,14 @@ export function CategoryPicker({
 
   const menu = open && !disabled ? (
     <div
+      ref={scrimRef}
       className="picker-scrim"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) setOpen(false);
+        if (e.target === e.currentTarget) requestClose(() => setOpen(false));
       }}
     >
       <div
-        ref={menuRef}
+        ref={panelRef}
         className="picker-menu picker-menu--category"
         role="listbox"
         aria-label="Category"

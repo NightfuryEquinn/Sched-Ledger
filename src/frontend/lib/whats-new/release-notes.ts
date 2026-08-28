@@ -36,7 +36,7 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
   {
     version: "4.1.0",
     date: "August 2026",
-    lead: "A smoother loading experience, safer saves when you tap fast, and stricter dev tooling to keep the codebase lean.",
+    lead: "Smoother transitions across the app, a trefoil loader, safer saves when you tap fast, and stricter dev tooling to keep the codebase lean.",
     highlights: [
       {
         icon: "sparkle",
@@ -58,6 +58,13 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
         body:
           "The repo now runs TypeScript type-checking and knip dead-code detection — run bun run typecheck and bun run knip " +
           "before shipping to catch unused exports and type errors early.",
+      },
+      {
+        icon: "sparkle",
+        title: "Unified motion",
+        body:
+          "Modals, views, pickers, and charts now animate through anime.js instead of scattered CSS keyframes — " +
+          "including enter and exit on dialogs. Respects your OS reduce-motion setting.",
       },
     ],
   },

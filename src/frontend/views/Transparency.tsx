@@ -1,3 +1,4 @@
+import { useStagger } from "@/frontend/lib/animate";
 import { ACCOUNT_STALE_DAYS } from "@/lib/account-retention";
 import { LoadingBloom } from "@/frontend/components/LoadingBloom";
 import { useEffect, useId, useRef, useState } from "react";
@@ -498,8 +499,11 @@ function CollectionCard({ doc }: { doc: CollectionDoc }) {
 }
 
 export function Transparency() {
+  const viewRef = useRef<HTMLDivElement>(null);
+  useStagger(viewRef, ".panel");
+
   return (
-    <div className="view transparency-view">
+    <div ref={viewRef} className="view transparency-view">
       <section className="panel" data-tour="tour-transparency-intro">
         <div className="panel-head panel-head--stack">
           <div>
@@ -526,11 +530,6 @@ export function Transparency() {
             <p className="panel-sub">Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules; Google Fonts serves typefaces only</p>
           </div>
         </div>
-        <MermaidDiagram
-          chart={SYSTEM_CHART}
-          mobileChart={SYSTEM_CHART_MOBILE}
-          label="System Hosting Flowchart"
-        />
       </section>
 
       <section className="panel" data-tour="tour-transparency-infer">
@@ -572,11 +571,6 @@ export function Transparency() {
             <p className="panel-sub">Opaque accountId anchors every user-owned collection; SIWE address stays on users</p>
           </div>
         </div>
-        <MermaidDiagram
-          chart={RELATIONSHIP_CHART}
-          mobileChart={RELATIONSHIP_CHART_MOBILE}
-          label="Collection Relationship Flowchart"
-        />
       </section>
 
       <section className="panel" data-tour="tour-transparency-e2ee">
@@ -589,11 +583,6 @@ export function Transparency() {
             </p>
           </div>
         </div>
-        <MermaidDiagram
-          chart={E2EE_CHART}
-          mobileChart={E2EE_CHART_MOBILE}
-          label="E2EE save flowchart"
-        />
       </section>
 
       <section className="panel" data-tour="tour-transparency-collections">
@@ -607,6 +596,41 @@ export function Transparency() {
           {COLLECTIONS.map((doc) => (
             <CollectionCard key={doc.name} doc={doc} />
           ))}
+        </div>
+      </section>
+
+      <section className="panel" data-tour="tour-transparency-diagrams">
+        <div className="panel-head panel-head--stack">
+          <div>
+            <h2>Diagrams</h2>
+            <p className="panel-sub">Visual maps of hosting, collection links, and the encrypted write path</p>
+          </div>
+        </div>
+        <div className="transparency-diagram-stack">
+          <div>
+            <h3 className="transparency-diagram-title">Hosting &amp; Jobs</h3>
+            <MermaidDiagram
+              chart={SYSTEM_CHART}
+              mobileChart={SYSTEM_CHART_MOBILE}
+              label="System Hosting Flowchart"
+            />
+          </div>
+          <div>
+            <h3 className="transparency-diagram-title">Data Relationships</h3>
+            <MermaidDiagram
+              chart={RELATIONSHIP_CHART}
+              mobileChart={RELATIONSHIP_CHART_MOBILE}
+              label="Collection Relationship Flowchart"
+            />
+          </div>
+          <div>
+            <h3 className="transparency-diagram-title">Encrypted Write Path</h3>
+            <MermaidDiagram
+              chart={E2EE_CHART}
+              mobileChart={E2EE_CHART_MOBILE}
+              label="E2EE save flowchart"
+            />
+          </div>
         </div>
       </section>
     </div>

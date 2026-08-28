@@ -4,6 +4,7 @@ import type { LedgerBackupPlain } from "@/frontend/auth/lib/encrypted-backup";
 import type { EventImportRow } from "@/frontend/auth/lib/import-events";
 import type { TodoImportList } from "@/frontend/auth/lib/import-todos";
 import { restoreBackupToLedger } from "@/frontend/auth/lib/restore-backup";
+import { useEnter } from "@/frontend/lib/animate";
 import { LoadingBloom } from "@/frontend/components/LoadingBloom";
 import { ThemeToggle } from "@/frontend/components/ThemeToggle";
 import { WalletManageModal, WalletSwitcher } from "@/frontend/components/Wallets";
@@ -84,6 +85,16 @@ const VIEW_TITLES: Record<ViewId, string> = {
   insights: "Insights",
   transparency: "Transparency",
 };
+
+/** Animated page title; remounts when `view` changes so enter motion replays. */
+function PageTitle({ view }: { view: ViewId }) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEnter(titleRef, { y: 4 });
+
+  return (
+    <h1 ref={titleRef} className="page-title">{VIEW_TITLES[view]}</h1>
+  );
+}
 
 export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppProps) {
   const ledger = useLedger(account.address);
@@ -440,7 +451,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
         <header className="topbar">
           <div className="tb-row tb-row--main">
             <div className="page-title-row">
-              <h1 key={view} className="page-title page-title--anim">{VIEW_TITLES[view]}</h1>
+              <PageTitle key={view} view={view} />
               <button
                 type="button"
                 className="tour-help-btn"

@@ -65,6 +65,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 | Frontend | React 19, TanStack Query, ethers v6 |
 | Styling | Custom theme CSS (`ledger.css`); Young Serif / Schibsted Grotesk / Azeret Mono via [Google Fonts](https://fonts.google.com) |
 | Loading | [ldrs](https://uiball.com/ldrs) trefoil spinner |
+| Motion | [anime.js](https://animejs.com) v4 |
 | Tours | [Shepherd.js](https://shepherdjs.dev) |
 | Diagrams | [Mermaid](https://mermaid.js.org) (Transparency view) |
 | Deploy | [Vercel](https://vercel.com) **hosting + Analytics / Speed Insights only** (no Vercel Cron); scheduled jobs via [cron-job.org](https://cron-job.org) |
@@ -105,6 +106,7 @@ src/
     │   ├── push/           # Web Push permission + subscription lifecycle
     │   ├── pwa/            # service worker registration + IndexedDB cipher cache
     │   ├── hooks/          # useLedger, useTheme
+    │   ├── animate.ts      # anime.js motion hooks (modals, views, pickers)
     │   ├── tour/           # guided tour steps and runner
     │   ├── whats-new/      # release notes, per-device seen state, auto-show gate
     │   ├── piggies.ts        # savings balance model (deposits − withdrawals, targets)
