@@ -23,22 +23,33 @@ export function recurringLabel(freq: RecurringField | unknown) {
 
 export function parseIsoDate(iso: string): { y: number; m: number; d: number } {
   const [y, m, d] = iso.split("-").map(Number);
+  if (y === undefined || m === undefined || d === undefined) {
+    throw new Error(`Invalid ISO date: ${iso}`);
+  }
   return { y, m, d };
+}
+
+function parseMonthKey(monthKey: string): { y: number; m: number } {
+  const [y, m] = monthKey.split("-").map(Number);
+  if (y === undefined || m === undefined) {
+    throw new Error(`Invalid month key: ${monthKey}`);
+  }
+  return { y, m };
 }
 
 export function formatIsoDateParts(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-export function daysInMonth(y: number, m: number): number {
+function daysInMonth(y: number, m: number): number {
   return new Date(y, m, 0).getDate();
 }
 
-export function monthIndex(y: number, m: number): number {
+function monthIndex(y: number, m: number): number {
   return y * 12 + m;
 }
 
-export function addMonths(y: number, m: number, delta: number): { y: number; m: number } {
+function addMonths(y: number, m: number, delta: number): { y: number; m: number } {
   const idx = monthIndex(y, m) + delta;
   const ny = Math.floor((idx - 1) / 12);
   const nm = ((idx - 1) % 12) + 1;
@@ -53,7 +64,7 @@ export function recurringOccursInMonth(
   if (!freq) return false;
 
   const { y: anchorY, m: anchorM } = parseIsoDate(expense.date);
-  const [viewY, viewM] = monthKey.split("-").map(Number);
+  const { y: viewY, m: viewM } = parseMonthKey(monthKey);
   const a = monthIndex(anchorY, anchorM);
   const v = monthIndex(viewY, viewM);
   if (v < a) return false;
@@ -64,9 +75,9 @@ export function recurringOccursInMonth(
 }
 
 /** Due ISO date in `monthKey` (YYYY-MM), clamping day to month length. */
-export function recurringDueDate(anchorIso: string, monthKey: string): string {
+function recurringDueDate(anchorIso: string, monthKey: string): string {
   const anchorD = parseIsoDate(anchorIso).d;
-  const [viewY, viewM] = monthKey.split("-").map(Number);
+  const { y: viewY, m: viewM } = parseMonthKey(monthKey);
   const day = Math.min(anchorD, daysInMonth(viewY, viewM));
   return formatIsoDateParts(viewY, viewM, day);
 }

@@ -7,7 +7,7 @@ yarn-error.log*
 lerna-debug.log*
 
 # monetization
-monetization.md
+MONETIZATION.md
 
 # database
 *.sqlite

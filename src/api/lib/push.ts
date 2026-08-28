@@ -6,7 +6,7 @@ import webpush from "web-push";
  * Subscriptions are per-device; a row in `push_subscriptions` *is* the opt-in.
  */
 
-export type PushPayload = {
+type PushPayload = {
   title: string;
   body: string;
   /** Collapse key so a re-delivered reminder replaces rather than stacks. */

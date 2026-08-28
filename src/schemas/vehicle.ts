@@ -1,19 +1,9 @@
 import { z } from "zod";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
-import { accountIdSchema, isoDateSchema, objectIdSchema } from "./common";
+import { isoDateSchema, objectIdSchema } from "./common";
 
-export const VEHICLE_TYPES = ["car", "ev", "bike", "van"] as const;
-export const vehicleTypeSchema = z.enum(VEHICLE_TYPES);
-export type VehicleTypeId = z.infer<typeof vehicleTypeSchema>;
-
-const vehicleTaxonomySchema = z.object({
-  accountId: accountIdSchema,
-  type: vehicleTypeSchema,
-  enc: e2eeVersionSchema,
-  payload: encryptedPayloadSchema,
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
+const VEHICLE_TYPES = ["car", "ev", "bike", "van"] as const;
+const vehicleTypeSchema = z.enum(VEHICLE_TYPES);
 
 export const createVehicleSchema = z.object({
   type: vehicleTypeSchema,
@@ -31,7 +21,6 @@ export const updateVehicleSchema = z
     message: "At least one field is required",
   });
 
-export type VehicleTaxonomy = z.infer<typeof vehicleTaxonomySchema>;
 
 const vehicleFillMetaSchema = z.object({
   vehicleId: objectIdSchema,
@@ -65,6 +54,3 @@ export const listVehicleFillsQuerySchema = z.object({
   before: isoDateSchema.optional(),
 });
 
-export type CreateVehicleFillInput = z.infer<typeof createVehicleFillSchema>;
-export type UpdateVehicleFillInput = z.infer<typeof updateVehicleFillSchema>;
-export type ListVehicleFillsQuery = z.infer<typeof listVehicleFillsQuerySchema>;

@@ -18,7 +18,6 @@ export const updateProfileSchema = z
   });
 
 export type LedgerProfile = z.infer<typeof ledgerProfileSchema>;
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 /** Seed a new ledger profile for an account. */
 export function defaultProfile(

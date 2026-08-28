@@ -9,7 +9,7 @@ type FxCache = {
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const cache = new Map<string, FxCache>();
 
-export type FxRates = {
+type FxRates = {
   base: string;
   rates: Record<string, number>;
   fetchedAt: number;

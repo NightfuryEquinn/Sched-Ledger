@@ -66,6 +66,7 @@ const Transparency = lazy(() =>
 type LedgerAppProps = {
   account: Account;
   onSignOut: () => void;
+  signingOut?: boolean;
 };
 
 const VIEW_TITLES: Record<ViewId, string> = {
@@ -84,7 +85,7 @@ const VIEW_TITLES: Record<ViewId, string> = {
   transparency: "Transparency",
 };
 
-export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
+export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppProps) {
   const ledger = useLedger(account.address);
   const [view, setView] = useState<ViewId>("overview");
   const [modal, setModal] = useState<
@@ -178,9 +179,9 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
     );
   }
 
-  const { expenses, allExpenses, budgets, wallet, currency, events, month, wallets, activeWallet, setMonth, setBudgets, setActiveWalletId } = ledger;
+  const { expenses, allExpenses, budgets, wallet, currency, events, month, wallets, activeWallet, setMonth, setBudgets, isBudgetsPending, setActiveWalletId } = ledger;
 
-  const saveExpense = async (data: Expense & { id?: string }) => {
+  const saveExpense = async (data: Omit<Expense, "id"> & { id?: string }) => {
     const walletId = data.walletId || activeWallet?.id;
     if (!walletId) return;
     const saved = await ledger.saveExpense({ ...data, walletId });
@@ -454,6 +455,7 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
               <AccountMenu
                 account={account}
                 onSignOut={onSignOut}
+                signingOut={signingOut}
                 expenses={allExpenses}
                 events={events}
                 todoLists={ledger.todoLists}
@@ -521,13 +523,14 @@ export function LedgerApp({ account, onSignOut }: LedgerAppProps) {
             <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
           )}
           {view === "budgets" && (
-            <BudgetsView {...viewProps} events={events} setBudgets={setBudgets} setView={setView} />
+            <BudgetsView {...viewProps} events={events} setBudgets={setBudgets} budgetsSaving={isBudgetsPending} setView={setView} />
           )}
           {view === "calculator" && (
             <Calculator
               wallet={wallet}
               budgets={budgets}
               setBudgets={setBudgets}
+              budgetsSaving={isBudgetsPending}
               currency={currency}
               categoryIndex={ledger.categoryIndex}
             />

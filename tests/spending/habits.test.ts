@@ -8,7 +8,6 @@ import {
   computeHabitMetrics,
   describeHabitShift,
   habitBlend,
-  habitConfidence,
   habitPeriodExpenses,
   habitTrajectory,
   pickHabitStyle,

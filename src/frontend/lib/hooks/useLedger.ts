@@ -39,7 +39,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 const ACTIVE_WALLET_KEY = "ledger:active-wallet";
 
-export type DeleteScopeOpts = { scope?: DeleteScope; fromDate?: string };
+type DeleteScopeOpts = { scope?: DeleteScope; fromDate?: string };
 
 /** Storage key for the last active wallet per account. */
 function activeWalletStorageKey(wallet: string) {
@@ -1028,7 +1028,9 @@ export function useLedger(walletAddress: string) {
     deleteVehicle: deleteVehicleMutation.mutateAsync,
     saveVehicleFill: saveVehicleFillMutation.mutateAsync,
     deleteVehicleFill: deleteVehicleFillMutation.mutateAsync,
+    isBudgetsPending: setBudgetsMutation.isPending,
     isSaving:
+      setBudgetsMutation.isPending ||
       saveExpenseMutation.isPending ||
       deleteExpenseMutation.isPending ||
       saveEventMutation.isPending ||

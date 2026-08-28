@@ -1,9 +1,9 @@
 /** Legacy geometric markers replaced by emojis. */
-export const LEGACY_GLYPHS = new Set([
+const LEGACY_GLYPHS = new Set([
   "◓", "◇", "◈", "△", "◐", "◆", "●", "◎", "◉", "□", "☑", "✦", "★", "♥", "⚡",
 ]);
 
-export const BUILTIN_GLYPHS: Record<string, string> = {
+const BUILTIN_GLYPHS: Record<string, string> = {
   food: "🍽️",
   transport: "🚗",
   utilities: "💡",

@@ -13,4 +13,3 @@ export const updateConsentSchema = z.object({
 });
 
 export type Consent = z.infer<typeof consentSchema>;
-export type UpdateConsentInput = z.infer<typeof updateConsentSchema>;

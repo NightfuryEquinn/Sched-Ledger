@@ -5,8 +5,6 @@ import {
   recurringMonthlyEquivalent,
   recurringOccursInMonth,
   recurringScheduleKey,
-  type RecurringField,
-  type RecurringInterval,
 } from "@/lib/recurring";
 import type { CategoryIndex } from "./categories";
 import { catOfSub, isArchivedCategory, isIncomeCategory, isSavingsSub, isSpendingCategory } from "./categories";
@@ -20,13 +18,11 @@ export {
   recurringDueDay,
   recurringLabel,
   recurringMonthlyEquivalent,
-  recurringOccursInMonth,
   recurringScheduleKey
 };
-export type { RecurringField, RecurringInterval };
 
 export type ChartPeriod = "daily" | "monthly" | "quarterly" | "yearly";
-export type ChartBar = { key: string; label: string; spent: number; earned: number };
+type ChartBar = { key: string; label: string; spent: number; earned: number };
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -34,7 +30,7 @@ function pad2(n: number) {
 
 function quarterOf(monthKey: string) {
   const [year, month] = monthKey.split("-").map(Number);
-  return { year, quarter: Math.ceil(month / 3) };
+  return { year: year!, quarter: Math.ceil(month! / 3) };
 }
 
 function quartersWindow(anchorMonth: string, size = 6) {
@@ -80,7 +76,7 @@ export function spendingChartSeries(
 ): ChartBar[] {
   if (period === "daily") {
     const [year, month] = anchorMonth.split("-").map(Number);
-    const days = new Date(year, month, 0).getDate();
+    const days = new Date(year!, month!, 0).getDate();
     const bars: ChartBar[] = [];
     for (let d = 1; d <= days; d++) {
       const key = `${anchorMonth}-${pad2(d)}`;
@@ -93,7 +89,7 @@ export function spendingChartSeries(
   if (period === "monthly") {
     return monthsWindow(anchorMonth).map((mo) => {
       const totals = flowTotals(monthExpenses(expenses, mo.key), index);
-      return { key: mo.key, label: monthLabel(mo.key).split(" ")[0], ...totals };
+      return { key: mo.key, label: monthLabel(mo.key).split(" ")[0] ?? mo.key, ...totals };
     });
   }
 
@@ -133,7 +129,7 @@ export function spendingChartSeries(
  * folded into their parent, so "Meal" and "Snacks" read as one Food & Dining
  * row carrying the category's name, color, and glyph.
  */
-export type FlowEntry = {
+type FlowEntry = {
   id: string;
   name: string;
   color: string;
@@ -143,7 +139,7 @@ export type FlowEntry = {
 };
 
 /** A single day of the trend line, broken down by spend / income category. */
-export type DayFlow = {
+type DayFlow = {
   /** ISO date, `YYYY-MM-DD`. */
   day: string;
   /** Day of month, matching the trend chart's x label. */
@@ -208,7 +204,7 @@ export function dayFlowSeries(
   upToDay?: number,
 ): DayFlow[] {
   const [year, month] = monthKey.split("-").map(Number);
-  const days = new Date(year, month, 0).getDate();
+  const days = new Date(year!, month!, 0).getDate();
   const last = Math.max(1, Math.min(upToDay ?? days, days));
   const spendByDay = new Map<string, Map<string, FlowEntry>>();
   const earnByDay = new Map<string, Map<string, FlowEntry>>();
@@ -261,7 +257,7 @@ export function chartBudgetForPeriod(period: ChartPeriod, monthlyBudget: number,
   if (period === "monthly") return monthlyBudget;
   if (period === "daily") {
     const [year, month] = anchorMonth.split("-").map(Number);
-    const days = new Date(year, month, 0).getDate();
+    const days = new Date(year!, month!, 0).getDate();
     return monthlyBudget / days;
   }
   if (period === "quarterly") return monthlyBudget * 3;
@@ -280,19 +276,10 @@ export function chartSelectionMonth(period: ChartPeriod, key: string) {
   return `${key}-01`;
 }
 
-export const inMonth = (iso: string, key: string) => iso.slice(0, 7) === key;
+const inMonth = (iso: string, key: string) => iso.slice(0, 7) === key;
 
 export function monthExpenses(expenses: Expense[], key: string) {
   return expenses.filter((e) => inMonth(e.date, key));
-}
-
-export function sumBy<T>(list: T[], keyFn: (item: T) => string) {
-  const m: Record<string, number> = {};
-  list.forEach((e) => {
-    const k = keyFn(e);
-    m[k] = (m[k] || 0) + (e as unknown as { amount: number }).amount;
-  });
-  return m;
 }
 
 export const isIncome = (e: Expense) => e.kind === "income";
@@ -326,7 +313,7 @@ export function catOf(sub: string, index?: CategoryIndex) {
 }
 
 /** Which pool a transaction belongs to for every analytics calculation. */
-export type TxClass = "spend" | "savings" | "withdrawal" | "income";
+type TxClass = "spend" | "savings" | "withdrawal" | "income";
 
 /**
  * Single source of truth for splitting transactions into spend / savings /
@@ -366,11 +353,6 @@ export function isSavings(e: Expense, index?: CategoryIndex) {
 /** True when the transaction counts toward spending (not savings, not income). */
 export function isSpend(e: Expense, index?: CategoryIndex) {
   return classifyTx(e, index) === "spend";
-}
-
-/** True when the transaction takes money back out of a savings envelope. */
-export function isWithdrawal(e: Expense, index?: CategoryIndex) {
-  return classifyTx(e, index) === "withdrawal";
 }
 
 export type WalletFunding = Pick<FinancialWallet, "fundingMode" | "income" | "startingBalance">;

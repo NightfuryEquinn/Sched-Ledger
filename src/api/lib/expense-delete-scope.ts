@@ -28,12 +28,12 @@ export function expenseSeriesFilter(doc: ExpenseDocument, accountId: string) {
   };
 }
 
-export type ExpenseDeleteResult = {
+type ExpenseDeleteResult = {
   deletedIds: string[];
   skippedId?: string;
 };
 
-export type ExpenseSeriesRetireResult = {
+type ExpenseSeriesRetireResult = {
   /** Old-series future rows removed so the prior cadence stops. */
   deletedIds: string[];
   /** Old-series past rows kept as history with recurrence cleared. */

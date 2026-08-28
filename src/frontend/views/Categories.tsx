@@ -401,9 +401,11 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                         className="danger"
                         disabled={busy}
                         onClick={() => removeCategory(cat.id)}
-                        aria-label={catInUse(cat) ? "Archive" : "Delete"}
+                        aria-label={busy ? (catInUse(cat) ? "Archiving" : "Deleting") : catInUse(cat) ? "Archive" : "Delete"}
                         title={
-                          catInUse(cat)
+                          busy
+                            ? catInUse(cat) ? "Archiving…" : "Deleting…"
+                            : catInUse(cat)
                             ? "Archive — keeps past transactions classified correctly"
                             : "Delete"
                         }
@@ -428,7 +430,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                             <Icon name="edit" size={16} />
                           </button>
                           {cat.subs.length > 1 ? (
-                            <button type="button" className="danger" disabled={busy} onClick={() => removeSub(cat.id, sub.id)} aria-label="Remove" tabIndex={filteredOut || !open ? -1 : undefined}>
+                            <button type="button" className="danger" disabled={busy} onClick={() => removeSub(cat.id, sub.id)} aria-label={busy ? "Removing" : "Remove"} title={busy ? "Removing…" : "Remove"} tabIndex={filteredOut || !open ? -1 : undefined}>
                               <Icon name="trash" size={16} />
                             </button>
                           ) : null}
@@ -478,7 +480,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                   disabled={busy}
                   onClick={() => restoreCategory(cat.id)}
                 >
-                  Restore
+                  {busy ? "Restoring…" : "Restore"}
                 </button>
               </div>
             ))}

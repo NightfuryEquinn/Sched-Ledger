@@ -8,7 +8,7 @@ export const DEFAULT_TIMEZONE =
     ? process.env.APP_TIMEZONE
     : FALLBACK_TIMEZONE;
 
-export function isValidTimezone(tz: string): boolean {
+function isValidTimezone(tz: string): boolean {
   try {
     Intl.DateTimeFormat(undefined, { timeZone: tz });
     return true;
@@ -26,6 +26,9 @@ export const timezoneSchema = z
 export function zonedLocalToUtcMs(dateIso: string, hhmm: string, timeZone: string): number {
   const [year, month, day] = dateIso.split("-").map(Number);
   const [hour, minute] = hhmm.split(":").map(Number);
+  if (year === undefined || month === undefined || day === undefined || hour === undefined || minute === undefined) {
+    throw new Error(`Invalid date/time: ${dateIso} ${hhmm}`);
+  }
 
   let utc = Date.UTC(year, month - 1, day, hour, minute, 0);
   for (let i = 0; i < 2; i++) {
@@ -67,7 +70,7 @@ export function timezoneShortName(timeZone: string, at = new Date()): string {
   );
 }
 
-export function formatTimezoneOption(timeZone: string, at = new Date()): string {
+function formatTimezoneOption(timeZone: string, at = new Date()): string {
   const offset =
     new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })
       .formatToParts(at)
@@ -77,7 +80,7 @@ export function formatTimezoneOption(timeZone: string, at = new Date()): string 
 }
 
 /** Curated list for profile picker; browser zone is appended when missing. */
-export const COMMON_TIMEZONES = [
+const COMMON_TIMEZONES = [
   "Pacific/Honolulu",
   "America/Los_Angeles",
   "America/Denver",

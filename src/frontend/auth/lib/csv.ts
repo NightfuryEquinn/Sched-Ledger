@@ -1,4 +1,4 @@
-export function escapeCsv(value: unknown): string {
+function escapeCsv(value: unknown): string {
   const s = String(value == null ? "" : value);
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
@@ -76,12 +76,13 @@ export function colIndex(headers: Record<string, number>, ...names: string[]): n
   return undefined;
 }
 
-export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const OBJECT_ID = /^[a-f0-9]{24}$/i;
 
 export function isValidIsoDate(value: string): boolean {
   if (!ISO_DATE.test(value)) return false;
   const [y, m, d] = value.split("-").map(Number);
+  if (y === undefined || m === undefined || d === undefined) return false;
   const dt = new Date(y, m - 1, d);
   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
 }

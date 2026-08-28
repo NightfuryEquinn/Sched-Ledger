@@ -177,7 +177,7 @@ describe("computeSavingsInsights capital allocation", () => {
       {
         ...tx("2026-07-02", 600, "sub_rainy_day"),
         capitalPlanId: "plan_wedding",
-        recurring: true,
+        recurring: "monthly" as const,
       },
     ];
 

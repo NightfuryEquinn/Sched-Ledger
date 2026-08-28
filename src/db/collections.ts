@@ -38,25 +38,25 @@ export type RateLimitDocument = {
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 
-export type UserDocument = Omit<User, "createdAt" | "updatedAt"> & {
+type UserDocument = Omit<User, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type LedgerProfileDocument = Omit<LedgerProfile, "createdAt" | "updatedAt"> & {
+type LedgerProfileDocument = Omit<LedgerProfile, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type FinancialWalletDocument = Omit<FinancialWallet, "createdAt" | "updatedAt"> & {
+type FinancialWalletDocument = Omit<FinancialWallet, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type CategoryTaxonomyDocument = Omit<CategoryTaxonomy, "createdAt" | "updatedAt"> & {
+type CategoryTaxonomyDocument = Omit<CategoryTaxonomy, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -89,13 +89,13 @@ export type EventDocument = Omit<Event, "createdAt" | "updatedAt" | "expenseId">
   updatedAt: Date;
 };
 
-export type ConsentDocument = Omit<Consent, "createdAt" | "updatedAt"> & {
+type ConsentDocument = Omit<Consent, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type AuthNonceDocument = {
+type AuthNonceDocument = {
   _id: ObjectId;
   address: string;
   nonce: string;
@@ -127,7 +127,7 @@ export type ReminderChannel = "email" | "push";
  * A browser push endpoint registered by one device. Presence of a row is the
  * account's push opt-in; disabling notifications deletes it.
  */
-export type PushSubscriptionDocument = {
+type PushSubscriptionDocument = {
   _id: ObjectId;
   accountId: string;
   endpoint: string;
@@ -149,7 +149,7 @@ export type ReminderLogDocument = {
 };
 
 /** Dedupes budget-near-limit delivery (one per user/wallet/category/month/level). */
-export type BudgetAlertLogDocument = {
+type BudgetAlertLogDocument = {
   _id: ObjectId;
   accountId: string;
   /** Legacy ownership key; unset after backfill. */
@@ -163,13 +163,13 @@ export type BudgetAlertLogDocument = {
   sentAt: Date;
 };
 
-export type TodoListDocument = Omit<TodoList, "createdAt" | "updatedAt"> & {
+type TodoListDocument = Omit<TodoList, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type CapitalPlanDocument = {
+type CapitalPlanDocument = {
   _id: ObjectId;
   accountId: string;
   enc: 1;
@@ -178,9 +178,9 @@ export type CapitalPlanDocument = {
   updatedAt: Date;
 };
 
-export type VehicleTypeId = "car" | "ev" | "bike" | "van";
+type VehicleTypeId = "car" | "ev" | "bike" | "van";
 
-export type VehicleDocument = {
+type VehicleDocument = {
   _id: ObjectId;
   accountId: string;
   type: VehicleTypeId;
@@ -190,7 +190,7 @@ export type VehicleDocument = {
   updatedAt: Date;
 };
 
-export type VehicleFillDocument = {
+type VehicleFillDocument = {
   _id: ObjectId;
   accountId: string;
   vehicleId: ObjectId;
@@ -203,7 +203,7 @@ export type VehicleFillDocument = {
   updatedAt: Date;
 };
 
-export type Collections = {
+type Collections = {
   users: Collection<UserDocument>;
   ledgerProfiles: Collection<LedgerProfileDocument>;
   financialWallets: Collection<FinancialWalletDocument>;

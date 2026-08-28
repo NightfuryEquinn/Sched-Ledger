@@ -31,6 +31,7 @@ function browserTimezone(): string {
 type AccountMenuProps = {
   account: Account;
   onSignOut: () => void;
+  signingOut?: boolean;
   expenses: Expense[];
   events?: LedgerEvent[];
   todoLists?: TodoList[];
@@ -54,6 +55,7 @@ type AccountMenuProps = {
 export function AccountMenu({
   account,
   onSignOut,
+  signingOut = false,
   expenses,
   events = [],
   todoLists = [],
@@ -220,8 +222,8 @@ export function AccountMenu({
               <Icon name="info" size={16} /> Take a Tour
             </button>
           ) : null}
-          <button className="am-item danger" type="button" onClick={onSignOut}>
-            <Icon name="logout" size={16} /> Sign Out
+          <button className="am-item danger" type="button" disabled={signingOut} onClick={onSignOut}>
+            <Icon name="logout" size={16} /> {signingOut ? "Signing Out…" : "Sign Out"}
           </button>
           <div className="am-version num">v{APP_VERSION}</div>
         </div>

@@ -3,13 +3,13 @@ import { createApiApp } from "@/api/app";
 import { SESSION_COOKIE, SESSION_MAX_LIFETIME_MS, hashToken } from "@/api/lib/auth";
 import { resetRateLimitsForTests } from "@/api/middleware/rate-limit";
 import { getCollections } from "@/db";
-import { Wallet } from "ethers";
+import { Wallet, type HDNodeWallet } from "ethers";
 import { ObjectId, type Db } from "mongodb";
 import { installMemoryDb, uninstallMemoryDb, type MemoryDb } from "../helpers/memory-db";
 
 const app = createApiApp();
 
-async function challengeAndVerify(wallet: Wallet) {
+async function challengeAndVerify(wallet: HDNodeWallet) {
   const challengeRes = await app.request("/api/auth/challenge", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

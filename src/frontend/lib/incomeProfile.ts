@@ -39,7 +39,7 @@ export type IncomeStyleId =
   | "windfall"
   | "emerging";
 
-export type IncomeStyleMeta = {
+type IncomeStyleMeta = {
   id: IncomeStyleId;
   title: string;
   trait: string;
@@ -116,7 +116,7 @@ export const INCOME_MIN_EVENTS = 3;
 /** Distinct months with income needed before a profile is offered. */
 export const INCOME_MIN_MONTHS = 2;
 
-export type IncomeSourceStat = {
+type IncomeSourceStat = {
   /** Subcategory id — the meaningful grain for income. */
   id: string;
   name: string;
@@ -129,7 +129,7 @@ export type IncomeSourceStat = {
   monthsPresent: number;
 };
 
-export type IncomeMonthPoint = {
+type IncomeMonthPoint = {
   monthKey: string;
   label: string;
   earned: number;
@@ -139,7 +139,7 @@ export type IncomeMonthPoint = {
   covered: boolean;
 };
 
-export type IncomeMetrics = {
+type IncomeMetrics = {
   txCount: number;
   total: number;
   monthsInWindow: number;
@@ -183,9 +183,9 @@ export type IncomeMetrics = {
   floorCoversSpend: boolean;
 };
 
-export type IncomeConfidence = Confidence;
+type IncomeConfidence = Confidence;
 
-export type IncomeAssessment =
+type IncomeAssessment =
   | {
       status: "insufficient";
       txHave: number;
@@ -611,7 +611,7 @@ export function incomeBlend(ranked: [IncomeStyleId, number][]): {
   return { secondary, weight, label: `${primaryTitle}, with a ${secondary.trait} streak` };
 }
 
-export type IncomeNarrative = { pattern: string; behavior: string };
+type IncomeNarrative = { pattern: string; behavior: string };
 
 /** Join the sentences that had the signal to be written. */
 function join(parts: (string | false | null | undefined)[], fallback: string) {

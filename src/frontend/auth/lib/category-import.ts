@@ -54,13 +54,14 @@ function selectable(categories: Category[]): Category[] {
 /** Primary income category used when importing income rows. */
 function incomeCategory(categories: Category[]): Category {
   const live = selectable(categories);
-
-  return (
+  const found =
     live.find((c) => isIncomeCategory(c)) ??
     live.find((c) => c.id === "income") ??
     live[0] ??
-    categories[0]
-  );
+    categories[0];
+  if (!found) throw new Error("No categories available to import into.");
+
+  return found;
 }
 
 /** Non-income categories (spending + savings) for expense imports. */
@@ -102,7 +103,7 @@ function subIdTaken(categories: Category[], id: string): boolean {
   return Boolean(buildCategoryIndex(categories).subById[id]);
 }
 
-export type ResolveImportSubResult =
+type ResolveImportSubResult =
   | { categories: Category[]; subId: string; newCategory: boolean; newSubcategory: boolean }
   | { error: string };
 

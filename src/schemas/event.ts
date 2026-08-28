@@ -14,7 +14,7 @@ import {
 } from "./common";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
-export const eventCommentSchema = z.object({
+const eventCommentSchema = z.object({
   id: z.string().min(1),
   text: z.string().min(1).max(2000),
   at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
@@ -209,9 +209,5 @@ export const listEventsQuerySchema = z.object({
   before: isoDateSchema.optional(),
 });
 
-export type EventComment = z.infer<typeof eventCommentSchema>;
 export type ReminderDetails = z.infer<typeof reminderDetailsSchema>;
 export type Event = z.infer<typeof eventSchema>;
-export type CreateEventInput = z.infer<typeof createEventSchema>;
-export type UpdateEventInput = z.infer<typeof updateEventSchema>;
-export type ListEventsQuery = z.infer<typeof listEventsQuerySchema>;

@@ -2,19 +2,19 @@ import { scheduleForMonth } from "@/frontend/lib/data";
 import type { LedgerEvent } from "@/frontend/lib/types";
 
 /** Any schedule event can reserve a budget envelope hold. */
-export function isHoldEligibleEvent(_ev: Pick<LedgerEvent, "catId">): boolean {
+function isHoldEligibleEvent(_ev: Pick<LedgerEvent, "catId">): boolean {
   return true;
 }
 
 /** Coerce a hold amount to a finite positive number, or 0. */
-export function holdAmountValue(amount: unknown): number {
+function holdAmountValue(amount: unknown): number {
   const n = typeof amount === "number" ? amount : Number(amount);
 
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 /** Whether the event has an active encrypted hold configuration. */
-export function hasBudgetHoldConfig(ev: LedgerEvent): boolean {
+function hasBudgetHoldConfig(ev: LedgerEvent): boolean {
   return Boolean(
     ev.budgetHoldEnabled &&
       holdAmountValue(ev.budgetHoldAmount) > 0 &&

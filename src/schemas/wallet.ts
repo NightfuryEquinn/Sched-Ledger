@@ -37,9 +37,9 @@ export const CURRENCY_CODES = [
   "ZAR",
 ] as const;
 
-export const currencyCodeSchema = z.enum(CURRENCY_CODES);
+const currencyCodeSchema = z.enum(CURRENCY_CODES);
 
-export const fundingModeSchema = z.enum(["monthly", "starting"]);
+const fundingModeSchema = z.enum(["monthly", "starting"]);
 
 const financialWalletSchema = z.object({
   accountId: accountIdSchema,
@@ -81,5 +81,3 @@ export const updateWalletSchema = z
 
 export type FinancialWallet = z.infer<typeof financialWalletSchema>;
 export type CreateWalletInput = z.infer<typeof createWalletSchema>;
-export type UpdateWalletInput = z.infer<typeof updateWalletSchema>;
-export type FundingMode = z.infer<typeof fundingModeSchema>;

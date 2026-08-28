@@ -1,3 +1,6 @@
-import handler from "./index.js";
+/** Vercel serverless entry point — lazily delegates to the bundled API handler emitted by `bun run build`. */
+export default async function handler(req: Request): Promise<Response> {
+  const mod = await import("./index.js");
 
-export default handler;
+  return mod.default(req);
+}

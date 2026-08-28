@@ -27,7 +27,7 @@ export type LedgerBackupPlain = {
   todoLists: TodoList[];
 };
 
-export type EncryptedBackupFile = {
+type EncryptedBackupFile = {
   format: typeof BACKUP_FORMAT;
   version: typeof BACKUP_VERSION;
   address: string;

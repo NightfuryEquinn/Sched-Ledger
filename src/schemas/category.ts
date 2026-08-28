@@ -23,9 +23,9 @@ export const subcategoryIdSchema = z
   .max(48)
   .regex(/^[a-z0-9_]+$/, "Invalid subcategory id");
 
-export const categoryTypeSchema = z.enum(["expense", "income", "savings"]);
+const categoryTypeSchema = z.enum(["expense", "income", "savings"]);
 
-export const subcategorySchema = z.object({
+const subcategorySchema = z.object({
   id: subcategoryIdSchema,
   name: z.string().trim().min(1).max(60),
   /** Piggy goal for this subcategory. Meaningful only under a savings category. */
@@ -33,7 +33,7 @@ export const subcategorySchema = z.object({
   deadline: savingsDeadlineSchema.optional(),
 });
 
-export const categorySchema = z.object({
+const categorySchema = z.object({
   id: categoryIdSchema,
   name: z.string().trim().min(1).max(60),
   color: z.string().regex(/^#[0-9a-f]{6}$/i),
@@ -68,14 +68,13 @@ export const updateCategoriesSchema = z.object({
   payload: encryptedPayloadSchema,
 });
 
-export type Subcategory = z.infer<typeof subcategorySchema>;
-export type Category = z.infer<typeof categorySchema>;
+type Category = z.infer<typeof categorySchema>;
 export type CategoryTaxonomy = z.infer<typeof categoryTaxonomySchema>;
 
 /* Default taxonomy for new accounts — cool muted palette. */
 export const DEFAULT_CATEGORIES: Category[] = [
   {
-    id: "food", name: "Food & Dining", color: "#5b7a8a", glyph: "🍽️", type: "expense", builtin: true,
+    id: "food", name: "Food & Dining", color: "#5b7a8a", glyph: "🍽️", type: "expense", builtin: true, archived: false,
     subs: [
       { id: "groceries", name: "Groceries" },
       { id: "meal", name: "Meal" },
@@ -83,14 +82,14 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
   },
   {
-    id: "transport", name: "Transport", color: "#6f8b6f", glyph: "🚗", type: "expense", builtin: true,
+    id: "transport", name: "Transport", color: "#6f8b6f", glyph: "🚗", type: "expense", builtin: true, archived: false,
     subs: [
       { id: "petrol", name: "Petrol" },
       { id: "transportation", name: "Transportation" },
     ],
   },
   {
-    id: "utilities", name: "Bills & Utilities", color: "#4f8a7b", glyph: "💡", type: "expense", builtin: true,
+    id: "utilities", name: "Bills & Utilities", color: "#4f8a7b", glyph: "💡", type: "expense", builtin: true, archived: false,
     subs: [
       { id: "electricity", name: "Electricity" },
       { id: "water", name: "Water" },
@@ -98,11 +97,11 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
   },
   {
-    id: "sport", name: "Health & Sport", color: "#4a6fa5", glyph: "🏃", type: "expense", builtin: true,
+    id: "sport", name: "Health & Sport", color: "#4a6fa5", glyph: "🏃", type: "expense", builtin: true, archived: false,
     subs: [{ id: "gym", name: "Sport" }],
   },
   {
-    id: "fun", name: "Entertainment", color: "#a06f95", glyph: "🎬", type: "expense", builtin: true,
+    id: "fun", name: "Entertainment", color: "#a06f95", glyph: "🎬", type: "expense", builtin: true, archived: false,
     subs: [
       { id: "streaming", name: "Streaming" },
       { id: "outings", name: "Outings" },
@@ -110,11 +109,11 @@ export const DEFAULT_CATEGORIES: Category[] = [
     ],
   },
   {
-    id: "savings", name: "Savings", color: "#7a6fa5", glyph: "🐷", type: "savings", builtin: true,
+    id: "savings", name: "Savings", color: "#7a6fa5", glyph: "🐷", type: "savings", builtin: true, archived: false,
     subs: [{ id: "saving", name: "Saving" }],
   },
   {
-    id: "income", name: "Income", color: "#6f8b6f", glyph: "💵", type: "income", builtin: true,
+    id: "income", name: "Income", color: "#6f8b6f", glyph: "💵", type: "income", builtin: true, archived: false,
     subs: [
       { id: "salary", name: "Salary" },
       { id: "wages", name: "Wages" },

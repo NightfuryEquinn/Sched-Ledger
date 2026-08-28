@@ -1,7 +1,7 @@
 import type { UpdateExpenseInput } from "@/schemas/expense";
 import { ObjectId } from "mongodb";
 
-export type ExpenseUpdateDocument = {
+type ExpenseUpdateDocument = {
   $set: Record<string, unknown>;
   $unset?: Record<string, "">;
 };

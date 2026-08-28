@@ -19,6 +19,7 @@ export function Root() {
   const [account, setAccount] = useState<Account | null>(null);
   const [booting, setBooting] = useState(true);
   const [cryptoReady, setCryptoReady] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Restore session; prefer locally-stored codename when it matches.
   useEffect(() => {
@@ -53,11 +54,18 @@ export function Root() {
   }, []);
 
   const signOut = async () => {
-    ledgerKeyStore.clear();
-    sessionSecrets.clearAll();
-    await logoutSession();
-    setAccount(null);
-    setCryptoReady(false);
+    if (signingOut) return;
+
+    setSigningOut(true);
+    try {
+      ledgerKeyStore.clear();
+      sessionSecrets.clearAll();
+      await logoutSession();
+      setAccount(null);
+      setCryptoReady(false);
+    } finally {
+      setSigningOut(false);
+    }
   };
 
   if (booting) {
@@ -74,12 +82,13 @@ export function Root() {
     <ThemeProvider>
       {account ? (
         cryptoReady || ledgerKeyStore.isUnlocked(account.address) ? (
-          <LedgerApp key={account.address} account={account} onSignOut={signOut} />
+          <LedgerApp key={account.address} account={account} onSignOut={signOut} signingOut={signingOut} />
         ) : (
           <UnlockScreen
             account={account}
             onUnlocked={() => setCryptoReady(true)}
             onSignOut={signOut}
+            signingOut={signingOut}
           />
         )
       ) : (

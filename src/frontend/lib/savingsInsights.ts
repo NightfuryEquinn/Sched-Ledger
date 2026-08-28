@@ -10,13 +10,13 @@ import {
 } from "./stats";
 import type { Expense } from "./types";
 
-export type SavingsHeadline = {
+type SavingsHeadline = {
   id: string;
   text: string;
   tone: "positive" | "warning";
 };
 
-export type PiggyPace = {
+type PiggyPace = {
   catId: string;
   /** Trailing monthly deposit rate, folding in active recurring pledges. */
   monthlyPace: number;
@@ -28,7 +28,7 @@ export type PiggyPace = {
   requiredMonthly: number | null;
 };
 
-export type SavingsInsights = {
+type SavingsInsights = {
   /** Net savings (deposits − withdrawals) as a share of income over the window. */
   savingsRate: number;
   meanMonthly: number;

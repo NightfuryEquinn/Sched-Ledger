@@ -7,14 +7,14 @@ const TODO_ICONS = TODO_ICON_OPTIONS;
 
 const todoIconSchema = z.enum(TODO_ICONS);
 
-export const todoTaskIdSchema = z
+const todoTaskIdSchema = z
   .string()
   .trim()
   .min(1)
   .max(48)
   .regex(/^[a-z0-9_-]+$/, "Invalid task id");
 
-export const todoTaskSchema = z.object({
+const todoTaskSchema = z.object({
   id: todoTaskIdSchema,
   title: z.string().trim().min(1).max(200),
   done: z.boolean().default(false),
@@ -42,6 +42,4 @@ export const updateTodoListSchema = z.object({
   payload: encryptedPayloadSchema,
 });
 
-export type TodoIcon = z.infer<typeof todoIconSchema>;
-export type TodoTask = z.infer<typeof todoTaskSchema>;
 export type TodoList = z.infer<typeof todoListSchema>;

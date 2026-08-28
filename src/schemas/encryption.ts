@@ -12,6 +12,3 @@ export const encryptedPayloadSchema = z.string().min(1).max(65_536);
 export const seriesKeySchema = z
   .string()
   .regex(/^[a-f0-9]{64}$/i, "Invalid series key");
-
-export type EncryptedPayload = z.infer<typeof encryptedPayloadSchema>;
-export type SeriesKey = z.infer<typeof seriesKeySchema>;

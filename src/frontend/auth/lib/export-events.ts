@@ -21,7 +21,7 @@ const HEADER = [
   "CommentsJson",
 ];
 
-export function buildEventsCsv(events: LedgerEvent[]): string {
+function buildEventsCsv(events: LedgerEvent[]): string {
   const rows = events
     .slice()
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))

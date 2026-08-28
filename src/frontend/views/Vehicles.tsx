@@ -57,6 +57,7 @@ export function Vehicles({
   const [editor, setEditor] = useState<EditorMode>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [removingFillId, setRemovingFillId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [model, setModel] = useState("");
@@ -244,8 +245,14 @@ export function Vehicles({
   };
 
   const removeFill = async (fillId: string) => {
-    await onDeleteFill(fillId);
-    setFillList((prev) => prev.filter((f) => f.id !== fillId));
+    if (removingFillId === fillId) return;
+    setRemovingFillId(fillId);
+    try {
+      await onDeleteFill(fillId);
+      setFillList((prev) => prev.filter((f) => f.id !== fillId));
+    } finally {
+      setRemovingFillId(null);
+    }
   };
 
   if (!vehicleList.length && !editor) {
@@ -488,7 +495,7 @@ export function Vehicles({
                     className="danger"
                     disabled={busy}
                     onClick={(e) => { e.stopPropagation(); void removeVehicle(vehicle.id); }}
-                    aria-label="Delete Vehicle"
+                    aria-label={busy ? "Deleting…" : "Delete Vehicle"}
                   >
                     <Icon name="trash" size={15} />
                   </button>
@@ -546,7 +553,13 @@ export function Vehicles({
                         Log
                       </button>
                     ) : null}
-                    <button type="button" className="capital-item-remove" onClick={() => void removeFill(fill.id)} aria-label="Remove fill">
+                    <button
+                      type="button"
+                      className="capital-item-remove"
+                      disabled={removingFillId === fill.id}
+                      onClick={() => void removeFill(fill.id)}
+                      aria-label={removingFillId === fill.id ? "Removing…" : "Remove fill"}
+                    >
                       <Icon name="close" size={13} />
                     </button>
                   </div>

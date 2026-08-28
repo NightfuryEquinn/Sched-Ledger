@@ -40,6 +40,7 @@ type CalculatorProps = {
   wallet: FinancialWallet | null | undefined;
   budgets: Budgets;
   setBudgets: (next: Budgets) => void;
+  budgetsSaving?: boolean;
   currency: string;
   categoryIndex: CategoryIndex;
 };
@@ -65,6 +66,7 @@ export function Calculator({
   wallet,
   budgets,
   setBudgets,
+  budgetsSaving = false,
   currency,
   categoryIndex,
 }: CalculatorProps) {
@@ -150,7 +152,7 @@ export function Calculator({
 
   /** Persist computed budgets after modal confirm. */
   const applyBudgets = () => {
-    if (!canApply) return;
+    if (!canApply || budgetsSaving) return;
 
     setBudgets({ ...budgets, ...computed });
     setConfirmOpen(false);
@@ -385,7 +387,7 @@ export function Calculator({
         <div
           className="modal-scrim center"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setConfirmOpen(false);
+            if (e.target === e.currentTarget && !budgetsSaving) setConfirmOpen(false);
           }}
         >
           <div className="modal sm" role="dialog" aria-modal="true" aria-labelledby={titleId}>
@@ -395,6 +397,7 @@ export function Calculator({
                 className="icon-btn"
                 type="button"
                 onClick={() => setConfirmOpen(false)}
+                disabled={budgetsSaving}
                 aria-label="Close"
               >
                 <Icon name="close" size={18} />
@@ -421,11 +424,11 @@ export function Calculator({
             <div className="modal-foot">
               <span />
               <div className="mf-right">
-                <button type="button" className="ghost-btn" onClick={() => setConfirmOpen(false)}>
+                <button type="button" className="ghost-btn" disabled={budgetsSaving} onClick={() => setConfirmOpen(false)}>
                   Cancel
                 </button>
-                <button type="button" className="primary-btn" onClick={applyBudgets}>
-                  Confirm Apply
+                <button type="button" className="primary-btn" disabled={budgetsSaving} onClick={applyBudgets}>
+                  {budgetsSaving ? "Applying…" : "Confirm Apply"}
                 </button>
               </div>
             </div>

@@ -11,5 +11,3 @@ export const authVerifySchema = z.object({
   signature: z.string().regex(/^0x[a-fA-F0-9]+$/, "Invalid signature"),
 });
 
-export type AuthChallengeInput = z.infer<typeof authChallengeSchema>;
-export type AuthVerifyInput = z.infer<typeof authVerifySchema>;

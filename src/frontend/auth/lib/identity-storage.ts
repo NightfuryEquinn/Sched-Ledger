@@ -47,18 +47,8 @@ function withPendingLegacy(idn: IdentityRecord): IdentityRecord {
   return { ...idn, ...legacy };
 }
 
-/** Read legacy plaintext secrets if still pending migration. */
-export function readLegacySecrets(idn: IdentityRecord): LegacyIdentitySecrets | null {
-  if (idn.vault || idn.injected) return null;
-  const pending = pendingLegacy.get(addrKey(idn.address));
-  if (pending) return pending;
-  if (!idn.mnemonic || !idn.privateKey) return null;
-
-  return { mnemonic: idn.mnemonic, privateKey: idn.privateKey };
-}
-
 /** Drop pending legacy secrets after successful vault migration. */
-export function clearPendingLegacy(address: string): void {
+function clearPendingLegacy(address: string): void {
   pendingLegacy.delete(addrKey(address));
 }
 

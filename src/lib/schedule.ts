@@ -16,7 +16,7 @@ export type ScheduleEvent = {
 };
 
 /** Minimal shape needed to evaluate recurrence on a calendar day. */
-export type OccurrenceEvent = {
+type OccurrenceEvent = {
   date: string;
   /** Absent behaves as "once". */
   repeat?: string;
@@ -25,7 +25,7 @@ export type OccurrenceEvent = {
 };
 
 /** An occurrence event that may cover more than one calendar day. */
-export type SpanningEvent = OccurrenceEvent & { endDate?: string | null };
+type SpanningEvent = OccurrenceEvent & { endDate?: string | null };
 
 const LEAD_MS: Record<LeadId, number> = {
   at: 0,
@@ -62,7 +62,7 @@ const ALL_DAY_AT_LABEL = "on the day of the event (9:00 AM)";
 export const REMINDER_POLL_INTERVAL_MS = 15 * 60 * 1000;
 
 /** Fire up to this many ms before the configured remind-at time. */
-export const REMINDER_EARLY_BUFFER_MS = 15 * 60 * 1000;
+const REMINDER_EARLY_BUFFER_MS = 15 * 60 * 1000;
 
 /**
  * True when `now` is inside the send window for a reminder:
@@ -92,7 +92,7 @@ export function isOccurrencePast(
 }
 
 /** Milliseconds before event time for a given reminder lead id. */
-export function leadOffsetMs(lead: LeadId): number {
+function leadOffsetMs(lead: LeadId): number {
   return LEAD_MS[lead] ?? 0;
 }
 
@@ -166,7 +166,7 @@ export function coversOn(ev: SpanningEvent, iso: string): boolean {
 }
 
 /** Inclusive last covered day of the occurrence starting on `startIso`. */
-export function occurrenceEndIso(
+function occurrenceEndIso(
   ev: { date: string; endDate?: string | null },
   startIso: string,
 ): string {
@@ -202,7 +202,7 @@ export function occurrenceEndMs(
  * padded for timezone offsets. `span` extends the lookback so an occurrence that
  * started days ago but is still running is still found.
  */
-export function candidateOccurrenceDates(lead: LeadId, now = new Date(), span = 1): string[] {
+function candidateOccurrenceDates(lead: LeadId, now = new Date(), span = 1): string[] {
   const horizon = Math.ceil(leadOffsetMs(lead) / (24 * 60 * 60 * 1000)) + 3;
   const lookback = 2 + Math.max(0, span - 1);
   const start = new Date(now);
@@ -216,7 +216,7 @@ export function candidateOccurrenceDates(lead: LeadId, now = new Date(), span = 
   return out;
 }
 
-export function eventTimeMs(
+function eventTimeMs(
   iso: string,
   time: string | null,
   allDay: boolean,
@@ -259,7 +259,7 @@ export function formatOccurrenceWhen(
   return `${start} — ${end}`;
 }
 
-export function formatEventWhen(
+function formatEventWhen(
   iso: string,
   time: string | null,
   allDay: boolean,
@@ -275,7 +275,8 @@ export function formatEventWhen(
   }).format(new Date(noonMs));
   if (allDay) return `${day} (All day)`;
   if (!time) return day;
-  const [h, m] = time.split(":").map(Number);
+  const [hRaw, m] = time.split(":").map(Number);
+  const h = hRaw ?? 0;
   const ap = h < 12 ? "AM" : "PM";
   const hh = ((h + 11) % 12) + 1;
   const tzLabel = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "short" })
@@ -286,7 +287,7 @@ export function formatEventWhen(
 }
 
 /** Dedupe key stored in `reminderLogs.lead` for daily "still running" sends. */
-export const SPAN_REMINDER_LEAD = "span";
+const SPAN_REMINDER_LEAD = "span";
 
 export type ReminderTarget = {
   /** Occurrence start — the occurrence's identity for dedupe and content. */

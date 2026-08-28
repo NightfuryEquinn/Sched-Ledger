@@ -67,14 +67,14 @@ import {
   recurringScheduleKey,
   recurringSchedulesForMonth,
   spendingChartSeries,
-  type ChartPeriod
+  type ChartPeriod,
+  type WalletFunding,
 } from "@/frontend/lib/stats";
 import { getAccent } from "@/frontend/lib/theme";
 import type { Budgets, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
+import type { DeleteScope } from "@/lib/delete-scope";
 import { useEffect, useMemo, useState } from "react";
-
-export { Categories } from "./Categories";
 
 /*
  * Ledger views
@@ -117,6 +117,9 @@ function remainingTodayEvents(events: LedgerEvent[], now: Date, limit = 3) {
     )
     .slice(0, limit);
 }
+
+/** Used wherever a wallet is legitimately absent (still loading, no wallet selected). */
+const EMPTY_WALLET: WalletFunding = { fundingMode: "starting", income: 0, startingBalance: 0 };
 
 const MOBILE_MQ = "(max-width: 860px)";
 
@@ -173,10 +176,10 @@ export function Overview({
 }: OverviewProps) {
   const [loadedAt] = useState(() => new Date());
   const st = useMemo(
-    () => monthStats(expenses, budgets, wallet, month, categoryIndex),
+    () => monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, month, categoryIndex),
     [expenses, budgets, wallet, month, categoryIndex],
   );
-  const [hoverCat, setHoverCat] = useState(null);
+  const [hoverCat, setHoverCat] = useState<string | null>(null);
   const [expandedCat, setExpandedCat] = useState<Record<string, boolean>>({});
   const isMobile = useIsMobile();
   const donutSize = isMobile ? 168 : 188;
@@ -204,7 +207,7 @@ export function Overview({
   const totalAll = useMemo(() => donutData.reduce((s, d) => s + d.value, 0), [donutData]);
 
   const [yy, mm] = month.split("-").map(Number);
-  const days = new Date(yy, mm, 0).getDate();
+  const days = new Date(yy ?? 0, mm ?? 0, 0).getDate();
   const todayCap = month === CURRENT_MONTH_KEY ? CURRENT_DAY : days;
   /** Per-day spend / income split by source — powers the trend hover card. */
   const dayFlows = useMemo(
@@ -305,7 +308,10 @@ export function Overview({
           <div className="recent-list">
             {todayEvents.length ? todayEvents.map((day) => {
               const ev = day.ev;
-              const cat = eventCatMeta(ev);
+              /* eventCatMeta always resolves to a real entry (EVENT_CAT_BY_ID.custom is
+               * always present) — noUncheckedIndexedAccess just can't see that, so fall
+               * back to the same "custom" meta it would already have picked. */
+              const cat = eventCatMeta(ev) ?? { id: "custom", name: "Custom", color: "#8a7355", glyph: "✨" };
 
               return (
                 <button
@@ -369,7 +375,7 @@ export function Overview({
             <div className="donut-stage">
               <Donut data={donutData} size={donutSize} thickness={donutThickness} onHover={setHoverCat} activeId={activeCat} />
               <div className="donut-center">
-                <div className="dc-label">{activeCat ? categoryIndex.catById[activeCat].name : "Total"}</div>
+                <div className="dc-label">{activeCat ? (categoryIndex.catById[activeCat]?.name ?? "Total") : "Total"}</div>
                 <div className="dc-value">{fmtMoney(activeCat ? (st.byCat[activeCat] || 0) : totalAll, { currency })}</div>
               </div>
             </div>
@@ -434,6 +440,8 @@ export function Overview({
           <div className="recent-list">
             {recent.length ? recent.map((e) => {
               const cat = categoryIndex.catById[catOf(e.sub, categoryIndex)];
+              if (!cat) return null;
+
               return (
                 <button key={e.id} className="recent-row" onClick={() => onEdit(e)}>
                   <span className="rr-glyph" style={glyphTint(cat.color)}>{displayGlyph(cat.glyph, cat.id)}</span>
@@ -478,8 +486,17 @@ export function Overview({
   );
 }
 
+type TransactionsProps = {
+  expenses: Expense[];
+  month: string;
+  currency: string;
+  categoryIndex: CategoryIndex;
+  onEdit: (expense: Expense) => void;
+  onDelete: (id: string, opts?: { scope?: DeleteScope; fromDate?: string }) => void | Promise<void>;
+};
+
 // ── Transactions ────────────────────────────────────────────────────
-export function Transactions({ expenses, month, currency, categoryIndex, onEdit, onDelete }) {
+export function Transactions({ expenses, month, currency, categoryIndex, onEdit, onDelete }: TransactionsProps) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [subFilter, setSubFilter] = useState<string | null>(null);
@@ -604,39 +621,59 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
       ) : null}
 
       <section key={filter + ":" + subFilter + ":" + q} className="panel txn-panel txn-panel--filter" data-tour="tour-txn-list">
-        {dates.length ? dates.map((d) => (
-          <div key={d} className="txn-group">
-            <div className="txn-group-head">
-              <span>{dayLabel(d)} · {weekdayLabel(d)}</span>
-              <span>{(() => {
-                const dayNet = groups[d].reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
-                return (dayNet >= 0 ? "+" : "−") + fmtMoney(Math.abs(dayNet), { currency });
-              })()}</span>
+        {dates.length ? dates.map((d) => {
+          // `dates` is Object.keys(groups), so this is always populated — the
+          // fallback only appeases noUncheckedIndexedAccess.
+          const dayRows = groups[d] ?? [];
+
+          return (
+            <div key={d} className="txn-group">
+              <div className="txn-group-head">
+                <span>{dayLabel(d)} · {weekdayLabel(d)}</span>
+                <span>{(() => {
+                  const dayNet = dayRows.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
+                  return (dayNet >= 0 ? "+" : "−") + fmtMoney(Math.abs(dayNet), { currency });
+                })()}</span>
+              </div>
+              {dayRows.map((e) => (
+                <TransactionRow
+                  key={e.id}
+                  exp={e}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  currency={currency}
+                  walletName={undefined}
+                  categoryIndex={categoryIndex}
+                />
+              ))}
             </div>
-            {groups[d].map((e) => (
-              <TransactionRow
-                key={e.id}
-                exp={e}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                currency={currency}
-                categoryIndex={categoryIndex}
-              />
-            ))}
-          </div>
-        )) : <EmptyState title="Nothing Matches" sub="Try a different search or filter." />}
+          );
+        }) : <EmptyState title="Nothing Matches" sub="Try a different search or filter." />}
       </section>
     </div>
   );
 }
 
+type BudgetsProps = {
+  expenses: Expense[];
+  budgets: Budgets;
+  setBudgets: (budgets: Budgets) => void;
+  budgetsSaving?: boolean;
+  wallet: FinancialWallet | null | undefined;
+  month: string;
+  currency: string;
+  categoryIndex: CategoryIndex;
+  events?: LedgerEvent[];
+  setView?: (view: ViewId) => void;
+};
+
 // ── Budgets ─────────────────────────────────────────────────────────
-export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency, categoryIndex, events = [], setView }) {
+export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, wallet, month, currency, categoryIndex, events = [], setView }: BudgetsProps) {
   const st = useMemo(
-    () => monthStats(expenses, budgets, wallet, month, categoryIndex, events),
+    () => monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, month, categoryIndex, events),
     [expenses, budgets, wallet, month, categoryIndex, events],
   );
-  const [editId, setEditId] = useState(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const draftEvaluated = useMemo(() => evaluateExpression(draft), [draft]);
   const draftIsExpression = draftEvaluated !== null && !isPlainNumber(draft);
@@ -645,11 +682,16 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
   const totalHeld = st.totalHeld;
   const totalAvailable = totalBudget - totalSpent - st.saved - totalHeld;
 
-  const startEdit = (id) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
+  /** Open the inline budget editor for a category. */
+  const startEdit = (id: string) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
+  /** Commit the drafted budget amount for the category being edited. */
   const commit = () => {
-    const v = Math.max(0, roundMoney(draftEvaluated ?? 0));
-    setBudgets({ ...budgets, [editId]: v });
+    const id = editId;
+    if (!id || budgetsSaving) return;
+
     setEditId(null);
+    const v = Math.max(0, roundMoney(draftEvaluated ?? 0));
+    setBudgets({ ...budgets, [id]: v });
   };
 
   return (
@@ -705,6 +747,7 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
                         <span className="be-cur">{getCurrency(currency).symbol}</span>
                         <input
                           autoFocus
+                          disabled={budgetsSaving}
                           type="text"
                           inputMode="text"
                           value={draft}
@@ -743,8 +786,18 @@ export function Budgets({ expenses, budgets, setBudgets, wallet, month, currency
   );
 }
 
+type InsightsProps = {
+  expenses: Expense[];
+  budgets: Budgets;
+  wallet: FinancialWallet | null | undefined;
+  month: string;
+  currency: string;
+  categoryIndex: CategoryIndex;
+  setMonth: (month: string) => void;
+};
+
 // ── Insights ────────────────────────────────────────────────────────
-export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, setMonth }) {
+export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, setMonth }: InsightsProps) {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
   const [habitPeriod, setHabitPeriod] = useState<HabitPeriod>("month");
   const [incomeWindow, setIncomeWindow] = useState<IncomeWindow>("6mo");
@@ -873,19 +926,19 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     () =>
       chartMonths.map((mo) => ({
         key: mo.key,
-        label: monthLabel(mo.key).split(" ")[0],
+        label: monthLabel(mo.key, false).split(" ")[0],
         spent: roundMoney(monthlyAgg.get(mo.key)?.spent || 0),
       })),
     [chartMonths, monthlyAgg],
   );
   const cur = useMemo(
-    () => monthStats(expenses, budgets, wallet, month, categoryIndex),
+    () => monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, month, categoryIndex),
     [expenses, budgets, wallet, month, categoryIndex],
   );
   const idx = MONTHS.findIndex((m) => m.key === month);
-  const prevKey = idx > 0 ? MONTHS[idx - 1].key : null;
+  const prevKey = idx > 0 ? (MONTHS[idx - 1]?.key ?? null) : null;
   const prev = useMemo(
-    () => (prevKey ? monthStats(expenses, budgets, wallet, prevKey, categoryIndex) : null),
+    () => (prevKey ? monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, prevKey, categoryIndex) : null),
     [expenses, budgets, wallet, prevKey, categoryIndex],
   );
 
@@ -927,12 +980,12 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   );
 
   // top subcategories this month
-  const subTotals = {};
+  const subTotals: Record<string, number> = {};
   cur.list.filter((e) => isOutgoing(e) && !isSavings(e, categoryIndex)).forEach((e) => {
     subTotals[e.sub] = (subTotals[e.sub] || 0) + e.amount;
   });
   const topSubs = Object.entries(subTotals).map(([sub, v]) => ({ sub, v })).sort((a, b) => b.v - a.v).slice(0, 6);
-  const maxSub = topSubs.length ? topSubs[0].v : 1;
+  const maxSub = topSubs.length ? (topSubs[0]?.v ?? 1) : 1;
 
   const avgSpent = roundMoney(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
 
@@ -997,7 +1050,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     .map(([sub, v]) => ({ sub, v }))
     .sort((a, b) => b.v - a.v)
     .slice(0, 6);
-  const maxIncomeSub = topIncomeSubs.length ? topIncomeSubs[0].v : 1;
+  const maxIncomeSub = topIncomeSubs.length ? (topIncomeSubs[0]?.v ?? 1) : 1;
 
   const avgEarned = roundMoney(
     chartMonths.reduce((s, mo) => s + (monthlyAgg.get(mo.key)?.earned || 0), 0) / chartMonths.length,
@@ -1263,7 +1316,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                         className={"ptrl-bar" + (isReady ? "" : " is-empty")}
                         style={{ height: isReady ? `${Math.max(6, (pt.spend / habitTrailMaxSpend) * 100)}%` : "4px" }}
                       />
-                      <p className="ptrl-label">{monthLabel(pt.monthKey).split(" ")[0]}</p>
+                      <p className="ptrl-label">{monthLabel(pt.monthKey, false).split(" ")[0]}</p>
                       <p className="ptrl-style">{isReady ? pt.trait : "—"}</p>
                     </button>
                   );
@@ -1275,7 +1328,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       </section>
 
       <div className="summary-grid sg-3">
-        <SummaryCard label="This Month" tone="spent" value={money(cur.spent)} sub={monthLabel(month)} />
+        <SummaryCard label="This Month" tone="spent" value={money(cur.spent)} sub={monthLabel(month, false)} />
         <SummaryCard label="Vs Last Month" tone={prev && cur.spent > prev.spent ? "danger" : "saved"}
           value={prev ? (cur.spent >= prev.spent ? "+" : "−") + money(Math.abs(cur.spent - prev.spent)) : "—"}
           sub={prev ? `${Math.round(Math.abs(cur.spent - prev.spent) / (prev.spent || 1) * 100)}% ${cur.spent >= prev.spent ? "higher" : "lower"}` : "no prior data"} />
@@ -1527,7 +1580,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
           {showDeclaredIncomeNote && (
             <p className="profile-callout">
-              Wallet declares {money(wallet.income)}/mo on top of logged income. Logged income
+              Wallet declares {money(wallet?.income ?? 0)}/mo on top of logged income. Logged income
               averages{" "}
               {incomeProfile.status === "ready" ? money(incomeProfile.metrics.monthlyMean) : "—"}
               /mo — if your salary is logged as a transaction, the pool counts it twice.
@@ -1536,7 +1589,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         </section>
 
         <div className="summary-grid sg-4">
-          <SummaryCard label="Income This Month" tone="saved" value={money(cur.earned)} sub={monthLabel(month)} />
+          <SummaryCard label="Income This Month" tone="saved" value={money(cur.earned)} sub={monthLabel(month, false)} />
           <SummaryCard
             label="Vs Last Month"
             tone={!prev || earnedDelta === 0 ? undefined : earnedDelta > 0 ? "saved" : "danger"}
@@ -1642,8 +1695,16 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   );
 }
 
+type RecurringProps = {
+  expenses: Expense[];
+  month: string;
+  currency: string;
+  categoryIndex: CategoryIndex;
+  onEdit: (expense: Expense) => void;
+};
+
 // ── Recurring ───────────────────────────────────────────────────────
-export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) {
+export function Recurring({ expenses, month, currency, categoryIndex, onEdit }: RecurringProps) {
   const list = recurringSchedulesForMonth(expenses, month);
   const total = roundMoney(list.reduce((s, e) => s + e.amount, 0));
   const monthlyEq = roundMoney(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
@@ -1671,7 +1732,7 @@ export function Recurring({ expenses, month, currency, categoryIndex, onEdit }) 
                 </span>
                 <span className="rec-day">
                   <span className="rec-day-n">{dueDay}</span>
-                  <span className="rec-day-l">{monthLabel(month)}</span>
+                  <span className="rec-day-l">{monthLabel(month, false)}</span>
                 </span>
                 <span className="rec-amt">{fmtMoney(e.amount, { currency })}</span>
               </button>

@@ -11,7 +11,7 @@ export const SESSION_MAX_LIFETIME_MS = 90 * 24 * 60 * 60 * 1000;
 export const NONCE_TTL_MS = 5 * 60 * 1000;
 
 /** Whether this process is a production / Vercel deploy. */
-export function isProductionRuntime(): boolean {
+function isProductionRuntime(): boolean {
   return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
 }
 
@@ -105,7 +105,7 @@ export function readSessionToken(c: Context): string | undefined {
 }
 
 /** Whether the session cookie should set the Secure attribute. */
-export function shouldUseSecureCookie(c: Context): boolean {
+function shouldUseSecureCookie(c: Context): boolean {
   if (isProductionRuntime()) return true;
   const proto = c.req.header("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
   if (proto === "https") return true;

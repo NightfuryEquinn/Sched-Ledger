@@ -34,6 +34,34 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "4.1.0",
+    date: "August 2026",
+    lead: "A smoother loading experience, safer saves when you tap fast, and stricter dev tooling to keep the codebase lean.",
+    highlights: [
+      {
+        icon: "sparkle",
+        title: "Trefoil loader",
+        body:
+          "Boot, ledger fetch, and lazy view switches now show a branded trefoil spinner instead of the hand-rolled bloom animation — " +
+          "same playful wait messages, sharper visual polish.",
+      },
+      {
+        icon: "shield",
+        title: "Safer saves",
+        body:
+          "Double-clicks and Enter-then-blur on budgets, expenses, events, capitals, todos, and sign-out no longer fire duplicate " +
+          "requests. Buttons show Saving… or Signing Out… while a change is in flight.",
+      },
+      {
+        icon: "info",
+        title: "Dev hygiene",
+        body:
+          "The repo now runs TypeScript type-checking and knip dead-code detection — run bun run typecheck and bun run knip " +
+          "before shipping to catch unused exports and type errors early.",
+      },
+    ],
+  },
+  {
     version: "4.0.0",
     date: "August 2026",
     lead: "Meet Vehicles and Fuel Insights, plus a ranked \"What Stands Out\" feed that forecasts and flags anomalies in Transaction Insights.",

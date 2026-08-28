@@ -28,7 +28,7 @@ export type HabitStyleId =
   | "accumulator"
   | "nomad";
 
-export type HabitStyleMeta = {
+type HabitStyleMeta = {
   id: HabitStyleId;
   title: string;
   /** Short trait label used in the blend line ("with a Burst streak"). */
@@ -104,7 +104,7 @@ export const HABIT_STYLES: Record<HabitStyleId, HabitStyleMeta> = {
 /** Minimum distinct calendar days with outgoing spend before a style is revealed. */
 export const HABIT_MIN_ACTIVE_DAYS = 5;
 
-export type HabitCatStat = {
+type HabitCatStat = {
   id: string;
   name: string;
   color: string;
@@ -115,7 +115,7 @@ export type HabitCatStat = {
   share: number;
 };
 
-export type HabitMetrics = {
+type HabitMetrics = {
   txCount: number;
   activeDays: number;
   spanDays: number;
@@ -174,10 +174,10 @@ export type HabitMetrics = {
 };
 
 /** Confidence shape is shared with the income engine — see `stat-helpers`. */
-export type HabitConfidenceLevel = ConfidenceLevel;
-export type HabitConfidence = Confidence;
+type HabitConfidenceLevel = ConfidenceLevel;
+type HabitConfidence = Confidence;
 
-export type HabitAssessment =
+type HabitAssessment =
   | {
       status: "insufficient";
       daysHave: number;
@@ -211,10 +211,10 @@ type TxPoint = {
 /** Parse YYYY-MM-DD into local calendar parts used by habit scoring. */
 function parseDateParts(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
+  const date = new Date(y!, m! - 1, d!);
   return {
     dayOfWeek: date.getDay(),
-    dayOfMonth: d,
+    dayOfMonth: d!,
     time: date.getTime(),
   };
 }
@@ -232,7 +232,7 @@ function buildClusters(points: TxPoint[], windowMs = 48 * 60 * 60 * 1000) {
     const prev = points[i - 1]!;
     const cur = points[i]!;
     if (cur.time - prev.time <= windowMs) {
-      clusters[clusters.length - 1].push(cur);
+      clusters[clusters.length - 1]!.push(cur);
     } else {
       clusters.push([cur]);
     }
@@ -277,7 +277,7 @@ function peakValleyScore(points: TxPoint[]) {
     const days = [...byDom.keys()].sort((a, b) => a - b);
     if (days.length < 3) continue;
 
-    let bestPeak = days[0];
+    let bestPeak = days[0]!;
     let bestAmt = -1;
     for (const d of days) {
       const amt = byDom.get(d) || 0;
@@ -293,7 +293,7 @@ function peakValleyScore(points: TxPoint[]) {
     const series = after.map((d) => byDom.get(d) || 0);
     let declines = 0;
     for (let i = 1; i < series.length; i++) {
-      if (series[i] <= series[i - 1] * 1.05) declines += 1;
+      if (series[i]! <= series[i - 1]! * 1.05) declines += 1;
     }
     const taper = declines / (series.length - 1);
     const peakShare = bestAmt / Math.max(1, series.reduce((s, v) => s + v, 0));
@@ -447,7 +447,7 @@ export function computeHabitMetrics(
 
   let lastDate = "";
   for (let i = 0; i < txCount; i++) {
-    const p = points[i];
+    const p = points[i]!;
     amounts[i] = p.amount;
     sum += p.amount;
     sumSq += p.amount * p.amount;
@@ -697,7 +697,7 @@ function pickFromRanked(ranked: [HabitStyleId, number][]): HabitStyleId {
 }
 
 /** Confidence in the winning style, from the score separation and sample size. */
-export function habitConfidence(
+function habitConfidence(
   ranked: [HabitStyleId, number][],
   metrics: HabitMetrics,
 ): HabitConfidence {
@@ -750,9 +750,9 @@ export function habitBlend(ranked: [HabitStyleId, number][]): {
   };
 }
 
-export type HabitFormatters = Formatters;
+type HabitFormatters = Formatters;
 
-export type HabitNarrative = { pattern: string; behavior: string };
+type HabitNarrative = { pattern: string; behavior: string };
 
 /** Personalized "Data Pattern" / "Behavior" copy, built from the period's real numbers. */
 export function buildHabitNarrative(
@@ -931,9 +931,9 @@ export function habitPeriodExpenses(
 /** Inclusive [start, end] ISO bounds for the rolling-90-day window anchored on `monthKey`. */
 function rolling90Bounds(monthKey: string) {
   const [y, m] = monthKey.split("-").map(Number);
-  const end = monthKey === CURRENT_MONTH_KEY ? TODAY_ISO : isoFromDate(new Date(y, m, 0));
+  const end = monthKey === CURRENT_MONTH_KEY ? TODAY_ISO : isoFromDate(new Date(y!, m!, 0));
   const [ey, em, ed] = end.split("-").map(Number);
-  const start = isoFromDate(new Date(ey, em - 1, ed - 89));
+  const start = isoFromDate(new Date(ey!, em! - 1, ed! - 89));
   return { start, end };
 }
 
@@ -945,7 +945,7 @@ function habitPeriodLabel(period: HabitPeriod, monthKey: string) {
   }
   if (period === "year") return monthKey.slice(0, 4);
   const [y, m] = monthKey.split("-").map(Number);
-  const name = new Date(y, m - 1, 1).toLocaleString("en", { month: "long" });
+  const name = new Date(y!, m! - 1, 1).toLocaleString("en", { month: "long" });
   return `${name} ${y}`;
 }
 
@@ -1004,7 +1004,7 @@ export function assessSpendingHabit(
   };
 }
 
-export type HabitTrajectoryPoint = {
+type HabitTrajectoryPoint = {
   monthKey: string;
   label: string;
   status: "insufficient" | "ready";

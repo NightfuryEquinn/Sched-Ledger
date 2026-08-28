@@ -62,7 +62,7 @@ describe("envelope holds", () => {
       }),
     ];
 
-    expect(isActiveHoldOccurrence(events[0], "2026-07-15")).toBe(false);
+    expect(isActiveHoldOccurrence(events[0]!, "2026-07-15")).toBe(false);
     expect(totalActiveHolds(events, "2026-07")).toBe(0);
   });
 

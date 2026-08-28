@@ -51,7 +51,7 @@ function openDb(): Promise<IDBDatabase> {
 }
 
 /** Build a cache key scoped to the signed-in address and API path. */
-export function cacheKey(address: string, path: string): string {
+function cacheKey(address: string, path: string): string {
   return `${address.toLowerCase()}|${path}`;
 }
 

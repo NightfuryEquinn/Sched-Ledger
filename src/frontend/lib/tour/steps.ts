@@ -1,14 +1,24 @@
 import type { ViewId } from "@/frontend/lib/types";
-import type { StepOptions } from "shepherd.js";
+import type { PopperPlacement, StepOptions } from "shepherd.js";
 
-type TourStep = StepOptions & { id: string };
+/** Which real Tour action a placeholder step button maps to once runTour binds it. */
+type TourButtonKind = "next" | "back" | "complete";
+
+/** A step button before runTour.ts binds `kind` to a real Shepherd `action` handler. */
+interface TourStepButton {
+  text: string;
+  classes: string;
+  kind: TourButtonKind;
+}
+
+type TourStep = Omit<StepOptions, "buttons"> & { id: string; buttons?: TourStepButton[] };
 
 function navTarget(view: ViewId): string {
   return `[data-tour="tour-nav-${view}"]`;
 }
 
-function btn(text: string, action: "next" | "back" | "complete") {
-  return { text, classes: action === "back" ? "shepherd-button-secondary" : "shepherd-button-primary", action };
+function btn(text: string, kind: TourButtonKind): TourStepButton {
+  return { text, classes: kind === "back" ? "shepherd-button-secondary" : "shepherd-button-primary", kind };
 }
 
 function step(
@@ -16,7 +26,7 @@ function step(
   title: string,
   text: string,
   element: string,
-  on: StepOptions["attachTo"] extends { on?: infer O } ? O : never = "bottom",
+  on: PopperPlacement = "bottom",
   extra: Partial<TourStep> = {},
 ): TourStep {
   return {
@@ -34,7 +44,7 @@ function lastStep(
   title: string,
   text: string,
   element: string,
-  on: StepOptions["attachTo"] extends { on?: infer O } ? O : never = "bottom",
+  on: PopperPlacement = "bottom",
 ): TourStep {
   return step(id, title, text, element, on, {
     buttons: [btn("Back", "back"), btn("Done", "complete")],

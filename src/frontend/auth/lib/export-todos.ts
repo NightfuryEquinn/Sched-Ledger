@@ -3,7 +3,7 @@ import type { TodoList } from "@/frontend/lib/types";
 
 const HEADER = ["ListId", "ListName", "ListIcon", "TaskId", "TaskTitle", "Done"];
 
-export function buildTodosCsv(todoLists: TodoList[]): string {
+function buildTodosCsv(todoLists: TodoList[]): string {
   const rows: unknown[][] = [];
   for (const list of todoLists) {
     if (list.tasks.length) {

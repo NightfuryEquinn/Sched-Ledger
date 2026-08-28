@@ -6,10 +6,7 @@ import type { CategoryIndex, Expense, FinancialWallet } from "@/frontend/lib/typ
 export function buildExpenseCsv(
   expenses: Expense[],
   wallets: FinancialWallet[] = [],
-  categoryIndex?: {
-    subById: Record<string, { name: string; catId: string }>;
-    catById: Record<string, { id?: string; name: string; type?: string }>;
-  },
+  categoryIndex?: CategoryIndex,
 ) {
   const walletById = Object.fromEntries(wallets.map((w) => [w.id, w]));
   const header = [

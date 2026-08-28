@@ -438,11 +438,15 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
   }
 
   async function connectInjected() {
+    if (busy) return;
+
     setError("");
     if (!walletClient.hasInjected()) {
       setError("No browser wallet detected on this device.");
       return;
     }
+
+    setBusy(true);
     try {
       const accs = await window.ethereum!.request({ method: "eth_requestAccounts" });
       const address = getAddress(accs[0]!);
@@ -711,7 +715,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         <textarea className="phrase-in" placeholder="Enter your 12- or 24-word recovery phrase, separated by spaces" value={phrase} onChange={(e) => setPhrase(e.target.value)} />
         {error ? <div className="auth-error">{error}</div> : null}
         <button className="primary-btn lg full" type="button" disabled={busy || !phrase.trim()} onClick={() => void doImport()}>{busy ? "Restoring…" : "Restore Identity"}</button>
-        {walletClient.hasInjected() ? <button className="ghost-btn full u-gap-top" type="button" onClick={() => void connectInjected()}><Icon name="wallet" size={17} /> Connect Browser Wallet</button> : null}
+        {walletClient.hasInjected() ? <button className="ghost-btn full u-gap-top" type="button" disabled={busy} onClick={() => void connectInjected()}><Icon name="wallet" size={17} /> {busy ? "Connecting…" : "Connect Browser Wallet"}</button> : null}
       </div></div>
     );
   }
@@ -725,7 +729,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         <button className="primary-btn lg" type="button" onClick={startCreate}><Icon name="shield" size={18} /> Create New</button>
         <button className="ghost-btn lg" type="button" onClick={() => { setError(""); setMode("restore"); }}><Icon name="key" size={17} /> Open Existing</button>
       </div>
-      {walletClient.hasInjected() ? <button className="link-btn auth-injected" type="button" onClick={() => void connectInjected()}>Or Connect Your Browser Wallet</button> : null}
+      {walletClient.hasInjected() ? <button className="link-btn auth-injected" type="button" disabled={busy} onClick={() => void connectInjected()}>{busy ? "Connecting…" : "Or Connect Your Browser Wallet"}</button> : null}
       {error ? <div className="auth-error auth-error--gap">{error}</div> : null}
       <ul className="auth-feat">
         <li><Icon name="check" /> No email or password required to sign in</li>

@@ -3,7 +3,7 @@ import type { CategoryIndex } from "@/frontend/lib/categories";
 import { buildPiggies } from "@/frontend/lib/piggies";
 import type { Expense } from "@/frontend/lib/types";
 
-export function buildPiggiesCsv(
+function buildPiggiesCsv(
   savingsTxns: Expense[],
   categoryIndex: CategoryIndex,
   currency = "MYR",

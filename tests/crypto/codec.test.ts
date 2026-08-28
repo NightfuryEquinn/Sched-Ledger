@@ -234,7 +234,7 @@ describe("crypto codec", () => {
       },
     ];
     const decoded = await decodeCategories({ categories }, key);
-    expect(decoded[0].id).toBe("fun");
+    expect(decoded[0]!.id).toBe("fun");
   });
 
   test("encodeEventCreate encrypts title/comments and leaves schedule plaintext", async () => {
@@ -264,7 +264,7 @@ describe("crypto codec", () => {
 
     const decoded = await decodeEvent({ id: "ev1", ...wire }, key);
     expect(decoded.title).toBe("Dentist");
-    expect(decoded.comments[0].text).toBe("Bring card");
+    expect(decoded.comments[0]!.text).toBe("Bring card");
     expect(decoded.email).toBe("you@mail.com");
   });
 
@@ -462,7 +462,7 @@ describe("crypto codec", () => {
     expect(wire).not.toHaveProperty("name");
     const decoded = await decodeTodoList({ id: "list1", ...wire }, key);
     expect(decoded.name).toBe("Groceries");
-    expect(decoded.tasks[0].title).toBe("Milk");
+    expect(decoded.tasks[0]!.title).toBe("Milk");
   });
 
   test("decodeTodoList supports legacy plaintext lists", async () => {
@@ -477,6 +477,6 @@ describe("crypto codec", () => {
       key,
     );
     expect(decoded.name).toBe("Chores");
-    expect(decoded.tasks[0].done).toBe(true);
+    expect(decoded.tasks[0]!.done).toBe(true);
   });
 });

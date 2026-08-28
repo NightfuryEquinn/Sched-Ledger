@@ -2,7 +2,7 @@ import { EmptyState, Icon } from "@/frontend/components/ui";
 import { slugId } from "@/frontend/lib/categories";
 import type { TodoList, TodoTask } from "@/frontend/lib/types";
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /*
  * TO-DO List view
@@ -40,6 +40,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
   const [taskDraft, setTaskDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const taskSaveRef = useRef(false);
 
   useEffect(() => {
     setLists(todoLists);
@@ -81,6 +82,9 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
   };
 
   const updateTasks = async (listId: string, tasks: TodoTask[]) => {
+    if (taskSaveRef.current) return;
+
+    taskSaveRef.current = true;
     setBusy(true);
     setError("");
     try {
@@ -89,6 +93,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save task");
     } finally {
+      taskSaveRef.current = false;
       setBusy(false);
     }
   };
@@ -239,9 +244,9 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                     className="danger"
                     disabled={busy}
                     onClick={() => removeList(active.id)}
-                    aria-label="Delete List"
+                    aria-label={busy ? "Deleting…" : "Delete List"}
                   >
-                    <Icon name="trash" size={16} />
+                    {busy ? "Deleting…" : <Icon name="trash" size={16} />}
                   </button>
                 </div>
               </div>
@@ -255,6 +260,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                       <button
                         type="button"
                         className={"todo-check" + (task.done ? " checked" : "")}
+                        disabled={busy}
                         onClick={() => toggleTask(active.id, task.id)}
                         aria-label={task.done ? "Mark incomplete" : "Mark complete"}
                       >
@@ -267,7 +273,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                         disabled={busy}
                         onClick={() => removeTask(active.id, task.id)}
                       >
-                        Remove
+                        {busy ? "Removing…" : "Remove"}
                       </button>
                     </div>
                   ))
@@ -292,7 +298,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                   disabled={busy || !taskDraft.trim()}
                   onClick={() => void addTask()}
                 >
-                  Add
+                  {busy ? "Adding…" : "Add"}
                 </button>
               </div>
 

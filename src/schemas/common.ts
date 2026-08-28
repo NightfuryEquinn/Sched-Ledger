@@ -17,11 +17,6 @@ export function monthDateBounds(month: string): { $gte: string; $lte: string } {
   return { $gte: `${month}-01`, $lte: `${month}-31` };
 }
 
-/** Shared list pagination: limit + optional cursor on date. */
-export const listPaginationSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(5000).optional().default(2000),
-  before: isoDateSchema.optional(),
-});
 export { categoryIdSchema, subcategoryIdSchema } from "./category";
 
 export const budgetsSchema = z.record(categoryIdSchema, z.number().nonnegative());
@@ -40,7 +35,7 @@ export const REPEAT_IDS = ["once", "daily", "weekly", "biweekly", "monthly", "ye
 export type RepeatId = (typeof REPEAT_IDS)[number];
 
 /** Days between the start of one occurrence and the start of the next. */
-export const REPEAT_STRIDE_DAYS: Record<RepeatId, number> = {
+const REPEAT_STRIDE_DAYS: Record<RepeatId, number> = {
   once: Infinity,
   daily: 1,
   weekly: 7,
@@ -82,10 +77,10 @@ export type LeadId = (typeof LEAD_IDS)[number];
  * Reminder leads allowed for all-day events: the day of the event itself
  * (delivered at 09:00 in the user's timezone) plus whole-day offsets.
  */
-export const ALL_DAY_LEAD_IDS = ["at", "1d", "2d"] as const satisfies readonly LeadId[];
+const ALL_DAY_LEAD_IDS = ["at", "1d", "2d"] as const satisfies readonly LeadId[];
 
 /** Reminder leads allowed for timed events. */
-export const TIMED_LEAD_IDS = LEAD_IDS;
+const TIMED_LEAD_IDS = LEAD_IDS;
 
 /** Whether a reminder lead is valid for an all-day or timed event. */
 export function isLeadAllowedForEvent(lead: LeadId, allDay: boolean): boolean {

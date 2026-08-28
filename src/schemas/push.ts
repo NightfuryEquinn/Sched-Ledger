@@ -16,4 +16,3 @@ export const pushUnsubscribeSchema = z.object({
   endpoint: endpointSchema,
 });
 
-export type PushSubscribeInput = z.infer<typeof pushSubscribeSchema>;

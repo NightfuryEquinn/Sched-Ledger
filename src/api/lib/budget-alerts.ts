@@ -4,7 +4,7 @@ import { getCollections, getDb } from "@/db";
 import type { BudgetAlertItem } from "@/schemas/budget-alert";
 import { ObjectId } from "mongodb";
 
-export type BudgetAlertSendResult = {
+type BudgetAlertSendResult = {
   sent: number;
   skipped: number;
   errors: string[];

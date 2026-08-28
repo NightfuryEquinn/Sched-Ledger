@@ -3,7 +3,7 @@
  * Never written to localStorage — clears on sign-out / clearAllLocalData.
  */
 
-export type SessionSecret = {
+type SessionSecret = {
   mnemonic: string;
   privateKey: string;
 };

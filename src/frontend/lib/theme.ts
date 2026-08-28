@@ -9,7 +9,7 @@
 export type ThemePreference = "light" | "dark" | "system";
 
 /** Default accent — keep in sync with --accent in ledger.css. */
-export const DEFAULT_ACCENT = "#4a6fa5";
+const DEFAULT_ACCENT = "#4a6fa5";
 
 const THEME_KEY = "ledger:theme";
 

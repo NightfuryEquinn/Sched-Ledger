@@ -3,7 +3,7 @@ export const DEFAULT_BUDGET_ALERT_THRESHOLD = 0.8;
 
 export type BudgetAlertLevel = "warning" | "exceeded";
 
-export type BudgetAlertCategory = {
+type BudgetAlertCategory = {
   id: string;
   name: string;
   type?: "expense" | "income" | "savings";
@@ -19,7 +19,7 @@ export type BudgetAlert = {
   month: string;
 };
 
-export function isPositiveBudget(n: unknown): n is number {
+function isPositiveBudget(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n) && n > 0;
 }
 

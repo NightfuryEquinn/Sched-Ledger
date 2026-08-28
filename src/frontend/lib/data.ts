@@ -1,9 +1,9 @@
 import { DEFAULT_CATEGORIES } from "@/schemas/category";
 import { spanDaysBetween } from "@/schemas/common";
-import { coversOn, occurrenceStartFor, occursOn, spanDays } from "@/lib/schedule";
+import { occurrenceStartFor, spanDays } from "@/lib/schedule";
 import type { MonthEntry } from "./types";
 
-const CURRENCY = { code: "MYR", symbol: "RM" };
+const CURRENCY = { code: "MYR", symbol: "RM", label: "Malaysian Ringgit" };
 
 export const CURRENCIES = [
   { code: "AED", symbol: "د.إ", label: "UAE Dirham" },
@@ -73,9 +73,9 @@ function buildMonths(fromKey: string, toKey: string): MonthEntry[] {
   const [fromY, fromM] = fromKey.split("-").map(Number);
   const [toY, toM] = toKey.split("-").map(Number);
   const out: MonthEntry[] = [];
-  let y = fromY;
-  let m = fromM - 1;
-  const end = new Date(toY, toM - 1, 1).getTime();
+  let y = fromY!;
+  let m = fromM! - 1;
+  const end = new Date(toY!, toM! - 1, 1).getTime();
 
   while (new Date(y, m, 1).getTime() <= end) {
     out.push({ key: `${y}-${pad(m + 1)}`, year: y, m });
@@ -136,7 +136,8 @@ const EVENT_CAT_BY_ID = Object.fromEntries(EVENT_CATS.map((c) => [c.id, c]));
 
 /** Resolve display meta for an event type, including custom label/glyph. */
 export function eventCatMeta(ev: { catId: string; customLabel?: string; customGlyph?: string }) {
-  const base = EVENT_CAT_BY_ID[ev.catId] ?? EVENT_CAT_BY_ID.custom;
+  /* EVENT_CATS always has a "custom" entry (defined above), so this fallback never misses. */
+  const base = (EVENT_CAT_BY_ID[ev.catId] ?? EVENT_CAT_BY_ID.custom)!;
 
   if (ev.catId === "custom") {
     return {
@@ -194,14 +195,12 @@ export function leadTimesForEvent(allDay: boolean) {
   );
 }
 
-export { coversOn, occursOn, spanDays };
-
 /**
  * Sort events on the same day: all-day first, then earliest time, then title.
  * A day the event merely runs through (`dayIndex > 0`) has no clock time of its
  * own, so it ranks with the all-day group.
  */
-export function compareEventsByEarliest(
+function compareEventsByEarliest(
   a: { allDay?: boolean; time?: string | null; title?: string; dayIndex?: number },
   b: { allDay?: boolean; time?: string | null; title?: string; dayIndex?: number },
 ): number {
@@ -289,20 +288,6 @@ export function eventDaysByMonth<T extends DayEvent>(
     list.sort((a, b) =>
       compareEventsByEarliest({ ...a.ev, dayIndex: a.dayIndex }, { ...b.ev, dayIndex: b.dayIndex }),
     );
-  }
-
-  return map;
-}
-
-/** Build a day → events map for one month, including days a span runs through. */
-export function eventsByDayForMonth<T extends DayEvent>(
-  events: T[],
-  monthKey: string,
-): Map<string, T[]> {
-  const map = new Map<string, T[]>();
-
-  for (const [iso, list] of eventDaysByMonth(events, monthKey)) {
-    map.set(iso, list.map((d) => d.ev));
   }
 
   return map;
@@ -416,14 +401,14 @@ export function collapseRecurringToNext<T extends DayEvent & { id: string }>(
 }
 
 /** Format HH:MM as a 12-hour clock string. */
-export function fmtTime(t) {
+export function fmtTime(t: string | null | undefined) {
   if (!t) return "";
 
   const [h, m] = t.split(":").map(Number);
-  const ap = h < 12 ? "AM" : "PM";
-  const hh = ((h + 11) % 12) + 1;
+  const ap = h! < 12 ? "AM" : "PM";
+  const hh = ((h! + 11) % 12) + 1;
 
-  return `${hh}:${pad(m)} ${ap}`;
+  return `${hh}:${pad(m!)} ${ap}`;
 }
 
 /**
@@ -437,7 +422,7 @@ export function fmtTime(t) {
  *   timed, end time      → "from 3:00 PM", "All day", "until 11:00 AM"
  *   timed, same day      → "3:00 – 4:30 PM"
  */
-export function eventTimeLabel(ev, day?: { dayIndex: number; span: number }) {
+export function eventTimeLabel(ev: DayEvent, day?: { dayIndex: number; span: number }) {
   const dayIndex = day?.dayIndex ?? 0;
   const span = day?.span ?? spanDays(ev);
   const multiDay = span > 1;
@@ -461,19 +446,21 @@ export function eventSpanLabel(day: { dayIndex: number; span: number }): string 
 }
 
 /** Human-readable repeat label for an event. */
-export function repeatLabel(ev) {
-  return (REPEAT_BY_ID[ev.repeat] || REPEAT_BY_ID.once).label;
+export function repeatLabel(ev: { repeat: string }) {
+  /* REPEATS always has a "once" entry, so this fallback never misses. */
+  return (REPEAT_BY_ID[ev.repeat] || REPEAT_BY_ID.once)!.label;
 }
 
 /** Human-readable lead-time label ("at" reads differently for all-day events). */
-export function leadLabel(id, allDay = false) {
+export function leadLabel(id: string, allDay = false) {
   if (allDay && id === "at") return ALL_DAY_AT_LEAD.label;
 
-  return (LEAD_BY_ID[id] || LEAD_BY_ID.at).label;
+  /* LEAD_TIMES always has an "at" entry, so this fallback never misses. */
+  return (LEAD_BY_ID[id] || LEAD_BY_ID.at)!.label;
 }
 
 /** Format a comment timestamp for display. */
-export function fmtCommentTime(iso) {
+export function fmtCommentTime(iso: string) {
   const d = new Date(iso);
 
   return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -489,7 +476,7 @@ export function roundMoney(n: number): number {
 }
 
 /** Format a number as currency with optional cents. */
-export function fmtMoney(n, opts: { cents?: boolean; currency?: string } = {}) {
+export function fmtMoney(n: number, opts: { cents?: boolean; currency?: string } = {}) {
   const cur = getCurrency(opts.currency);
   const v = Math.abs(n);
   const s = v.toLocaleString("en-MY", {
@@ -511,7 +498,7 @@ export function fmtBudgetLimit(n: unknown, opts: { currency?: string } = {}) {
 }
 
 /** Compact currency format (e.g. RM1.2k). */
-export function fmtMoneyShort(n, currency?: string) {
+export function fmtMoneyShort(n: number, currency?: string) {
   const cur = getCurrency(currency);
 
   if (Math.abs(n) >= 1000) return `${cur.symbol}${(n / 1000).toFixed(1)}k`;
@@ -520,22 +507,22 @@ export function fmtMoneyShort(n, currency?: string) {
 }
 
 /** Format a YYYY-MM key as a month label. */
-export function monthLabel(key, long) {
+export function monthLabel(key: string, long?: boolean) {
   const [y, mm] = key.split("-").map(Number);
-  const d = new Date(y, mm - 1, 1);
+  const d = new Date(y!, mm! - 1, 1);
 
   return d.toLocaleString("en-US", { month: long ? "long" : "short", year: long ? "numeric" : undefined });
 }
 
 /** Format an ISO date as day + short month. */
-export function dayLabel(iso) {
+export function dayLabel(iso: string) {
   const d = new Date(iso + "T00:00:00");
 
   return d.toLocaleString("en-US", { day: "numeric", month: "short" });
 }
 
 /** Format an ISO date as a short weekday. */
-export function weekdayLabel(iso) {
+export function weekdayLabel(iso: string) {
   const d = new Date(iso + "T00:00:00");
 
   return d.toLocaleString("en-US", { weekday: "short" });

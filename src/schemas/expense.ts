@@ -8,13 +8,11 @@ import {
   subcategoryIdSchema,
 } from "./common";
 
-export const txnKindSchema = z.enum(["expense", "income"]);
+const txnKindSchema = z.enum(["expense", "income"]);
 
-export { RECURRING_INTERVALS };
-export const recurringIntervalSchema = z.enum(RECURRING_INTERVALS);
-export type RecurringInterval = z.infer<typeof recurringIntervalSchema>;
+const recurringIntervalSchema = z.enum(RECURRING_INTERVALS);
 
-export const recurringFieldSchema = z.preprocess(
+const recurringFieldSchema = z.preprocess(
   (val) => {
     if (val === true) return "monthly";
     if (val === false || val === null || val === undefined) return false;
@@ -23,7 +21,7 @@ export const recurringFieldSchema = z.preprocess(
   z.union([recurringIntervalSchema, z.literal(false)]),
 );
 
-export const recurringFieldInputSchema = z.union([recurringIntervalSchema, z.literal(false)]).default(false);
+const recurringFieldInputSchema = z.union([recurringIntervalSchema, z.literal(false)]).default(false);
 
 const expenseMetaSchema = z.object({
   walletId: objectIdSchema,
@@ -96,8 +94,5 @@ export const listExpensesQuerySchema = z.object({
   sub: subcategoryIdSchema.optional(),
 });
 
-export type TxnKind = z.infer<typeof txnKindSchema>;
 export type Expense = z.infer<typeof expenseSchema>;
-export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
-export type ListExpensesQuery = z.infer<typeof listExpensesQuerySchema>;

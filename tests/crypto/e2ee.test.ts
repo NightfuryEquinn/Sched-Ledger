@@ -7,10 +7,10 @@ import {
   expenseSeriesKey,
   DERIVATION_MESSAGE_PREFIX,
 } from "@/frontend/lib/crypto/e2ee";
-import { getAddress, Wallet } from "ethers";
+import { getAddress, Wallet, type HDNodeWallet } from "ethers";
 import { E2EE_VERSION } from "@/schemas/encryption";
 
-async function keyFromWallet(wallet: Wallet) {
+async function keyFromWallet(wallet: HDNodeWallet) {
   const message = buildDerivationMessage(wallet.address);
   const signature = await wallet.signMessage(message);
   return deriveKeyFromSignature(signature);
@@ -55,7 +55,7 @@ describe("e2ee primitives", () => {
     const key = await keyFromWallet(Wallet.createRandom());
     const cipher = await encryptJson(key, { amount: 9 });
     const packed = Uint8Array.from(atob(cipher), (c) => c.charCodeAt(0));
-    packed[packed.length - 1] ^= 0xff;
+    packed[packed.length - 1]! ^= 0xff;
     let binary = "";
     for (const b of packed) binary += String.fromCharCode(b);
     await expect(decryptJson(key, btoa(binary))).rejects.toThrow();

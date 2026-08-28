@@ -61,10 +61,19 @@ import {
   type Icon as PhosphorIcon,
 } from "@phosphor-icons/react";
 import { isRecurring, normalizeRecurring, recurringLabel } from "@/frontend/lib/stats";
-import type { CapitalPlan, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
+import type {
+  CapitalPlan,
+  CategoryIndex,
+  Expense,
+  FinancialWallet,
+  MonthEntry,
+  RecurringInterval,
+  ViewId,
+} from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /*
@@ -78,7 +87,7 @@ import { createPortal } from "react-dom";
  *   DeleteScopeDialog        — recurring delete scope chooser
  */
 
-export type DeleteExpenseOpts = { scope?: DeleteScope; fromDate?: string };
+type DeleteExpenseOpts = { scope?: DeleteScope; fromDate?: string };
 
 const DELETE_SCOPE_OPTIONS: { v: DeleteScope; label: string; note: string }[] = [
   { v: "this", label: "This Only", note: "Remove just this occurrence." },
@@ -220,14 +229,14 @@ const ICON_MAP: Record<string, PhosphorIcon> = {
   car: Car,
 };
 
-function Icon({ name, size = 20 }) {
+function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const Glyph = ICON_MAP[name];
   if (!Glyph) return null;
   return <Glyph size={size} />;
 }
 
 // ── CatGlyph: category / type emoji marker ──────────────────────────
-function CatGlyph({ glyph, id }) {
+function CatGlyph({ glyph, id }: { glyph?: string; id?: string }) {
   return (
     <span className="cat-glyph-inline" aria-hidden>
       {displayGlyph(glyph, id)}
@@ -253,7 +262,7 @@ export const NAV_ITEMS = [
 ] as const;
 
 // ── Sidebar (desktop navigation) ────────────────────────────────────
-function Sidebar({ view, setView }) {
+function Sidebar({ view, setView }: { view: ViewId; setView: (id: ViewId) => void }) {
   const items = NAV_ITEMS;
   return (
     <aside className="sidebar">
@@ -285,22 +294,62 @@ function scrollIsInsideMenu(menu: HTMLElement | null, target: EventTarget | null
   return !!(menu && target instanceof Node && (target === menu || menu.contains(target)));
 }
 
-function MonthSwitcher({ months, current, onChange }) {
+function MonthSwitcher({
+  months,
+  current,
+  onChange,
+}: {
+  months: MonthEntry[];
+  current: string;
+  onChange: (key: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<Record<string, string | number>>({});
   const rootRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // A month change is a fire-and-forget PATCH /profile (setMonth just calls
+  // mutation.mutate, no promise back) — rapid clicks would otherwise queue
+  // unboundedly. Gate on `current` catching up to the requested key, which
+  // is how we learn the request settled without a promise to await.
+  const [changing, setChanging] = useState(false);
+  const pendingKeyRef = useRef<string | null>(null);
   const [pickY, setPickY] = useState(() => Number(current.split("-")[0]));
-  const { minY, maxY } = monthRangeBounds();
+  // Bounds come from parsing fixed MIN/MAX_MONTH_KEY constants — always well-formed,
+  // but the split/map gives numbers TS can't prove are present without a fallback.
+  const { minY = 0, maxY = 9999 } = monthRangeBounds();
 
   useEffect(() => {
-    const [y] = current.split("-").map(Number);
-    setPickY(y);
+    setPickY(Number(current.split("-")[0]));
+    if (pendingKeyRef.current && current === pendingKeyRef.current) {
+      pendingKeyRef.current = null;
+      setChanging(false);
+    }
   }, [current]);
 
+  /** Fire onChange, blocking further changes until `current` catches up.
+   *  ponytail: 8s safety-net unblock in case the PATCH errors and `current`
+   *  never catches up; swap for a real isPending flag if useLedger exposes
+   *  one for setMonth. */
+  const requestChange = (key: string) => {
+    if (changing) return;
+    pendingKeyRef.current = key;
+    setChanging(true);
+    onChange(key);
+    window.setTimeout(() => {
+      if (pendingKeyRef.current === key) {
+        pendingKeyRef.current = null;
+        setChanging(false);
+      }
+    }, 8000);
+  };
+
   const idx = months.findIndex((m) => m.key === current);
-  const go = (d: number) => { const n = idx + d; if (n >= 0 && n < months.length) onChange(months[n].key); };
+  const go = (d: number) => {
+    const n = idx + d;
+    const next = n >= 0 && n < months.length ? months[n] : undefined;
+    if (next) requestChange(next.key);
+  };
 
   const placeMenu = () => {
     const el = labelRef.current;
@@ -345,7 +394,7 @@ function MonthSwitcher({ months, current, onChange }) {
   }, [open]);
 
   const pickMonth = (month: number) => {
-    onChange(clampMonthKey(`${pickY}-${pad(month)}`));
+    requestChange(clampMonthKey(`${pickY}-${pad(month)}`));
     setOpen(false);
   };
 
@@ -381,7 +430,7 @@ function MonthSwitcher({ months, current, onChange }) {
               key={label}
               type="button"
               className={"month-pick-cell" + (active ? " active" : "") + (today && !active ? " today" : "")}
-              disabled={!enabled}
+              disabled={!enabled || changing}
               onClick={() => pickMonth(month)}
             >
               {label}
@@ -394,7 +443,7 @@ function MonthSwitcher({ months, current, onChange }) {
 
   return (
     <div className="month-switch" data-tour="tour-month" ref={rootRef}>
-      <button className="msbtn" disabled={idx <= 0} onClick={() => go(-1)} aria-label="Previous Month"><Icon name="chevL" size={18} /></button>
+      <button className="msbtn" disabled={idx <= 0 || changing} onClick={() => go(-1)} aria-label="Previous Month"><Icon name="chevL" size={18} /></button>
       <button
         ref={labelRef}
         className="ms-label-btn"
@@ -407,14 +456,26 @@ function MonthSwitcher({ months, current, onChange }) {
         <span>{monthLabel(current, true)}</span>
         <Icon name="chevD" size={14} />
       </button>
-      <button className="msbtn" disabled={idx >= months.length - 1} onClick={() => go(1)} aria-label="Next Month"><Icon name="chevR" size={18} /></button>
+      <button className="msbtn" disabled={idx >= months.length - 1 || changing} onClick={() => go(1)} aria-label="Next Month"><Icon name="chevR" size={18} /></button>
       {picker ? createPortal(picker, document.body) : null}
     </div>
   );
 }
 
 // ── SummaryCard: labeled stat with optional tone accent ─────────────
-function SummaryCard({ label, value, sub, tone, foot }) {
+function SummaryCard({
+  label,
+  value,
+  sub,
+  tone,
+  foot,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone?: string;
+  foot?: ReactNode;
+}) {
   return (
     <div className={"summary-card" + (tone ? " tone-" + tone : "")}>
       <div className="sc-label">{label}</div>
@@ -426,19 +487,40 @@ function SummaryCard({ label, value, sub, tone, foot }) {
 }
 
 // ── TransactionRow: single expense/income line item ─────────────────
-function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryIndex }) {
+function TransactionRow({
+  exp,
+  onEdit,
+  onDelete,
+  currency,
+  walletName,
+  categoryIndex,
+}: {
+  exp: Expense;
+  onEdit: (exp: Expense) => void;
+  onDelete: (id: string, opts?: DeleteExpenseOpts) => void | Promise<void>;
+  currency?: string;
+  walletName?: string;
+  categoryIndex: CategoryIndex;
+}) {
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const sub = categoryIndex.subById[exp.sub];
   const cat = sub ? categoryIndex.catById[sub.catId] : null;
   if (!sub || !cat) return null;
 
   /** Start delete — ask for scope when the row is recurring. */
-  const requestDelete = () => {
+  const requestDelete = async () => {
     if (isRecurring(exp)) {
       setScopeOpen(true);
       return;
     }
-    onDelete(exp.id);
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onDelete(exp.id);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -457,7 +539,7 @@ function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryI
       </div>
       <div className="txn-actions">
         <button onClick={() => onEdit(exp)} aria-label="Edit"><Icon name="edit" size={16} /></button>
-        <button onClick={requestDelete} aria-label="Delete"><Icon name="trash" size={16} /></button>
+        <button onClick={requestDelete} aria-label="Delete" disabled={deleting}><Icon name="trash" size={16} /></button>
       </div>
       {scopeOpen ? (
         <DeleteScopeDialog
@@ -474,7 +556,15 @@ function TransactionRow({ exp, onEdit, onDelete, currency, walletName, categoryI
 }
 
 // ── Segmented: pill-style option switch ──────────────────────────────
-function Segmented({ options, value, onChange }) {
+function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { v: T; label: ReactNode }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
   return (
     <div className="seg">
       {options.map((o) => (
@@ -485,7 +575,7 @@ function Segmented({ options, value, onChange }) {
 }
 
 // ── EmptyState: centered placeholder for empty lists ────────────────
-function EmptyState({ title, sub }) {
+function EmptyState({ title, sub }: { title: ReactNode; sub?: ReactNode }) {
   return <div className="empty"><div className="empty-mark">◌</div><div className="empty-title">{title}</div>{sub ? <div className="empty-sub">{sub}</div> : null}</div>;
 }
 
@@ -640,15 +730,44 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
  * On savings deposits (`kind === "expense"` + savings category), an optional
  * Capital picker assigns the amount to a plan as Unspent; default is Piggies.
  */
-function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, capitalPlans = [], onSave, onClose, onDelete, title, lockedSub, maxAmount }) {
+/** Draft payload for creating (`id` absent) or updating (`id` set) an expense. */
+type ExpenseDraft = Omit<Expense, "id"> & { id?: string };
+
+function AddExpenseModal({
+  initial,
+  wallets,
+  defaultWalletId,
+  categoryIndex,
+  capitalPlans = [],
+  onSave,
+  onClose,
+  onDelete,
+  title,
+  lockedSub,
+  maxAmount,
+}: {
+  initial?: Partial<Expense> | null;
+  wallets: FinancialWallet[];
+  defaultWalletId: string;
+  categoryIndex: CategoryIndex;
+  capitalPlans?: CapitalPlan[];
+  onSave: (payload: ExpenseDraft) => void | Promise<void>;
+  onClose: () => void;
+  onDelete: (id: string, opts?: DeleteExpenseOpts) => void | Promise<void>;
+  title?: string;
+  lockedSub?: string;
+  maxAmount?: number;
+}) {
   const editing = !!(initial && initial.id);
+  const initialId = initial?.id;
+  const initialDate = initial?.date;
   const locked = !!lockedSub;
   const initKind = initial?.kind ?? "expense";
   const { expenseCategories, incomeCategories, subById, catById } = categoryIndex;
-  const firstSub = (catId) => catById[catId]?.subs[0]?.id ?? catId;
+  const firstSub = (catId: string) => catById[catId]?.subs[0]?.id ?? catId;
   const defaultExpenseCat = expenseCategories[0]?.id ?? "";
-  const initCat =
-    initial?.sub && subById[initial.sub] ? subById[initial.sub].catId : defaultExpenseCat;
+  const initSub = initial?.sub ? subById[initial.sub] : undefined;
+  const initCat = initSub ? initSub.catId : defaultExpenseCat;
   const [kind, setKind] = useState(initKind);
   const [walletId, setWalletId] = useState(initial?.walletId ?? defaultWalletId);
   const [catId, setCatId] = useState(
@@ -671,20 +790,23 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, cap
   );
   const [scopeOpen, setScopeOpen] = useState(false);
   const [capitalPlanId, setCapitalPlanId] = useState(initial?.capitalPlanId ?? "");
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const busy = saving || deleting;
   const selectedWallet = wallets.find((w) => w.id === walletId) ?? wallets[0];
   const cur = getCurrency(selectedWallet?.currency);
   const visibleCategories = kind === "income" ? incomeCategories : expenseCategories;
   const showCapitalPicker =
     !locked && kind === "expense" && isSavingsCategory(catById[catId]) && capitalPlans.length > 0;
-  const amtRef = useRef(null);
+  const amtRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (amtRef.current) amtRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e) => { if (e.key === "Escape" && !scopeOpen) onClose(); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !busy) onClose(); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [scopeOpen]);
+  }, [scopeOpen, busy]);
 
-  const switchKind = (next) => {
+  const switchKind = (next: "expense" | "income") => {
     setKind(next);
     setCapitalPlanId("");
     if (next === "income") {
@@ -698,17 +820,17 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, cap
     }
   };
 
-  const chooseCat = (id) => {
+  const chooseCat = (id: string) => {
     setCatId(id);
     setSub(firstSub(id));
     if (!isSavingsCategory(catById[id])) setCapitalPlanId("");
   };
   const overMax = maxAmount != null && amountEvaluated != null && amountEvaluated > maxAmount;
   const valid = amountEvaluated != null && amountEvaluated > 0 && date && !overMax;
-  const submit = () => {
-    if (!valid || !walletId) return;
-    const payload = {
-      id: initial && initial.id,
+  const submit = async () => {
+    if (!valid || !walletId || busy) return;
+    const payload: ExpenseDraft = {
+      id: initial?.id,
       walletId,
       kind,
       date,
@@ -722,25 +844,35 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, cap
       if (capitalPlanId) payload.capitalPlanId = capitalPlanId;
       else if (editing) payload.capitalPlanId = "";
     }
-    onSave(payload);
+    setSaving(true);
+    try {
+      await onSave(payload);
+    } finally {
+      setSaving(false);
+    }
   };
 
   /** Start delete — ask for scope when editing a recurring transaction. */
-  const requestDelete = () => {
-    if (!initial?.id) return;
-    if (isRecurring(initial)) {
+  const requestDelete = async () => {
+    if (!initial?.id || busy) return;
+    if (isRecurring({ recurring: initial.recurring ?? false })) {
       setScopeOpen(true);
       return;
     }
-    onDelete(initial.id);
+    setDeleting(true);
+    try {
+      await onDelete(initial.id);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
-    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen) onClose(); }}>
+    <div className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !busy) onClose(); }}>
       <div className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title ?? (editing ? "Edit Transaction" : "Add Transaction")}</h3>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close" disabled={busy}><Icon name="close" size={18} /></button>
         </div>
 
         <div className="modal-body modal-scroll">
@@ -794,7 +926,7 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, cap
               <div className="cat-grid">
                 {visibleCategories.map((c) => (
                   <button key={c.id} type="button" className={"cat-chip" + (catId === c.id ? " active" : "")}
-                    style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
+                    style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : undefined}
                     onClick={() => chooseCat(c.id)}>
                     <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>
                     <span className="cc-label">{c.name}</span>
@@ -878,21 +1010,25 @@ function AddExpenseModal({ initial, wallets, defaultWalletId, categoryIndex, cap
         </div>
 
         <div className="modal-foot">
-          {editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />}
+          {editing ? (
+            <button className="ghost-btn danger" type="button" onClick={requestDelete} disabled={busy}>
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          ) : <span />}
           <div className="mf-right">
-            <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
-            <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>
-              {locked ? "Withdraw" : editing ? "Save Changes" : kind === "income" ? "Add Income" : "Add Expense"}
+            <button className="ghost-btn" type="button" onClick={onClose} disabled={busy}>Cancel</button>
+            <button className="primary-btn" type="button" disabled={!valid || busy} onClick={submit}>
+              {saving ? "Saving…" : locked ? "Withdraw" : editing ? "Save Changes" : kind === "income" ? "Add Income" : "Add Expense"}
             </button>
           </div>
         </div>
       </div>
-      {scopeOpen && initial?.id ? (
+      {scopeOpen && initialId ? (
         <DeleteScopeDialog
           title="Delete Recurring Transaction"
           onCancel={() => setScopeOpen(false)}
           onConfirm={async (scope) => {
-            await onDelete(initial.id, { scope, fromDate: initial.date });
+            await onDelete(initialId, { scope, fromDate: initialDate });
             setScopeOpen(false);
           }}
         />

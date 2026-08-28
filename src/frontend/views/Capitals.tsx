@@ -66,6 +66,7 @@ export function Capitals({
   const [itemCost, setItemCost] = useState("");
   const [editingCost, setEditingCost] = useState<string | null>(null);
   const [costDraft, setCostDraft] = useState("");
+  const [itemBusy, setItemBusy] = useState(false);
 
   useEffect(() => {
     setPlans(capitalPlans);
@@ -184,40 +185,73 @@ export function Capitals({
     }
   };
 
+  /** Open the inline "add item" draft row for a plan. */
   const openAddItem = (planId: string) => {
+    if (itemBusy) return;
     setItemDraftFor(planId);
     setItemName("");
     setItemCost("");
   };
 
+  /** Commit the draft item to a plan and persist. */
   const submitAddItem = async (plan: CapitalPlan) => {
+    if (itemBusy) return;
     if (!itemName.trim()) return;
     const item = newCapitalItem(itemName.trim(), plan.items);
     item.estimatedCost = Number(itemCost) || 0;
     setItemDraftFor(null);
-    await persistPlan({ id: plan.id, items: [...plan.items, item] });
+    setItemBusy(true);
+    try {
+      await persistPlan({ id: plan.id, items: [...plan.items, item] });
+    } finally {
+      setItemBusy(false);
+    }
   };
 
+  /** Remove an item from a plan and persist. */
   const removeItem = async (plan: CapitalPlan, itemId: string) => {
-    await persistPlan({ id: plan.id, items: plan.items.filter((i) => i.id !== itemId) });
+    if (itemBusy) return;
+    setItemBusy(true);
+    try {
+      await persistPlan({ id: plan.id, items: plan.items.filter((i) => i.id !== itemId) });
+    } finally {
+      setItemBusy(false);
+    }
   };
 
+  /** Flip an item's paid state and persist. */
   const togglePaid = async (plan: CapitalPlan, item: CapitalItem) => {
-    const items = plan.items.map((i) => (i.id === item.id ? { ...i, paid: !i.paid } : i));
-    await persistPlan({ id: plan.id, items });
+    if (itemBusy) return;
+    setItemBusy(true);
+    try {
+      const items = plan.items.map((i) => (i.id === item.id ? { ...i, paid: !i.paid } : i));
+      await persistPlan({ id: plan.id, items });
+    } finally {
+      setItemBusy(false);
+    }
   };
 
+  /** Open the inline cost editor for an item. */
   const startEditCost = (item: CapitalItem) => {
     setEditingCost(item.id);
     setCostDraft(String(item.estimatedCost || ""));
   };
 
+  /** Commit the edited cost for an item and persist. */
   const commitCost = async (plan: CapitalPlan, item: CapitalItem) => {
+    if (itemBusy || editingCost !== item.id) return;
+
     const value = Number(costDraft) || 0;
     setEditingCost(null);
     if (value === item.estimatedCost) return;
+
     const items = plan.items.map((i) => (i.id === item.id ? { ...i, estimatedCost: value } : i));
-    await persistPlan({ id: plan.id, items });
+    setItemBusy(true);
+    try {
+      await persistPlan({ id: plan.id, items });
+    } finally {
+      setItemBusy(false);
+    }
   };
 
   const editorTitle = editor?.type === "add-plan" ? "New Plan" : editor ? "Edit Plan" : "";
@@ -391,7 +425,7 @@ export function Capitals({
                     <Icon name="edit" size={15} />
                   </button>
                   <button type="button" className="danger" disabled={busy} onClick={() => void removePlan(plan.id)} aria-label="Delete Plan">
-                    <Icon name="trash" size={15} />
+                    {busy ? "Removing…" : <Icon name="trash" size={15} />}
                   </button>
                 </div>
               </div>
@@ -424,6 +458,7 @@ export function Capitals({
                         <button
                           type="button"
                           className={"todo-check" + (item.paid ? " checked" : "")}
+                          disabled={itemBusy}
                           onClick={() => void togglePaid(plan, item)}
                           aria-label={item.paid ? "Mark unpaid" : "Mark paid"}
                         >
@@ -454,7 +489,7 @@ export function Capitals({
                             Log
                           </button>
                         ) : null}
-                        <button type="button" className="capital-item-remove" onClick={() => void removeItem(plan, item.id)} aria-label="Remove item">
+                        <button type="button" className="capital-item-remove" disabled={itemBusy} onClick={() => void removeItem(plan, item.id)} aria-label="Remove item">
                           <Icon name="close" size={13} />
                         </button>
                       </div>
@@ -488,13 +523,13 @@ export function Capitals({
                       if (e.key === "Enter") void submitAddItem(plan);
                     }}
                   />
-                  <button className="primary-btn" type="button" disabled={!itemName.trim()} onClick={() => void submitAddItem(plan)}>
-                    Add
+                  <button className="primary-btn" type="button" disabled={itemBusy || !itemName.trim()} onClick={() => void submitAddItem(plan)}>
+                    {itemBusy ? "Adding…" : "Add"}
                   </button>
                 </div>
               ) : (
-                <button type="button" className="ghost-btn full capital-add-item-btn" onClick={() => openAddItem(plan.id)}>
-                  <Icon name="plus" size={14} /> Add Item
+                <button type="button" className="ghost-btn full capital-add-item-btn" disabled={itemBusy} onClick={() => openAddItem(plan.id)}>
+                  {itemBusy ? "Saving…" : <><Icon name="plus" size={14} /> Add Item</>}
                 </button>
               )}
             </div>

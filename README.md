@@ -64,10 +64,12 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 | Database | [MongoDB](https://www.mongodb.com) |
 | Frontend | React 19, TanStack Query, ethers v6 |
 | Styling | Custom theme CSS (`ledger.css`); Young Serif / Schibsted Grotesk / Azeret Mono via [Google Fonts](https://fonts.google.com) |
+| Loading | [ldrs](https://uiball.com/ldrs) trefoil spinner |
 | Tours | [Shepherd.js](https://shepherdjs.dev) |
 | Diagrams | [Mermaid](https://mermaid.js.org) (Transparency view) |
 | Deploy | [Vercel](https://vercel.com) **hosting + Analytics / Speed Insights only** (no Vercel Cron); scheduled jobs via [cron-job.org](https://cron-job.org) |
 | PWA | `public/manifest.webmanifest` + `public/sw.js` (copied into `dist/` on build) |
+| Tooling | TypeScript (`tsc --noEmit`) + [knip](https://knip.dev) (dead code detection) |
 
 ## Project structure
 
@@ -221,9 +223,11 @@ The in-app **Transparency** view documents hosting roles, what the server can in
 
 ```bash
 bun dev
-bun test   # crypto, reminders, calculator, spending habits, session auth, budget alerts,
-           # envelope holds, schedule recurrence/multi-day, push dedupe, ranked insights,
-           # transaction/fuel insights, vehicle routes, release-notes gate
+bun test        # crypto, reminders, calculator, spending habits, session auth, budget alerts,
+                # envelope holds, schedule recurrence/multi-day, push dedupe, ranked insights,
+                # transaction/fuel insights, vehicle routes, release-notes gate
+bun run typecheck  # tsc --noEmit
+bun run knip       # unused files/exports/deps
 ```
 
 Open [http://localhost:3000](http://localhost:3000). The SPA and API share the same origin (`/api/*`).

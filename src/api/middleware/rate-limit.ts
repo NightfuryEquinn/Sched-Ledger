@@ -100,7 +100,7 @@ type RateLimitOptions = {
 };
 
 /** Build a rate-limit middleware with a fixed window and key prefix. */
-export function rateLimit(opts: RateLimitOptions) {
+function rateLimit(opts: RateLimitOptions) {
   return createMiddleware(async (c, next) => {
     const suffix = opts.keyFn ? opts.keyFn(c) : getClientIp(c);
     const key = `${opts.keyPrefix}:${suffix}`;

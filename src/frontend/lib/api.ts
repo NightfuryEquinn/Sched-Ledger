@@ -12,7 +12,7 @@ import type {
 import { getCipherCache, putCipherCache } from "@/frontend/lib/pwa/cipher-cache";
 import { identityStorage } from "@/frontend/auth/lib/identity-storage";
 
-export class ApiError extends Error {
+class ApiError extends Error {
   status: number;
 
   constructor(status: number, message: string) {
@@ -22,7 +22,7 @@ export class ApiError extends Error {
   }
 }
 
-export type ApiProfile = {
+type ApiProfile = {
   id: string;
   currentMonth: string;
   /* ISO timestamp; tells a brand-new account from a returning one when
@@ -39,7 +39,7 @@ export type ApiSession = {
   lastSeenAt: string;
 };
 
-export type ApiUser = {
+type ApiUser = {
   id: string;
   address: string;
   codename: string;
@@ -49,7 +49,7 @@ export type ApiUser = {
   budgetAlertsEnabled?: boolean;
 };
 
-export type ApiConsent = {
+type ApiConsent = {
   id: string;
   optedIn: boolean;
   updatedAt: string;

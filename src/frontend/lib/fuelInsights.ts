@@ -14,14 +14,14 @@ import {
 import type { FuelFill, VehicleType } from "@/frontend/lib/types";
 
 /** Whether a vehicle type runs on fuel (litres) or power (kWh). */
-export type EnergyMode = "fuel" | "power";
+type EnergyMode = "fuel" | "power";
 
 /**
  * Vocabulary record keyed by vehicle type — every string the Vehicles view and
  * Fuel Insights render comes from here, so an EV never says "litres" and a
  * car never says "charge".
  */
-export type VehicleTypeMeta = {
+type VehicleTypeMeta = {
   id: VehicleType;
   label: string;
   mode: EnergyMode;
@@ -93,10 +93,10 @@ export const VEHICLE_TYPES: Record<VehicleType, VehicleTypeMeta> = {
 /** Minimum fills before cost metrics unlock. */
 export const FUEL_MIN_FILLS = 3;
 /** Minimum full-to-full distance segments before consumption metrics unlock. */
-export const FUEL_MIN_SEGMENTS = 2;
+const FUEL_MIN_SEGMENTS = 2;
 
 /** One full-to-full (or full-to-partial-to-full) distance segment. */
-export type FuelSegment = {
+type FuelSegment = {
   startFillId: string;
   endFillId: string;
   startDate: string;
@@ -107,7 +107,7 @@ export type FuelSegment = {
   cost: number;
 };
 
-export type FuelMetrics = {
+type FuelMetrics = {
   fillCount: number;
   totalSpend: number;
   totalQuantity: number;
@@ -141,7 +141,7 @@ export type FuelMetrics = {
   missingOdometerCount: number;
 };
 
-export type FuelAssessment =
+type FuelAssessment =
   | { status: "insufficient"; fillsHave: number; fillsNeeded: number }
   | { status: "ready"; metrics: FuelMetrics; confidence: Confidence };
 

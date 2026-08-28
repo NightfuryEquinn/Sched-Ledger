@@ -11,10 +11,9 @@ import {
 import { normalizeRecurring } from "@/lib/recurring";
 import type { Category, Expense, FinancialWallet, RecurringInterval } from "@/frontend/lib/types";
 
-export type { ImportRowError, ImportRowNotice };
 export type ExpenseImportRow = Omit<Expense, "id">;
 
-export type ParseExpenseCsvResult = {
+type ParseExpenseCsvResult = {
   rows: ExpenseImportRow[];
   errors: ImportRowError[];
   notices: ImportRowNotice[];
@@ -90,7 +89,7 @@ export function parseExpenseCsv(
     };
   }
 
-  const headerRow = parsed[0].map((h) => h.trim());
+  const headerRow = parsed[0]!.map((h) => h.trim());
   const headerMap = Object.fromEntries(headerRow.map((h, i) => [h.toLowerCase(), i]));
 
   const dateIdx = colIndex(headerMap, "date");

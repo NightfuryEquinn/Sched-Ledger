@@ -20,7 +20,7 @@ export type TodoImportList = {
   tasks: TodoTask[];
 };
 
-export type ParseTodosCsvResult = {
+type ParseTodosCsvResult = {
   lists: TodoImportList[];
   errors: ImportRowError[];
   notices: ImportRowNotice[];
@@ -59,7 +59,7 @@ export function parseTodosCsv(text: string, existingLists: TodoList[] = []): Par
     return { lists: [], errors: [{ row: 0, message: "The file is empty." }], notices, stats: { newLists: 0, newTasks: 0 } };
   }
 
-  const headerMap = Object.fromEntries(parsed[0].map((h, i) => [h.trim().toLowerCase(), i]));
+  const headerMap = Object.fromEntries(parsed[0]!.map((h, i) => [h.trim().toLowerCase(), i]));
   const listIdIdx = colIndex(headerMap, "listid", "list id");
   const listNameIdx = colIndex(headerMap, "listname", "list name");
   const listIconIdx = colIndex(headerMap, "listicon", "list icon");

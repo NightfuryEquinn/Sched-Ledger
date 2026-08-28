@@ -4,7 +4,7 @@ import { z } from "zod";
 export const DELETE_SCOPES = ["this", "future", "all"] as const;
 export type DeleteScope = (typeof DELETE_SCOPES)[number];
 
-export const deleteScopeSchema = z.enum(DELETE_SCOPES);
+const deleteScopeSchema = z.enum(DELETE_SCOPES);
 
 export const deleteScopeQuerySchema = z.object({
   scope: deleteScopeSchema.optional(),
@@ -22,7 +22,7 @@ export function dayBeforeIso(iso: string): string {
   return formatIsoDateParts(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
 }
 
-export type EventDeleteAction =
+type EventDeleteAction =
   | { type: "except"; date: string }
   | { type: "until"; until: string }
   | { type: "delete" };

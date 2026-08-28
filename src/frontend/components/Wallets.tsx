@@ -257,7 +257,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                   <span className="fld-label">Remove wallet</span>
                   <p className="dm-lead">Delete this wallet only if it has no transactions. This cannot be undone.</p>
                   <button className="ghost-btn danger full" type="button" disabled={busy} onClick={() => remove(editId)}>
-                    Delete Wallet
+                    {busy ? "Deleting…" : "Delete Wallet"}
                   </button>
                 </>
               ) : null}

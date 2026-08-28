@@ -1,6 +1,6 @@
 import type { Insight } from "./types";
 
-export type RankOptions = {
+type RankOptions = {
   /** Minimum score to keep a card at all. */
   floor?: number;
   /** Maximum cards returned. */

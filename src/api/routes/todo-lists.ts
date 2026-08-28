@@ -14,15 +14,6 @@ export const todoListsRoutes = new Hono<{ Variables: SessionVariables }>();
 
 todoListsRoutes.use("*", sessionAuth);
 
-/** Find a todo list owned by the session user. */
-async function findOwnedList(accountId: string, listId: string) {
-  const { todoLists } = getCollections(getDb());
-  return todoLists.findOne({
-    _id: new ObjectId(listId),
-    accountId,
-  });
-}
-
 todoListsRoutes.get("/", async (c) => {
   const accountId = c.get("accountId");
   const { todoLists } = getCollections(getDb());

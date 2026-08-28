@@ -13,7 +13,7 @@ export type PushStatus = {
 };
 
 /** Whether this browser can do Web Push at all (iOS needs an installed PWA). */
-export function pushSupported(): boolean {
+function pushSupported(): boolean {
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
@@ -47,7 +47,7 @@ export async function pushStatus(): Promise<PushStatus> {
   return { supported: true, permission: Notification.permission, subscribed: Boolean(sub) };
 }
 
-export type EnablePushResult =
+type EnablePushResult =
   | { ok: true }
   | { ok: false; reason: "unsupported" | "denied" | "unconfigured" | "failed" };
 

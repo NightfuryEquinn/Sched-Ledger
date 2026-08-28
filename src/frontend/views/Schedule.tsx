@@ -32,7 +32,7 @@ import {
 import type { EventDay } from "@/frontend/lib/data";
 import { isActiveHoldOccurrence } from "@/frontend/lib/envelope-holds";
 import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
-import type { CategoryIndex, LedgerEvent } from "@/frontend/lib/types";
+import type { CategoryIndex, EventComment, LedgerEvent } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
 import { shiftIso } from "@/lib/schedule";
@@ -48,6 +48,10 @@ import { createPortal } from "react-dom";
  */
 
 const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/* EVENT_CATS always has a "custom" entry, so this is the safe default when an
+ * event's own catId can't be resolved to a known category. */
+const FALLBACK_CAT_META = EVENT_CATS.find((c) => c.id === "custom")!;
 
 function normalizeLead(lead: string, allDay: boolean): string {
   const allowed = leadTimesForEvent(allDay);
@@ -155,7 +159,7 @@ function AgendaEventRow({
   onEditEvent: (ev: LedgerEvent, occurrenceIso: string) => void;
 }) {
   const { ev, startIso } = day;
-  const c = eventCatMeta(ev);
+  const c = eventCatMeta(ev) ?? FALLBACK_CAT_META;
   /*
    * The hold is reserved once for the whole run, so the badge belongs on the
    * first day only — repeating it would read as a charge every day.
@@ -422,7 +426,7 @@ export function Schedule({
                   <div className="cal-events">
                     {list.slice(0, 3).map((day) => {
                       const { ev, dayIndex, span } = day;
-                      const c = eventCatMeta(ev);
+                      const c = eventCatMeta(ev) ?? FALLBACK_CAT_META;
                       /* Flatten the inner edges so a run reads as one bar. */
                       const runCls = span === 1
                         ? ""
@@ -459,6 +463,19 @@ export function Schedule({
   );
 }
 
+type EventModalProps = {
+  initial: LedgerEvent | null;
+  defaultDate?: string;
+  occurrenceIso?: string;
+  hasLinkedPayment?: boolean;
+  categoryIndex: CategoryIndex;
+  currency: string;
+  onSave: (data: LedgerEvent & { id?: string }) => void;
+  onClose: () => void;
+  onDelete: (id: string, opts?: { scope?: DeleteScope; fromDate?: string }) => void;
+  onLogPayment?: (payment: { id: string; title: string; date: string; expenseId?: string }) => void;
+};
+
 // ── EventModal (add / edit event) ───────────────────────────────────
 export function EventModal({
   initial,
@@ -471,7 +488,7 @@ export function EventModal({
   onClose,
   onDelete,
   onLogPayment,
-}) {
+}: EventModalProps) {
   const editing = !!(initial && initial.id);
   const lastEmail = (() => { try { return localStorage.getItem("ledger:notifyEmail") || ""; } catch (e) { return ""; } })();
   const customMeta = EVENT_CATS.find((c) => c.id === "custom")!;
@@ -496,9 +513,13 @@ export function EventModal({
     normalizeLead(initial ? initial.lead : "1d", initial ? !!initial.allDay : true),
   );
   const [email, setEmail] = useState(initial && initial.email ? initial.email : lastEmail);
-  const [comments, setComments] = useState(initial && initial.comments ? initial.comments : []);
+  const [comments, setComments] = useState<EventComment[]>(
+    initial && initial.comments ? initial.comments : [],
+  );
   const [draft, setDraft] = useState("");
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [holdEnabled, setHoldEnabled] = useState(Boolean(initial?.budgetHoldEnabled));
   const [holdAmount, setHoldAmount] = useState(
     initial?.budgetHoldAmount ? String(initial.budgetHoldAmount) : "",
@@ -534,10 +555,10 @@ export function EventModal({
     if (endDate < next) setEndDate(shiftIso(next, span - 1));
   };
 
-  const titleRef = useRef(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e) => { if (e.key === "Escape" && !scopeOpen) onClose(); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen) onClose(); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, [scopeOpen]);
 
@@ -569,46 +590,58 @@ export function EventModal({
   const holdValid = !holdEnabled || (holdAmountNum > 0 && resolvedHoldCategoryId);
   const valid =
     title.trim() && date && (allDay || time) && customOk && holdValid && spanValid && endTimeValid;
-  const submit = () => {
-    if (!valid) return;
-    if (notify && email.trim()) { try { localStorage.setItem("ledger:notifyEmail", email.trim()); } catch (e) {} }
-    const holdFields = holdEnabled && holdAmountNum > 0 && resolvedHoldCategoryId
-      ? {
-          budgetHoldEnabled: true,
-          budgetHoldAmount: holdAmountNum,
-          budgetHoldCategoryId: resolvedHoldCategoryId,
-          budgetHoldReleasedDates: initial?.budgetHoldReleasedDates,
-        }
-      : {
-          budgetHoldEnabled: false,
-        };
-    onSave({
-      id: initial && initial.id, title: title.trim(), catId,
-      customLabel: catId === "custom" ? customLabel.trim() : undefined,
-      customGlyph: catId === "custom" ? customGlyph : undefined,
-      date,
-      /* Both null for a plain single-day event, so its payload is unchanged. */
-      endDate: endDate > date ? endDate : null,
-      allDay, time: allDay ? null : time,
-      endTime: allDay || !endTime ? null : endTime,
-      repeat,
-      notify, lead, email: email.trim(), comments,
-      ...holdFields,
-    });
+  const submit = async () => {
+    if (!valid || saving) return;
+    setSaving(true);
+    try {
+      if (notify && email.trim()) { try { localStorage.setItem("ledger:notifyEmail", email.trim()); } catch (e) {} }
+      const holdFields = holdEnabled && holdAmountNum > 0 && resolvedHoldCategoryId
+        ? {
+            budgetHoldEnabled: true,
+            budgetHoldAmount: holdAmountNum,
+            budgetHoldCategoryId: resolvedHoldCategoryId,
+            budgetHoldReleasedDates: initial?.budgetHoldReleasedDates,
+          }
+        : {
+            budgetHoldEnabled: false,
+          };
+      await onSave({
+        /* Empty id (rather than omitted) still reads as "new" downstream — data.id is checked for truthiness. */
+        id: initial?.id ?? "", title: title.trim(), catId,
+        customLabel: catId === "custom" ? customLabel.trim() : undefined,
+        customGlyph: catId === "custom" ? customGlyph : undefined,
+        date,
+        /* Both null for a plain single-day event, so its payload is unchanged. */
+        endDate: endDate > date ? endDate : null,
+        allDay, time: allDay ? null : time,
+        endTime: allDay || !endTime ? null : endTime,
+        repeat,
+        notify, lead, email: email.trim(), comments,
+        ...holdFields,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   /** Start delete — ask for scope when the event repeats. */
-  const requestDelete = () => {
-    if (!initial?.id) return;
+  const requestDelete = async () => {
+    if (!initial?.id || deleting) return;
     if (initial.repeat && initial.repeat !== "once") {
       setScopeOpen(true);
       return;
     }
-    onDelete(initial.id);
+    setDeleting(true);
+    try {
+      await onDelete(initial.id);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   /** Confirm a scoped recurring event delete. */
   const confirmScopedDelete = async (scope: DeleteScope) => {
+    if (!initial?.id) return;
     await onDelete(initial.id, { scope, fromDate: deleteFromDate });
     setScopeOpen(false);
   };
@@ -631,7 +664,7 @@ export function EventModal({
           <div className="cat-grid">
             {EVENT_CATS.filter((c) => c.id !== "custom").map((c) => (
               <button key={c.id} type="button" className={"cat-chip" + (catId === c.id ? " active" : "")}
-                style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : null}
+                style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : undefined}
                 onClick={() => chooseCat(c.id)}>
                 <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>
                 <span className="cc-label">{c.name}</span>
@@ -640,7 +673,7 @@ export function EventModal({
             <button
               type="button"
               className={"cat-chip cat-chip--span2" + (catId === "custom" ? " active" : "")}
-              style={catId === "custom" ? { borderColor: customMeta.color, background: customMeta.color + "16" } : null}
+              style={catId === "custom" ? { borderColor: customMeta.color, background: customMeta.color + "16" } : undefined}
               onClick={() => chooseCat("custom")}
             >
               <span className="cc-glyph" style={{ color: customMeta.color }}>
@@ -853,26 +886,29 @@ export function EventModal({
         <div className={"modal-foot" + (showLogPayment ? " modal-foot-stacked" : "")}>
           {showLogPayment ? (
             <div className="mf-row mf-row-full">
-              <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button>
+              <button className="ghost-btn danger" type="button" disabled={deleting} onClick={requestDelete}>{deleting ? "Deleting…" : "Delete"}</button>
               <button
                 className="ghost-btn"
                 type="button"
-                onClick={() => onLogPayment({
-                  id: initial.id,
-                  title: title.trim() || initial.title,
-                  date: paymentOccurrenceIso,
-                  expenseId: hasLinkedPayment ? initial.expenseId : undefined,
-                })}
+                onClick={() => {
+                  if (!initial || !onLogPayment) return;
+                  onLogPayment({
+                    id: initial.id,
+                    title: title.trim() || initial.title,
+                    date: paymentOccurrenceIso,
+                    expenseId: hasLinkedPayment ? initial.expenseId : undefined,
+                  });
+                }}
               >
                 {hasLinkedPayment ? "View Linked Payment" : "Log Payment"}
               </button>
             </div>
           ) : (
-            editing ? <button className="ghost-btn danger" type="button" onClick={requestDelete}>Delete</button> : <span />
+            editing ? <button className="ghost-btn danger" type="button" disabled={deleting} onClick={requestDelete}>{deleting ? "Deleting…" : "Delete"}</button> : <span />
           )}
           <div className="mf-right">
             <button className="ghost-btn" type="button" onClick={onClose}>Cancel</button>
-            <button className="primary-btn" type="button" disabled={!valid} onClick={submit}>{editing ? "Save Changes" : "Add Event"}</button>
+            <button className="primary-btn" type="button" disabled={!valid || saving} onClick={submit}>{saving ? "Saving…" : editing ? "Save Changes" : "Add Event"}</button>
           </div>
         </div>
       </div>

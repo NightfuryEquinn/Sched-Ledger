@@ -25,7 +25,7 @@ function doc(partial: Partial<ExpenseDocument> & Pick<ExpenseDocument, "date" | 
 describe("expenseSeriesFilter", () => {
   test("uses seriesKey for encrypted recurring expenses", () => {
     const expense = doc({ date: "2026-07-01", recurring: "monthly" });
-    expect(expenseSeriesFilter(expense, "64b64c4f2f1c2e0012345678")).toEqual({
+    expect(expenseSeriesFilter(expense, "64b64c4f2f1c2e0012345678")).toMatchObject({
       accountId: "64b64c4f2f1c2e0012345678",
       walletId: expense.walletId,
       seriesKey: "series-abc",

@@ -79,7 +79,7 @@ function reminderContent(doc: EventDocument): {
   };
 }
 
-export type ReminderProcessResult = {
+type ReminderProcessResult = {
   scanned: number;
   sent: number;
   skipped: number;

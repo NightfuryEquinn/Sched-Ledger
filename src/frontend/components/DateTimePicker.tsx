@@ -70,9 +70,11 @@ function datePickerLabel(iso: string) {
   return `${y}/${m}/${d}`;
 }
 
-/** Split HH:MM into 12-hour parts; an unset value opens the menu at 9:00 AM. */
+/** Split HH:MM into 12-hour parts; an unset or malformed value opens the menu at 9:00 AM. */
 function parseTime24(t: string) {
-  const [h, m] = (t || "09:00").split(":").map(Number);
+  const [hRaw, mRaw] = (t || "09:00").split(":").map(Number);
+  const h = hRaw ?? 9;
+  const m = mRaw ?? 0;
   const ap = h < 12 ? "AM" : "PM";
   const h12 = ((h + 11) % 12) + 1;
   return { h12, m, ap: ap as "AM" | "PM" };
@@ -88,6 +90,13 @@ function monthKey(y: number, m: number) {
   return `${y}-${pad(m)}`;
 }
 
+/** Split a "YYYY-MM-DD" (or "YYYY-MM") string into its year/month parts. */
+function parseYearMonth(iso: string) {
+  const [y, m] = iso.split("-").map(Number);
+
+  return { y: y ?? new Date().getFullYear(), m: m ?? 1 };
+}
+
 type DatePickerProps = {
   value: string;
   onChange: (iso: string) => void;
@@ -97,13 +106,13 @@ type DatePickerProps = {
 export function DatePicker({ value, onChange, className }: DatePickerProps) {
   const { open, setOpen, rootRef, triggerRef, menuRef } = usePickerPortal();
   const seed = value || TODAY_ISO;
-  const [y, m] = seed.split("-").map(Number);
+  const { y, m } = parseYearMonth(seed);
   const [viewY, setViewY] = useState(y);
   const [viewM, setViewM] = useState(m);
 
   useEffect(() => {
     const next = value || TODAY_ISO;
-    const [vy, vm] = next.split("-").map(Number);
+    const { y: vy, m: vm } = parseYearMonth(next);
     setViewY(vy);
     setViewM(vm);
   }, [value]);

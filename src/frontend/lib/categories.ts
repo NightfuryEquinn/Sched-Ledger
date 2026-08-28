@@ -60,7 +60,7 @@ export function isSpendingCategory(cat?: Pick<Category, "id" | "type"> | null): 
 }
 
 /** Normalize a category so type is always explicit and canonical. */
-export function normalizeCategory(cat: Category): Category {
+function normalizeCategory(cat: Category): Category {
   return { ...cat, type: resolveCategoryType(cat) };
 }
 

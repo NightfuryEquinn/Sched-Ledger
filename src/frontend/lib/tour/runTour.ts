@@ -1,5 +1,5 @@
 import type { ViewId } from "@/frontend/lib/types";
-import type { Tour } from "shepherd.js";
+import type { StepOptionsButton, Tour } from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
 import { getViewTourSteps, SHELL_TOUR_STEPS } from "./steps";
 import { markTourSeen } from "./storage";
@@ -31,14 +31,12 @@ function waitForElement(selector: string, timeout = 2500): Promise<Element | nul
 function bindButtons(tour: Tour, steps: ReturnType<typeof getViewTourSteps>) {
   return steps.map((step) => ({
     ...step,
-    buttons: step.buttons?.map((button) => {
-      if (typeof button === "object" && button !== null && "action" in button) {
-        const action = button.action;
-        if (action === "next") return { ...button, action: () => tour.next() };
-        if (action === "back") return { ...button, action: () => tour.back() };
-        if (action === "complete") return { ...button, action: () => tour.complete() };
-      }
-      return button;
+    buttons: step.buttons?.map((button): StepOptionsButton => {
+      const { kind, ...rest } = button;
+      if (kind === "back") return { ...rest, action: () => tour.back() };
+      if (kind === "complete") return { ...rest, action: () => tour.complete() };
+
+      return { ...rest, action: () => tour.next() };
     }),
     beforeShowPromise: async () => {
       const selector =

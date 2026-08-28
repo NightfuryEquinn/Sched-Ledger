@@ -21,6 +21,7 @@ type UnlockScreenProps = {
   account: Account;
   onUnlocked: () => void;
   onSignOut: () => void;
+  signingOut?: boolean;
 };
 
 /** Resolve signing material for unlock (session, vault, or one-shot legacy migration). */
@@ -71,7 +72,7 @@ async function materializeIdentity(
   return idn;
 }
 
-export function UnlockScreen({ account, onUnlocked, onSignOut }: UnlockScreenProps) {
+export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = false }: UnlockScreenProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [passphrase, setPassphrase] = useState("");
@@ -218,8 +219,8 @@ export function UnlockScreen({ account, onUnlocked, onSignOut }: UnlockScreenPro
             Connect Wallet
           </button>
         )}
-        <button type="button" className="ghost-btn full u-gap-top" disabled={busy} onClick={onSignOut}>
-          Sign Out
+        <button type="button" className="ghost-btn full u-gap-top" disabled={busy || signingOut} onClick={onSignOut}>
+          {signingOut ? "Signing Out…" : "Sign Out"}
         </button>
       </div>
     </div>

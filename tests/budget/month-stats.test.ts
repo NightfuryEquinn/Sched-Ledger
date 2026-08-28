@@ -60,6 +60,7 @@ function expense(overrides: Partial<Expense>): Expense {
     note: "",
     kind: "expense",
     walletId: "w1",
+    recurring: false,
     ...overrides,
   };
 }

@@ -1,7 +1,7 @@
 /** How recently an account must have been created to count as brand new. */
 export const NEW_ACCOUNT_GRACE_MS = 10 * 60 * 1000;
 
-export type WhatsNewDecision = "show" | "skip-seen" | "skip-new-account";
+type WhatsNewDecision = "show" | "skip-seen" | "skip-new-account";
 
 type DecisionInput = {
   /** Whether this device already saw notes for the current version. */

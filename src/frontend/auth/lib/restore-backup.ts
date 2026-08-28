@@ -12,12 +12,12 @@ import type {
 } from "@/frontend/lib/types";
 import type { LedgerBackupPlain } from "./encrypted-backup";
 
-export type BackupRestoreApi = {
+type BackupRestoreApi = {
   saveCategories: (categories: Category[]) => Promise<unknown>;
-  saveWallet: (wallet: FinancialWallet & { id?: string }) => Promise<FinancialWallet>;
-  saveExpense: (expense: Expense & { id?: string }) => Promise<unknown>;
-  saveEvent: (event: LedgerEvent & { id?: string }) => Promise<unknown>;
-  saveTodoList: (list: TodoList & { id?: string }) => Promise<unknown>;
+  saveWallet: (wallet: Omit<FinancialWallet, "id"> & { id?: string }) => Promise<FinancialWallet>;
+  saveExpense: (expense: Omit<Expense, "id"> & { id?: string }) => Promise<unknown>;
+  saveEvent: (event: Omit<LedgerEvent, "id"> & { id?: string }) => Promise<unknown>;
+  saveTodoList: (list: Omit<TodoList, "id"> & { id?: string }) => Promise<unknown>;
 };
 
 export type BackupRestoreResult = {

@@ -1,6 +1,16 @@
 import { useState, type CSSProperties } from "react";
 
-function Donut({ data, size = 220, thickness = 30, onHover, activeId }) {
+type DonutDatum = { id: string; value: number; color: string; label?: string };
+
+type DonutProps = {
+  data: DonutDatum[];
+  size?: number;
+  thickness?: number;
+  onHover?: (id: string | null) => void;
+  activeId?: string | null;
+};
+
+function Donut({ data, size = 220, thickness = 30, onHover, activeId }: DonutProps) {
   // data: [{id,label,value,color}]
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   const R = size / 2;
@@ -376,11 +386,11 @@ function MoMBars({
   );
 }
 
-function MiniSpark({ values, color, width = 90, height = 28 }) {
+function MiniSpark({ values, color, width = 90, height = 28 }: { values: number[]; color: string; width?: number; height?: number }) {
   const max = Math.max(...values, 1), min = Math.min(...values, 0);
   const rng = max - min || 1;
-  const x = (i) => (i / (values.length - 1)) * width;
-  const y = (v) => height - 2 - ((v - min) / rng) * (height - 4);
+  const x = (i: number) => (i / (values.length - 1)) * width;
+  const y = (v: number) => height - 2 - ((v - min) / rng) * (height - 4);
   const d = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   return (
     <svg width={width} height={height}>
@@ -390,4 +400,3 @@ function MiniSpark({ values, color, width = 90, height = 28 }) {
 }
 
 export { AreaTrend, Donut, MiniSpark, MoMBars };
-export type { FlowEntry, TrendDetail };

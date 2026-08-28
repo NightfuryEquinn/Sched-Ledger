@@ -188,14 +188,14 @@ export function DataPrivacyModal({
                     <div className="session-meta num">Last active {new Date(s.lastSeenAt).toLocaleString()}</div>
                   </div>
                   {!s.current ? (
-                    <button className="ghost-btn" type="button" disabled={sessionsBusy} onClick={() => revokeSession(s.id)}>Revoke</button>
+                    <button className="ghost-btn" type="button" disabled={sessionsBusy} onClick={() => revokeSession(s.id)}>{sessionsBusy ? "Revoking…" : "Revoke"}</button>
                   ) : null}
                 </div>
               )) : <p className="dm-note">No active sessions found.</p>}
             </div>
             {sessions.some((s) => !s.current) ? (
               <button className="ghost-btn full u-gap-top" type="button" disabled={sessionsBusy} onClick={revokeOthers}>
-                Sign Out All Other Devices
+                {sessionsBusy ? "Signing Out…" : "Sign Out All Other Devices"}
               </button>
             ) : null}
           </div>
@@ -268,7 +268,7 @@ export function DataPrivacyModal({
                   disabled={emailBusy || notifyEmailDraft.trim() === notifyEmail}
                   onClick={saveNotifyEmail}
                 >
-                  Save
+                  {emailBusy ? "Saving…" : "Save"}
                 </button>
               </div>
             </label>

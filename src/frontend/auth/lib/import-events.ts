@@ -22,7 +22,7 @@ import {
 
 export type EventImportRow = Omit<LedgerEvent, "id">;
 
-export type ParseEventsCsvResult = {
+type ParseEventsCsvResult = {
   rows: EventImportRow[];
   errors: ImportRowError[];
   notices: ImportRowNotice[];
@@ -118,7 +118,7 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
     return { rows, errors: [{ row: 0, message: "The file is empty." }], notices, stats: { skipped: 0 } };
   }
 
-  const headerMap = Object.fromEntries(parsed[0].map((h, i) => [h.trim().toLowerCase(), i]));
+  const headerMap = Object.fromEntries(parsed[0]!.map((h, i) => [h.trim().toLowerCase(), i]));
   const idIdx = colIndex(headerMap, "id");
   const titleIdx = colIndex(headerMap, "title");
   const catIdIdx = colIndex(headerMap, "categoryid", "category id");

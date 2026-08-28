@@ -3,7 +3,7 @@
  * Client-side only; no persistence.
  */
 
-export type AllocationRow = {
+type AllocationRow = {
   id: string;
   pct: number;
 };

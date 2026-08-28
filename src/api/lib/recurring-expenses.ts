@@ -21,7 +21,7 @@ const LOOKBACK_DAYS = 35;
 const ANCHOR_BATCH_LIMIT = 200;
 const CRON_TIME_BUDGET_MS = 22_000;
 
-export type RecurringMaterializeResult = {
+type RecurringMaterializeResult = {
   scanned: number;
   series: number;
   created: number;
