@@ -36,8 +36,17 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
   {
     version: "4.1.1",
     date: "August 2026",
-    lead: "You choose whether the guided tour runs, tours stop reappearing after you close them, and every button that talks to the server now looks the part while it works.",
+    lead: "Saving Insights now counts your Capitals plans alongside Piggies, you choose whether the guided tour runs, tours stop reappearing after you close them, and every button that talks to the server now looks the part while it works.",
     highlights: [
+      {
+        icon: "capital",
+        title: "Saving Insights includes Capitals",
+        body:
+          "Money assigned to a Capitals plan is still money saved, so it now counts toward your savings rate, net saving, " +
+          "streak, and best month — with the split between piggies and capitals shown alongside the total. Each plan gets " +
+          "its own line: what is set aside, what is left to save, the monthly pace, and whether it is funded, on pace, or " +
+          "behind for its target date. Piggy pace is untouched — an assigned deposit is progress on the plan, not the piggy.",
+      },
       {
         icon: "info",
         title: "Your call on the tour",

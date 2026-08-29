@@ -3,16 +3,19 @@ import { Donut, MiniSpark } from "@/frontend/charts";
 import { CatGlyph, EmptyState, Icon, SummaryCard, glyphTint } from "@/frontend/components/ui";
 import { dayLabel, fmtMoney, monthsWindow } from "@/frontend/lib/data";
 import { buildPiggies, type Piggy, type Piglet } from "@/frontend/lib/piggies";
+import { CapitalPaceList } from "@/frontend/components/CapitalPaceList";
 import { computeSavingsInsights, monthlyNetForCat } from "@/frontend/lib/savingsInsights";
-import type { CategoryIndex, Expense } from "@/frontend/lib/types";
+import type { CapitalPlan, CategoryIndex, Expense } from "@/frontend/lib/types";
 import { useMemo, useRef } from "react";
 
 const SPARK_MONTHS = 6;
+const INSIGHT_WINDOW = 12;
 
 type PiggiesProps = {
   savingsTxns: Expense[];
   savingsLoading?: boolean;
   allExpenses: Expense[];
+  capitalPlans: CapitalPlan[];
   categoryIndex: CategoryIndex;
   currency: string;
   month: string;
@@ -25,6 +28,7 @@ export function Piggies({
   savingsTxns,
   savingsLoading,
   allExpenses,
+  capitalPlans,
   categoryIndex,
   currency,
   month,
@@ -33,8 +37,17 @@ export function Piggies({
 }: PiggiesProps) {
   const piggies = useMemo(() => buildPiggies(savingsTxns, categoryIndex), [savingsTxns, categoryIndex]);
   const insights = useMemo(
-    () => computeSavingsInsights(savingsTxns, allExpenses, piggies, categoryIndex, month),
-    [savingsTxns, allExpenses, piggies, categoryIndex, month],
+    () =>
+      computeSavingsInsights(
+        savingsTxns,
+        allExpenses,
+        piggies,
+        categoryIndex,
+        month,
+        INSIGHT_WINDOW,
+        capitalPlans,
+      ),
+    [savingsTxns, allExpenses, piggies, categoryIndex, month, capitalPlans],
   );
   const paceById = useMemo(
     () => new Map(insights.perPiggy.map((p) => [p.catId, p])),
@@ -77,7 +90,11 @@ export function Piggies({
           label="Net This Window"
           tone={insights.netFlow < 0 ? "danger" : "saved"}
           value={money(insights.netFlow)}
-          sub="trailing 12 months"
+          sub={
+            insights.capitalNetFlow !== 0
+              ? `${money(insights.piggyNetFlow)} piggies · ${money(insights.capitalNetFlow)} capitals`
+              : "trailing 12 months"
+          }
         />
         <SummaryCard
           label="Savings Rate"
@@ -94,6 +111,7 @@ export function Piggies({
       <section className="panel" data-tour="tour-piggies-insights">
         <div className="panel-head">
           <h2>Saving Insights</h2>
+          <p className="panel-sub">Piggies and Capitals together</p>
         </div>
         {insights.headlines.length ? (
           <ul className="piggy-headlines">
@@ -106,6 +124,8 @@ export function Piggies({
         ) : (
           <p className="panel-sub">Keep saving to unlock streaks, pace, and projections here.</p>
         )}
+
+        <CapitalPaceList plans={insights.perPlan} money={money} />
       </section>
 
       <div className="piggy-grid" data-tour="tour-piggies-grid">

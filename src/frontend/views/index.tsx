@@ -1,6 +1,7 @@
 import { useEnter, useStagger } from "@/frontend/lib/animate";
 import { FadeIn } from "@/frontend/components/FadeIn";
 import { AreaTrend, Donut, MiniSpark, MoMBars } from "@/frontend/charts";
+import { CapitalPaceList } from "@/frontend/components/CapitalPaceList";
 import { CurrencyPicker } from "@/frontend/components/CurrencyPicker";
 import {
   CatGlyph,
@@ -73,7 +74,7 @@ import {
   type WalletFunding,
 } from "@/frontend/lib/stats";
 import { getAccent } from "@/frontend/lib/theme";
-import type { Budgets, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
+import type { Budgets, CapitalPlan, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -88,6 +89,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
  *   Insights     — month-over-month and category trends
  *   Recurring    — fixed monthly commitments
  */
+
+/** Trailing window Saving Insights reads on the Insights view. */
+const SAVINGS_WINDOW_MONTHS = 12;
 
 /** Up to `limit` lists in API order (oldest first). */
 function oldestTodoLists(todoLists: TodoList[], limit = 3) {
@@ -807,11 +811,12 @@ type InsightsProps = {
   month: string;
   currency: string;
   categoryIndex: CategoryIndex;
+  capitalPlans: CapitalPlan[];
   setMonth: (month: string) => void;
 };
 
 // ── Insights ────────────────────────────────────────────────────────
-export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, setMonth }: InsightsProps) {
+export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, capitalPlans, setMonth }: InsightsProps) {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
   const [habitPeriod, setHabitPeriod] = useState<HabitPeriod>("month");
   const [incomeWindow, setIncomeWindow] = useState<IncomeWindow>("6mo");
@@ -886,8 +891,17 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     [savingsSlice, categoryIndex],
   );
   const savingsInsights = useMemo(
-    () => computeSavingsInsights(savingsSlice, expenses, windowedPiggies, categoryIndex, month),
-    [savingsSlice, expenses, windowedPiggies, categoryIndex, month],
+    () =>
+      computeSavingsInsights(
+        savingsSlice,
+        expenses,
+        windowedPiggies,
+        categoryIndex,
+        month,
+        SAVINGS_WINDOW_MONTHS,
+        capitalPlans,
+      ),
+    [savingsSlice, expenses, windowedPiggies, categoryIndex, month, capitalPlans],
   );
 
   /** Pre-aggregate spend and income by month and category once for Insights charts. */
@@ -1676,10 +1690,10 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         <div className="panel-head">
           <div>
             <h2>Saving Insights</h2>
-            <p className="panel-sub">Trailing 12 months on this wallet</p>
+            <p className="panel-sub">Piggies and Capitals · trailing 12 months on this wallet</p>
           </div>
         </div>
-        <div className="summary-grid sg-3">
+        <div className="summary-grid sg-4">
           <SummaryCard
             label="Savings Rate"
             value={`${Math.round(savingsInsights.savingsRate * 100)}%`}
@@ -1690,6 +1704,12 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
             tone={savingsInsights.netFlow < 0 ? "danger" : "saved"}
             value={money(savingsInsights.netFlow)}
             sub="deposits minus withdrawals"
+          />
+          <SummaryCard
+            label="To Capitals"
+            tone="ok"
+            value={money(savingsInsights.capitalNetFlow)}
+            sub={`${money(savingsInsights.piggyNetFlow)} to piggies`}
           />
           <SummaryCard
             label="Streak"
@@ -1708,6 +1728,7 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
             Keep saving to unlock streaks, pace, and projections here.
           </p>
         )}
+        <CapitalPaceList plans={savingsInsights.perPlan} money={money} />
       </section>
     </div>
   );
