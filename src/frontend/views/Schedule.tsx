@@ -900,7 +900,7 @@ export function EventModal({
         <div className={"modal-foot" + (showLogPayment ? " modal-foot-stacked" : "")}>
           {showLogPayment ? (
             <div className="mf-row mf-row-full">
-              <button className="ghost-btn danger" type="button" disabled={deleting} onClick={requestDelete}>{deleting ? "Deleting…" : "Delete"}</button>
+              <button className="ghost-btn danger" type="button" disabled={deleting} onClick={requestDelete}><span className="btn-label">{deleting ? "Deleting…" : "Delete"}</span></button>
               <button
                 className="ghost-btn"
                 type="button"
@@ -914,7 +914,7 @@ export function EventModal({
                   });
                 }}
               >
-                {hasLinkedPayment ? "View Linked Payment" : "Log Payment"}
+                <span className="btn-label">{hasLinkedPayment ? "View Linked Payment" : "Log Payment"}</span>
               </button>
             </div>
           ) : (

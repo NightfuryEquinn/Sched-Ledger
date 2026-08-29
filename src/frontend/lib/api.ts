@@ -11,6 +11,7 @@ import type {
 } from "@/frontend/lib/crypto/codec";
 import { getCipherCache, putCipherCache } from "@/frontend/lib/pwa/cipher-cache";
 import { identityStorage } from "@/frontend/auth/lib/identity-storage";
+import type { TourPreference } from "@/schemas/profile";
 
 class ApiError extends Error {
   status: number;
@@ -25,6 +26,10 @@ class ApiError extends Error {
 type ApiProfile = {
   id: string;
   currentMonth: string;
+  /* Onboarding answer and the tours already shown. Server-side so the choice
+     follows the user across devices instead of dying with localStorage. */
+  tourPreference: TourPreference;
+  toursSeen: string[];
   /* ISO timestamp; tells a brand-new account from a returning one when
      deciding whether to announce release notes. */
   createdAt: string;
@@ -197,7 +202,7 @@ export const api = {
     get() {
       return request<{ profile: ApiProfile }>("/profile");
     },
-    update(body: Partial<Pick<ApiProfile, "currentMonth">>) {
+    update(body: Partial<Pick<ApiProfile, "currentMonth" | "tourPreference" | "toursSeen">>) {
       return request<{ profile: ApiProfile }>("/profile", { method: "PATCH", body });
     },
   },

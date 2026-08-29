@@ -554,13 +554,14 @@ h1, h2, h3 {
   color: var(--ink-soft);
 }
 
-.icon-btn:hover {
+.icon-btn:hover:not(:disabled) {
   background: var(--surface-2);
 }
 
 .ghost-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   padding: 11px 18px;
   border-radius: var(--r-lg);
@@ -570,9 +571,15 @@ h1, h2, h3 {
   border: 1px solid var(--border);
   transition: all .13s;
   white-space: nowrap;
+  /* Shrink inside a tight flex row instead of pushing it wide — a nowrap flex
+     item defaults to min-width:auto and refuses to give ground — and keep an
+     over-long label inside the button rather than painting past its edge. */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
-.ghost-btn:hover {
+.ghost-btn:hover:not(:disabled) {
   background: var(--surface-2);
   color: var(--ink);
 }
@@ -582,8 +589,13 @@ h1, h2, h3 {
   border-color: color-mix(in srgb, var(--danger) 42%, var(--border));
 }
 
-.ghost-btn.danger:hover {
+.ghost-btn.danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.ghost-btn:disabled {
+  opacity: .45;
+  cursor: default;
 }
 
 .ghost-btn.sm {
@@ -595,6 +607,7 @@ h1, h2, h3 {
 .primary-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   padding: 11px 22px;
   border-radius: var(--r-lg);
@@ -604,6 +617,9 @@ h1, h2, h3 {
   color: #fff;
   transition: filter .13s;
   white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .primary-btn:hover:not(:disabled) {
@@ -654,13 +670,44 @@ h1, h2, h3 {
   gap: 9px;
 }
 
+/* Every button gets `cursor: pointer` from the base reset, so a disabled one
+   still reads as clickable unless it is dimmed and the cursor reset here. */
+.fab:disabled,
+.fab-action:disabled,
+.icon-btn:disabled,
+.mini-btn:disabled,
+.link-btn:disabled,
+.fchip:disabled,
+.known-row:disabled,
+.am-item:disabled,
+.capital-item-remove:disabled,
+.capital-item-cost:disabled,
+.capital-card-actions button:disabled,
+.cat-block-actions button:disabled,
+.cat-sub-actions button:disabled,
+.txn-actions button:disabled,
+.auth-back:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+/* A bare text node in a flex button is an anonymous flex item, which cannot
+   take min-width or text-overflow — so a long label spills out or is clipped
+   mid-word. Wrapping it in this span gives the text something to ellipsise. */
+.btn-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .link-btn {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--accent);
 }
 
-.link-btn:hover {
+.link-btn:hover:not(:disabled) {
   text-decoration: underline;
 }
 
@@ -678,7 +725,7 @@ h1, h2, h3 {
   transition: all .13s;
 }
 
-.mini-btn:hover {
+.mini-btn:hover:not(:disabled) {
   border-color: var(--border-strong);
   color: var(--ink);
 }
@@ -1140,7 +1187,7 @@ h1, h2, h3 {
   transition: background .12s;
 }
 
-.am-item:hover {
+.am-item:hover:not(:disabled) {
   background: var(--surface-2);
   color: var(--ink);
 }
@@ -1149,7 +1196,7 @@ h1, h2, h3 {
   color: var(--danger);
 }
 
-.am-item.danger:hover {
+.am-item.danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
@@ -3078,6 +3125,8 @@ h1, h2, h3 {
   font-weight: 500;
   color: var(--ink-soft);
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
   transition: background var(--dur) var(--ease), 
     color var(--dur) var(--ease), 
     border-color var(--dur) var(--ease), 
@@ -3085,7 +3134,7 @@ h1, h2, h3 {
     box-shadow var(--dur) var(--ease);
 }
 
-.fchip:hover {
+.fchip:hover:not(:disabled) {
   border-color: var(--border-strong);
   color: var(--ink);
 }
@@ -5718,6 +5767,21 @@ h1, h2, h3 {
   align-items: stretch;
 }
 
+/* Reserve the idle label's footprint so swapping in "Saving…" / "Deleting…"
+   does not visibly shrink the button — and the row under it — mid-request.
+   Full-width footer buttons are sized by their flex track, so they opt out. */
+/* Direct children only: buttons inside an .mf-row-full share a flex track and
+   must stay free to shrink, so they keep their own sizing. */
+.modal-foot > .primary-btn,
+.mf-right > .primary-btn {
+  min-width: 10rem;
+}
+
+.modal-foot > .ghost-btn.danger,
+.mf-right > .ghost-btn.danger {
+  min-width: 8rem;
+}
+
 .mf-row {
   display: flex;
   align-items: center;
@@ -5725,13 +5789,31 @@ h1, h2, h3 {
   min-width: 0;
 }
 
+/* Two full-width choices split a phone-width modal too finely to hold their
+   own labels, so give each its own row there. */
+@media (max-width: 480px) {
+  .tour-welcome-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 380px) {
+  .mf-row-full {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .mf-row-full {
   width: 100%;
 }
 
+/* Size by content, not an even split: a short Delete beside a long
+   "View Linked Payment" left the latter with half a row it never fit in. */
 .mf-row-full > .ghost-btn,
 .mf-row-full > .primary-btn {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   justify-content: center;
   min-width: 0;
 }
@@ -5975,6 +6057,13 @@ h1, h2, h3 {
 .auth-actions .ghost-btn {
   flex: 1;
   justify-content: center;
+}
+
+/* Two lg buttons side by side clip their own labels on a 320px phone. */
+@media (max-width: 360px) {
+  .auth-actions {
+    flex-direction: column;
+  }
 }
 
 .face-id-btn {
@@ -6258,7 +6347,7 @@ h1, h2, h3 {
   transition: border-color .13s;
 }
 
-.known-row:hover {
+.known-row:hover:not(:disabled) {
   border-color: var(--accent);
 }
 

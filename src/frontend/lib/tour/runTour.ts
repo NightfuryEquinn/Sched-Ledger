@@ -2,11 +2,34 @@ import type { ViewId } from "@/frontend/lib/types";
 import type { StepOptionsButton, Tour } from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
 import { getViewTourSteps, SHELL_TOUR_STEPS } from "./steps";
-import { markTourSeen } from "./storage";
 
-type TourKind = ViewId | "shell";
+export type TourKind = ViewId | "shell";
+
+/** How a finished tour ended: run to the end, or dismissed part-way. */
+type TourOutcome = "complete" | "cancel";
+
+type RunTourOptions = {
+  /** Called once when the tour ends, however it ended. */
+  onDone?: (kind: TourKind, outcome: TourOutcome) => void;
+};
 
 let activeTour: Tour | null = null;
+/* Set while tearing a tour down ourselves (replacing it, or unmounting the
+   app), so a programmatic cancel is not recorded as the user answering. */
+let silentTeardown = false;
+
+/** Cancel the active tour without reporting it as a user dismissal. */
+function teardownActiveTour() {
+  if (!activeTour) return;
+
+  silentTeardown = true;
+  try {
+    if (activeTour.isActive()) activeTour.cancel();
+  } finally {
+    silentTeardown = false;
+    activeTour = null;
+  }
+}
 
 function waitForElement(selector: string, timeout = 2500): Promise<Element | null> {
   const found = document.querySelector(selector);
@@ -47,11 +70,8 @@ function bindButtons(tour: Tour, steps: ReturnType<typeof getViewTourSteps>) {
   }));
 }
 
-async function createTour(kind: TourKind, onDone?: () => void): Promise<Tour> {
-  if (activeTour?.isActive()) {
-    activeTour.cancel();
-    activeTour = null;
-  }
+async function createTour(kind: TourKind, { onDone }: RunTourOptions): Promise<Tour> {
+  teardownActiveTour();
 
   const { default: Shepherd } = await import("shepherd.js");
 
@@ -69,30 +89,36 @@ async function createTour(kind: TourKind, onDone?: () => void): Promise<Tour> {
 
   bindButtons(tour, steps).forEach((step) => tour.addStep(step));
 
-  const finish = () => {
-    markTourSeen(kind);
+  /* Both endings bank the tour as seen. Dismissing it is an answer, not a
+     deferral — treating cancel as "not seen" reopened the tour on every
+     single reload for anyone who closed it with the X. */
+  let finished = false;
+  const finish = (outcome: TourOutcome) => {
+    if (finished || silentTeardown) return;
+    finished = true;
     activeTour = null;
-    onDone?.();
+    onDone?.(kind, outcome);
   };
 
-  tour.on("complete", finish);
-  tour.on("cancel", () => {
-    activeTour = null;
-  });
+  tour.on("complete", () => finish("complete"));
+  tour.on("cancel", () => finish("cancel"));
 
   activeTour = tour;
+
   return tour;
 }
 
-export async function runTour(kind: TourKind, onDone?: () => void) {
-  const tour = await createTour(kind, onDone);
+/** Start the tour for one view (or the app shell), replacing any active tour. */
+export async function runTour(kind: TourKind, options: RunTourOptions = {}) {
+  const tour = await createTour(kind, options);
   tour.start();
+
   return tour;
 }
 
+/** Dismiss whatever tour is on screen, without recording an answer. */
 export function cancelActiveTour() {
-  if (activeTour?.isActive()) activeTour.cancel();
-  activeTour = null;
+  teardownActiveTour();
 }
 
 /** Whether a guided tour is on screen right now. */

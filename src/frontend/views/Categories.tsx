@@ -397,10 +397,10 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                     </div>
                   </div>
                   <div className="cat-block-actions">
-                    <button type="button" onClick={() => openEditCat(cat)} aria-label="Edit" tabIndex={filteredOut ? -1 : undefined}>
+                    <button type="button" disabled={busy} onClick={() => openEditCat(cat)} aria-label="Edit" tabIndex={filteredOut ? -1 : undefined}>
                       <Icon name="edit" size={16} />
                     </button>
-                    <button type="button" onClick={() => openAddSub(cat.id)} aria-label="Add Subcategory" tabIndex={filteredOut ? -1 : undefined}>
+                    <button type="button" disabled={busy} onClick={() => openAddSub(cat.id)} aria-label="Add Subcategory" tabIndex={filteredOut ? -1 : undefined}>
                       <Icon name="plus" size={16} />
                     </button>
                     {!cat.builtin ? (
@@ -434,7 +434,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                           <span className="cat-sub-id num">{sub.id}</span>
                         </div>
                         <div className="cat-sub-actions">
-                          <button type="button" onClick={() => openEditSub(cat.id, sub)} aria-label="Rename" tabIndex={filteredOut || !open ? -1 : undefined}>
+                          <button type="button" disabled={busy} onClick={() => openEditSub(cat.id, sub)} aria-label="Rename" tabIndex={filteredOut || !open ? -1 : undefined}>
                             <Icon name="edit" size={16} />
                           </button>
                           {cat.subs.length > 1 ? (

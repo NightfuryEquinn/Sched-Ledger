@@ -34,6 +34,7 @@ import { classifyTx, normalizeRecurring, recurringScheduleKey } from "@/frontend
 import type { Budgets, CapitalPlan, Category, Expense, FinancialWallet, FuelFill, LedgerEvent, TodoList, Vehicle } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
+import type { TourPreference } from "@/schemas/profile";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -147,6 +148,10 @@ const keys = {
   vehicles: (wallet: string) => ["vehicles", wallet] as const,
   vehicleFills: (wallet: string) => ["vehicleFills", wallet] as const,
 };
+
+/* Stable empty list so an unloaded profile does not hand consumers a fresh
+   array on every render and retrigger their effects. */
+const EMPTY_TOURS_SEEN: string[] = [];
 
 export function useLedger(walletAddress: string) {
   const queryClient = useQueryClient();
@@ -482,6 +487,16 @@ export function useLedger(walletAddress: string) {
 
   const setMonthMutation = useMutation({
     mutationFn: (currentMonth: string) => api.profile.update({ currentMonth }),
+    onSuccess: ({ profile }) => {
+      queryClient.setQueryData(keys.profile(wallet), profile);
+    },
+  });
+
+  /* Onboarding answer and tour-seen list, persisted on the profile so the
+     choice follows the user rather than the browser. */
+  const setTourStateMutation = useMutation({
+    mutationFn: (state: { tourPreference?: TourPreference; toursSeen?: string[] }) =>
+      api.profile.update(state),
     onSuccess: ({ profile }) => {
       queryClient.setQueryData(keys.profile(wallet), profile);
     },
@@ -1009,7 +1024,11 @@ export function useLedger(walletAddress: string) {
     isLoading,
     error,
     setActiveWalletId,
+    tourPreference: profileQuery.data?.tourPreference ?? "pending",
+    toursSeen: profileQuery.data?.toursSeen ?? EMPTY_TOURS_SEEN,
+    setTourState: setTourStateMutation.mutateAsync,
     setMonth: (currentMonth: string) => setMonthMutation.mutate(currentMonth),
+    isMonthPending: setMonthMutation.isPending,
     setBudgets: (budgets: Budgets) => setBudgetsMutation.mutate(budgets),
     saveCategories: saveCategoriesMutation.mutateAsync,
     saveWallet: saveWalletMutation.mutateAsync,

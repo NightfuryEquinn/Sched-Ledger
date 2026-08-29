@@ -36,10 +36,12 @@ const COLLECTIONS: CollectionDoc[] = [
   },
   {
     name: "ledger_profiles",
-    purpose: "Per-user UI state (selected month)",
+    purpose: "Per-user UI state (selected month, guided-tour onboarding)",
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "currentMonth", value: '"2026-07"', note: "YYYY-MM" },
+      { key: "tourPreference", value: '"guided"', note: "pending | guided | explore" },
+      { key: "toursSeen", value: '["shell", "overview"]', note: "tour ids already shown" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
