@@ -1,3 +1,4 @@
+import { planBudget, planIsOverbudget, planPaidTotal, planUnspentTotal } from "./capitals";
 import { CURRENT_MONTH_KEY, monthLabel, monthsWindow, roundMoney } from "./data";
 import { mean } from "./stat-helpers";
 import type { CategoryIndex } from "./categories";
@@ -8,7 +9,7 @@ import {
   recurringMonthlyEquivalent,
   recurringScheduleKey,
 } from "./stats";
-import type { Expense } from "./types";
+import type { CapitalPlan, Expense } from "./types";
 
 type SavingsHeadline = {
   id: string;
@@ -28,6 +29,28 @@ type PiggyPace = {
   requiredMonthly: number | null;
 };
 
+export type CapitalPace = {
+  planId: string;
+  name: string;
+  glyph: string;
+  /** Net savings assigned to the plan, all time (matches the Capitals card). */
+  unspent: number;
+  /** Still to set aside: budget − paid − unspent, floored at 0. */
+  remainingNeed: number;
+  /** Trailing monthly rate of assigned deposits, folding in recurring pledges. */
+  monthlyPace: number;
+  /** Monthly amount needed to cover the remaining need by the target, or null. */
+  requiredMonthly: number | null;
+  /** ISO month (YYYY-MM) the remaining need is projected to be covered, or null. */
+  projectedCompletion: string | null;
+  /** null when the plan has no budget or no target date to judge pace against. */
+  onTrack: boolean | null;
+  /** True once nothing is left to set aside for the plan. */
+  funded: boolean;
+  /** Paid line items already exceed the plan's budget. */
+  overbudget: boolean;
+};
+
 type SavingsInsights = {
   /** Net savings (deposits − withdrawals) as a share of income over the window. */
   savingsRate: number;
@@ -35,8 +58,14 @@ type SavingsInsights = {
   /** Consecutive months (ending at the window's last month) with positive net saving. */
   currentStreak: number;
   bestMonth: { key: string; label: string; amount: number } | null;
+  /** Net saving over the window across piggies and Capitals plans combined. */
   netFlow: number;
+  /** The share of `netFlow` that landed in piggies (deposits with no plan). */
+  piggyNetFlow: number;
+  /** The share of `netFlow` assigned to Capitals plans. */
+  capitalNetFlow: number;
   perPiggy: PiggyPace[];
+  perPlan: CapitalPace[];
   headlines: SavingsHeadline[];
 };
 
@@ -85,6 +114,32 @@ export function monthlyNetForCat(
 }
 
 /**
+ * Net monthly savings assigned to one Capitals plan across a window of months.
+ * The mirror of `monthlyNetForCat` on the other side of the split: this counts
+ * only rows carrying the plan's `capitalPlanId`.
+ */
+function monthlyNetForPlan(
+  txns: Expense[],
+  planId: string,
+  index: CategoryIndex,
+  months: { key: string }[],
+): Map<string, number> {
+  const byMonth = new Map(months.map((m) => [m.key, 0]));
+
+  for (const e of txns) {
+    if (e.capitalPlanId !== planId) continue;
+    const monthKey = e.date.slice(0, 7);
+    if (!byMonth.has(monthKey)) continue;
+
+    const cls = classifyTx(e, index);
+    if (cls === "savings") byMonth.set(monthKey, byMonth.get(monthKey)! + e.amount);
+    else if (cls === "withdrawal") byMonth.set(monthKey, byMonth.get(monthKey)! - e.amount);
+  }
+
+  return byMonth;
+}
+
+/**
  * Monthly equivalent of every still-active recurring deposit pledged to a
  * category, deduped by series so a 12-month-old standing order counts once,
  * not once per historical instance.
@@ -98,6 +153,25 @@ function recurringPledgeForCat(txns: Expense[], catId: string, index: CategoryIn
     if (classifyTx(e, index) !== "savings") continue;
     if (!isRecurring(e)) continue;
     if (index.subById[e.sub]?.catId !== catId) continue;
+
+    const key = recurringScheduleKey(e);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    total += recurringMonthlyEquivalent(e.amount, e.recurring);
+  }
+
+  return total;
+}
+
+/** Recurring pledge equivalent for deposits assigned to one Capitals plan. */
+function recurringPledgeForPlan(txns: Expense[], planId: string, index: CategoryIndex): number {
+  const seen = new Set<string>();
+  let total = 0;
+
+  for (const e of txns) {
+    if (e.capitalPlanId !== planId) continue;
+    if (classifyTx(e, index) !== "savings") continue;
+    if (!isRecurring(e)) continue;
 
     const key = recurringScheduleKey(e);
     if (seen.has(key)) continue;
@@ -156,9 +230,77 @@ function paceFor(
   return { catId: piggy.catId, monthlyPace, projectedCompletion, onTrack, requiredMonthly };
 }
 
+/**
+ * Pace, projection and on-track status for one Capitals plan.
+ *
+ * The plan's goal is its remaining need — budget minus what is already paid
+ * and already set aside — so a plan whose items are paid reads as funded even
+ * with nothing assigned to it. Pace resolves like a piggy's: the larger of the
+ * trailing window mean and any active recurring pledge, so a standing order
+ * that only just started is not under-projected.
+ */
+function paceForPlan(
+  plan: CapitalPlan,
+  txns: Expense[],
+  index: CategoryIndex,
+  monthKey: string,
+  windowMonths: { key: string }[],
+): CapitalPace {
+  const netByMonth = monthlyNetForPlan(txns, plan.id, index, windowMonths);
+  const historicalMean = mean([...netByMonth.values()]);
+  const pledged = recurringPledgeForPlan(txns, plan.id, index);
+  const monthlyPace = roundMoney(Math.max(historicalMean, pledged));
+
+  const budget = planBudget(plan);
+  const unspent = planUnspentTotal(plan, txns, index);
+  // A plan with no budget has nothing to overspend, so paid items alone never
+  // make it overbudget here — there would be no figure to call them over.
+  const overbudget = budget > 0 && planIsOverbudget(plan);
+  const remainingNeed = roundMoney(Math.max(0, budget - planPaidTotal(plan) - unspent));
+  const funded = budget > 0 && remainingNeed === 0;
+  const targetMonth = plan.targetDate ? plan.targetDate.slice(0, 7) : null;
+
+  let projectedCompletion: string | null = null;
+  if (budget > 0) {
+    if (remainingNeed === 0) projectedCompletion = monthKey;
+    else if (monthlyPace > 0) {
+      projectedCompletion = shiftMonthKey(monthKey, Math.ceil(remainingNeed / monthlyPace));
+    }
+  }
+
+  let requiredMonthly: number | null = null;
+  if (budget > 0 && targetMonth) {
+    if (remainingNeed === 0) requiredMonthly = 0;
+    else {
+      const monthsLeft = monthsBetween(monthKey, targetMonth);
+      requiredMonthly = monthsLeft > 0 ? roundMoney(remainingNeed / monthsLeft) : null;
+    }
+  }
+
+  const onTrack =
+    budget > 0 && targetMonth
+      ? funded || (projectedCompletion !== null && projectedCompletion <= targetMonth)
+      : null;
+
+  return {
+    planId: plan.id,
+    name: plan.name,
+    glyph: plan.glyph,
+    unspent,
+    remainingNeed,
+    monthlyPace,
+    requiredMonthly,
+    projectedCompletion,
+    onTrack,
+    funded,
+    overbudget,
+  };
+}
+
 function buildHeadlines(
   piggies: Piggy[],
   perPiggy: PiggyPace[],
+  perPlan: CapitalPace[],
   currentStreak: number,
   bestMonth: SavingsInsights["bestMonth"],
 ): SavingsHeadline[] {
@@ -205,6 +347,58 @@ function buildHeadlines(
     });
   }
 
+  headlines.push(...capitalHeadlines(perPlan));
+
+  return headlines;
+}
+
+/**
+ * One warning and one positive line about Capitals, at most, so a wallet with
+ * a dozen plans does not bury its piggy callouts. The warning prefers the
+ * plan that is furthest behind on money, since that is the hardest to catch up.
+ */
+function capitalHeadlines(perPlan: CapitalPace[]): SavingsHeadline[] {
+  const headlines: SavingsHeadline[] = [];
+
+  const overbudget = perPlan.find((p) => p.overbudget);
+  const behind = perPlan
+    .filter((p) => p.onTrack === false)
+    .sort((a, b) => b.remainingNeed - a.remainingNeed)[0];
+
+  if (behind) {
+    headlines.push({
+      id: `capital-behind-${behind.planId}`,
+      text:
+        behind.requiredMonthly !== null
+          ? `${behind.name} needs ${behind.requiredMonthly.toFixed(2)} a month to be funded on time — you are setting aside ${behind.monthlyPace.toFixed(2)}.`
+          : `${behind.name} still needs ${behind.remainingNeed.toFixed(2)} and its target date has passed.`,
+      tone: "warning",
+    });
+  } else if (overbudget) {
+    headlines.push({
+      id: `capital-overbudget-${overbudget.planId}`,
+      text: `${overbudget.name} is over its budget — paid items exceed what you planned.`,
+      tone: "warning",
+    });
+  }
+
+  const funded = perPlan.find((p) => p.funded && !p.overbudget);
+  const onPace = perPlan.find((p) => p.onTrack === true && !p.funded);
+
+  if (funded) {
+    headlines.push({
+      id: `capital-funded-${funded.planId}`,
+      text: `${funded.name} is fully funded.`,
+      tone: "positive",
+    });
+  } else if (onPace) {
+    headlines.push({
+      id: `capital-on-track-${onPace.planId}`,
+      text: `${onPace.name} is on pace to be funded${onPace.projectedCompletion ? `, projected ${monthLabel(onPace.projectedCompletion, false)}` : ""}.`,
+      tone: "positive",
+    });
+  }
+
   return headlines;
 }
 
@@ -213,9 +407,13 @@ function buildHeadlines(
  *
  * `savingsTxns` must already be filtered to savings deposits/withdrawals
  * (e.g. `useLedger().savingsTxns`); `allExpenses` is the full transaction set,
- * needed only to size `savingsRate` against income. Transactions assigned to
- * a Capitals plan (`capitalPlanId`) are excluded — they show as Unspent on
- * that plan instead of contributing to Piggies analytics.
+ * needed only to size `savingsRate` against income. `plans` is optional — pass
+ * the wallet's Capitals plans to get per-plan pace and capital headlines.
+ *
+ * Money assigned to a Capitals plan is still money saved, so it counts toward
+ * the wallet-wide figures (`netFlow`, `savingsRate`, streak, best month), with
+ * `piggyNetFlow` / `capitalNetFlow` giving the split. Per-piggy pace stays
+ * capital-free: an assigned deposit is progress on a plan, not on the piggy.
  */
 export function computeSavingsInsights(
   savingsTxns: Expense[],
@@ -224,18 +422,24 @@ export function computeSavingsInsights(
   index: CategoryIndex,
   monthKey: string = CURRENT_MONTH_KEY,
   windowSize = 12,
+  plans: CapitalPlan[] = [],
 ): SavingsInsights {
   const windowMonths = monthsWindow(monthKey, windowSize);
   const windowKeys = new Set(windowMonths.map((m) => m.key));
 
   const netByMonth = new Map(windowMonths.map((m) => [m.key, 0]));
+  let piggyNet = 0;
+  let capitalNet = 0;
   for (const e of savingsTxns) {
-    if (e.capitalPlanId) continue;
     const mo = e.date.slice(0, 7);
     if (!windowKeys.has(mo)) continue;
     const cls = classifyTx(e, index);
-    if (cls === "savings") netByMonth.set(mo, netByMonth.get(mo)! + e.amount);
-    else if (cls === "withdrawal") netByMonth.set(mo, netByMonth.get(mo)! - e.amount);
+    if (cls !== "savings" && cls !== "withdrawal") continue;
+
+    const signed = cls === "savings" ? e.amount : -e.amount;
+    netByMonth.set(mo, netByMonth.get(mo)! + signed);
+    if (e.capitalPlanId) capitalNet += signed;
+    else piggyNet += signed;
   }
 
   const monthlyValues = windowMonths.map((m) => roundMoney(netByMonth.get(m.key) ?? 0));
@@ -267,7 +471,19 @@ export function computeSavingsInsights(
   const savingsRate = totalIncome > 0 ? roundMoney(netFlow / totalIncome) : 0;
 
   const perPiggy = piggies.map((p) => paceFor(p, savingsTxns, index, monthKey, windowMonths));
-  const headlines = buildHeadlines(piggies, perPiggy, currentStreak, bestMonth);
+  const perPlan = plans.map((p) => paceForPlan(p, savingsTxns, index, monthKey, windowMonths));
+  const headlines = buildHeadlines(piggies, perPiggy, perPlan, currentStreak, bestMonth);
 
-  return { savingsRate, meanMonthly, currentStreak, bestMonth, netFlow, perPiggy, headlines };
+  return {
+    savingsRate,
+    meanMonthly,
+    currentStreak,
+    bestMonth,
+    netFlow,
+    piggyNetFlow: roundMoney(piggyNet),
+    capitalNetFlow: roundMoney(capitalNet),
+    perPiggy,
+    perPlan,
+    headlines,
+  };
 }

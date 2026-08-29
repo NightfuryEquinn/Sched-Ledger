@@ -615,6 +615,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
               savingsTxns={ledger.savingsTxns}
               savingsLoading={ledger.savingsLoading}
               allExpenses={allExpenses}
+              capitalPlans={ledger.capitalPlans}
               categoryIndex={ledger.categoryIndex}
               currency={currency}
               month={month}
@@ -646,7 +647,9 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
               onLogFill={logFuelFill}
             />
           )}
-          {view === "insights" && <Insights {...viewProps} setMonth={setMonth} />}
+          {view === "insights" && (
+            <Insights {...viewProps} capitalPlans={ledger.capitalPlans} setMonth={setMonth} />
+          )}
           {view === "transparency" && <Transparency />}
           <div className="scroll-pad" />
         </Suspense>
