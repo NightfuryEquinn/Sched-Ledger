@@ -4,7 +4,7 @@ import { serializeDoc } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
-import { defaultProfile, updateProfileSchema } from "@/schemas/profile";
+import { defaultProfile, updateProfileSchema, type TourPreference } from "@/schemas/profile";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { ObjectId } from "mongodb";
@@ -20,10 +20,12 @@ function profileCacheKey(accountId: string) {
   return `profile:${accountId}`;
 }
 
-/** Expose only id + currentMonth + createdAt (ownership keys stay server-side). */
+/** Expose only UI state + createdAt (ownership keys stay server-side). */
 function serializeProfile(doc: {
   _id: import("mongodb").ObjectId;
   currentMonth: string;
+  tourPreference?: TourPreference;
+  toursSeen?: string[];
   createdAt: Date;
 }) {
   const serialized = serializeDoc(doc);
@@ -31,6 +33,10 @@ function serializeProfile(doc: {
   return {
     id: serialized.id,
     currentMonth: serialized.currentMonth,
+    /* Profiles written before onboarding moved server-side have neither field;
+       the defaults read as "never asked", so those users get the prompt once. */
+    tourPreference: serialized.tourPreference ?? "pending",
+    toursSeen: serialized.toursSeen ?? [],
     /* Account age tells the client whether to announce release notes. */
     createdAt: serialized.createdAt.toISOString(),
   };

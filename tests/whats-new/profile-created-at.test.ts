@@ -87,6 +87,12 @@ describe("profile route exposes createdAt", () => {
     const res = await app.request("/api/profile", { headers: { cookie } });
     const { profile } = (await res.json()) as { profile: Record<string, unknown> };
 
-    expect(Object.keys(profile).sort()).toEqual(["createdAt", "currentMonth", "id"]);
+    expect(Object.keys(profile).sort()).toEqual([
+      "createdAt",
+      "currentMonth",
+      "id",
+      "tourPreference",
+      "toursSeen",
+    ]);
   });
 });

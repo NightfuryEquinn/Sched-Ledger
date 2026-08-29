@@ -20,16 +20,26 @@ type UseWhatsNewOptions = {
   ready: boolean;
   /** ISO creation time of the ledger profile, once loaded. */
   accountCreatedAt?: string;
+  /**
+   * Hold the popup while another first-run dialog owns the screen. The tour
+   * gate below only sees Shepherd tours, so the onboarding modal — an ordinary
+   * React dialog — has to say so itself.
+   */
+  blocked?: boolean;
 };
 
 /**
  * Own the What's New popup: decide whether to open it automatically on this
  * device, and expose manual open/close for the account menu entry.
  */
-export function useWhatsNew({ ready, accountCreatedAt }: UseWhatsNewOptions) {
+export function useWhatsNew({ ready, accountCreatedAt, blocked = false }: UseWhatsNewOptions) {
   const [open, setOpen] = useState(false);
   const [waitingForTour, setWaitingForTour] = useState(false);
   const decided = useRef(false);
+
+  /* Read through a ref so toggling `blocked` cannot restart the poll interval. */
+  const blockedRef = useRef(blocked);
+  blockedRef.current = blocked;
 
   useEffect(() => {
     if (!ready || decided.current) return;
@@ -62,7 +72,7 @@ export function useWhatsNew({ ready, accountCreatedAt }: UseWhatsNewOptions) {
 
     let quiet = 0;
     const timer = window.setInterval(() => {
-      if (isTourActive()) {
+      if (blockedRef.current || isTourActive()) {
         quiet = 0;
 
         return;

@@ -262,7 +262,7 @@ export function Vehicles({
   };
 
   const removeFill = async (fillId: string) => {
-    if (removingFillId === fillId) return;
+    if (busy || removingFillId) return;
     setRemovingFillId(fillId);
     try {
       await onDeleteFill(fillId);
@@ -566,7 +566,7 @@ export function Vehicles({
                       {fill.odometer != null ? ` · ${fill.odometer.toLocaleString()} km` : ""}
                       {fill.station ? ` · ${fill.station}` : ""}
                     </span>
-                    <button type="button" className="capital-item-cost" onClick={() => openEditFill(fill)}>
+                    <button type="button" className="capital-item-cost" disabled={busy} onClick={() => openEditFill(fill)}>
                       {money(fill.price)}
                     </button>
                     {!fill.expenseId ? (
@@ -577,7 +577,7 @@ export function Vehicles({
                     <button
                       type="button"
                       className="capital-item-remove"
-                      disabled={removingFillId === fill.id}
+                      disabled={busy || removingFillId === fill.id}
                       onClick={() => void removeFill(fill.id)}
                       aria-label={removingFillId === fill.id ? "Removing…" : "Remove fill"}
                     >

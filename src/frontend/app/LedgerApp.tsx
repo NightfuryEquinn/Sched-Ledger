@@ -1,4 +1,5 @@
 import { AccountMenu } from "@/frontend/auth";
+import { TourWelcomeModal } from "@/frontend/auth/components/TourWelcomeModal";
 import { WhatsNewModal } from "@/frontend/auth/components/WhatsNewModal";
 import type { LedgerBackupPlain } from "@/frontend/auth/lib/encrypted-backup";
 import type { EventImportRow } from "@/frontend/auth/lib/import-events";
@@ -18,7 +19,7 @@ import {
 import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
 import { releaseHoldForOccurrence, restoreHoldForOccurrence } from "@/frontend/lib/envelope-holds";
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
-import { useLedgerTour } from "@/frontend/lib/tour";
+import { useLedgerTour, type TourKind } from "@/frontend/lib/tour";
 import { useWhatsNew } from "@/frontend/lib/whats-new";
 import type { Account, CapitalItem, CapitalPlan, Category, Expense, FuelFill, LedgerEvent, Vehicle, ViewId } from "@/frontend/lib/types";
 import { VEHICLE_TYPES } from "@/frontend/lib/fuelInsights";
@@ -31,7 +32,7 @@ import {
 } from "@/frontend/views";
 import { EventModal, Schedule } from "@/frontend/views/Schedule";
 import type { Piggy, Piglet } from "@/frontend/lib/piggies";
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /* Own-file views, deferred until first opened — cuts their deps (mermaid, etc) from the initial load. */
 const CategoriesView = lazy(() =>
@@ -131,11 +132,66 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
   const monthInitialized = useRef(false);
   const fabRef = useRef<HTMLDivElement>(null);
   const tourReady = !ledger.isLoading && !ledger.error && !!ledger.profile;
-  const { startViewTour } = useLedgerTour({ view, ready: tourReady });
+  const { setTourState, tourPreference, toursSeen } = ledger;
+
+  /* Latched so the modal survives its own exit animation: answering flips
+     tourPreference off "pending", which would otherwise unmount it mid-fade. */
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const welcomeDue = tourReady && tourPreference === "pending";
+
+  useEffect(() => {
+    if (welcomeDue) setWelcomeOpen(true);
+  }, [welcomeDue]);
+
+  /* Accumulates locally as tours finish. Two tours can end back to back —
+     the shell tour hands straight off to the current view's — and reading
+     `toursSeen` alone would let the second PATCH overwrite the first before
+     it had landed. */
+  const seenRef = useRef<string[]>(toursSeen);
+  if (toursSeen.length > seenRef.current.length) seenRef.current = toursSeen;
+
+  /** Record a tour as shown for this user, on their profile. */
+  const markTourSeen = useCallback(
+    (kind: TourKind) => {
+      if (seenRef.current.includes(kind)) return;
+
+      seenRef.current = [...seenRef.current, kind];
+      void setTourState({ toursSeen: seenRef.current }).catch(() => {
+        /* A failed write just means the tour is offered again next visit. */
+      });
+    },
+    [setTourState],
+  );
+
+  const { startViewTour } = useLedgerTour({
+    view,
+    ready: tourReady,
+    preference: tourPreference,
+    seen: toursSeen,
+    onSeen: markTourSeen,
+  });
+
   const { open: whatsNewOpen, openWhatsNew, closeWhatsNew } = useWhatsNew({
     ready: tourReady,
     accountCreatedAt: ledger.profile?.createdAt,
+    blocked: welcomeOpen,
   });
+
+  /** Take the guided walkthrough; the shell tour starts once this lands. */
+  const chooseGuidedTour = useCallback(
+    () => setTourState({ tourPreference: "guided" }),
+    [setTourState],
+  );
+
+  /** Explore alone: bank every tour as seen so none of them auto-open. */
+  const chooseExploreAlone = useCallback(
+    () =>
+      setTourState({
+        tourPreference: "explore",
+        toursSeen: ["shell", ...(Object.keys(VIEW_TITLES) as ViewId[])],
+      }),
+    [setTourState],
+  );
 
   useEffect(() => {
     if (!fabOpen) return;
@@ -190,7 +246,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
     );
   }
 
-  const { expenses, allExpenses, budgets, wallet, currency, events, month, wallets, activeWallet, setMonth, setBudgets, isBudgetsPending, setActiveWalletId } = ledger;
+  const { expenses, allExpenses, budgets, wallet, currency, events, month, wallets, activeWallet, setMonth, setBudgets, isBudgetsPending, isMonthPending, isSaving, setActiveWalletId } = ledger;
 
   const saveExpense = async (data: Omit<Expense, "id"> & { id?: string }) => {
     const walletId = data.walletId || activeWallet?.id;
@@ -493,7 +549,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
                   onManage={() => setWalletModal(true)}
                 />
               ) : null}
-              <MonthSwitcher months={MONTHS} current={month} onChange={setMonth} />
+              <MonthSwitcher months={MONTHS} current={month} onChange={setMonth} changing={isMonthPending} />
             </div>
           ) : null}
         </header>
@@ -621,6 +677,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
             type="button"
             aria-label="Add Event"
             tabIndex={fabOpen ? 0 : -1}
+            disabled={isSaving}
             onClick={() => {
               setFabOpen(false);
               setEvModal({ add: true, date: TODAY_ISO });
@@ -634,6 +691,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
             type="button"
             aria-label="Add Transaction"
             tabIndex={fabOpen ? 0 : -1}
+            disabled={isSaving}
             onClick={() => {
               setFabOpen(false);
               setModal({ add: true });
@@ -643,11 +701,14 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
             <span className="fab-action-label">Transaction</span>
           </button>
         </div>
+        {/* A write is in flight somewhere in the app: opening a second editor
+            on top of it invites a duplicate submit, so hold the quick-add. */}
         <button
           className="fab"
           type="button"
           aria-label={fabOpen ? "Close Add Menu" : "Open Add Menu"}
           aria-expanded={fabOpen}
+          disabled={isSaving}
           onClick={() => setFabOpen((o) => !o)}
         >
           <Icon name="chevU" size={26} />
@@ -716,6 +777,13 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
           onDelete={deleteEvent}
         />
       )}
+      {welcomeOpen ? (
+        <TourWelcomeModal
+          onGuided={chooseGuidedTour}
+          onExplore={chooseExploreAlone}
+          onClosed={() => setWelcomeOpen(false)}
+        />
+      ) : null}
       {whatsNewOpen ? <WhatsNewModal onClose={closeWhatsNew} /> : null}
     </div>
   );

@@ -585,7 +585,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
 
           return (
             <button key={c.id} className={"fchip" + (filter === key ? " active" : "")} onClick={() => selectFilter(key)}>
-              <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
+              <CatGlyph glyph={c.glyph} id={c.id} /> <span className="btn-label">{c.name}</span>
             </button>
           );
         })}
@@ -596,7 +596,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
           <button className={"fchip" + (subFilter === null ? " active" : "")} onClick={() => setSubFilter(null)}>All Subs</button>
           {filterCat.subs.map((s: any) => (
             <button key={s.id} className={"fchip" + (subFilter === s.id ? " active" : "")} onClick={() => setSubFilter(s.id)}>
-              {s.name}
+              <span className="btn-label">{s.name}</span>
             </button>
           ))}
         </div>

@@ -1,10 +1,26 @@
 import { z } from "zod";
 import { accountIdSchema, monthKeySchema } from "./common";
 
+/**
+ * How the user answered the first-run tour prompt.
+ *
+ * `pending` — never asked, so the welcome modal is due.
+ * `guided`  — wants the walkthrough; tours auto-open per view on first visit.
+ * `explore` — wants to look around alone; nothing auto-opens ever again.
+ */
+export const tourPreferenceSchema = z.enum(["pending", "guided", "explore"]);
+
+/** Tour ids already shown to this user: "shell" plus any view id. */
+const toursSeenSchema = z.array(z.string().max(32)).max(32);
+
 /** Per-user ledger UI state. Budgets/income live on financial_wallets (E2EE). */
 const ledgerProfileSchema = z.object({
   accountId: accountIdSchema,
   currentMonth: monthKeySchema,
+  /* Onboarding lives here rather than in localStorage so the answer follows the
+     user across devices and survives sign-out and Clear Local Data. */
+  tourPreference: tourPreferenceSchema.default("pending"),
+  toursSeen: toursSeenSchema.default([]),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -12,12 +28,15 @@ const ledgerProfileSchema = z.object({
 export const updateProfileSchema = z
   .object({
     currentMonth: monthKeySchema.optional(),
+    tourPreference: tourPreferenceSchema.optional(),
+    toursSeen: toursSeenSchema.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
   });
 
 export type LedgerProfile = z.infer<typeof ledgerProfileSchema>;
+export type TourPreference = z.infer<typeof tourPreferenceSchema>;
 
 /** Seed a new ledger profile for an account. */
 export function defaultProfile(
@@ -32,5 +51,7 @@ export function defaultProfile(
   return {
     accountId: accountIdSchema.parse(accountId),
     currentMonth: monthKeySchema.parse(month),
+    tourPreference: "pending",
+    toursSeen: [],
   };
 }

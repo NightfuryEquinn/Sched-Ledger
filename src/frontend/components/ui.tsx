@@ -304,22 +304,19 @@ function MonthSwitcher({
   months,
   current,
   onChange,
+  changing = false,
 }: {
   months: MonthEntry[];
   current: string;
   onChange: (key: string) => void;
+  /** True while the month PATCH is in flight, from the profile mutation. */
+  changing?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<Record<string, string | number>>({});
   const rootRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  // A month change is a fire-and-forget PATCH /profile (setMonth just calls
-  // mutation.mutate, no promise back) — rapid clicks would otherwise queue
-  // unboundedly. Gate on `current` catching up to the requested key, which
-  // is how we learn the request settled without a promise to await.
-  const [changing, setChanging] = useState(false);
-  const pendingKeyRef = useRef<string | null>(null);
   const [pickY, setPickY] = useState(() => Number(current.split("-")[0]));
   // Bounds come from parsing fixed MIN/MAX_MONTH_KEY constants — always well-formed,
   // but the split/map gives numbers TS can't prove are present without a fallback.
@@ -327,27 +324,12 @@ function MonthSwitcher({
 
   useEffect(() => {
     setPickY(Number(current.split("-")[0]));
-    if (pendingKeyRef.current && current === pendingKeyRef.current) {
-      pendingKeyRef.current = null;
-      setChanging(false);
-    }
   }, [current]);
 
-  /** Fire onChange, blocking further changes until `current` catches up.
-   *  ponytail: 8s safety-net unblock in case the PATCH errors and `current`
-   *  never catches up; swap for a real isPending flag if useLedger exposes
-   *  one for setMonth. */
+  /** Fire onChange, ignoring clicks while a month PATCH is still in flight. */
   const requestChange = (key: string) => {
     if (changing) return;
-    pendingKeyRef.current = key;
-    setChanging(true);
     onChange(key);
-    window.setTimeout(() => {
-      if (pendingKeyRef.current === key) {
-        pendingKeyRef.current = null;
-        setChanging(false);
-      }
-    }, 8000);
   };
 
   const idx = months.findIndex((m) => m.key === current);

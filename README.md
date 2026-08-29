@@ -44,7 +44,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **PWA read cache** — installable app shell + IndexedDB ciphertext cache for offline reads (writes still require the network)
 - **Budget alerts** — email when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates and sends names/amounts; server only delivers)
 - **Transparency** — in-app map of hosting roles, what the server can infer, MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagrams)
-- **Guided tour** — Shepherd.js walkthrough for each main view
+- **Guided tour** — Shepherd.js walkthrough for each main view. On first sign-in a welcome modal asks whether to take the guided tour or explore alone; the answer is stored on the ledger profile (`tourPreference`), so it follows the user across devices rather than living in this browser's `localStorage`. Dismissing a tour counts as having seen it. Replay any view's tour from the **?** beside the page title, or **Account → Take a Tour**
 - **What's New** — release notes open once per device per app version (see [Versioning](#versioning)), and stay reachable from **Account → What's New**
 
 ### Security
@@ -176,7 +176,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | MongoDB collection | Code key | Purpose |
 |------------------|----------|---------|
 | `users` | `users` | Account profile (codename, notify email, timezone, reminder/alert prefs) |
-| `ledger_profiles` | `ledgerProfiles` | Per-user UI state (`currentMonth`); its `createdAt` is exposed to the client as account age |
+| `ledger_profiles` | `ledgerProfiles` | Per-user UI state (`currentMonth`, plus `tourPreference` / `toursSeen` for guided-tour onboarding); its `createdAt` is exposed to the client as account age |
 | `financial_wallets` | `financialWallets` | Wallets (currency, funding mode; E2EE financials) |
 | `category_taxonomies` | `categoryTaxonomies` | One document per user — E2EE category tree |
 | `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
@@ -248,7 +248,7 @@ The user-facing version lives in [`src/lib/version.ts`](src/lib/version.ts) as `
 
 Release notes are a newest-first list in [`src/frontend/lib/whats-new/release-notes.ts`](src/frontend/lib/whats-new/release-notes.ts). Prepend a new entry and bump `APP_VERSION` to re-announce: the modal opens on the next load of every device that has not seen that version, because seen-state is stored per version in `localStorage` under `ledger:whatsnew:v1`. The modal scrolls the full changelog; **Got It** stays fixed at the bottom.
 
-Two cases are deliberately quiet — a device that already saw the current version, and a brand-new account (profile `createdAt` under 10 minutes old), for which the guided tour is the introduction instead. When the popup is due it waits for the Shepherd tour to finish first, so the two never overlap.
+Two cases are deliberately quiet — a device that already saw the current version, and a brand-new account (profile `createdAt` under 10 minutes old), for which onboarding is the introduction instead. When the popup is due it waits for both the first-run tour prompt and any Shepherd tour to finish, so the three never overlap: welcome modal → tour (if chosen) → What's New.
 
 To preview it during development, delete `ledger:whatsnew:v1` in DevTools → Application → Local Storage and reload, or open **Account → What's New**.
 
@@ -408,6 +408,7 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" -H "Content-Type: application/j
 9. **Budget hold** — enable a hold on a schedule event, confirm Budgets shows **Held**, then log payment and confirm the hold releases for that occurrence.
 10. **Push notifications** — open **Account → Preferences**, enable push, and confirm the device registers (needs the `VAPID_*` keys; on iOS add the app to the Home Screen first).
 11. **What's New** — confirm the release notes open on a device that has not seen this version, and that **Account → What's New** reopens them afterwards.
+12. **First-run tour prompt** — sign in with a fresh wallet and confirm the welcome modal appears once. Choose **I'll explore** and confirm no tour auto-opens on any view and the prompt does not return after a reload; with another fresh wallet choose **Show me around**, close the shell tour with the X, and confirm it stays closed on reload.
 
 ### Serverless notes
 

@@ -34,6 +34,36 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "4.1.1",
+    date: "August 2026",
+    lead: "You choose whether the guided tour runs, tours stop reappearing after you close them, and every button that talks to the server now looks the part while it works.",
+    highlights: [
+      {
+        icon: "info",
+        title: "Your call on the tour",
+        body:
+          "The first time you sign in, Sched Ledger asks whether you want the guided walk-through or would rather explore " +
+          "on your own. Pick either — the answer is saved to your account, so it follows you to every device instead of " +
+          "being asked again on each new browser.",
+      },
+      {
+        icon: "sparkle",
+        title: "Tours that stay closed",
+        body:
+          "Closing a tour with the X used to count for nothing: it reopened on the very next load, every time. Dismissing " +
+          "a tour now settles it. The ? beside any page title still replays that view's tour whenever you want it.",
+      },
+      {
+        icon: "shield",
+        title: "Buttons that show their state",
+        body:
+          "Cancel, Delete, Revoke, and the account menu now dim properly while a request is in flight instead of looking " +
+          "clickable, and buttons no longer resize when their label switches to Saving…. Long category names ellipsize " +
+          "inside their chip rather than spilling out of the row.",
+      },
+    ],
+  },
+  {
     version: "4.1.0",
     date: "August 2026",
     lead: "Smoother transitions across the app, a trefoil loader, safer saves when you tap fast, and stricter dev tooling to keep the codebase lean.",
