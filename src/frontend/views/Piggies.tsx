@@ -3,19 +3,16 @@ import { Donut, MiniSpark } from "@/frontend/charts";
 import { CatGlyph, EmptyState, Icon, SummaryCard, glyphTint } from "@/frontend/components/ui";
 import { dayLabel, fmtMoney, monthsWindow } from "@/frontend/lib/data";
 import { buildPiggies, type Piggy, type Piglet } from "@/frontend/lib/piggies";
-import { CapitalPaceList } from "@/frontend/components/CapitalPaceList";
 import { computeSavingsInsights, monthlyNetForCat } from "@/frontend/lib/savingsInsights";
-import type { CapitalPlan, CategoryIndex, Expense } from "@/frontend/lib/types";
+import type { CategoryIndex, Expense } from "@/frontend/lib/types";
 import { useMemo, useRef } from "react";
 
 const SPARK_MONTHS = 6;
-const INSIGHT_WINDOW = 12;
 
 type PiggiesProps = {
   savingsTxns: Expense[];
   savingsLoading?: boolean;
   allExpenses: Expense[];
-  capitalPlans: CapitalPlan[];
   categoryIndex: CategoryIndex;
   currency: string;
   month: string;
@@ -23,12 +20,17 @@ type PiggiesProps = {
   onWithdraw: (piggy: Piggy, sub: Piglet) => void;
 };
 
-/** One-glance tracker for every savings category ("piggy") and its subs ("piglets"). */
+/**
+ * One-glance tracker for every savings category ("piggy") and its subs ("piglets").
+ *
+ * The headline and per-plan reads of Saving Insights live on the Insights view;
+ * what is computed here is the totals row and each card's on-track status, so no
+ * Capitals plans are passed — `perPlan` is not rendered on this view.
+ */
 export function Piggies({
   savingsTxns,
   savingsLoading,
   allExpenses,
-  capitalPlans,
   categoryIndex,
   currency,
   month,
@@ -37,17 +39,8 @@ export function Piggies({
 }: PiggiesProps) {
   const piggies = useMemo(() => buildPiggies(savingsTxns, categoryIndex), [savingsTxns, categoryIndex]);
   const insights = useMemo(
-    () =>
-      computeSavingsInsights(
-        savingsTxns,
-        allExpenses,
-        piggies,
-        categoryIndex,
-        month,
-        INSIGHT_WINDOW,
-        capitalPlans,
-      ),
-    [savingsTxns, allExpenses, piggies, categoryIndex, month, capitalPlans],
+    () => computeSavingsInsights(savingsTxns, allExpenses, piggies, categoryIndex, month),
+    [savingsTxns, allExpenses, piggies, categoryIndex, month],
   );
   const paceById = useMemo(
     () => new Map(insights.perPiggy.map((p) => [p.catId, p])),
@@ -107,26 +100,6 @@ export function Piggies({
           sub={insights.currentStreak === 1 ? "month saving" : "months saving"}
         />
       </div>
-
-      <section className="panel" data-tour="tour-piggies-insights">
-        <div className="panel-head">
-          <h2>Saving Insights</h2>
-          <p className="panel-sub">Piggies and Capitals together</p>
-        </div>
-        {insights.headlines.length ? (
-          <ul className="piggy-headlines">
-            {insights.headlines.map((h) => (
-              <li key={h.id} className={`piggy-headline piggy-headline--${h.tone}`}>
-                {h.text}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="panel-sub">Keep saving to unlock streaks, pace, and projections here.</p>
-        )}
-
-        <CapitalPaceList plans={insights.perPlan} money={money} />
-      </section>
 
       <div className="piggy-grid" data-tour="tour-piggies-grid">
         {piggies.map((piggy) => {

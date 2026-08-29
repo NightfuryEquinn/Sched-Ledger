@@ -615,7 +615,6 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
               savingsTxns={ledger.savingsTxns}
               savingsLoading={ledger.savingsLoading}
               allExpenses={allExpenses}
-              capitalPlans={ledger.capitalPlans}
               categoryIndex={ledger.categoryIndex}
               currency={currency}
               month={month}

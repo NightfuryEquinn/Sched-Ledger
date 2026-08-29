@@ -145,8 +145,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
   ],
   piggies: [
     step("piggies-nav", "Piggies", "One glance at every savings category and its lifetime balance.", navTarget("piggies"), "right"),
-    step("piggies-summary", "Totals", "Total saved across every piggy, net flow across piggies and Capitals, savings rate, and your current saving streak.", '[data-tour="tour-piggies-summary"]'),
-    step("piggies-insights", "Saving Insights", "Streaks, best months, and pace-vs-deadline callouts from your saving history — including each Capitals plan's pace and whether it is funded, on pace, or behind.", '[data-tour="tour-piggies-insights"]'),
+    step("piggies-summary", "Totals", "Total saved across every piggy, net flow across piggies and Capitals, savings rate, and your current saving streak. The full Saving Insights read lives on the Insights view.", '[data-tour="tour-piggies-summary"]'),
     lastStep("piggies-grid", "Piggy Cards", "Each card is a savings category — its progress ring, subcategories, and Add / Withdraw actions. Unassigned savings land here; assign deposits to a Capital from Add Transaction.", '[data-tour="tour-piggies-grid"]'),
   ],
   capitals: [
