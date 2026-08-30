@@ -1,5 +1,5 @@
 import { DatePicker } from "@/frontend/components/DateTimePicker";
-import { EmptyState, Icon, InsightFeed, SummaryCard } from "@/frontend/components/ui";
+import { ConfirmDialog, EmptyState, Icon, InsightFeed, SummaryCard } from "@/frontend/components/ui";
 import { dayLabel, fmtMoney, roundMoney } from "@/frontend/lib/data";
 import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
 import {
@@ -59,6 +59,9 @@ export function Vehicles({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [removingFillId, setRemovingFillId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<
+    { type: "vehicle"; id: string } | { type: "fill"; id: string } | null
+  >(null);
   const vehicleScrimRef = useRef<HTMLDivElement>(null);
   const vehiclePanelRef = useRef<HTMLDivElement>(null);
   const fillScrimRef = useRef<HTMLDivElement>(null);
@@ -515,7 +518,7 @@ export function Vehicles({
                     type="button"
                     className="danger"
                     disabled={busy}
-                    onClick={(e) => { e.stopPropagation(); void removeVehicle(vehicle.id); }}
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: "vehicle", id: vehicle.id }); }}
                     aria-label={busy ? "Deleting…" : "Delete Vehicle"}
                   >
                     <Icon name="trash" size={15} />
@@ -578,7 +581,7 @@ export function Vehicles({
                       type="button"
                       className="capital-item-remove"
                       disabled={busy || removingFillId === fill.id}
-                      onClick={() => void removeFill(fill.id)}
+                      onClick={() => setConfirmDelete({ type: "fill", id: fill.id })}
                       aria-label={removingFillId === fill.id ? "Removing…" : "Remove fill"}
                     >
                       <Icon name="close" size={13} />
@@ -629,6 +632,30 @@ export function Vehicles({
       ) : null}
 
       {renderEditor()}
+
+      {confirmDelete ? (
+        <ConfirmDialog
+          title={confirmDelete.type === "vehicle" ? "Delete Vehicle" : "Remove Fill"}
+          message={
+            confirmDelete.type === "vehicle"
+              ? (() => {
+                  const vehicle = vehicleList.find((v) => v.id === confirmDelete.id);
+                  const count = fillsFor(confirmDelete.id).length;
+                  return `Delete "${vehicle?.name ?? ""}" and all ${count} logged fills? This cannot be undone.`;
+                })()
+              : (() => {
+                  const fill = fillList.find((f) => f.id === confirmDelete.id);
+                  return `Remove this fill${fill ? ` from ${dayLabel(fill.date)}` : ""}? This cannot be undone.`;
+                })()
+          }
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={async () => {
+            if (confirmDelete.type === "vehicle") await removeVehicle(confirmDelete.id);
+            else await removeFill(confirmDelete.id);
+            setConfirmDelete(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

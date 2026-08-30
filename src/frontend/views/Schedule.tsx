@@ -3,6 +3,7 @@ import { CategoryPicker } from "@/frontend/components/CategoryPicker";
 import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
 import { FadeIn } from "@/frontend/components/FadeIn";
 import {
+  ConfirmDialog,
   DeleteScopeDialog,
   EmptyState,
   Icon,
@@ -528,6 +529,7 @@ export function EventModal({
   );
   const [draft, setDraft] = useState("");
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const busy = saving || deleting;
@@ -572,9 +574,9 @@ export function EventModal({
   const titleRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !busy) requestClose(onClose); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !confirmOpen && !busy) requestClose(onClose); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [scopeOpen, busy, onClose, requestClose]);
+  }, [scopeOpen, confirmOpen, busy, onClose, requestClose]);
 
   const handleAllDayChange = (checked: boolean) => {
     setAllDay(checked);
@@ -638,19 +640,14 @@ export function EventModal({
     }
   };
 
-  /** Start delete — ask for scope when the event repeats. */
-  const requestDelete = async () => {
+  /** Start delete — ask for scope when recurring, otherwise confirm once. */
+  const requestDelete = () => {
     if (!initial?.id || deleting) return;
     if (initial.repeat && initial.repeat !== "once") {
       setScopeOpen(true);
       return;
     }
-    setDeleting(true);
-    try {
-      await onDelete(initial.id);
-    } finally {
-      setDeleting(false);
-    }
+    setConfirmOpen(true);
   };
 
   /** Confirm a scoped recurring event delete. */
@@ -661,7 +658,7 @@ export function EventModal({
   };
 
   return (
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !busy) requestClose(onClose); }}>
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !confirmOpen && !busy) requestClose(onClose); }}>
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{editing ? "Edit Event" : "New Event"}</h3>
@@ -931,6 +928,22 @@ export function EventModal({
           title="Delete Recurring Event"
           onCancel={() => setScopeOpen(false)}
           onConfirm={confirmScopedDelete}
+        />
+      ) : null}
+      {confirmOpen && initial?.id ? (
+        <ConfirmDialog
+          title="Delete Event"
+          message={`Delete "${title.trim() || initial.title}"? This cannot be undone.`}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={async () => {
+            setDeleting(true);
+            try {
+              await onDelete(initial.id);
+            } finally {
+              setDeleting(false);
+            }
+            setConfirmOpen(false);
+          }}
         />
       ) : null}
     </div>

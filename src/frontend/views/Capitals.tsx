@@ -1,6 +1,6 @@
 import { Donut } from "@/frontend/charts";
 import { DatePicker } from "@/frontend/components/DateTimePicker";
-import { EmptyState, Icon, SummaryCard } from "@/frontend/components/ui";
+import { ConfirmDialog, EmptyState, Icon, SummaryCard } from "@/frontend/components/ui";
 import {
   newCapitalItem,
   planBudget,
@@ -68,6 +68,9 @@ export function Capitals({
   const [editingCost, setEditingCost] = useState<string | null>(null);
   const [costDraft, setCostDraft] = useState("");
   const [itemBusy, setItemBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<
+    { type: "plan"; id: string } | { type: "item"; planId: string; itemId: string } | null
+  >(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: !!editor });
@@ -432,7 +435,7 @@ export function Capitals({
                   <button type="button" onClick={() => openEditPlan(plan)} aria-label="Edit Plan">
                     <Icon name="edit" size={15} />
                   </button>
-                  <button type="button" className="danger" disabled={busy} onClick={() => void removePlan(plan.id)} aria-label="Delete Plan">
+                  <button type="button" className="danger" disabled={busy} onClick={() => setConfirmDelete({ type: "plan", id: plan.id })} aria-label="Delete Plan">
                     {busy ? "Removing…" : <Icon name="trash" size={15} />}
                   </button>
                 </div>
@@ -497,7 +500,7 @@ export function Capitals({
                             Log
                           </button>
                         ) : null}
-                        <button type="button" className="capital-item-remove" disabled={itemBusy} onClick={() => void removeItem(plan, item.id)} aria-label="Remove item">
+                        <button type="button" className="capital-item-remove" disabled={itemBusy} onClick={() => setConfirmDelete({ type: "item", planId: plan.id, itemId: item.id })} aria-label="Remove item">
                           <Icon name="close" size={13} />
                         </button>
                       </div>
@@ -546,6 +549,33 @@ export function Capitals({
       </div>
 
       {renderEditor()}
+
+      {confirmDelete ? (
+        <ConfirmDialog
+          title={confirmDelete.type === "plan" ? "Delete Plan" : "Remove Item"}
+          message={
+            confirmDelete.type === "plan"
+              ? (() => {
+                  const plan = plans.find((p) => p.id === confirmDelete.id);
+                  return `Delete "${plan?.name ?? ""}" and all ${plan?.items.length ?? 0} of its line items? This cannot be undone.`;
+                })()
+              : (() => {
+                  const plan = plans.find((p) => p.id === confirmDelete.planId);
+                  const item = plan?.items.find((i) => i.id === confirmDelete.itemId);
+                  return `Remove "${item?.name ?? ""}" from this plan? This cannot be undone.`;
+                })()
+          }
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={async () => {
+            if (confirmDelete.type === "plan") await removePlan(confirmDelete.id);
+            else {
+              const plan = plans.find((p) => p.id === confirmDelete.planId);
+              if (plan) await removeItem(plan, confirmDelete.itemId);
+            }
+            setConfirmDelete(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -87,6 +87,7 @@ import { createPortal } from "react-dom";
  *   Segmented, EmptyState    — controls & placeholders
  *   AddExpenseModal          — add / edit transaction
  *   DeleteScopeDialog        — recurring delete scope chooser
+ *   ConfirmDialog            — generic yes/no confirmation
  */
 
 type DeleteExpenseOpts = { scope?: DeleteScope; fromDate?: string };
@@ -173,6 +174,80 @@ function DeleteScopeDialog({
           </button>
           <button className="ghost-btn danger" type="button" onClick={confirm} disabled={busy}>
             {busy ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/** Generic yes/no confirmation before a destructive action. */
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel = "Delete",
+  pendingLabel = "Deleting…",
+  danger = true,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  pendingLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) requestClose(onCancel);
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [busy, onCancel, requestClose]);
+
+  /** Confirm the pending action. */
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onConfirm();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return createPortal(
+    <div
+      ref={scrimRef}
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !busy) requestClose(onCancel);
+      }}
+    >
+      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+        <div className="modal-head">
+          <h3 id="confirm-dialog-title">{title}</h3>
+          <button className="icon-btn" type="button" onClick={() => requestClose(onCancel)} aria-label="Close" disabled={busy}>
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <p className="dm-lead">{message}</p>
+        </div>
+        <div className="modal-foot">
+          <button className="ghost-btn" type="button" onClick={() => requestClose(onCancel)} disabled={busy}>
+            Cancel
+          </button>
+          <button className={"ghost-btn" + (danger ? " danger" : "")} type="button" onClick={confirm} disabled={busy}>
+            {busy ? pendingLabel : confirmLabel}
           </button>
         </div>
       </div>
@@ -492,24 +567,19 @@ function TransactionRow({
   categoryIndex: CategoryIndex;
 }) {
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const sub = categoryIndex.subById[exp.sub];
   const cat = sub ? categoryIndex.catById[sub.catId] : null;
   if (!sub || !cat) return null;
 
-  /** Start delete — ask for scope when the row is recurring. */
-  const requestDelete = async () => {
+  /** Start delete — ask for scope when recurring, otherwise confirm once. */
+  const requestDelete = () => {
     if (isRecurring(exp)) {
       setScopeOpen(true);
       return;
     }
-    if (deleting) return;
-    setDeleting(true);
-    try {
-      await onDelete(exp.id);
-    } finally {
-      setDeleting(false);
-    }
+    setConfirmOpen(true);
   };
 
   return (
@@ -537,6 +607,22 @@ function TransactionRow({
           onConfirm={async (scope) => {
             await onDelete(exp.id, { scope, fromDate: exp.date });
             setScopeOpen(false);
+          }}
+        />
+      ) : null}
+      {confirmOpen ? (
+        <ConfirmDialog
+          title="Delete Transaction"
+          message="Delete this transaction? This cannot be undone."
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={async () => {
+            setDeleting(true);
+            try {
+              await onDelete(exp.id);
+            } finally {
+              setDeleting(false);
+            }
+            setConfirmOpen(false);
           }}
         />
       ) : null}
@@ -780,6 +866,7 @@ function AddExpenseModal({
     initRecurring !== false ? initRecurring : "monthly",
   );
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [capitalPlanId, setCapitalPlanId] = useState(initial?.capitalPlanId ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -796,9 +883,9 @@ function AddExpenseModal({
 
   useEffect(() => { if (amtRef.current) amtRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !busy) requestClose(onClose); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !confirmOpen && !busy) requestClose(onClose); };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
-  }, [scopeOpen, busy, onClose, requestClose]);
+  }, [scopeOpen, confirmOpen, busy, onClose, requestClose]);
 
   const switchKind = (next: "expense" | "income") => {
     setKind(next);
@@ -846,23 +933,18 @@ function AddExpenseModal({
     }
   };
 
-  /** Start delete — ask for scope when editing a recurring transaction. */
-  const requestDelete = async () => {
+  /** Start delete — ask for scope when recurring, otherwise confirm once. */
+  const requestDelete = () => {
     if (!initial?.id || busy) return;
     if (isRecurring({ recurring: initial.recurring ?? false })) {
       setScopeOpen(true);
       return;
     }
-    setDeleting(true);
-    try {
-      await onDelete(initial.id);
-    } finally {
-      setDeleting(false);
-    }
+    setConfirmOpen(true);
   };
 
   return (
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !busy) requestClose(onClose); }}>
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !confirmOpen && !busy) requestClose(onClose); }}>
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title ?? (editing ? "Edit Transaction" : "Add Transaction")}</h3>
@@ -1027,10 +1109,26 @@ function AddExpenseModal({
           }}
         />
       ) : null}
+      {confirmOpen && initialId ? (
+        <ConfirmDialog
+          title="Delete Transaction"
+          message="Delete this transaction? This cannot be undone."
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={async () => {
+            setDeleting(true);
+            try {
+              await onDelete(initialId);
+            } finally {
+              setDeleting(false);
+            }
+            setConfirmOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
 export {
-  AddExpenseModal, CatGlyph, DeleteScopeDialog, EmptyState, Icon, InsightFeed, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
+  AddExpenseModal, CatGlyph, ConfirmDialog, DeleteScopeDialog, EmptyState, Icon, InsightFeed, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
 };
