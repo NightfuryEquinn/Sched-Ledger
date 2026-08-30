@@ -28,6 +28,7 @@ import {
   type ReminderContext,
 } from "@/frontend/lib/crypto/codec";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
+import { releaseOrphanedPlanRefs } from "@/frontend/lib/capitals";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
 import { classifyTx, normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
@@ -263,6 +264,27 @@ export function useLedger(walletAddress: string) {
     [wallet],
   );
 
+  const capitalPlansQuery = useQuery({
+    queryKey: keys.capitalPlans(wallet),
+    queryFn: async () => {
+      const { capitalPlans } = await api.capitalPlans.list();
+      const cryptoKey = requireKey(wallet);
+      return Promise.all(capitalPlans.map((wire) => decodeCapitalPlan(wire, cryptoKey)));
+    },
+    enabled: cryptoReady && !!profileQuery.data,
+  });
+
+  /*
+   * Declared before the expense queries because both heal orphaned plan refs
+   * below, and a useMemo body runs during this render — reading a `const`
+   * declared further down would hit the temporal dead zone.
+   *
+   * Null until the plans have actually loaded: treating every assignment as
+   * orphaned mid-load would flash wrong balances and, worse, let an unrelated
+   * edit save the cleared assignment back.
+   */
+  const livePlans = capitalPlansQuery.isSuccess ? capitalPlansQuery.data ?? [] : null;
+
   const expensesQuery = useQuery({
     queryKey: keys.expenses(wallet),
     queryFn: async () => {
@@ -289,11 +311,16 @@ export function useLedger(walletAddress: string) {
     enabled: cryptoReady && !!profileQuery.data && wallets.length > 0 && categoriesQuery.data !== undefined,
   });
 
-  const allExpenses = (expensesQuery.data ?? []).map((e) => ({
+  const decodedExpenses = (expensesQuery.data ?? []).map((e) => ({
     ...e,
     kind: e.kind ?? "expense",
     recurring: normalizeRecurring(e.recurring),
   }));
+  /* Null plans means "not loaded", not "no plans exist" — healing against an
+     empty roster would strip every live assignment. */
+  const allExpenses = livePlans
+    ? releaseOrphanedPlanRefs(decodedExpenses, livePlans)
+    : decodedExpenses;
   const expenses = useMemo(
     () => (activeWallet ? allExpenses.filter((e) => e.walletId === activeWallet.id) : []),
     [allExpenses, activeWallet],
@@ -332,17 +359,42 @@ export function useLedger(walletAddress: string) {
   });
 
   const savingsTxns = useMemo(() => {
-    const all = (savingsAllQuery.data ?? []).map((e) => ({
+    const decoded = (savingsAllQuery.data ?? []).map((e) => ({
       ...e,
       kind: e.kind ?? "expense",
       recurring: normalizeRecurring(e.recurring),
     }));
+    const all = livePlans ? releaseOrphanedPlanRefs(decoded, livePlans) : decoded;
     return all.filter((e) => {
       if (activeWallet && e.walletId !== activeWallet.id) return false;
       const cls = classifyTx(e, categoryIndex);
       return cls === "savings" || cls === "withdrawal";
     });
-  }, [savingsAllQuery.data, categoryIndex, activeWallet]);
+  }, [savingsAllQuery.data, categoryIndex, activeWallet, livePlans]);
+
+  /**
+   * Subcategories with transaction history, across full history and every
+   * wallet. A category holding any of these is archived rather than deleted, so
+   * its past transactions keep resolving to the right type.
+   *
+   * `savingsAllQuery` fetches with no `from` and no `walletId`, so its rows are
+   * every expense on the account — which is the point. Deriving this from the
+   * windowed, wallet-scoped `expenses` let a category whose deposits sat in
+   * another wallet or predated the lookback be hard-deleted, silently
+   * reclassifying that history as spending and dropping its balance out of
+   * Piggies entirely.
+   *
+   * Null while the unbounded query is still in flight: the caller treats that
+   * as "everything is in use", because permitting a delete on a partial answer
+   * is exactly the failure this guards against.
+   */
+  const usedSubIds = useMemo(() => {
+    if (!savingsAllQuery.isSuccess) return null;
+    const subs = new Set((savingsAllQuery.data ?? []).map((e) => e.sub));
+    for (const e of expensesQuery.data ?? []) subs.add(e.sub);
+
+    return subs;
+  }, [savingsAllQuery.isSuccess, savingsAllQuery.data, expensesQuery.data]);
 
   const eventsQuery = useQuery({
     queryKey: keys.events(wallet, month),
@@ -435,16 +487,6 @@ export function useLedger(walletAddress: string) {
           return decodeTodoList(wire, cryptoKey);
         }),
       );
-    },
-    enabled: cryptoReady && !!profileQuery.data,
-  });
-
-  const capitalPlansQuery = useQuery({
-    queryKey: keys.capitalPlans(wallet),
-    queryFn: async () => {
-      const { capitalPlans } = await api.capitalPlans.list();
-      const cryptoKey = requireKey(wallet);
-      return Promise.all(capitalPlans.map((wire) => decodeCapitalPlan(wire, cryptoKey)));
     },
     enabled: cryptoReady && !!profileQuery.data,
   });
@@ -915,6 +957,15 @@ export function useLedger(walletAddress: string) {
       queryClient.setQueryData<CapitalPlan[]>(keys.capitalPlans(wallet), (prev = []) =>
         prev.filter((p) => p.id !== id),
       );
+      /* Mirror the server's release into both expense caches so piggy balances
+         recover now rather than after savingsAll's staleTime: `expenses` is
+         windowed and feeds Insights, `savingsAll` is full history and feeds
+         Piggies and the Capitals pot. */
+      const release = (prev: Expense[] = []) =>
+        prev.map((e) => (e.capitalPlanId === id ? { ...e, capitalPlanId: undefined } : e));
+      queryClient.setQueryData<Expense[]>(keys.expenses(wallet), release);
+      queryClient.setQueryData<Expense[]>(keys.savingsAll(wallet), release);
+      void queryClient.invalidateQueries({ queryKey: keys.savingsAll(wallet) });
     },
   });
 
@@ -1008,6 +1059,7 @@ export function useLedger(walletAddress: string) {
     allExpenses,
     expenses,
     savingsTxns,
+    usedSubIds,
     savingsLoading: savingsAllQuery.isLoading,
     events: eventsQuery.data ?? [],
     todoLists: todoListsQuery.data ?? [],

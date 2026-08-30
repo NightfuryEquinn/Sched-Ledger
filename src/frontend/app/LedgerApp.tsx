@@ -32,7 +32,7 @@ import {
 } from "@/frontend/views";
 import { EventModal, Schedule } from "@/frontend/views/Schedule";
 import type { Piggy, Piglet } from "@/frontend/lib/piggies";
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 
 /* Own-file views, deferred until first opened — cuts their deps (mermaid, etc) from the initial load. */
 const CategoriesView = lazy(() =>
@@ -216,17 +216,6 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
       ledger.setMonth(CURRENT_MONTH_KEY);
     }
   }, [ledger.isLoading, ledger.error, ledger.profile, ledger.setMonth]);
-
-  /**
-   * Subcategories with transaction history. A category holding any of these is
-   * archived rather than deleted, so its past transactions keep resolving to
-   * the right type — deleting a savings envelope outright would silently
-   * reclassify its whole history as spending.
-   */
-  const usedSubIds = useMemo(
-    () => new Set(ledger.expenses.map((e) => e.sub)),
-    [ledger.expenses],
-  );
 
   if (ledger.isLoading) {
     return (
@@ -449,16 +438,74 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
     );
   };
 
-  const deleteExpense = async (id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) => {
-    const linkedEvent = events.find((ev) => ev.expenseId === id);
-    const linkedExpense = allExpenses.find((expense) => expense.id === id);
+  /**
+   * Drop a Capital item's link to an expense that no longer exists.
+   *
+   * The checkbox stands — deleting the ledger row does not un-pay the venue —
+   * but `actualCost` claimed a figure the ledger no longer has, so the item
+   * falls back to its estimate (`planPaidTotal` already does that when
+   * `actualCost` is unset). The plan is E2EE, so no server cascade can reach it.
+   */
+  const unlinkCapitalItems = async (deletedIds: string[]) => {
+    const gone = new Set(deletedIds);
 
-    await ledger.deleteExpense(id, opts);
+    for (const plan of ledger.capitalPlans) {
+      if (!plan.items.some((i) => i.loggedExpenseId && gone.has(i.loggedExpenseId))) continue;
 
-    if (linkedEvent) {
-      const occurrenceIso = linkedExpense?.date ?? linkedEvent.date;
-      await ledger.saveEvent(restoreHoldForOccurrence(linkedEvent, occurrenceIso));
+      const items = plan.items.map((i) => {
+        if (!i.loggedExpenseId || !gone.has(i.loggedExpenseId)) return i;
+        const { loggedExpenseId: _dropped, actualCost: _stale, ...rest } = i;
+
+        return rest;
+      });
+
+      try {
+        await ledger.saveCapitalPlan({ id: plan.id, items });
+      } catch {
+        /* Best-effort: the expense is already deleted. */
+      }
     }
+  };
+
+  /* A fill whose logged expense was deleted must offer "Log" again. Same
+     resolution the event modal does before showing "View Linked Payment". */
+  const liveExpenseIds = new Set(allExpenses.map((e) => e.id));
+
+  const deleteExpense = async (id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) => {
+    /* Snapshot the dates before the delete — the rows are gone afterwards. */
+    const datesById = new Map(allExpenses.map((e) => [e.id, e.date]));
+
+    const res = await ledger.deleteExpense(id, opts);
+    /* A skipped occurrence is gone from every read path too, so its links are
+       dead as well — and the server unlinks it for the same reason. */
+    const affected = [
+      ...(res?.deletedIds ?? []),
+      ...(res?.skippedId ? [res.skippedId] : []),
+    ];
+    const deletedIds = affected.length ? affected : [id];
+
+    /*
+     * The server clears events.expenseId and vehicleFills.expenseId for every
+     * deleted row. Repeating events also track release in
+     * `budgetHoldReleasedDates`, which lives inside the encrypted payload, so
+     * only the client can restore those — do it for every deleted id, not just
+     * the one clicked, or a "delete all" leaves the rest of the series' holds
+     * released forever. An event outside the month currently loaded is still
+     * missed; the server-side unlink covers the once-event case, which is the
+     * only one `isHoldReleased` reads expenseId for.
+     */
+    for (const deletedId of deletedIds) {
+      const linkedEvent = events.find((ev) => ev.expenseId === deletedId);
+      if (!linkedEvent) continue;
+      const occurrenceIso = datesById.get(deletedId) ?? linkedEvent.date;
+      try {
+        await ledger.saveEvent(restoreHoldForOccurrence(linkedEvent, occurrenceIso));
+      } catch {
+        /* Best-effort: the expense is already deleted. */
+      }
+    }
+
+    await unlinkCapitalItems(deletedIds);
 
     setModal(null);
   };
@@ -606,7 +653,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
             <CategoriesView
               categoryIndex={ledger.categoryIndex}
               onSave={ledger.saveCategories}
-              usedSubIds={usedSubIds}
+              usedSubIds={ledger.usedSubIds}
             />
           )}
           {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}
@@ -644,6 +691,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
               onSaveFill={ledger.saveVehicleFill}
               onDeleteFill={ledger.deleteVehicleFill}
               onLogFill={logFuelFill}
+              linkedExpenseIds={liveExpenseIds}
             />
           )}
           {view === "insights" && (

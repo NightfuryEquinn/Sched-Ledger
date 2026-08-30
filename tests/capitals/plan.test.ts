@@ -14,6 +14,7 @@ import {
   planProgress,
   planRemainingNeed,
   planSavedTotal,
+  releaseOrphanedPlanRefs,
   planTotal,
   planUnpaidTotal,
   planUnspentTotal,
@@ -487,6 +488,51 @@ describe("planMoney", () => {
       outstanding: 6000,
       remainingNeed: 6000,
     });
+  });
+});
+
+describe("releaseOrphanedPlanRefs", () => {
+  const live = plan({ id: "p1" });
+
+  test("strips a capitalPlanId matching no live plan", () => {
+    const txns = [savingsTx("2026-06-01", 500, "gone")];
+    const [released] = releaseOrphanedPlanRefs(txns, [live]);
+
+    expect(released!.capitalPlanId).toBeUndefined();
+  });
+
+  test("keeps a capitalPlanId that still resolves", () => {
+    const txns = [savingsTx("2026-06-01", 500, "p1")];
+    const [kept] = releaseOrphanedPlanRefs(txns, [live]);
+
+    expect(kept!.capitalPlanId).toBe("p1");
+  });
+
+  test("leaves rows carrying no plan id alone", () => {
+    const txns = [savingsTx("2026-06-01", 500)];
+
+    expect(releaseOrphanedPlanRefs(txns, [live])[0]!.capitalPlanId).toBeUndefined();
+  });
+
+  test("returns the same array when nothing is orphaned, so memos hold", () => {
+    const txns = [savingsTx("2026-06-01", 500, "p1"), savingsTx("2026-06-02", 100)];
+
+    expect(releaseOrphanedPlanRefs(txns, [live])).toBe(txns);
+  });
+
+  test("releases everything when no plans have loaded", () => {
+    const txns = [savingsTx("2026-06-01", 500, "p1")];
+
+    expect(releaseOrphanedPlanRefs(txns, [])[0]!.capitalPlanId).toBeUndefined();
+  });
+
+  test("a released deposit counts toward its plan again once healed", () => {
+    // The end-to-end point: an orphaned row is skipped by its piggy and claimed
+    // by no plan, so it counts nowhere until the id is cleared.
+    const orphaned = [savingsTx("2026-06-01", 500, "gone")];
+
+    expect(planSavedTotal(live, orphaned, INDEX)).toBe(0);
+    expect(releaseOrphanedPlanRefs(orphaned, [live])[0]!.capitalPlanId).toBeUndefined();
   });
 });
 

@@ -23,8 +23,13 @@ import { useEffect, useRef, useState } from "react";
 type CategoriesViewProps = {
   categoryIndex: CategoryIndex;
   onSave: (categories: Category[]) => Promise<unknown>;
-  /** Subcategory ids that have transaction history — drives archive vs delete. */
-  usedSubIds?: Set<string>;
+  /**
+   * Subcategory ids that have transaction history — drives archive vs delete.
+   * `null` means the history is not loaded yet, which is treated as "in use":
+   * deleting on a partial answer is what hard-deletes a category whose
+   * transactions simply had not arrived.
+   */
+  usedSubIds: Set<string> | null;
 };
 
 type EditorMode =
@@ -83,7 +88,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
 
   /** True when any of the category's subs carries transaction history. */
   const catInUse = (cat: Category) =>
-    Boolean(usedSubIds && cat.subs.some((s) => usedSubIds.has(s.id)));
+    usedSubIds === null || cat.subs.some((s) => usedSubIds.has(s.id));
 
   /** Last remaining live category of its type cannot be retired. */
   const isLastOfType = (cat: Category) => {
@@ -191,7 +196,12 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
    * the sub before it reaches the category.
    */
   const removeSub = async (catId: string, subId: string) => {
-    if (usedSubIds?.has(subId)) {
+    if (usedSubIds === null) {
+      setError("Still loading your transaction history — try again in a moment.");
+
+      return;
+    }
+    if (usedSubIds.has(subId)) {
       setError("That subcategory has transactions — archive its category instead.");
 
       return;

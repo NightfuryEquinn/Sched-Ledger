@@ -30,6 +30,8 @@ type VehiclesProps = {
   onSaveFill: (data: Omit<FuelFill, "id"> & { id?: string }) => Promise<FuelFill>;
   onDeleteFill: (id: string) => Promise<unknown>;
   onLogFill: (vehicle: Vehicle, fill: FuelFill) => void;
+  /** Expense ids that still exist, so a fill whose payment was deleted can be re-logged. */
+  linkedExpenseIds: Set<string>;
 };
 
 type EditorMode =
@@ -51,6 +53,7 @@ export function Vehicles({
   onSaveFill,
   onDeleteFill,
   onLogFill,
+  linkedExpenseIds,
 }: VehiclesProps) {
   const [vehicleList, setVehicleList] = useState(vehicles);
   const [fillList, setFillList] = useState(fills);
@@ -246,6 +249,10 @@ export function Vehicles({
     const vehicleId = editor.type === "add-fill" ? editor.vehicleId : fillList.find((f) => f.id === editor.fillId)?.vehicleId;
     if (!vehicleId) return;
 
+    /* Carry the ledger link through: encodeVehicleFillUpdate sends
+       `expenseId ?? null`, so omitting it here reads as an explicit unlink and
+       silently re-enables Log — letting the same fill be logged twice. */
+    const existingFill = editor.type === "edit-fill" ? fillList.find((f) => f.id === editor.fillId) : undefined;
     const payload = {
       vehicleId,
       date: fillDate,
@@ -254,6 +261,7 @@ export function Vehicles({
       odometer: fillOdometer ? Number(fillOdometer) : undefined,
       station: fillStation.trim(),
       partial: fillPartial,
+      ...(existingFill?.expenseId ? { expenseId: existingFill.expenseId } : {}),
     };
 
     const saved =
@@ -572,7 +580,7 @@ export function Vehicles({
                     <button type="button" className="capital-item-cost" disabled={busy} onClick={() => openEditFill(fill)}>
                       {money(fill.price)}
                     </button>
-                    {!fill.expenseId ? (
+                    {!fill.expenseId || !linkedExpenseIds.has(fill.expenseId) ? (
                       <button type="button" className="ghost-btn sm" onClick={() => onLogFill(selectedVehicle, fill)}>
                         Log
                       </button>

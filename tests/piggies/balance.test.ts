@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { buildCategoryIndex } from "@/frontend/lib/categories";
+import { releaseOrphanedPlanRefs } from "@/frontend/lib/capitals";
 import { buildPiggies } from "@/frontend/lib/piggies";
 import type { Category, Expense } from "@/frontend/lib/types";
 
@@ -154,5 +155,19 @@ describe("buildPiggies balance", () => {
 
     expect(piggy!.balance).toBe(500);
     expect(piggy!.deposited).toBe(500);
+  });
+
+  test("a released deposit counts toward its piggy again", () => {
+    // The exclusion is a truthiness check, so a plan id left behind by a
+    // deleted plan hides the money here and claims it for no plan either.
+    const orphaned = [
+      tx("2026-06-01", 500, "sub_rainy_day"),
+      { ...tx("2026-06-02", 300, "sub_rainy_day"), capitalPlanId: "plan_gone" },
+    ];
+    const released = releaseOrphanedPlanRefs(orphaned, []);
+    const [piggy] = buildPiggies(released, INDEX).filter((p) => p.catId === "cat_emergency");
+
+    expect(piggy!.balance).toBe(800);
+    expect(piggy!.deposited).toBe(800);
   });
 });

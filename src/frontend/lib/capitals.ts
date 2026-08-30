@@ -96,6 +96,27 @@ export function planSavedTotal(plan: CapitalPlan, txns: Expense[], index?: Categ
   return roundMoney(total);
 }
 
+/**
+ * Strip a `capitalPlanId` that no longer resolves to a plan.
+ *
+ * A dangling id is skipped by its piggy — the exclusion tests are truthiness
+ * checks — and claimed by no plan, whose inclusion tests are id equality, so the
+ * deposit counts nowhere at all. Releasing it puts the money back in its savings
+ * envelope. Deleting a plan now clears these server-side; this heals ids left
+ * behind by deletes that predate that, or by a delete on another device.
+ *
+ * Returns the input array unchanged when nothing is orphaned, so callers keep
+ * their memo identity.
+ */
+export function releaseOrphanedPlanRefs<T extends Expense>(txns: T[], plans: CapitalPlan[]): T[] {
+  const live = new Set(plans.map((p) => p.id));
+  if (!txns.some((e) => e.capitalPlanId && !live.has(e.capitalPlanId))) return txns;
+
+  return txns.map((e) =>
+    e.capitalPlanId && !live.has(e.capitalPlanId) ? { ...e, capitalPlanId: undefined } : e,
+  );
+}
+
 /** Budgeted cost not yet paid: max(0, budget − paid). */
 export function planOutstandingCost(plan: CapitalPlan): number {
   return roundMoney(Math.max(0, planEffectiveBudget(plan) - planPaidTotal(plan)));

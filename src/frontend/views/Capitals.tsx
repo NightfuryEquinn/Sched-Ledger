@@ -8,6 +8,7 @@ import {
   planIsOverbudget,
   planMoney,
   planMonthlySave,
+  planSavedTotal,
   planIsUpcoming,
   plansTotalMonthlySave,
 } from "@/frontend/lib/capitals";
@@ -245,12 +246,23 @@ export function Capitals({
     }
   };
 
-  /** Flip an item's paid state and persist. */
+  /**
+   * Flip an item's paid state and persist. Un-ticking also drops `actualCost`
+   * and the logged-expense link, which described a payment that is no longer
+   * being claimed — left behind, they would keep the item tied to a ledger row
+   * it no longer represents.
+   */
   const togglePaid = async (plan: CapitalPlan, item: CapitalItem) => {
     if (itemBusy) return;
     setItemBusy(true);
     try {
-      const items = plan.items.map((i) => (i.id === item.id ? { ...i, paid: !i.paid } : i));
+      const items = plan.items.map((i) => {
+        if (i.id !== item.id) return i;
+        if (!i.paid) return { ...i, paid: true };
+        const { actualCost: _cost, loggedExpenseId: _link, ...rest } = i;
+
+        return { ...rest, paid: false };
+      });
       await persistPlan({ id: plan.id, items });
     } finally {
       setItemBusy(false);
@@ -595,7 +607,15 @@ export function Capitals({
             confirmDelete.type === "plan"
               ? (() => {
                   const plan = plans.find((p) => p.id === confirmDelete.id);
-                  return `Delete "${plan?.name ?? ""}" and all ${plan?.items.length ?? 0} of its line items? This cannot be undone.`;
+                  if (!plan) return "Delete this plan? This cannot be undone.";
+                  const assigned = savingsTxns.filter((e) => e.capitalPlanId === plan.id).length;
+                  const saved = planSavedTotal(plan, savingsTxns, categoryIndex);
+                  /* Deleting releases them back to their savings envelope, so
+                     say where the money goes before it moves. */
+                  const released = assigned
+                    ? ` Its ${assigned} assigned ${assigned === 1 ? "deposit" : "deposits"} (${money(saved)}) return to your savings envelopes.`
+                    : "";
+                  return `Delete "${plan.name}" and all ${plan.items.length} of its line items?${released} This cannot be undone.`;
                 })()
               : (() => {
                   const plan = plans.find((p) => p.id === confirmDelete.planId);
