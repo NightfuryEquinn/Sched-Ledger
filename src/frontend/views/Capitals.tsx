@@ -435,8 +435,15 @@ export function Capitals({
                   <button type="button" onClick={() => openEditPlan(plan)} aria-label="Edit Plan">
                     <Icon name="edit" size={15} />
                   </button>
-                  <button type="button" className="danger" disabled={busy} onClick={() => setConfirmDelete({ type: "plan", id: plan.id })} aria-label="Delete Plan">
-                    {busy ? "Removing…" : <Icon name="trash" size={15} />}
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={busy}
+                    onClick={() => setConfirmDelete({ type: "plan", id: plan.id })}
+                    aria-label={busy ? "Removing…" : "Delete Plan"}
+                    title={busy ? "Removing…" : "Delete Plan"}
+                  >
+                    <Icon name="trash" size={15} />
                   </button>
                 </div>
               </div>
