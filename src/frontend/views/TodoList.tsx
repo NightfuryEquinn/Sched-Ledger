@@ -1,5 +1,5 @@
 import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
-import { EmptyState, Icon } from "@/frontend/components/ui";
+import { ConfirmDialog, EmptyState, Icon } from "@/frontend/components/ui";
 import { slugId } from "@/frontend/lib/categories";
 import type { TodoList, TodoTask } from "@/frontend/lib/types";
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
@@ -41,6 +41,9 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
   const [taskDraft, setTaskDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<
+    { type: "list"; id: string } | { type: "task"; listId: string; taskId: string } | null
+  >(null);
   const taskSaveRef = useRef(false);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -252,7 +255,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                     type="button"
                     className="danger"
                     disabled={busy}
-                    onClick={() => removeList(active.id)}
+                    onClick={() => setConfirmDelete({ type: "list", id: active.id })}
                     aria-label={busy ? "Deleting…" : "Delete List"}
                   >
                     {busy ? "Deleting…" : <Icon name="trash" size={16} />}
@@ -280,7 +283,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                         type="button"
                         className="ghost-btn sm danger"
                         disabled={busy}
-                        onClick={() => removeTask(active.id, task.id)}
+                        onClick={() => setConfirmDelete({ type: "task", listId: active.id, taskId: task.id })}
                       >
                         {busy ? "Removing…" : "Remove"}
                       </button>
@@ -396,6 +399,30 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
             </div>
           </div>
         </div>
+      ) : null}
+
+      {confirmDelete ? (
+        <ConfirmDialog
+          title={confirmDelete.type === "list" ? "Delete List" : "Remove Task"}
+          message={
+            confirmDelete.type === "list"
+              ? (() => {
+                  const list = lists.find((l) => l.id === confirmDelete.id);
+                  return `Delete "${list?.name ?? ""}" and all ${list?.tasks.length ?? 0} of its tasks? This cannot be undone.`;
+                })()
+              : (() => {
+                  const list = lists.find((l) => l.id === confirmDelete.listId);
+                  const task = list?.tasks.find((t) => t.id === confirmDelete.taskId);
+                  return `Remove "${task?.title ?? ""}"? This cannot be undone.`;
+                })()
+          }
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={async () => {
+            if (confirmDelete.type === "list") await removeList(confirmDelete.id);
+            else await removeTask(confirmDelete.listId, confirmDelete.taskId);
+            setConfirmDelete(null);
+          }}
+        />
       ) : null}
     </div>
   );

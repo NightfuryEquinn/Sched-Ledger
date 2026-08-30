@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CurrencyPicker } from "./CurrencyPicker";
 import { FadeIn } from "@/frontend/components/FadeIn";
-import { Icon, Segmented, WalletPicker } from "./ui";
+import { ConfirmDialog, Icon, Segmented, WalletPicker } from "./ui";
 
 /*
  * Wallets
@@ -50,15 +50,16 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   const startingBalanceIsExpression = startingBalanceEvaluated !== null && !isPlainNumber(startingBalance);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) requestClose(onClose); };
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy && !confirmDelete) requestClose(onClose); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [busy, onClose, requestClose]);
+  }, [busy, confirmDelete, onClose, requestClose]);
 
   const startAdd = () => {
     setMode("add");
@@ -124,7 +125,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   const title = mode === "list" ? "Wallets" : mode === "add" ? "Add Wallet" : "Edit Wallet";
 
   return createPortal(
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) requestClose(onClose); }}>
+    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy && !confirmDelete) requestClose(onClose); }}>
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title}</h3>
@@ -261,7 +262,7 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                   <div className="dm-div" />
                   <span className="fld-label">Remove wallet</span>
                   <p className="dm-lead">Delete this wallet only if it has no transactions. This cannot be undone.</p>
-                  <button className="ghost-btn danger full" type="button" disabled={busy} onClick={() => remove(editId)}>
+                  <button className="ghost-btn danger full" type="button" disabled={busy} onClick={() => setConfirmDelete(true)}>
                     {busy ? "Deleting…" : "Delete Wallet"}
                   </button>
                 </>
@@ -277,6 +278,17 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
           )}
         </div>
       </div>
+      {confirmDelete ? (
+        <ConfirmDialog
+          title="Delete Wallet"
+          message="Delete this wallet? This cannot be undone."
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={async () => {
+            if (editId) await remove(editId);
+            setConfirmDelete(false);
+          }}
+        />
+      ) : null}
     </div>,
     document.body,
   );

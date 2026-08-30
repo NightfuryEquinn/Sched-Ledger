@@ -1,4 +1,4 @@
-import { Icon } from "@/frontend/components/ui";
+import { ConfirmDialog, Icon } from "@/frontend/components/ui";
 import { api, type ApiSession } from "@/frontend/lib/api";
 import { useModalMotion } from "@/frontend/lib/animate";
 import type { Account } from "@/frontend/lib/types";
@@ -47,6 +47,9 @@ export function DataPrivacyModal({
   const [sessions, setSessions] = useState<ApiSession[]>([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
+  const [confirmRevokeOthers, setConfirmRevokeOthers] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
@@ -192,13 +195,13 @@ export function DataPrivacyModal({
                     <div className="session-meta num">Last active {new Date(s.lastSeenAt).toLocaleString()}</div>
                   </div>
                   {!s.current ? (
-                    <button className="ghost-btn" type="button" disabled={sessionsBusy} onClick={() => revokeSession(s.id)}>{sessionsBusy ? "Revoking…" : "Revoke"}</button>
+                    <button className="ghost-btn" type="button" disabled={sessionsBusy} onClick={() => setConfirmRevoke(s.id)}>{sessionsBusy ? "Revoking…" : "Revoke"}</button>
                   ) : null}
                 </div>
               )) : <p className="dm-note">No active sessions found.</p>}
             </div>
             {sessions.some((s) => !s.current) ? (
-              <button className="ghost-btn full u-gap-top" type="button" disabled={sessionsBusy} onClick={revokeOthers}>
+              <button className="ghost-btn full u-gap-top" type="button" disabled={sessionsBusy} onClick={() => setConfirmRevokeOthers(true)}>
                 {sessionsBusy ? "Signing Out…" : "Sign Out All Other Devices"}
               </button>
             ) : null}
@@ -313,12 +316,51 @@ export function DataPrivacyModal({
           <div className="dm-sec">
             <span className="fld-label">Cookies &amp; local data</span>
             <p className="dm-lead">Sign out everywhere and remove Ledger data stored in this browser, including saved identities and preferences. Your ledger itself stays on the server — restore it anytime with your recovery phrase.</p>
-            <button className="ghost-btn danger full" type="button" disabled={clearBusy} onClick={clearEverything}>
+            <button className="ghost-btn danger full" type="button" disabled={clearBusy} onClick={() => setConfirmClear(true)}>
               {clearBusy ? "Clearing…" : "Clear Sessions, Cookies & Local Data"}
             </button>
           </div>
         </div>
       </div>
+      {confirmRevoke ? (
+        <ConfirmDialog
+          title="Revoke Session"
+          message={`Sign "${sessions.find((s) => s.id === confirmRevoke)?.device ?? "this device"}" out? It can sign back in anytime.`}
+          confirmLabel="Sign Out"
+          pendingLabel="Signing Out…"
+          onCancel={() => setConfirmRevoke(null)}
+          onConfirm={async () => {
+            await revokeSession(confirmRevoke);
+            setConfirmRevoke(null);
+          }}
+        />
+      ) : null}
+      {confirmRevokeOthers ? (
+        <ConfirmDialog
+          title="Sign Out Other Devices"
+          message="Sign out every device except this one? They can sign back in anytime."
+          confirmLabel="Sign Out"
+          pendingLabel="Signing Out…"
+          onCancel={() => setConfirmRevokeOthers(false)}
+          onConfirm={async () => {
+            await revokeOthers();
+            setConfirmRevokeOthers(false);
+          }}
+        />
+      ) : null}
+      {confirmClear ? (
+        <ConfirmDialog
+          title="Clear Local Data"
+          message="Sign out everywhere and remove Ledger data stored in this browser, including saved identities and preferences. Your ledger itself stays on the server — restore it anytime with your recovery phrase."
+          confirmLabel="Clear Data"
+          pendingLabel="Clearing…"
+          onCancel={() => setConfirmClear(false)}
+          onConfirm={async () => {
+            await clearEverything();
+            setConfirmClear(false);
+          }}
+        />
+      ) : null}
     </div>,
     document.body,
   );

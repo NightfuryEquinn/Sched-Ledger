@@ -1,5 +1,5 @@
 import { useEnter, useModalMotion } from "@/frontend/lib/animate";
-import { EmptyState, Icon, Segmented, glyphTint } from "@/frontend/components/ui";
+import { ConfirmDialog, EmptyState, Icon, Segmented, glyphTint } from "@/frontend/components/ui";
 import { DatePicker } from "@/frontend/components/DateTimePicker";
 import {
   nextCategoryColor,
@@ -58,6 +58,9 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   const [deadline, setDeadline] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<
+    { type: "cat"; id: string } | { type: "sub"; catId: string; subId: string } | null
+  >(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: !!editor });
@@ -408,7 +411,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                         type="button"
                         className="danger"
                         disabled={busy}
-                        onClick={() => removeCategory(cat.id)}
+                        onClick={() => (catInUse(cat) ? removeCategory(cat.id) : setConfirmDelete({ type: "cat", id: cat.id }))}
                         aria-label={busy ? (catInUse(cat) ? "Archiving" : "Deleting") : catInUse(cat) ? "Archive" : "Delete"}
                         title={
                           busy
@@ -438,7 +441,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                             <Icon name="edit" size={16} />
                           </button>
                           {cat.subs.length > 1 ? (
-                            <button type="button" className="danger" disabled={busy} onClick={() => removeSub(cat.id, sub.id)} aria-label={busy ? "Removing" : "Remove"} title={busy ? "Removing…" : "Remove"} tabIndex={filteredOut || !open ? -1 : undefined}>
+                            <button type="button" className="danger" disabled={busy} onClick={() => setConfirmDelete({ type: "sub", catId: cat.id, subId: sub.id })} aria-label={busy ? "Removing" : "Remove"} title={busy ? "Removing…" : "Remove"} tabIndex={filteredOut || !open ? -1 : undefined}>
                               <Icon name="trash" size={16} />
                             </button>
                           ) : null}
@@ -573,6 +576,26 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
             </div>
           </div>
         </div>
+      ) : null}
+      {confirmDelete ? (
+        <ConfirmDialog
+          title={confirmDelete.type === "cat" ? "Delete Category" : "Remove Subcategory"}
+          message={
+            confirmDelete.type === "cat"
+              ? `Delete "${categories.find((c) => c.id === confirmDelete.id)?.name ?? ""}"? This cannot be undone.`
+              : `Remove "${
+                  categories
+                    .find((c) => c.id === confirmDelete.catId)
+                    ?.subs.find((s) => s.id === confirmDelete.subId)?.name ?? ""
+                }" from ${categories.find((c) => c.id === confirmDelete.catId)?.name ?? "this category"}? This cannot be undone.`
+          }
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={async () => {
+            if (confirmDelete.type === "cat") await removeCategory(confirmDelete.id);
+            else await removeSub(confirmDelete.catId, confirmDelete.subId);
+            setConfirmDelete(null);
+          }}
+        />
       ) : null}
     </div>
   );
