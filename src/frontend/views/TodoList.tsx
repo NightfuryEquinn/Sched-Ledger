@@ -257,8 +257,9 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                     disabled={busy}
                     onClick={() => setConfirmDelete({ type: "list", id: active.id })}
                     aria-label={busy ? "Deleting…" : "Delete List"}
+                    title={busy ? "Deleting…" : "Delete List"}
                   >
-                    {busy ? "Deleting…" : <Icon name="trash" size={16} />}
+                    <Icon name="trash" size={16} />
                   </button>
                 </div>
               </div>
