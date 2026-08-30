@@ -2,12 +2,39 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sched Ledger — Your money and schedule, encrypted end-to-end</title>
 <meta name="description" content="Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and currencies, plan events with email and push reminders, and sign in with a Web3 wallet — no email or password required.">
+<link rel="canonical" href="https://nightfuryequinn.github.io/Sched-Ledger/">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="author" content="NightfuryEquinn">
+<meta name="theme-color" content="#0b0d12">
+
+<!-- Open Graph / Facebook / LinkedIn / WhatsApp / Discord -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sched Ledger">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://nightfuryequinn.github.io/Sched-Ledger/">
+<meta property="og:title" content="Sched Ledger — Your money and schedule, encrypted end-to-end">
+<meta property="og:description" content="A private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.">
+<meta property="og:image" content="https://nightfuryequinn.github.io/Sched-Ledger/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Sched Ledger — your money and schedule, encrypted end-to-end.">
+<meta property="og:see_also" content="https://sched-ledger.vercel.app">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sched Ledger — Your money and schedule, encrypted end-to-end">
+<meta name="twitter:description" content="A private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.">
+<meta name="twitter:image" content="https://nightfuryequinn.github.io/Sched-Ledger/og-image.png">
+<meta name="twitter:image:alt" content="Sched Ledger — your money and schedule, encrypted end-to-end.">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="icon" href="logo.png" type="image/x-icon" />
+<link rel="icon" href="logo.png" type="image/png" />
+<link rel="apple-touch-icon" href="logo.png" />
 <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,400..700;1,400..700&family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=Young+Serif&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -199,6 +226,24 @@
   .stat h3{font-family:var(--font-mono);font-size:2rem;font-weight:500;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;}
   .stat p{color:var(--text-dim);font-size:0.85rem;margin-top:6px;}
 
+  .faq-list{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-items:start;}
+  .faq-item{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px 22px;transition:border-color .2s;
+  }
+  .faq-item[open]{border-color:var(--accent2);}
+  .faq-item summary{
+    cursor:pointer;font-weight:700;font-size:0.98rem;list-style:none;
+    display:flex;gap:14px;align-items:flex-start;justify-content:space-between;
+  }
+  .faq-item summary::-webkit-details-marker{display:none;}
+  .faq-item summary::after{
+    content:"+";color:var(--accent);font-family:var(--font-mono);
+    font-size:1.15rem;line-height:1.3;flex-shrink:0;
+  }
+  .faq-item[open] summary::after{content:"\2212";}
+  .faq-item p{color:var(--text-dim);font-size:0.92rem;margin-top:12px;}
+
   .cta-final{padding:96px 24px;text-align:center;}
   .cta-final h2{
     font-family:var(--font-display);
@@ -217,6 +262,7 @@
     .grid3{grid-template-columns:1fr;}
     .split-inner, .privacy-inner{grid-template-columns:1fr;}
     .stats-grid{grid-template-columns:repeat(2,1fr);}
+    .faq-list{grid-template-columns:1fr;}
     .nav-links{display:none;}
     .hero{padding:72px 20px 56px;}
     .features, .split, .privacy{padding:56px 20px;}
@@ -239,6 +285,8 @@
     .features, .split, .privacy{padding:48px 16px;}
     .section-head h2{font-size:1.5rem;}
     .card{padding:20px;}
+    .faq-item{padding:18px;}
+    .faq-item summary{font-size:0.92rem;}
     .split h2, .privacy h2{font-size:1.4rem;}
     .mock{padding:18px;}
     .mock-row{font-size:0.84rem;padding:10px 0;}
@@ -258,29 +306,175 @@
     .stats-grid{grid-template-columns:1fr;}
   }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author",
+      "name": "NightfuryEquinn",
+      "url": "https://github.com/NightfuryEquinn"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#website",
+      "url": "https://nightfuryequinn.github.io/Sched-Ledger/",
+      "name": "Sched Ledger",
+      "description": "Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.",
+      "inLanguage": "en",
+      "publisher": {
+        "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#app",
+      "name": "Sched Ledger",
+      "url": "https://nightfuryequinn.github.io/Sched-Ledger/",
+      "installUrl": "https://sched-ledger.vercel.app",
+      "sameAs": [
+        "https://sched-ledger.vercel.app",
+        "https://github.com/NightfuryEquinn/Sched-Ledger"
+      ],
+      "applicationCategory": "FinanceApplication",
+      "applicationSubCategory": "Personal budgeting and expense tracking",
+      "operatingSystem": "Web browser, Android, iOS",
+      "browserRequirements": "Requires a modern browser with WebCrypto support",
+      "softwareVersion": "4.1.1",
+      "description": "Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.",
+      "image": "https://nightfuryequinn.github.io/Sched-Ledger/og-image.png",
+      "screenshot": "https://nightfuryequinn.github.io/Sched-Ledger/og-image.png",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "author": {
+        "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
+      },
+      "publisher": {
+        "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://sched-ledger.vercel.app"
+      },
+      "featureList": [
+        "End-to-end encrypted ledger — AES-256-GCM in the browser, ciphertext on the server",
+        "Web3 wallet sign-in with no email address or password",
+        "Multiple wallets across 29 currencies",
+        "Built-in budget calculator and custom categories",
+        "Recurring transactions and recurring scheduled events",
+        "Calendar and agenda views with budget holds for upcoming bills",
+        "Email and Web Push reminders with per-event lead times",
+        "Piggies savings goals and Capitals plans for large one-off expenses",
+        "Spending, saving, transaction, and fuel insights",
+        "Vehicles with fuel and charging cost tracking",
+        "Budget alerts and multiple named to-do lists",
+        "Encrypted backup, CSV export and import",
+        "Installable PWA with offline reads"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Sched Ledger really end-to-end encrypted?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are encrypted with AES-256-GCM in your browser before anything reaches the database, so the server only ever stores ciphertext it cannot read. Two deliberate exceptions stay in plaintext: day-level dates, which are needed to fire reminders on time, and — only on events where you switch reminders on — a readable copy of what that email or push notification will say."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need an email address or a password?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. You sign in with an in-browser Web3 wallet, created or restored from a 12- or 24-word recovery phrase, using a cryptographic challenge instead of credentials. There is no signup form, no password to reuse, and no email address on file unless you switch on email reminders yourself."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to buy crypto or pay gas fees?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. The wallet is used purely as an identity key to sign in and derive your encryption key — Sched Ledger never sends a transaction, never touches a blockchain, and never asks you to fund anything. You can use a ledger-only key so your sign-in address is not correlated with any on-chain activity."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is this different from other budgeting apps?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Most expense trackers keep your data in plaintext on their servers and ask for an email address, a password, and often a bank connection. Sched Ledger asks for none of that: no signup form, no bank linking, and no readable server-side copy of your spending. What you trade for it is recovery — the key is yours alone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Sched Ledger free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes — every feature is free on the official hosted app. The source is public for transparency under a proprietary license, which means it is not free to self-host, rebrand, or offer as a competing service; those uses need a written commercial agreement."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens if I lose my recovery phrase?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "There is no recovery. Because your ledger is encrypted with a key only you hold, nobody — the operator included — can restore access or read your data. Keep the phrase somewhere safe, set a device passphrase so the key is wrapped on each browser, and download an encrypted backup from Account → Exports & imports."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I install Sched Ledger on my phone?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. It is an installable PWA — add it to your home screen on Android or iOS and it runs like a native app, with Web Push reminders delivered even when it is closed. An IndexedDB ciphertext cache keeps your ledger readable offline; writing new entries still needs a connection."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which currencies are supported, and how does conversion work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can create wallets in any of 29 currencies and run several side by side, each with its own budgets and categories. Insights converts across them using live rates so cross-wallet totals stay comparable, while individual entries always keep the currency you recorded them in."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
 <div class="glow"></div>
 
 <header>
-  <nav>
-    <div class="brand"><img src="logo.png" alt="Sched Ledger logo">Sched Ledger</div>
+  <nav aria-label="Primary">
+    <div class="brand"><img src="logo.png" alt="Sched Ledger logo" width="30" height="30" decoding="async">Sched Ledger</div>
     <div class="nav-links">
       <a href="#features">Ledger</a>
       <a href="#schedule">Schedule</a>
       <a href="#goals">Goals</a>
       <a href="#privacy">Privacy</a>
+      <a href="#faq">FAQ</a>
       <a href="#stack">Stack</a>
     </div>
     <a class="nav-cta" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Open app</a>
   </nav>
 </header>
 
+<main>
+
 <section class="hero">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="wrap">
-    <div class="badge"><span class="ver">v4.0.0</span> <span class="dot"></span> End-to-end encrypted · Web3 sign-in · No email or password</div>
+    <div class="badge"><span class="ver">v4.1.1</span> <span class="dot"></span> End-to-end encrypted · Web3 sign-in · No email or password</div>
     <h1>Your money and schedule,<br><span class="grad">encrypted end-to-end.</span></h1>
     <p>Sched Ledger is a private expense ledger, calendar, and to-do app. Track spending across wallets and currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.</p>
     <div class="hero-ctas">
@@ -457,6 +651,50 @@
   </div>
 </section>
 
+<section class="features" id="faq">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">FAQ</div>
+      <h2>Questions worth asking before you trust an app with your money</h2>
+      <p>What Sched Ledger encrypts, what it still needs in plaintext, and what you give up in exchange.</p>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>Is Sched Ledger really end-to-end encrypted?</summary>
+        <p>Yes. Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are encrypted with AES-256-GCM in your browser before anything reaches the database, so the server only ever stores ciphertext it cannot read. Two deliberate exceptions stay in plaintext: day-level dates, which are needed to fire reminders on time, and — only on events where you switch reminders on — a readable copy of what that email or push notification will say.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Do I need an email address or a password?</summary>
+        <p>No. You sign in with an in-browser Web3 wallet, created or restored from a 12- or 24-word recovery phrase, using a cryptographic challenge instead of credentials. There is no signup form, no password to reuse, and no email address on file unless you switch on email reminders yourself.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Do I need to buy crypto or pay gas fees?</summary>
+        <p>No. The wallet is used purely as an identity key to sign in and derive your encryption key — Sched Ledger never sends a transaction, never touches a blockchain, and never asks you to fund anything. You can use a ledger-only key so your sign-in address is not correlated with any on-chain activity.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How is this different from other budgeting apps?</summary>
+        <p>Most expense trackers keep your data in plaintext on their servers and ask for an email address, a password, and often a bank connection. Sched Ledger asks for none of that: no signup form, no bank linking, and no readable server-side copy of your spending. What you trade for it is recovery — the key is yours alone.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is Sched Ledger free?</summary>
+        <p>Yes — every feature is free on the official hosted app. The source is public for transparency under a proprietary license, which means it is not free to self-host, rebrand, or offer as a competing service; those uses need a written commercial agreement.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What happens if I lose my recovery phrase?</summary>
+        <p>There is no recovery. Because your ledger is encrypted with a key only you hold, nobody — the operator included — can restore access or read your data. Keep the phrase somewhere safe, set a device passphrase so the key is wrapped on each browser, and download an encrypted backup from Account → Exports &amp; imports.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Can I install Sched Ledger on my phone?</summary>
+        <p>Yes. It is an installable PWA — add it to your home screen on Android or iOS and it runs like a native app, with Web Push reminders delivered even when it is closed. An IndexedDB ciphertext cache keeps your ledger readable offline; writing new entries still needs a connection.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Which currencies are supported, and how does conversion work?</summary>
+        <p>You can create wallets in any of 29 currencies and run several side by side, each with its own budgets and categories. Insights converts across them using live rates so cross-wallet totals stay comparable, while individual entries always keep the currency you recorded them in.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
 <section class="features" id="stack">
   <div class="wrap">
     <div class="section-head">
@@ -483,25 +721,29 @@
   </div>
 </section>
 
+</main>
+
 <footer>
   <div class="wrap">
     <div class="footer-inner">
-      <div class="brand"><img src="logo.png" alt="Sched Ledger logo" style="width:26px;height:26px;border-radius:7px;">Sched Ledger</div>
+      <div class="brand"><img src="logo.png" alt="Sched Ledger logo" width="26" height="26" loading="lazy" decoding="async" style="width:26px;height:26px;border-radius:7px;">Sched Ledger</div>
       <div class="footer-links">
         <a href="https://github.com/NightfuryEquinn/Sched-Ledger" target="_blank" rel="noopener">GitHub</a>
         <a href="#features">Ledger</a>
         <a href="#schedule">Schedule</a>
         <a href="#goals">Goals</a>
         <a href="#privacy">Privacy</a>
+        <a href="#faq">FAQ</a>
       </div>
     </div>
-    <p class="foot-note">Sched Ledger v4.0.0 — private expense ledger, schedule, and to-do app. E2EE by default. Source public for transparency under the <a href="https://github.com/NightfuryEquinn/Sched-Ledger/blob/develop/LICENSE" target="_blank" rel="noopener" style="text-decoration:underline;">Sched Ledger Proprietary License</a>. Licensing: <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.</p>
+    <p class="foot-note">Sched Ledger v4.1.1 — private expense ledger, schedule, and to-do app. E2EE by default. Source public for transparency under the <a href="https://github.com/NightfuryEquinn/Sched-Ledger/blob/develop/LICENSE" target="_blank" rel="noopener" style="text-decoration:underline;">Sched Ledger Proprietary License</a>. Licensing: <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.</p>
   </div>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-(function(){
+/* Deferred scripts run in order before DOMContentLoaded, so THREE is ready here. */
+document.addEventListener('DOMContentLoaded', function(){
   if (typeof THREE === 'undefined') return;
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -596,7 +838,7 @@
       renderer.setSize(w, h);
     });
   })();
-})();
+});
 </script>
 
 </body>

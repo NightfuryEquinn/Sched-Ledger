@@ -1,0 +1,6 @@
+# Sched Ledger — hosted app
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://sched-ledger.vercel.app/sitemap.xml

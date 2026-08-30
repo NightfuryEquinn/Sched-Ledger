@@ -1,5 +1,7 @@
 # Sched Ledger
 
+**[Website](https://nightfuryequinn.github.io/Sched-Ledger/)** · **[Open the app](https://sched-ledger.vercel.app)**
+
 Private expense ledger, schedule, and to-do app. Track spending across multiple wallets and currencies, plan events with email and push reminders, and sign in with a Web3 wallet — no email or password required.
 
 Built with **Bun**, **Hono**, **MongoDB**, and **React**.

@@ -1,23 +1,29 @@
 {
-  "name": "Sched Ledger",
+  "id": "/",
+  "name": "Sched Ledger — Private, encrypted expense ledger and schedule",
   "short_name": "Sched Ledger",
-  "description": "Private expense ledger, schedule, and to-do — unlock with your key.",
+  "description": "Private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — no email or password required.",
+  "categories": ["finance", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0f1419",
   "theme_color": "#1a2332",
   "icons": [
     {
       "src": "/logo.png",
-      "sizes": "192x192",
+      "sizes": "2000x2000",
       "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "/logo.png",
-      "sizes": "512x512",
+      "sizes": "2000x2000",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }
