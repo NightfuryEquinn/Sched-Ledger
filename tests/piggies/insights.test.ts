@@ -249,12 +249,8 @@ describe("computeSavingsInsights capital allocation", () => {
 });
 
 describe("computeSavingsInsights capital pace", () => {
-  test("a plan with no budget has nothing to judge pace against", () => {
-    const plan = plan_({
-      initialBudget: undefined,
-      targetDate: "2026-12-01",
-      items: [{ id: "i1", name: "Rings", estimatedCost: 800, paid: true }],
-    });
+  test("a plan with neither a budget nor items has nothing to judge pace against", () => {
+    const plan = plan_({ initialBudget: undefined, targetDate: "2026-12-01", items: [] });
     const txns = [{ ...tx("2026-07-01", 300, "sub_rainy_day"), capitalPlanId: plan.id }];
     const insights = withPlans(txns, [plan]);
     const pace = insights.perPlan[0]!;
@@ -262,9 +258,46 @@ describe("computeSavingsInsights capital pace", () => {
     expect(pace.onTrack).toBeNull();
     expect(pace.requiredMonthly).toBeNull();
     expect(pace.funded).toBe(false);
-    // Paid items with no budget to measure them against are not "over" anything.
+    // Nothing to be over, so paid items are not flagged.
     expect(pace.overbudget).toBe(false);
+    expect(pace.saved).toBe(300);
     expect(pace.unspent).toBe(300);
+  });
+
+  test("a plan with no typed budget is measured against its item estimates", () => {
+    const plan = plan_({
+      initialBudget: undefined,
+      targetDate: "2026-12-01",
+      items: [
+        { id: "i1", name: "Rings", estimatedCost: 800, paid: true },
+        { id: "i2", name: "Suit", estimatedCost: 400, paid: false },
+      ],
+    });
+    const txns = [{ ...tx("2026-07-01", 300, "sub_rainy_day"), capitalPlanId: plan.id }];
+    const pace = withPlans(txns, [plan]).perPlan[0]!;
+
+    // Budget 1200 from the estimates, 800 paid — the 300 pot went into that.
+    expect(pace.saved).toBe(300);
+    expect(pace.unspent).toBe(0);
+    expect(pace.remainingNeed).toBe(400);
+    expect(pace.overbudget).toBe(false);
+    expect(pace.funded).toBe(false);
+  });
+
+  test("a plan that paid an item from its own pot is not counted as funded twice", () => {
+    const plan = plan_({
+      initialBudget: 10000,
+      targetDate: "2026-12-01",
+      items: [{ id: "i1", name: "Venue", estimatedCost: 4000, paid: true, actualCost: 4000 }],
+    });
+    const txns = [{ ...tx("2026-07-01", 4000, "sub_rainy_day"), capitalPlanId: plan.id }];
+    const pace = withPlans(txns, [plan]).perPlan[0]!;
+
+    expect(pace.saved).toBe(4000);
+    expect(pace.unspent).toBe(0);
+    // The old (budget − paid − saved) formula answered 2000 here.
+    expect(pace.remainingNeed).toBe(6000);
+    expect(pace.funded).toBe(false);
   });
 
   test("steady assigned deposits project a completion month and read as on pace", () => {
@@ -299,16 +332,19 @@ describe("computeSavingsInsights capital pace", () => {
     expect(insights.headlines.some((h) => h.id === `capital-behind-${plan.id}`)).toBe(true);
   });
 
-  test("paid items and assigned savings together fund a plan", () => {
+  test("savings on top of a paid item fund the rest of the budget", () => {
     const plan = plan_({
       initialBudget: 1000,
       targetDate: "2026-12-01",
       items: [{ id: "i1", name: "Deposit", estimatedCost: 600, paid: true }],
     });
-    const txns = [{ ...tx("2026-07-01", 400, "sub_rainy_day"), capitalPlanId: plan.id }];
+    // 1000 set aside: 600 of it went on the deposit, 400 is still in the pot,
+    // which is exactly the 400 of budget left unpaid.
+    const txns = [{ ...tx("2026-07-01", 1000, "sub_rainy_day"), capitalPlanId: plan.id }];
     const insights = withPlans(txns, [plan]);
     const pace = insights.perPlan[0]!;
 
+    expect(pace.unspent).toBe(400);
     expect(pace.remainingNeed).toBe(0);
     expect(pace.funded).toBe(true);
     expect(pace.onTrack).toBe(true);

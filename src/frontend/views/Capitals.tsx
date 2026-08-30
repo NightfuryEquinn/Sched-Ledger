@@ -6,10 +6,9 @@ import {
   planBudget,
   planBudgetProgress,
   planIsOverbudget,
+  planMoney,
   planMonthlySave,
-  planPaidTotal,
   planIsUpcoming,
-  planUnspentTotal,
   plansTotalMonthlySave,
 } from "@/frontend/lib/capitals";
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
@@ -23,9 +22,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * Capitals — future financial planner
  * ────────────────────────────────────
  * Standalone checklists for big life expenses (marriage, trips, loans, or
- * fully custom plans). Each plan carries a total budget and optional target
- * date; monthly save is (budget − paid − unspent) ÷ months left. Savings
- * deposits can optionally be assigned to a plan as Unspent (otherwise Piggies).
+ * fully custom plans). Each plan carries a total budget (or falls back to the
+ * sum of its item estimates) and an optional target date; monthly save is what
+ * is still to set aside — the unpaid budget less the plan's remaining pot —
+ * divided by the months left. Savings deposits can optionally be assigned to a
+ * plan (otherwise Piggies), and paying an item draws that pot down.
  * Overbudget plans show Overpaid. Line items can optionally be "logged" into
  * the real ledger when paid.
  */
@@ -81,18 +82,31 @@ export function Capitals({
   }, [capitalPlans]);
 
   const money = (n: number) => fmtMoney(n, { currency });
-  const totalPlanned = useMemo(() => plans.reduce((s, p) => s + planBudget(p), 0), [plans]);
-  const totalPaid = useMemo(() => plans.reduce((s, p) => s + planPaidTotal(p), 0), [plans]);
+  /* One pass per plan: the individual helpers each re-scan savingsTxns. */
+  const totals = useMemo(
+    () =>
+      plans.reduce(
+        (acc, p) => {
+          const m = planMoney(p, savingsTxns, categoryIndex);
+
+          return {
+            planned: acc.planned + m.budget,
+            paid: acc.paid + m.paid,
+            saved: acc.saved + m.saved,
+            unspent: acc.unspent + m.unspent,
+            remaining: acc.remaining + m.remainingNeed,
+          };
+        },
+        { planned: 0, paid: 0, saved: 0, unspent: 0, remaining: 0 },
+      ),
+    [plans, savingsTxns, categoryIndex],
+  );
   const upcoming = useMemo(
     () => plans.filter((p) => planIsUpcoming(p)).length,
     [plans],
   );
   const totalMonthlySave = useMemo(
     () => plansTotalMonthlySave(plans, new Date(), savingsTxns, categoryIndex),
-    [plans, savingsTxns, categoryIndex],
-  );
-  const totalUnspent = useMemo(
-    () => plans.reduce((s, p) => s + planUnspentTotal(p, savingsTxns, categoryIndex), 0),
     [plans, savingsTxns, categoryIndex],
   );
   const viewRef = useRef<HTMLDivElement>(null);
@@ -165,7 +179,7 @@ export function Capitals({
         glyph,
         templateId,
         targetDate: targetDate || undefined,
-        initialBudget: budget > 0 ? budget : undefined,
+        initialBudget: budget,
         createdAt: new Date().toISOString(),
         items,
       });
@@ -179,7 +193,7 @@ export function Capitals({
       name: name.trim(),
       glyph,
       targetDate: targetDate || undefined,
-      initialBudget: budget > 0 ? budget : 0,
+      initialBudget: budget,
     });
     if (saved) setEditor(null);
   };
@@ -393,10 +407,10 @@ export function Capitals({
   return (
     <div ref={viewRef} className="view">
       <div ref={gridRef} className="summary-grid sg-5" data-tour="tour-capitals-summary">
-        <SummaryCard label="Total Planned" value={money(totalPlanned)} sub={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`} />
-        <SummaryCard label="Total Paid" tone="saved" value={money(totalPaid)} sub={totalPlanned ? `${Math.round((totalPaid / totalPlanned) * 100)}% of planned` : ""} />
-        <SummaryCard label="Total Unspent" tone="ok" value={money(totalUnspent)} sub="assigned from savings" />
-        <SummaryCard label="Monthly Saving" tone="ok" value={money(totalMonthlySave)} sub="across all plans" />
+        <SummaryCard label="Total Planned" value={money(totals.planned)} sub={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`} />
+        <SummaryCard label="Total Paid" tone="saved" value={money(totals.paid)} sub={totals.planned ? `${Math.round((totals.paid / totals.planned) * 100)}% of planned` : ""} />
+        <SummaryCard label="Total Unspent" tone="ok" value={money(totals.unspent)} sub={`of ${money(totals.saved)} set aside`} />
+        <SummaryCard label="Monthly Saving" tone="ok" value={money(totalMonthlySave)} sub={`${money(totals.remaining)} still to save`} />
         <SummaryCard label="Upcoming" value={String(upcoming)} sub="plans with a future target date" />
       </div>
 
@@ -410,16 +424,18 @@ export function Capitals({
 
       <div className="capital-grid" data-tour="tour-capitals-grid">
         {plans.map((plan) => {
-          const budget = planBudget(plan);
-          const paid = planPaidTotal(plan);
-          const unspent = planUnspentTotal(plan, savingsTxns, categoryIndex);
+          const m = planMoney(plan, savingsTxns, categoryIndex);
+          const derivedBudget = planBudget(plan) <= 0 && m.budget > 0;
           const progress = planBudgetProgress(plan);
           const overbudget = planIsOverbudget(plan);
           const monthlySave = planMonthlySave(plan, new Date(), savingsTxns, categoryIndex);
-          const donutData = budget > 0
+          /* Three arcs so the grey one is what is genuinely left to fund, not
+             budget − paid: money already in the pot covers part of that. */
+          const donutData = m.budget > 0
             ? [
-                { id: "paid", value: Math.min(paid, budget), color: overbudget ? "var(--danger)" : "var(--saved)" },
-                { id: "remain", value: Math.max(budget - paid, 0), color: "var(--hair)" },
+                { id: "paid", value: Math.min(m.paid, m.budget), color: overbudget ? "var(--danger)" : "var(--saved)" },
+                { id: "unspent", value: Math.min(m.unspent, m.outstanding), color: "var(--ok)" },
+                { id: "remain", value: m.remainingNeed, color: "var(--hair)" },
               ]
             : [{ id: "empty", value: 1, color: "var(--hair)" }];
 
@@ -456,13 +472,28 @@ export function Capitals({
                   </div>
                 </div>
                 <div className="capital-card-stats">
-                  <div className="capital-total">{money(budget)}</div>
-                  <div className="capital-paid">{money(paid)} paid</div>
-                  {unspent > 0 ? <div className="capital-unspent">{money(unspent)} unspent</div> : null}
+                  <div className="capital-total">
+                    {money(m.budget)}
+                    {derivedBudget ? <span className="capital-tag">from item estimates</span> : null}
+                  </div>
+                  <div className="capital-paid">
+                    {money(m.paid)} paid
+                    {m.saved > 0 && m.outOfPocket > 0 ? ` · ${money(m.outOfPocket)} out of pocket` : ""}
+                  </div>
+                  {m.saved > 0 ? (
+                    <div className="capital-unspent">
+                      {m.unspent === m.saved
+                        ? `${money(m.unspent)} unspent`
+                        : `${money(m.saved)} saved · ${money(m.unspent)} unspent`}
+                    </div>
+                  ) : null}
                   {overbudget ? (
                     <div className="capital-monthly capital-overpaid">Overpaid</div>
                   ) : monthlySave !== null ? (
                     <div className="capital-monthly">Save {money(monthlySave)}/mo</div>
+                  ) : null}
+                  {m.budget > 0 && m.remainingNeed > 0 ? (
+                    <div className="capital-monthly">{money(m.remainingNeed)} still to save</div>
                   ) : null}
                 </div>
               </div>

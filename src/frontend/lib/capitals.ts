@@ -4,6 +4,30 @@ import { roundMoney } from "@/frontend/lib/data";
 import { classifyTx } from "@/frontend/lib/stats";
 import type { CapitalItem, CapitalPlan, CapitalTemplateId, Expense } from "@/frontend/lib/types";
 
+/*
+ * Capitals money math — every figure is derived, nothing is persisted.
+ *
+ * A plan has a budget (B), payments recorded on its line items (P), and a pot of
+ * savings deposits assigned to it (S). Line items carry no funding source, so
+ * Capitals assumes payments are drawn from the pot first and from other money
+ * only once the pot is empty:
+ *
+ *   saved       S = deposits − withdrawals carrying this plan's id
+ *   unspent     max(0, S − P)              what is still in the pot
+ *   ofPocket    max(0, P − S)              payments the pot did not cover
+ *   outstanding max(0, B − P)              budgeted cost not yet paid
+ *   need        max(0, outstanding − unspent)
+ *
+ * `need` collapses to (B − S) while the pot still covers every payment, and to
+ * (B − P) once payments have emptied it, so money that was set aside and then
+ * spent on an item is only ever counted once. The old formula was
+ * (B − P − S), which counted it twice and under-stated what was left to save.
+ *
+ * The draw-down is implicit: paying an item is NOT recorded as an assigned
+ * withdrawal, and must not be, or the pot would be drawn down twice — once by
+ * the withdrawal and once by the payment. See `logCapitalItem` in LedgerApp.
+ */
+
 /** Sum of every item's estimated cost. */
 export function planTotal(plan: CapitalPlan): number {
   return plan.items.reduce((s, i) => s + i.estimatedCost, 0);
@@ -23,20 +47,43 @@ export function planUnpaidTotal(plan: CapitalPlan): number {
     .reduce((s, i) => s + i.estimatedCost, 0);
 }
 
-/** Plan budget (initialBudget), treating missing as 0. */
+/** Budget as the user typed it, treating missing as 0. Prefer `planEffectiveBudget`. */
 export function planBudget(plan: CapitalPlan): number {
   return plan.initialBudget ?? 0;
 }
 
-/** True when paid items exceed the plan budget. */
+/**
+ * The budget every other figure is measured against: the typed budget, or the
+ * sum of item estimates when none was typed. Without the fallback a plan with
+ * items but no budget reads as a 0 budget, which makes any payment "Overpaid".
+ *
+ * A derived budget moves when item costs are edited, so the card labels it as
+ * coming from estimates rather than showing a number that shifts unexplained.
+ */
+export function planEffectiveBudget(plan: CapitalPlan): number {
+  const typed = planBudget(plan);
+
+  return typed > 0 ? typed : planTotal(plan);
+}
+
+/** True when paid items exceed the budget. A plan with no budget is never over it. */
 export function planIsOverbudget(plan: CapitalPlan): boolean {
-  return planPaidTotal(plan) > planBudget(plan);
+  const budget = planEffectiveBudget(plan);
+
+  return budget > 0 && planPaidTotal(plan) > budget;
 }
 
 /**
- * Net savings assigned to a plan: deposits minus withdrawals with matching capitalPlanId.
+ * Gross savings assigned to a plan: deposits minus withdrawals carrying this
+ * plan's id, over all time. It grows as deposits land and knows nothing about
+ * what has since been spent — `planUnspentTotal` is the balance after payments.
+ *
+ * A row could carry a `capitalPlanId` on a withdrawal — the "Allocate to" picker
+ * is gated to expenses, so not one it creates. If such a row exists alongside a
+ * paid item, the pot is drawn down twice: once by the withdrawal, once by the
+ * payment. Rare enough to document rather than code around.
  */
-export function planUnspentTotal(plan: CapitalPlan, txns: Expense[], index?: CategoryIndex): number {
+export function planSavedTotal(plan: CapitalPlan, txns: Expense[], index?: CategoryIndex): number {
   let total = 0;
 
   for (const e of txns) {
@@ -49,18 +96,84 @@ export function planUnspentTotal(plan: CapitalPlan, txns: Expense[], index?: Cat
   return roundMoney(total);
 }
 
+/** Budgeted cost not yet paid: max(0, budget − paid). */
+export function planOutstandingCost(plan: CapitalPlan): number {
+  return roundMoney(Math.max(0, planEffectiveBudget(plan) - planPaidTotal(plan)));
+}
+
+type PlanMoney = {
+  /** Budget every other figure is measured against — typed, or from estimates. */
+  budget: number;
+  /** Sum of paid items, at actual cost where known. */
+  paid: number;
+  /** Gross savings assigned to the plan, all time. */
+  saved: number;
+  /** What is left of that pot after payments. */
+  unspent: number;
+  /** Payments the pot did not cover. */
+  outOfPocket: number;
+  /** Budgeted cost not yet paid. */
+  outstanding: number;
+  /** Still to set aside once the pot is applied to the unpaid budget. */
+  remainingNeed: number;
+};
+
 /**
- * Remaining budget to save: max(0, budget − paid − unspent).
- * Paid items and capital-assigned savings both reduce the monthly save need.
+ * Every money figure for one plan, from a single pass over `txns`. Prefer this
+ * when a caller needs more than one figure — the helpers around it are thin
+ * reads of this, so the two can never disagree.
+ */
+export function planMoney(
+  plan: CapitalPlan,
+  txns: Expense[] = [],
+  index?: CategoryIndex,
+): PlanMoney {
+  const budget = planEffectiveBudget(plan);
+  const paid = planPaidTotal(plan);
+  const saved = txns.length ? planSavedTotal(plan, txns, index) : 0;
+  const unspent = roundMoney(Math.max(0, saved - paid));
+  const outOfPocket = roundMoney(Math.max(0, paid - saved));
+  const outstanding = planOutstandingCost(plan);
+
+  return {
+    budget: roundMoney(budget),
+    paid: roundMoney(paid),
+    saved,
+    unspent,
+    outOfPocket,
+    outstanding,
+    remainingNeed: roundMoney(Math.max(0, outstanding - unspent)),
+  };
+}
+
+/**
+ * What is left in the plan's pot: max(0, saved − paid). Paying a line item draws
+ * this down, because money you set aside and then spent cannot also be sitting
+ * there waiting for the rest of the budget.
+ */
+export function planUnspentTotal(plan: CapitalPlan, txns: Expense[], index?: CategoryIndex): number {
+  return planMoney(plan, txns, index).unspent;
+}
+
+/** Payments the plan's pot did not cover: max(0, paid − saved). */
+export function planOutOfPocket(plan: CapitalPlan, txns: Expense[], index?: CategoryIndex): number {
+  return planMoney(plan, txns, index).outOfPocket;
+}
+
+/**
+ * Money still to set aside: what is left of the budget after payments, minus
+ * whatever is still in the pot — max(0, max(0, B − P) − max(0, S − P)).
+ *
+ * It collapses to (budget − saved) while the pot still covers every payment, and
+ * to (budget − paid) once payments have emptied it, so money that was set aside
+ * and then spent on an item is only ever counted once.
  */
 export function planRemainingNeed(
   plan: CapitalPlan,
   txns: Expense[] = [],
   index?: CategoryIndex,
 ): number {
-  const unspent = txns.length ? planUnspentTotal(plan, txns, index) : 0;
-
-  return Math.max(0, planBudget(plan) - planPaidTotal(plan) - unspent);
+  return planMoney(plan, txns, index).remainingNeed;
 }
 
 /**
@@ -68,7 +181,7 @@ export function planRemainingNeed(
  * Null when there is no budget yet.
  */
 export function planBudgetProgress(plan: CapitalPlan): number | null {
-  const budget = planBudget(plan);
+  const budget = planEffectiveBudget(plan);
 
   if (budget <= 0) return null;
 
@@ -109,8 +222,9 @@ export function planIsUpcoming(plan: CapitalPlan, today: Date = new Date()): boo
 }
 
 /**
- * Monthly amount still needed: (budget − paid − unspent) ÷ months until target.
- * Null when overbudget, or when months cannot be computed (no/past target).
+ * Monthly amount still to set aside: `planRemainingNeed` ÷ months until target.
+ * Null when there is no budget to save toward, when the plan is overbudget, or
+ * when months cannot be computed (no/past target).
  */
 export function planMonthlySave(
   plan: CapitalPlan,
@@ -118,6 +232,7 @@ export function planMonthlySave(
   txns: Expense[] = [],
   index?: CategoryIndex,
 ): number | null {
+  if (planEffectiveBudget(plan) <= 0) return null;
   if (planIsOverbudget(plan)) return null;
 
   const months = planMonthsUntilTarget(plan, today);

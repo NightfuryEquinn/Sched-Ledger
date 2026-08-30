@@ -99,7 +99,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("overview-donut", "By Category", "Tap or hover slices to see how spending breaks down across categories.", '[data-tour="tour-overview-donut"]', "left"),
     step("overview-recent", "Recent Transaction", "Up to three of your latest transactions. Tap one to edit, or See All for the full list.", '[data-tour="tour-overview-recent"]'),
     step("overview-piggies", "Piggies", "Your top savings categories at a glance — tap See All for the full Piggies view.", '[data-tour="tour-overview-piggies"]'),
-    lastStep("overview-capitals", "Capitals", "Planning something big — a marriage, a trip, a loan? Capitals tracks a total budget, paid progress, Unspent from assigned savings, and a monthly save amount toward your target date.", navTarget("capitals"), "right"),
+    lastStep("overview-capitals", "Capitals", "Planning something big — a marriage, a trip, a loan? Capitals tracks a total budget, paid progress, what is still unspent from the savings you assigned to it, and a monthly save amount toward your target date.", navTarget("capitals"), "right"),
   ],
   todos: [
     step("todos-nav", "TO-DO List", "Organize tasks into separate lists — groceries, work, travel, and more.", navTarget("todos"), "right"),
@@ -149,10 +149,10 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     lastStep("piggies-grid", "Piggy Cards", "Each card is a savings category — its progress ring, subcategories, and Add / Withdraw actions. Unassigned savings land here; assign deposits to a Capital from Add Transaction.", '[data-tour="tour-piggies-grid"]'),
   ],
   capitals: [
-    step("capitals-nav", "Capitals", "Plan for big future expenses — marriage, trips, loans, or anything custom. Set a total budget and a target date to see how much to save each month; assign savings deposits as Unspent on a plan.", navTarget("capitals"), "right"),
-    step("capitals-summary", "Totals", "Total planned, total paid, total unspent from assigned savings, monthly saving across every plan, and how many plans have an upcoming target date.", '[data-tour="tour-capitals-summary"]'),
+    step("capitals-nav", "Capitals", "Plan for big future expenses — marriage, trips, loans, or anything custom. Set a total budget and a target date to see how much to save each month; assign savings deposits to a plan and paying an item spends them down.", navTarget("capitals"), "right"),
+    step("capitals-summary", "Totals", "Total planned, total paid, what is still unspent of everything set aside, monthly saving and what is still to save across every plan, and how many plans have an upcoming target date.", '[data-tour="tour-capitals-summary"]'),
     step("capitals-toolbar", "New Plan", "Start from a template — marriage, trip, car loan, house loan — or build a fully custom plan. You can set a total budget and optional target date.", '[data-tour="tour-capitals-toolbar"]', "bottom"),
-    lastStep("capitals-grid", "Plan Cards", "Each card shows paid vs budget on the ring, Unspent from assigned savings, a monthly save hint (or Overpaid), line items, and Log to record a real payment in the ledger.", '[data-tour="tour-capitals-grid"]'),
+    lastStep("capitals-grid", "Plan Cards", "Each card shows paid vs budget on the ring, what is set aside and still unspent, what is still to save, a monthly save hint (or Overpaid), line items, and Log to record a real payment in the ledger.", '[data-tour="tour-capitals-grid"]'),
   ],
   vehicles: [
     step("vehicles-nav", "Vehicles", "Track fuel or charging costs per vehicle — cars, EVs, bikes, and vans each get their own history and Fuel Insights.", navTarget("vehicles"), "right"),

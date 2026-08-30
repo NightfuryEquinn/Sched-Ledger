@@ -4941,6 +4941,14 @@ h1, h2, h3 {
   font-family: var(--font-mono);
 }
 
+/* The "from item estimates" hint sits inline after the budget, which is bold
+   mono — reset both so it reads as an aside rather than part of the figure. */
+.capital-total .capital-tag {
+  margin-left: 6px;
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
 .capital-paid {
   font-size: 12px;
   color: var(--ink-faint);
