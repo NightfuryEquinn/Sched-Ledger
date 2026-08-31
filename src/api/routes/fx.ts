@@ -10,7 +10,6 @@ type FxCache = {
   base: string;
   rates: Record<string, number>;
   fetchedAt: number;
-  provider: string;
 };
 
 const cache = new Map<string, FxCache>();
@@ -22,6 +21,9 @@ fxRoutes.use("*", sessionAuth);
 fxRoutes.get("/latest/:base", async (c) => {
   const base = c.req.param("base").trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(base)) badRequest("Invalid currency code");
+  if (!CURRENCY_CODES.includes(base as (typeof CURRENCY_CODES)[number])) {
+    badRequest("Unsupported currency code");
+  }
 
   const hit = cache.get(base);
   if (hit && Date.now() - hit.fetchedAt < CACHE_TTL_MS) {
@@ -62,7 +64,6 @@ fxRoutes.get("/latest/:base", async (c) => {
     base: data.base_code ?? base,
     rates,
     fetchedAt: Date.now(),
-    provider: "exchangerate-api",
   };
   cache.set(base, entry);
 
