@@ -19,7 +19,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation; includes Malaysia-oriented presets (EPF / SOCSO / EIS / PCB ballpark / SST) that never leave the browser
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable expense and income category/subcategory taxonomy with glyphs and colors; savings categories use the custom DatePicker for optional deadline goals
-- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron-job.org; delete scopes for one occurrence, this-and-future, or the whole series
+- **Recurring transactions** — monthly, quarterly, or yearly; auto-posted on due dates via cron-job.org; delete scopes for one occurrence, this-and-future, or the whole series; destructive deletes ask for confirmation first
 - **Insights** — FX conversion, a ranked **What Stands Out** feed (month-end spend forecast with a confidence band, over-budget categories before the month ends, unusually large charges, category spend drift, and new/stopped/creeping recurring charges), month-over-month charts (daily/monthly/quarterly/yearly), an earnings line plotted against spending on the overview trend, per-category hover breakdowns on charts and recent rows, and spending habits (unlock after five active transaction days)
 - **Vehicles** — track fuel or charging costs per vehicle (car, EV, bike, or van): log fill-ups or charges with price, quantity, odometer, and station, with an optional partial-fill flag and **Log** to link one to a real ledger transaction. An EV automatically switches every label to kWh, charge, and kWh/100km instead of litres and fill-ups. A **Fuel Insights** engine (same ranked-card model as Transaction Insights) surfaces consumption trend, price timing, running-cost projection, and cadence once a vehicle has logged enough history
 
@@ -40,7 +40,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Dark mode** — system-aware theme toggle, persisted locally
 - **Typography** — Young Serif (display), Schibsted Grotesk (UI), and Azeret Mono (amounts), shared with the marketing site; summary amounts stay 20–24px and reflow on narrow screens so long figures do not overflow
 - **Sessions & privacy** — HttpOnly session cookies with sliding token rotation, revoke devices, clear local data, and third-party data-sharing consent under **Account → Data & privacy**
-- **Encrypted backup** — download/restore a full ledger pack encrypted with your ledger key (client-only; not stored on the server) via **Account → Exports & imports**
+- **Encrypted backup** — download/restore an encrypted ledger pack (wallets, categories, transactions, schedule, todos, Capitals plans, and Vehicles) encrypted with your ledger key (client-only; not stored on the server) via **Account → Exports & imports**
 - **CSV export & import** — transactions (with categories), schedule events, and to-do lists (plaintext spreadsheet portability)
 - **Encrypted ledger** — amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos encrypted client-side; unlock with your wallet key each session
 - **PWA read cache** — installable app shell + IndexedDB ciphertext cache for offline reads (writes still require the network)
@@ -55,7 +55,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - Ownership uses opaque `accountId` (`users._id`); the SIWE address stays on `users` for login only
 - New document ids are random ObjectIds (no embedded creation timestamp)
 - Signature verification, Mongo-backed rate limiting (in-memory fallback), security headers, in-memory profile cache
-- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, budget-alert evaluation, envelope holds, multi-day and recurring schedule math, push dedupe, the ranked-insight model, transaction and fuel insights, vehicle routes, and the release-notes gate (`bun test`)
+- Automated tests for crypto unlock/codec, device vault, encrypted backup, reminder email privacy, calculator, spending habits, session auth, budget-alert evaluation, envelope holds, multi-day and recurring schedule math, push dedupe, compound list pagination, cron scan cursors, security-header parity, the ranked-insight model, transaction and fuel insights, vehicle routes, and the release-notes gate (`bun test`)
 
 ## Tech stack
 
@@ -84,7 +84,7 @@ src/
 ├── vercel-api.ts         # API bundle source (built → api/index.js)
 ├── api/
 │   ├── app.ts            # Hono app + error handler
-│   ├── lib/              # auth, cache, email, push, reminders, reminder-details,
+│   ├── lib/              # auth, cache, email, push, reminders, reminder-details, pagination,
 │   │                     # recurring-expenses, budget-alerts, expense-delete-scope,
 │   │                     # expense-update, money, ids, serialize, errors
 │   ├── middleware/       # session, rate-limit (Mongo + memory fallback), security, db
@@ -93,7 +93,7 @@ src/
 │                         # consent, budget-alerts, push, fx, cron
 ├── db/                   # MongoDB client, collections, indexes, URI resolver
 ├── schemas/              # Zod schemas (shared API validation)
-├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts,
+├── lib/                  # glyphs, recurring, schedule, timezone, budget-alerts, security-headers,
 │                         # delete-scope, account-retention, version (shared)
 └── frontend/
     ├── app/              # Root, LedgerApp
@@ -122,9 +122,9 @@ src/
     │                     # Recurring, Insights, Piggies, Capitals, Vehicles, Schedule, TodoList, Transparency
     └── main.tsx
 public/                   # PWA manifest + service worker (copied into dist/ on build)
-scripts/                  # MongoDB collection maintenance (drop/list, stale-user prune)
-tests/                    # auth, crypto, calculator, spending, schedule, budget/holds, whats-new,
-                          # insights, vehicles
+scripts/                  # MongoDB maintenance (drop/list, stale-user prune, reminder_log backfill)
+tests/                    # auth, crypto, calculator, spending, schedule, budget/holds, pagination,
+                          # cron scans, push routes, security headers, whats-new, insights, vehicles
 build.ts                  # Production build (dist/ + api/index.js)
 ```
 
@@ -190,16 +190,16 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `consent` | `consent` | Data-sharing opt-in flag |
 | `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
 | `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
-| `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminders, per occurrence and per `channels` (email / push; absent on pre-push rows, which were email-only) |
-| `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit email delivery |
+| `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminders, per occurrence and per `channels` (email / push; absent on pre-push rows, which were email-only); TTL on `sentAt` (~400 days) |
+| `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit email/push delivery; TTL on `sentAt` (~400 days) |
 | `push_subscriptions` | `pushSubscriptions` | Web Push endpoints, one row per browser (unique on `endpoint`) — the row *is* the opt-in |
-| `rate_limits` | `rateLimits` | Shared API rate-limit buckets (TTL on `resetAt`; multi-instance) |
+| `rate_limits` | `rateLimits` | Shared API rate-limit buckets (`_id` = prefix + client key; TTL on `resetAt`; multi-instance) |
 
 ### Encryption vs plaintext
 
 | Collection | Encrypted (client-side) | Plaintext (needed for queries / cron) |
 |------------|-------------------------|----------------------------------------|
-| `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId` |
+| `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId`, optional `capitalPlanId` |
 | `financial_wallets` | `payload` (name, income, starting balance, budgets) via `enc` | `accountId`, `currency`, `fundingMode`, `isDefault` |
 | `category_taxonomies` | `payload` (full `categories[]` tree, incl. optional piggy `target`/`deadline` per category and sub) via `enc` | `accountId` |
 | `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on |
@@ -287,7 +287,7 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 | `POST /api/auth/clear` | Revoke all sessions and clear cookie |
 | `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder/alert prefs |
 | `POST /api/users` | Create or upsert user profile on first sign-in |
-| `GET/PATCH /api/profile` | Per-user UI state — accepts `currentMonth` only; returns `id`, `currentMonth`, and `createdAt` (account age, used to gate release notes) |
+| `GET/PATCH /api/profile` | Per-user UI state — `currentMonth`, `tourPreference`, `toursSeen`; returns `id`, those fields, and `createdAt` (account age, used to gate release notes) |
 | `CRUD /api/wallets` | Financial wallets (metadata + E2EE `enc`/`payload` via PATCH) |
 | `PUT /api/wallets/:id/budgets` | Update encrypted wallet financials (`enc`/`payload`) |
 | `GET/PUT /api/categories` | Category taxonomy |
