@@ -1,5 +1,6 @@
 import { useEnter, useModalMotion } from "@/frontend/lib/animate";
 import { ConfirmDialog, EmptyState, Icon, Segmented, glyphTint } from "@/frontend/components/ui";
+import { CategoryColorPicker } from "@/frontend/components/CategoryColorPicker";
 import { DatePicker } from "@/frontend/components/DateTimePicker";
 import {
   nextCategoryColor,
@@ -534,10 +535,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                 {editor.type === "add-cat" || editor.type === "edit-cat" ? (
                   <>
                     <label className="fld-label">Color</label>
-                    <div className="cat-color-row">
-                      <input type="color" value={color} onChange={(e) => setColor(e.target.value)} aria-label="Category Color" />
-                      <span className="cat-color-preview" style={{ background: color }} aria-hidden />
-                    </div>
+                    <CategoryColorPicker value={color} onChange={setColor} />
 
                     <label className="fld-label">Icon</label>
                     <div className="cat-glyph-row">

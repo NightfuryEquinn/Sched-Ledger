@@ -160,7 +160,7 @@ function panelEnterState(variant: ModalVariant) {
   if (variant === "sheet") return { opacity: 0.6, translateY: 24, scale: 1 };
   if (variant === "picker") return { opacity: 0, translateY: 0, scale: 1 };
 
-  return { opacity: 0, translateY: 8, scale: 0.98 };
+  return { opacity: 0, translateY: 4, scale: 1 };
 }
 
 /** Panel duration for a modal variant. */
@@ -168,7 +168,7 @@ function panelDuration(variant: ModalVariant) {
   if (variant === "sheet") return DUR.sheet;
   if (variant === "picker") return DUR.picker;
 
-  return DUR.modal;
+  return DUR.scrim;
 }
 
 /** Animate modal scrim + panel on mount; expose animated close. */
