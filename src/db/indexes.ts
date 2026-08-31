@@ -91,9 +91,18 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db.collection(COLLECTIONS.sessions).createIndex({ tokenHash: 1 }, { unique: true }),
     db.collection(COLLECTIONS.sessions).createIndex({ accountId: 1, createdAt: -1 }),
     db.collection(COLLECTIONS.sessions).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.collection(COLLECTIONS.events).createIndex(
+      { notify: 1, lastScannedAt: 1 },
+      { partialFilterExpression: { notify: true }, name: "events_notify_last_scanned" },
+    ),
+    db.collection(COLLECTIONS.expenses).createIndex({ lastScannedAt: 1, _id: 1 }),
     db
       .collection(COLLECTIONS.reminderLogs)
       .createIndex({ eventId: 1, occurrenceIso: 1, lead: 1 }, { unique: true }),
+    db.collection(COLLECTIONS.reminderLogs).createIndex(
+      { sentAt: 1 },
+      { expireAfterSeconds: 400 * 24 * 60 * 60 },
+    ),
     db.collection(COLLECTIONS.budgetAlertLogs).createIndex(
       { accountId: 1, walletId: 1, categoryId: 1, month: 1, level: 1 },
       { unique: true },
