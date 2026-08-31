@@ -886,8 +886,8 @@ export function buildHabitNudge(
       return "Spending clusters into short bursts — a short cooling-off window before big purchases could help.";
     case "dripper":
       if (m.driverByCount && m.driverByCount.txCount > 0) {
-        const weekly = (m.driverByCount.amount / Math.max(1, m.activeDays)) * 7;
-        return `Trimming ${m.driverByCount.name} by two visits a week saves about ${money(weekly * (2 / 7))} a week.`;
+        const weekly = (m.driverByCount.amount / Math.max(1, m.driverByCount.txCount)) * 2;
+        return `Trimming ${m.driverByCount.name} by two visits a week saves about ${money(weekly)} a week.`;
       }
       return "Small daily charges add up quietly — a weekly cap on incidentals could help.";
     case "peakValley":

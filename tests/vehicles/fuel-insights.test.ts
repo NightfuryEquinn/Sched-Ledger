@@ -232,6 +232,34 @@ describe("computeFuelInsights money formatter seam", () => {
     }
   });
 
+  test("running cost excludes the first fill from the spend span", () => {
+    const fills = [
+      fill({ date: "2026-01-01", price: 100, quantity: 40, odometer: 1000 }),
+      fill({ date: "2026-02-01", price: 100, quantity: 40, odometer: 2000 }),
+      fill({ date: "2026-03-01", price: 100, quantity: 40, odometer: 3000 }),
+    ];
+    const metrics = computeFuelMetrics(fills);
+
+    expect(metrics.monthlyRunningCost).toBeLessThan(105);
+    expect(metrics.monthlyRunningCost).toBeGreaterThan(95);
+  });
+
+  test("cadence insight compares days since last fill to median gap", () => {
+    const fills = [
+      fill({ date: "2026-01-01", price: 100, quantity: 40, odometer: 1000 }),
+      fill({ date: "2026-01-31", price: 100, quantity: 40, odometer: 2000 }),
+      fill({ date: "2026-03-02", price: 100, quantity: 20, odometer: 2500 }),
+    ];
+    const metrics = computeFuelMetrics(fills);
+    const assessment = assessVehicleFuel(fills);
+    if (assessment.status !== "ready") throw new Error("expected ready");
+
+    const insights = computeFuelInsights(metrics, VEHICLE_TYPES.car, assessment.confidence);
+    expect(insights.some((i) => i.kind === "fuel-cadence" && i.title.includes("Longer than usual"))).toBe(
+      false,
+    );
+  });
+
   test("odometer coverage nudge appears when most fills are missing a reading", () => {
     const fills = [
       fill({ date: "2026-01-01", odometer: undefined }),

@@ -129,6 +129,8 @@ type FuelMetrics = {
   costPerKm: number | null;
 
   medianDaysBetweenFills: number;
+  /** Days since the most recent fill (0 when only one fill). */
+  lastGapDays: number;
   medianDistanceBetweenFills: number | null;
   monthlyRunningCost: number;
   projectedAnnualCost: number;
@@ -248,7 +250,10 @@ export function computeFuelMetrics(fills: FuelFill[]): FuelMetrics {
   const medianDaysBetweenFills = median(dayGaps);
   const medianDistanceBetweenFills = segments.length ? median(segments.map((s) => s.distanceKm)) : null;
 
-  const monthlyRunningCost = spanDays > 0 ? roundMoney((totalSpend / spanDays) * 30.44) : totalSpend;
+  const monthlyRunningCost =
+    spanDays > 0
+      ? roundMoney(((fillCount > 1 ? totalSpend - first!.price : totalSpend) / spanDays) * 30.44)
+      : totalSpend;
   const projectedAnnualCost = roundMoney(monthlyRunningCost * 12);
 
   let bestFill: FuelFill | null = null;
@@ -289,6 +294,7 @@ export function computeFuelMetrics(fills: FuelFill[]): FuelMetrics {
     consumptionPer100,
     costPerKm,
     medianDaysBetweenFills,
+    lastGapDays: dayGaps[dayGaps.length - 1] ?? 0,
     medianDistanceBetweenFills,
     monthlyRunningCost,
     projectedAnnualCost,
@@ -391,11 +397,8 @@ export function computeFuelInsights(
     metric: { label: "Projected annual cost", value: money(metrics.projectedAnnualCost) },
   });
 
-  if (metrics.medianDaysBetweenFills > 0 && metrics.segments.length) {
-    const lastGapSegment = metrics.segments[metrics.segments.length - 1]!;
-    const lastGapDays = Math.round(
-      (new Date(lastGapSegment.endDate).getTime() - new Date(lastGapSegment.startDate).getTime()) / 86_400_000,
-    );
+  if (metrics.medianDaysBetweenFills > 0 && metrics.lastGapDays > 0) {
+    const lastGapDays = metrics.lastGapDays;
     const ratio = lastGapDays / metrics.medianDaysBetweenFills;
     if (ratio >= 1.6) {
       pushInsight(out, {

@@ -500,4 +500,12 @@ describe("narrative and nudge generation", () => {
       expect(nudge.length).toBeGreaterThan(0);
     });
   }
+
+  test("dripper nudge scales savings by visit count, not active days", () => {
+    const metrics = computeHabitMetrics(ARCHETYPE_FIXTURES.dripper).metrics;
+    expect(metrics.driverByCount?.txCount).toBeGreaterThan(0);
+    const nudge = buildHabitNudge("dripper", metrics, { money: (n) => `$${n.toFixed(0)}` });
+    expect(nudge).toMatch(/\$\d+/);
+    expect(nudge).not.toContain("NaN");
+  });
 });
