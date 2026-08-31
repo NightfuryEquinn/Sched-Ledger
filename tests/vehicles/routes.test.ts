@@ -176,6 +176,67 @@ describe("vehicles routes", () => {
     expect(fills).toHaveLength(0);
   });
 
+  test("deleting an expense unlinks the fill that logged it", async () => {
+    const cookie = await signIn();
+    const vehicleId = await createVehicle(cookie);
+
+    const walletRes = await app.request("/api/wallets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", cookie },
+      body: JSON.stringify({ currency: "MYR", enc: 1, payload: "wallet" }),
+    });
+    const { wallet } = (await walletRes.json()) as { wallet: { id: string } };
+
+    const expenseRes = await app.request("/api/expenses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", cookie },
+      body: JSON.stringify({
+        walletId: wallet.id,
+        date: "2026-08-01",
+        enc: 1,
+        payload: "expense",
+      }),
+    });
+    const { expense } = (await expenseRes.json()) as { expense: { id: string } };
+
+    const linkedRes = await app.request("/api/vehicles/fills", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", cookie },
+      body: JSON.stringify({
+        vehicleId,
+        date: "2026-08-01",
+        partial: false,
+        expenseId: expense.id,
+        enc: 1,
+        payload: "linked-fill",
+      }),
+    });
+    expect(linkedRes.status).toBe(201);
+
+    const otherRes = await app.request("/api/vehicles/fills", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", cookie },
+      body: JSON.stringify({ vehicleId, date: "2026-08-02", partial: false, enc: 1, payload: "other" }),
+    });
+    const { fill: otherFill } = (await otherRes.json()) as { fill: { id: string } };
+
+    const deleteRes = await app.request(`/api/expenses/${expense.id}`, {
+      method: "DELETE",
+      headers: { cookie },
+    });
+    expect(deleteRes.status).toBe(200);
+
+    /* The dead link is what hides the fill's "Log" button, so leaving it would
+       make the payment impossible to record again. */
+    const fillsRes = await app.request(`/api/vehicles/fills?vehicleId=${vehicleId}`, {
+      headers: { cookie },
+    });
+    const { fills } = (await fillsRes.json()) as { fills: { id: string; expenseId?: string }[] };
+    expect(fills).toHaveLength(2);
+    expect(fills.every((f) => f.expenseId === undefined)).toBe(true);
+    expect(fills.some((f) => f.id === otherFill.id)).toBe(true);
+  });
+
   test("rejects an unknown vehicle type", async () => {
     const cookie = await signIn();
     const res = await app.request("/api/vehicles", {

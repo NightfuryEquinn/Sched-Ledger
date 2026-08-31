@@ -2,13 +2,19 @@ import { describe, expect, test } from "bun:test";
 import {
   instantiateFromTemplate,
   planBudgetProgress,
+  planEffectiveBudget,
   planIsOverbudget,
+  planMoney,
   planMonthlySave,
   planMonthsUntilTarget,
   planIsUpcoming,
+  planOutOfPocket,
+  planOutstandingCost,
   planPaidTotal,
   planProgress,
   planRemainingNeed,
+  planSavedTotal,
+  releaseOrphanedPlanRefs,
   planTotal,
   planUnpaidTotal,
   planUnspentTotal,
@@ -101,11 +107,44 @@ describe("planRemainingNeed", () => {
     expect(planRemainingNeed(plan({ initialBudget: 10000 }))).toBe(3200);
   });
 
-  test("subtracts unspent savings assigned to the plan", () => {
+  test("is budget minus paid once payments have emptied the pot", () => {
+    // 1000 set aside, 6800 already paid: the pot is spent, so it cannot also
+    // reduce the need. Was 2200 under the old (budget − paid − saved) formula.
     const p = plan({ id: "p1", initialBudget: 10000 });
     const txns = [savingsTx("2026-06-01", 1000, "p1")];
 
-    expect(planRemainingNeed(p, txns, INDEX)).toBe(2200);
+    expect(planRemainingNeed(p, txns, INDEX)).toBe(3200);
+  });
+
+  test("is budget minus saved while the pot still covers every payment", () => {
+    const p = plan({ id: "p1", initialBudget: 10000 });
+    const txns = [savingsTx("2026-06-01", 8000, "p1")];
+
+    expect(planRemainingNeed(p, txns, INDEX)).toBe(2000);
+  });
+
+  test("subtracts the whole pot while nothing is paid", () => {
+    const p = plan({
+      id: "p1",
+      initialBudget: 10000,
+      items: [{ id: "i1", name: "Venue", estimatedCost: 5000, paid: false }],
+    });
+    const txns = [savingsTx("2026-06-01", 4000, "p1")];
+
+    expect(planRemainingNeed(p, txns, INDEX)).toBe(6000);
+  });
+
+  test("counts money set aside and then spent on an item only once", () => {
+    // The reported bug: budget 10000, 4000 set aside, that same 4000 spent on
+    // a paid item. Old formula answered 2000 by subtracting it twice.
+    const p = plan({
+      id: "p1",
+      initialBudget: 10000,
+      items: [{ id: "i1", name: "Venue", estimatedCost: 4000, paid: true, actualCost: 4000 }],
+    });
+    const txns = [savingsTx("2026-06-01", 4000, "p1")];
+
+    expect(planRemainingNeed(p, txns, INDEX)).toBe(6000);
   });
 
   test("still counts remaining budget when every item is paid", () => {
@@ -123,8 +162,13 @@ describe("planRemainingNeed", () => {
     expect(planRemainingNeed(plan({ initialBudget: 5000 }))).toBe(0);
   });
 
-  test("treats missing budget as 0", () => {
-    expect(planRemainingNeed(plan())).toBe(0);
+  test("falls back to the item estimates when no budget is typed", () => {
+    // estimates 10000, paid 6800
+    expect(planRemainingNeed(plan())).toBe(3200);
+  });
+
+  test("is 0 with neither a budget nor any items", () => {
+    expect(planRemainingNeed(plan({ items: [] }))).toBe(0);
   });
 });
 
@@ -136,6 +180,34 @@ describe("planIsOverbudget", () => {
   test("is false when paid is within budget", () => {
     expect(planIsOverbudget(plan({ initialBudget: 10000 }))).toBe(false);
   });
+
+  test("is false with no budget and no items, however much is paid", () => {
+    // No figure to be over. Matches the Insights pace line, which already
+    // guarded on budget > 0 while capitals.ts did not.
+    const p = plan({
+      items: [{ id: "i1", name: "Venue", estimatedCost: 0, paid: true, actualCost: 500 }],
+    });
+
+    expect(planIsOverbudget(p)).toBe(false);
+  });
+});
+
+describe("planEffectiveBudget", () => {
+  test("is the typed budget when there is one", () => {
+    expect(planEffectiveBudget(plan({ initialBudget: 12000 }))).toBe(12000);
+  });
+
+  test("falls back to the sum of item estimates when none is typed", () => {
+    expect(planEffectiveBudget(plan())).toBe(10000);
+  });
+
+  test("falls back for an explicit 0, which is how a cleared budget is stored", () => {
+    expect(planEffectiveBudget(plan({ initialBudget: 0 }))).toBe(10000);
+  });
+
+  test("is 0 with neither a budget nor any items", () => {
+    expect(planEffectiveBudget(plan({ items: [] }))).toBe(0);
+  });
 });
 
 describe("planBudgetProgress", () => {
@@ -143,8 +215,12 @@ describe("planBudgetProgress", () => {
     expect(planBudgetProgress(plan({ initialBudget: 10000 }))).toBeCloseTo(0.68);
   });
 
-  test("is null when there is no budget", () => {
-    expect(planBudgetProgress(plan())).toBeNull();
+  test("falls back to the item estimates when no budget is typed", () => {
+    expect(planBudgetProgress(plan())).toBeCloseTo(0.68);
+  });
+
+  test("is null with neither a budget nor any items", () => {
+    expect(planBudgetProgress(plan({ items: [] }))).toBeNull();
   });
 
   test("can exceed 1 when overbudget", () => {
@@ -203,11 +279,12 @@ describe("planIsUpcoming", () => {
 describe("planMonthlySave", () => {
   const today = new Date(2026, 7, 21); // Aug 21, 2026
 
-  test("divides (budget − paid − unspent) by months until target", () => {
+  test("divides what is still to set aside by months until target", () => {
+    // 8000 set aside covers the 6800 paid, so the need is budget − saved
     const p = plan({ id: "p1", targetDate: "2026-11-01", initialBudget: 10000 });
-    const txns = [savingsTx("2026-06-01", 600, "p1")];
+    const txns = [savingsTx("2026-06-01", 8000, "p1")];
 
-    expect(planMonthlySave(p, today, txns, INDEX)).toBeCloseTo((3200 - 600) / 3);
+    expect(planMonthlySave(p, today, txns, INDEX)).toBeCloseTo((10000 - 8000) / 3);
   });
 
   test("divides (budget − paid) by months until target", () => {
@@ -247,6 +324,11 @@ describe("planMonthlySave", () => {
   test("returns null when the target month is past", () => {
     expect(planMonthlySave(plan({ targetDate: "2026-01-01", initialBudget: 10000 }), today)).toBeNull();
   });
+
+  test("returns null for a plan with neither a budget nor items", () => {
+    // Previously 0, which rendered a pointless "Save 0.00/mo" on the card.
+    expect(planMonthlySave(plan({ targetDate: "2026-11-01", items: [] }), today)).toBeNull();
+  });
 });
 
 describe("plansTotalMonthlySave", () => {
@@ -277,7 +359,7 @@ describe("planProgress", () => {
   });
 });
 
-describe("planUnspentTotal", () => {
+describe("planSavedTotal", () => {
   test("sums deposits minus withdrawals for matching capitalPlanId", () => {
     const p = plan({ id: "p1" });
     const txns = [
@@ -287,7 +369,7 @@ describe("planUnspentTotal", () => {
       savingsTx("2026-07-02", 200, "p2"),
     ];
 
-    expect(planUnspentTotal(p, txns, INDEX)).toBe(700);
+    expect(planSavedTotal(p, txns, INDEX)).toBe(700);
   });
 
   test("ignores non-savings transactions even with capitalPlanId", () => {
@@ -310,7 +392,147 @@ describe("planUnspentTotal", () => {
       ...SAVINGS_CATEGORIES,
     ]);
 
-    expect(planUnspentTotal(p, txns, spendingIndex)).toBe(0);
+    expect(planSavedTotal(p, txns, spendingIndex)).toBe(0);
+  });
+
+  test("is unmoved by paying an item — it is the gross pot", () => {
+    const p = plan({ id: "p1" });
+    const txns = [savingsTx("2026-06-01", 4000, "p1")];
+
+    expect(planSavedTotal(p, txns, INDEX)).toBe(4000);
+  });
+});
+
+describe("planUnspentTotal", () => {
+  test("is the whole pot while nothing is paid", () => {
+    const p = plan({
+      id: "p1",
+      items: [{ id: "i1", name: "Venue", estimatedCost: 5000, paid: false }],
+    });
+    const txns = [savingsTx("2026-06-01", 4000, "p1")];
+
+    expect(planUnspentTotal(p, txns, INDEX)).toBe(4000);
+  });
+
+  test("is drawn down by paying an item", () => {
+    // The reported bug: 4000 set aside, a 4000 item paid from it → pot empty.
+    const p = plan({
+      id: "p1",
+      initialBudget: 10000,
+      items: [{ id: "i1", name: "Venue", estimatedCost: 4000, paid: true, actualCost: 4000 }],
+    });
+    const txns = [savingsTx("2026-06-01", 4000, "p1")];
+
+    expect(planUnspentTotal(p, txns, INDEX)).toBe(0);
+  });
+
+  test("never goes negative when payments exceed the pot", () => {
+    const p = plan({ id: "p1" });
+    const txns = [savingsTx("2026-06-01", 1000, "p1")];
+
+    expect(planUnspentTotal(p, txns, INDEX)).toBe(0);
+  });
+
+  test("ignores deposits assigned to another plan", () => {
+    const p = plan({
+      id: "p1",
+      items: [{ id: "i1", name: "Venue", estimatedCost: 5000, paid: false }],
+    });
+    const txns = [savingsTx("2026-06-01", 4000, "p2")];
+
+    expect(planUnspentTotal(p, txns, INDEX)).toBe(0);
+  });
+});
+
+describe("planOutOfPocket", () => {
+  test("is what the pot did not cover", () => {
+    const p = plan({ id: "p1" });
+    const txns = [savingsTx("2026-06-01", 1000, "p1")];
+
+    expect(planOutOfPocket(p, txns, INDEX)).toBe(5800);
+  });
+
+  test("is 0 once the pot covers every payment", () => {
+    const p = plan({ id: "p1" });
+    const txns = [savingsTx("2026-06-01", 8000, "p1")];
+
+    expect(planOutOfPocket(p, txns, INDEX)).toBe(0);
+  });
+});
+
+describe("planOutstandingCost", () => {
+  test("is the budgeted cost not yet paid", () => {
+    expect(planOutstandingCost(plan({ initialBudget: 10000 }))).toBe(3200);
+  });
+
+  test("clamps at 0 once paid meets the budget", () => {
+    expect(planOutstandingCost(plan({ initialBudget: 5000 }))).toBe(0);
+  });
+});
+
+describe("planMoney", () => {
+  test("reports every figure for a plan that paid an item from its own pot", () => {
+    const p = plan({
+      id: "p1",
+      initialBudget: 10000,
+      items: [{ id: "i1", name: "Venue", estimatedCost: 4000, paid: true, actualCost: 4000 }],
+    });
+    const txns = [savingsTx("2026-06-01", 4000, "p1")];
+
+    expect(planMoney(p, txns, INDEX)).toEqual({
+      budget: 10000,
+      paid: 4000,
+      saved: 4000,
+      unspent: 0,
+      outOfPocket: 0,
+      outstanding: 6000,
+      remainingNeed: 6000,
+    });
+  });
+});
+
+describe("releaseOrphanedPlanRefs", () => {
+  const live = plan({ id: "p1" });
+
+  test("strips a capitalPlanId matching no live plan", () => {
+    const txns = [savingsTx("2026-06-01", 500, "gone")];
+    const [released] = releaseOrphanedPlanRefs(txns, [live]);
+
+    expect(released!.capitalPlanId).toBeUndefined();
+  });
+
+  test("keeps a capitalPlanId that still resolves", () => {
+    const txns = [savingsTx("2026-06-01", 500, "p1")];
+    const [kept] = releaseOrphanedPlanRefs(txns, [live]);
+
+    expect(kept!.capitalPlanId).toBe("p1");
+  });
+
+  test("leaves rows carrying no plan id alone", () => {
+    const txns = [savingsTx("2026-06-01", 500)];
+
+    expect(releaseOrphanedPlanRefs(txns, [live])[0]!.capitalPlanId).toBeUndefined();
+  });
+
+  test("returns the same array when nothing is orphaned, so memos hold", () => {
+    const txns = [savingsTx("2026-06-01", 500, "p1"), savingsTx("2026-06-02", 100)];
+
+    expect(releaseOrphanedPlanRefs(txns, [live])).toBe(txns);
+  });
+
+  test("releases everything when no plans have loaded", () => {
+    const txns = [savingsTx("2026-06-01", 500, "p1")];
+
+    expect(releaseOrphanedPlanRefs(txns, [])[0]!.capitalPlanId).toBeUndefined();
+  });
+
+  test("a released deposit counts toward its plan again once healed", () => {
+    // The end-to-end point: an orphaned row is skipped by its piggy and claimed
+    // by no plan, so it counts nowhere until the id is cleared.
+    const orphaned = [savingsTx("2026-06-01", 500, "gone")];
+
+    expect(planSavedTotal(live, orphaned, INDEX)).toBe(0);
+    expect(releaseOrphanedPlanRefs(orphaned, [live])[0]!.capitalPlanId).toBeUndefined();
   });
 });
 

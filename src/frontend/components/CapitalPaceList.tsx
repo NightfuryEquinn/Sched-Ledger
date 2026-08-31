@@ -24,8 +24,8 @@ function PaceStatus({ plan }: { plan: CapitalPace }) {
 
 /**
  * The Capitals half of Saving Insights: one line per plan with what is set
- * aside, what is left, the pace it is being saved at, and where that leaves it
- * against the target date. Shared by the Piggies and Insights views, which
+ * aside, how much of that is still unspent, what is left, the pace it is being
+ * saved at, and where that leaves it against the target date. Shared by the Piggies and Insights views, which
  * format money differently (Insights can convert currency), so `money` comes
  * from the caller.
  */
@@ -46,7 +46,8 @@ export function CapitalPaceList({
           <div className="capital-pace-main">
             <span className="capital-pace-name">{plan.name}</span>
             <span className="capital-pace-meta">
-              {money(plan.unspent)} set aside
+              {money(plan.saved)} set aside
+              {plan.unspent !== plan.saved ? ` · ${money(plan.unspent)} unspent` : ""}
               {plan.remainingNeed > 0 ? ` · ${money(plan.remainingNeed)} to go` : ""}
               {plan.monthlyPace > 0 ? ` · ${money(plan.monthlyPace)}/mo pace` : ""}
               {plan.requiredMonthly ? ` · ${money(plan.requiredMonthly)}/mo needed` : ""}

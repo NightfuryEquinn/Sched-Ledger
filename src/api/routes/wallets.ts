@@ -1,5 +1,5 @@
 import { badRequest, notFound } from "@/api/lib/errors";
-import { randomObjectId } from "@/api/lib/ids";
+import { idForms, randomObjectId } from "@/api/lib/ids";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -216,9 +216,11 @@ walletsRoutes.delete("/:id", async (c) => {
   const walletCount = await financialWallets.countDocuments({ accountId });
   if (walletCount <= 1) badRequest("Cannot delete your only wallet");
 
+  /* Match both stored forms: a legacy string-typed walletId would not be
+     counted, and the wallet would delete out from under real transactions. */
   const expenseCount = await expenses.countDocuments({
     accountId,
-    walletId: new ObjectId(id.data),
+    walletId: { $in: idForms(id.data) },
   });
   if (expenseCount > 0) {
     badRequest("Cannot delete a wallet that has transactions. Move or delete them first.");

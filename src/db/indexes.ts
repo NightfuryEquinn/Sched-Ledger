@@ -51,6 +51,15 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db.collection(COLLECTIONS.expenses).createIndex({ accountId: 1, walletId: 1, date: -1 }),
     db.collection(COLLECTIONS.expenses).createIndex({ accountId: 1, date: -1 }),
     db.collection(COLLECTIONS.expenses).createIndex({ accountId: 1, recurring: 1, date: -1 }),
+    /* Releasing a deleted plan's deposits filters on this; partial because most
+       expenses carry no plan. */
+    db.collection(COLLECTIONS.expenses).createIndex(
+      { accountId: 1, capitalPlanId: 1 },
+      {
+        name: "capital_plan_assignment",
+        partialFilterExpression: { capitalPlanId: { $exists: true } },
+      },
+    ),
     /* Lookup for cron materialization dedupe (legacy plaintext series). */
     db.collection(COLLECTIONS.expenses).createIndex(
       { accountId: 1, walletId: 1, sub: 1, note: 1, recurring: 1, date: 1 },
@@ -88,6 +97,12 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db.collection(COLLECTIONS.budgetAlertLogs).createIndex(
       { accountId: 1, walletId: 1, categoryId: 1, month: 1, level: 1 },
       { unique: true },
+    ),
+    /* Month-keyed dedupe markers that nothing resolves back to a wallet or
+       category, so they are pure growth once their month is past. */
+    db.collection(COLLECTIONS.budgetAlertLogs).createIndex(
+      { sentAt: 1 },
+      { expireAfterSeconds: 400 * 24 * 60 * 60 },
     ),
     db.collection(COLLECTIONS.todoLists).createIndex({ accountId: 1, createdAt: 1 }),
     db.collection(COLLECTIONS.capitalPlans).createIndex({ accountId: 1, createdAt: 1 }),

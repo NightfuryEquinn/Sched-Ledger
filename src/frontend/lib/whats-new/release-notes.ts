@@ -34,6 +34,59 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "4.1.3",
+    date: "August 2026",
+    lead: "Deleting something no longer leaves money counted nowhere: assigned savings go back to their envelope, budget holds re-reserve, and a category with old history can no longer be deleted by mistake.",
+    highlights: [
+      {
+        icon: "capital",
+        title: "Deleting a plan returns its savings",
+        body:
+          "Deposits you assigned to a Capital plan go back to their savings envelope instead of disappearing from " +
+          "both Piggies and Capitals. Deposits stranded by a plan you deleted earlier come back on their own, and the " +
+          "delete confirmation now tells you how much is about to move.",
+      },
+      {
+        icon: "budget",
+        title: "Budget holds re-reserve correctly",
+        body:
+          "Deleting the payment logged from a scheduled event now re-reserves that event's budget hold, including " +
+          "across months and when you delete a whole recurring series — cases that previously left the envelope " +
+          "quietly under-reserved.",
+      },
+      {
+        icon: "piggy",
+        title: "Safer category deletes",
+        body:
+          "Whether a category counts as in use is now judged on your full history across every wallet, not just the " +
+          "recent months of the wallet you happen to have open, so a savings envelope with older deposits is archived " +
+          "rather than deleted. Editing a logged fuel fill also no longer unlinks its ledger entry.",
+      },
+    ],
+  },
+  {
+    version: "4.1.2",
+    date: "August 2026",
+    lead: "Capitals now counts money you set aside and then spend only once, so a plan's Unspent falls when you pay for something out of it.",
+    highlights: [
+      {
+        icon: "capital",
+        title: "Unspent follows your spending",
+        body:
+          "Paying a line item now draws down the savings you assigned to that plan instead of leaving them sitting there. " +
+          "Plan cards show what you have set aside, what of it is still unspent, and what is still to save — figures that " +
+          "previously subtracted the same money twice and under-stated how much you had left to put away.",
+      },
+      {
+        icon: "budget",
+        title: "Plans without a budget",
+        body:
+          "A plan with line items but no budget typed in now measures itself against the sum of those estimates, " +
+          "so it no longer reads as Overpaid the moment you pay for anything.",
+      },
+    ],
+  },
+  {
     version: "4.1.1",
     date: "August 2026",
     lead: "Saving Insights now counts your Capitals plans alongside Piggies, you choose whether the guided tour runs, tours stop reappearing after you close them, and every button that talks to the server now looks the part while it works.",

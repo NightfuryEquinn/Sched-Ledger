@@ -1,5 +1,5 @@
 import { notFound } from "@/api/lib/errors";
-import { randomObjectId } from "@/api/lib/ids";
+import { idForms, randomObjectId } from "@/api/lib/ids";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -65,12 +65,22 @@ capitalPlansRoutes.delete("/:id", async (c) => {
   const id = objectIdSchema.safeParse(c.req.param("id"));
   if (!id.success) notFound("Plan not found");
 
-  const { capitalPlans } = getCollections(getDb());
+  const { capitalPlans, expenses } = getCollections(getDb());
   const result = await capitalPlans.deleteOne({
     _id: new ObjectId(id.data),
     accountId,
   });
 
   if (result.deletedCount === 0) notFound("Plan not found");
+
+  /* Deposits assigned to the plan outlive it — release them back to their
+     savings envelope. A dangling capitalPlanId fails both the piggy exclusion
+     (a truthiness check) and every plan's inclusion test (id equality), so the
+     money would count nowhere at all. */
+  await expenses.updateMany(
+    { accountId, capitalPlanId: { $in: idForms(id.data) } },
+    { $set: { updatedAt: new Date() }, $unset: { capitalPlanId: "" } },
+  );
+
   return c.json({ ok: true });
 });

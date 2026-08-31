@@ -5,7 +5,7 @@ import {
   shouldRetireOldExpenseSeries,
 } from "@/api/lib/expense-delete-scope";
 import { buildExpenseUpdate } from "@/api/lib/expense-update";
-import { randomObjectId } from "@/api/lib/ids";
+import { idForms, randomObjectId } from "@/api/lib/ids";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -165,13 +165,36 @@ expensesRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async
   if (!id.success) notFound("Expense not found");
 
   const { scope, fromDate } = c.req.valid("query");
-  const { expenses } = getCollections(getDb());
+  const { expenses, events, vehicleFills } = getCollections(getDb());
   const doc = await expenses.findOne({
     _id: new ObjectId(id.data),
     accountId,
     skipped: { $ne: true },
   });
   if (!doc) notFound("Expense not found");
+
+  /*
+   * An event's expenseId is proof-of-payment to `isHoldReleased`, and a fill's
+   * is what hides its "Log" button. Left pointing at a deleted expense, the
+   * first under-reserves that budget envelope forever and the second makes the
+   * payment impossible to re-log. Both fields are plaintext, so clear them here
+   * rather than relying on the client, which only unlinks the single row it was
+   * asked to delete and only searches the month it happens to be showing.
+   */
+  const unlinkDeleted = async (deletedIds: string[]) => {
+    if (!deletedIds.length) return;
+    const now = new Date();
+    /* EventDocument.expenseId is `ObjectId | string`, so match both stored
+       forms; VehicleFillDocument.expenseId is strictly ObjectId. */
+    await events.updateMany(
+      { accountId, expenseId: { $in: deletedIds.flatMap((hex) => idForms(hex)) } },
+      { $set: { updatedAt: now }, $unset: { expenseId: "" } },
+    );
+    await vehicleFills.updateMany(
+      { accountId, expenseId: { $in: deletedIds.map((hex) => new ObjectId(hex)) } },
+      { $set: { updatedAt: now }, $unset: { expenseId: "" } },
+    );
+  };
 
   const isRecurring = normalizeRecurring(doc.recurring) !== false;
 
@@ -181,6 +204,7 @@ expensesRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async
       accountId,
     });
     if (result.deletedCount === 0) notFound("Expense not found");
+    await unlinkDeleted([doc._id.toString()]);
     return c.json({ ok: true, deletedIds: [doc._id.toString()] });
   }
 
@@ -192,6 +216,13 @@ expensesRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async
     scope,
     fromDate: effectiveFrom,
   });
+
+  /* A skipped occurrence is filtered out of every read path, so links to it are
+     just as dead as links to a deleted row. `endedIds` rows still exist. */
+  await unlinkDeleted([
+    ...(applied.deletedIds ?? []),
+    ...(applied.skippedId ? [applied.skippedId] : []),
+  ]);
 
   return c.json({ ok: true, ...applied });
 });

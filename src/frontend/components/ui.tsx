@@ -805,7 +805,7 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
  * only ever land back in the envelope it came from.
  *
  * On savings deposits (`kind === "expense"` + savings category), an optional
- * Capital picker assigns the amount to a plan as Unspent; default is Piggies.
+ * Capital picker adds the amount to a plan's pot; default is Piggies.
  */
 /** Draft payload for creating (`id` absent) or updating (`id` set) an expense. */
 type ExpenseDraft = Omit<Expense, "id"> & { id?: string };

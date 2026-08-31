@@ -143,7 +143,9 @@ export type CapitalPlan = {
   templateId?: CapitalTemplateId;
   glyph: string;
   targetDate?: string;
-  /** Money already set aside for this plan; reduces monthly save need. */
+  /** The plan's total target cost. Not money in hand — the pot of savings
+   * assigned to the plan is derived from transactions. 0 or absent falls back
+   * to the sum of item estimates; see `planEffectiveBudget`. */
   initialBudget?: number;
   createdAt: string;
   items: CapitalItem[];

@@ -92,7 +92,7 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
       }
       if ("$in" in ops) {
         const list = ops.$in as unknown[];
-        if (!list.includes(doc[key])) return false;
+        if (!list.some((candidate) => valueEquals(doc[key], candidate))) return false;
         continue;
       }
     }
@@ -103,6 +103,14 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
     if (doc[key] !== value) return false;
   }
   return true;
+}
+
+/** Mongo-style equality: ObjectIds compare by value, everything else by identity. */
+function valueEquals(left: unknown, right: unknown): boolean {
+  if (right instanceof ObjectId) {
+    return left instanceof ObjectId && left.equals(right);
+  }
+  return left === right;
 }
 
 function applyUpdate(doc: Doc, update: Record<string, unknown>): void {
@@ -123,6 +131,11 @@ function applyUpdate(doc: Doc, update: Record<string, unknown>): void {
           ? ((v as { $each: unknown[] }).$each ?? [])
           : [v];
       doc[k] = [...current, ...incoming.filter((item) => !current.includes(item))];
+    }
+  }
+  if (update.$unset && typeof update.$unset === "object") {
+    for (const k of Object.keys(update.$unset as Record<string, unknown>)) {
+      delete doc[k];
     }
   }
   if (update.$setOnInsert && typeof update.$setOnInsert === "object") {
@@ -254,6 +267,9 @@ function createCollection() {
         },
       };
       return api;
+    },
+    async countDocuments(filter: Record<string, unknown> = {}) {
+      return docs.filter((d) => matches(d, filter)).length;
     },
     async deleteOne(filter: Record<string, unknown> = {}) {
       const idx = docs.findIndex((d) => matches(d, filter));

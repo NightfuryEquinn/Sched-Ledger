@@ -1,4 +1,4 @@
-import { planBudget, planIsOverbudget, planPaidTotal, planUnspentTotal } from "./capitals";
+import { planIsOverbudget, planMoney } from "./capitals";
 import { CURRENT_MONTH_KEY, monthLabel, monthsWindow, roundMoney } from "./data";
 import { mean } from "./stat-helpers";
 import type { CategoryIndex } from "./categories";
@@ -33,9 +33,11 @@ export type CapitalPace = {
   planId: string;
   name: string;
   glyph: string;
-  /** Net savings assigned to the plan, all time (matches the Capitals card). */
+  /** Gross savings assigned to the plan, all time. */
+  saved: number;
+  /** What is left of that pot after payments — see `planUnspentTotal`. */
   unspent: number;
-  /** Still to set aside: budget − paid − unspent, floored at 0. */
+  /** Still to set aside once the pot is applied to the unpaid budget. */
   remainingNeed: number;
   /** Trailing monthly rate of assigned deposits, folding in recurring pledges. */
   monthlyPace: number;
@@ -89,7 +91,7 @@ function monthsBetween(fromKey: string, toKey: string): number {
  * Net monthly deposits (savings − withdrawals) for one category across a
  * window of months, keyed by month. Also used by the Piggies view to draw
  * each card's contribution sparkline. Capital-assigned transactions are
- * excluded — they count as Capitals Unspent, not Piggies.
+ * excluded — they count toward the plan's pot, not the piggy.
  */
 export function monthlyNetForCat(
   txns: Expense[],
@@ -233,9 +235,10 @@ function paceFor(
 /**
  * Pace, projection and on-track status for one Capitals plan.
  *
- * The plan's goal is its remaining need — budget minus what is already paid
- * and already set aside — so a plan whose items are paid reads as funded even
- * with nothing assigned to it. Pace resolves like a piggy's: the larger of the
+ * The plan's goal is its remaining need — the unpaid part of the budget, less
+ * whatever is still in the plan's pot. A plan reads as funded once its budget is
+ * fully paid or fully saved for; money set aside and then spent on an item
+ * counts once, not twice. Pace resolves like a piggy's: the larger of the
  * trailing window mean and any active recurring pledge, so a standing order
  * that only just started is not under-projected.
  */
@@ -251,12 +254,8 @@ function paceForPlan(
   const pledged = recurringPledgeForPlan(txns, plan.id, index);
   const monthlyPace = roundMoney(Math.max(historicalMean, pledged));
 
-  const budget = planBudget(plan);
-  const unspent = planUnspentTotal(plan, txns, index);
-  // A plan with no budget has nothing to overspend, so paid items alone never
-  // make it overbudget here — there would be no figure to call them over.
-  const overbudget = budget > 0 && planIsOverbudget(plan);
-  const remainingNeed = roundMoney(Math.max(0, budget - planPaidTotal(plan) - unspent));
+  const { budget, saved, unspent, remainingNeed } = planMoney(plan, txns, index);
+  const overbudget = planIsOverbudget(plan);
   const funded = budget > 0 && remainingNeed === 0;
   const targetMonth = plan.targetDate ? plan.targetDate.slice(0, 7) : null;
 
@@ -286,6 +285,7 @@ function paceForPlan(
     planId: plan.id,
     name: plan.name,
     glyph: plan.glyph,
+    saved,
     unspent,
     remainingNeed,
     monthlyPace,
