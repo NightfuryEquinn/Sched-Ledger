@@ -24,6 +24,30 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
           if (typeof right === "string" && String(doc._id) === right) return false;
           continue;
         }
+        const docId = doc._id instanceof ObjectId ? doc._id : null;
+        if (docId) {
+          if ("$lt" in ops && ops.$lt instanceof ObjectId) {
+            if (docId.toHexString() >= ops.$lt.toHexString()) return false;
+            continue;
+          }
+          if ("$lte" in ops && ops.$lte instanceof ObjectId) {
+            if (docId.toHexString() > ops.$lte.toHexString()) return false;
+            continue;
+          }
+          if ("$gt" in ops && ops.$gt instanceof ObjectId) {
+            if (docId.toHexString() <= ops.$gt.toHexString()) return false;
+            continue;
+          }
+        if ("$gte" in ops && ops.$gte instanceof ObjectId) {
+          if (docId.toHexString() < ops.$gte.toHexString()) return false;
+          continue;
+        }
+        if ("$nin" in ops) {
+          const list = ops.$nin as ObjectId[];
+          if (list.some((candidate) => docId.equals(candidate))) return false;
+          continue;
+        }
+      }
       }
       const id =
         value instanceof ObjectId
@@ -44,6 +68,10 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
       if ("$gt" in ops) {
         const left = doc[key];
         const right = ops.$gt;
+        if (left instanceof ObjectId && right instanceof ObjectId) {
+          if (left.toHexString() <= right.toHexString()) return false;
+          continue;
+        }
         if (!(left instanceof Date && right instanceof Date && left.getTime() > right.getTime())) {
           if (!(typeof left === "number" && typeof right === "number" && left > right)) {
             if (!(typeof left === "string" && typeof right === "string" && left > right)) return false;
@@ -54,6 +82,10 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
       if ("$gte" in ops) {
         const left = doc[key];
         const right = ops.$gte;
+        if (left instanceof ObjectId && right instanceof ObjectId) {
+          if (left.toHexString() < right.toHexString()) return false;
+          continue;
+        }
         if (!(left instanceof Date && right instanceof Date && left.getTime() >= right.getTime())) {
           if (!(typeof left === "number" && typeof right === "number" && left >= right)) {
             if (!(typeof left === "string" && typeof right === "string" && left >= right)) return false;
@@ -64,6 +96,10 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
       if ("$lt" in ops) {
         const left = doc[key];
         const right = ops.$lt;
+        if (left instanceof ObjectId && right instanceof ObjectId) {
+          if (left.toHexString() >= right.toHexString()) return false;
+          continue;
+        }
         if (!(left instanceof Date && right instanceof Date && left.getTime() < right.getTime())) {
           if (!(typeof left === "number" && typeof right === "number" && left < right)) {
             if (!(typeof left === "string" && typeof right === "string" && left < right)) return false;
@@ -74,6 +110,10 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
       if ("$lte" in ops) {
         const left = doc[key];
         const right = ops.$lte;
+        if (left instanceof ObjectId && right instanceof ObjectId) {
+          if (left.toHexString() > right.toHexString()) return false;
+          continue;
+        }
         if (!(left instanceof Date && right instanceof Date && left.getTime() <= right.getTime())) {
           if (!(typeof left === "number" && typeof right === "number" && left <= right)) {
             if (!(typeof left === "string" && typeof right === "string" && left <= right)) return false;
@@ -93,6 +133,11 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
       if ("$in" in ops) {
         const list = ops.$in as unknown[];
         if (!list.some((candidate) => valueEquals(doc[key], candidate))) return false;
+        continue;
+      }
+      if ("$nin" in ops) {
+        const list = ops.$nin as unknown[];
+        if (list.some((candidate) => valueEquals(doc[key], candidate))) return false;
         continue;
       }
     }
@@ -233,15 +278,13 @@ function createCollection() {
       const matched = docs.filter((d) => matches(d, filter));
       const state = {
         docs: matched,
-        sortKey: null as string | null,
-        sortDir: 1,
+        sortKeys: [] as Array<{ key: string; dir: 1 | -1 }>,
         limitN: null as number | null,
       };
       const api = {
         sort(spec: Record<string, 1 | -1>) {
-          const [key, dir] = Object.entries(spec)[0] ?? [];
-          state.sortKey = key ?? null;
-          state.sortDir = dir ?? 1;
+          const entries = Object.entries(spec);
+          state.sortKeys = entries.map(([key, dir]) => ({ key, dir: dir ?? 1 }));
           return api;
         },
         limit(n: number) {
@@ -250,16 +293,23 @@ function createCollection() {
         },
         async toArray() {
           const out = [...state.docs];
-          if (state.sortKey) {
-            const key = state.sortKey;
-            const dir = state.sortDir;
+          if (state.sortKeys.length) {
             out.sort((a, b) => {
-              const av = a[key];
-              const bv = b[key];
-              if (av instanceof Date && bv instanceof Date) {
-                return (av.getTime() - bv.getTime()) * dir;
+              for (const { key, dir } of state.sortKeys) {
+                const av = a[key];
+                const bv = b[key];
+                let cmp = 0;
+                if (av instanceof ObjectId && bv instanceof ObjectId) {
+                  cmp = av.toHexString().localeCompare(bv.toHexString());
+                } else if (av instanceof Date && bv instanceof Date) {
+                  cmp = av.getTime() - bv.getTime();
+                } else {
+                  cmp = String(av).localeCompare(String(bv));
+                }
+                if (cmp !== 0) return cmp * dir;
               }
-              return String(av).localeCompare(String(bv)) * dir;
+
+              return 0;
             });
           }
           if (state.limitN != null) return out.slice(0, state.limitN);

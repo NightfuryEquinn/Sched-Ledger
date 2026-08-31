@@ -247,6 +247,7 @@ export const api = {
       to?: string;
       limit?: number;
       before?: string;
+      beforeId?: string;
       recurring?: boolean;
       walletId?: string;
       kind?: "expense" | "income";
@@ -257,6 +258,7 @@ export const api = {
       if (query?.to) params.set("to", query.to);
       if (query?.limit != null) params.set("limit", String(query.limit));
       if (query?.before) params.set("before", query.before);
+      if (query?.beforeId) params.set("beforeId", query.beforeId);
       if (query?.recurring !== undefined) params.set("recurring", String(query.recurring));
       if (query?.walletId) params.set("walletId", query.walletId);
       if (query?.kind) params.set("kind", query.kind);
@@ -265,6 +267,7 @@ export const api = {
         expenses: ExpenseWire[];
         hasMore?: boolean;
         nextBefore?: string | null;
+        nextBeforeId?: string | null;
       }>(`/expenses${qs ? `?${qs}` : ""}`);
     },
     create(body: Record<string, unknown>) {
@@ -290,18 +293,20 @@ export const api = {
   },
 
   events: {
-    list(query?: { month?: string; from?: string; to?: string; limit?: number; before?: string }) {
+    list(query?: { month?: string; from?: string; to?: string; limit?: number; before?: string; beforeId?: string }) {
       const params = new URLSearchParams();
       if (query?.month) params.set("month", query.month);
       if (query?.from) params.set("from", query.from);
       if (query?.to) params.set("to", query.to);
       if (query?.limit != null) params.set("limit", String(query.limit));
       if (query?.before) params.set("before", query.before);
+      if (query?.beforeId) params.set("beforeId", query.beforeId);
       const qs = params.toString();
       return request<{
         events: EventWire[];
         hasMore?: boolean;
         nextBefore?: string | null;
+        nextBeforeId?: string | null;
       }>(`/events${qs ? `?${qs}` : ""}`);
     },
     create(body: Record<string, unknown>) {
@@ -366,13 +371,19 @@ export const api = {
       return request<{ ok: boolean }>(`/vehicles/${id}`, { method: "DELETE" });
     },
     fills: {
-      list(params: { vehicleId?: string; limit?: number; before?: string } = {}) {
+      list(params: { vehicleId?: string; limit?: number; before?: string; beforeId?: string } = {}) {
         const qs = new URLSearchParams();
         if (params.vehicleId) qs.set("vehicleId", params.vehicleId);
         if (params.limit) qs.set("limit", String(params.limit));
         if (params.before) qs.set("before", params.before);
+        if (params.beforeId) qs.set("beforeId", params.beforeId);
         const suffix = qs.toString() ? `?${qs.toString()}` : "";
-        return request<{ fills: VehicleFillWire[]; hasMore: boolean; nextBefore: string | null }>(
+        return request<{
+          fills: VehicleFillWire[];
+          hasMore: boolean;
+          nextBefore: string | null;
+          nextBeforeId: string | null;
+        }>(
           `/vehicles/fills${suffix}`,
         );
       },

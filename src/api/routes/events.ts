@@ -7,6 +7,7 @@ import {
   sendImmediateReminderIfDue,
 } from "@/api/lib/reminders";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
+import { dateIdCursorClause, pageCursorFromDocs } from "@/api/lib/pagination";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
 import { getCollections, getDb } from "@/db";
@@ -40,7 +41,7 @@ eventsRoutes.use("*", sessionAuth);
 
 eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
   const accountId = c.get("accountId");
-  const { month, from, to, limit, before } = c.req.valid("query");
+  const { month, from, to, limit, before, beforeId } = c.req.valid("query");
   const { events } = getCollections(getDb());
 
   const filter: Record<string, unknown> = { accountId };
@@ -58,14 +59,12 @@ eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
     const onceDate: Record<string, string> = {};
     if (rangeStart) onceDate.$gte = rangeStart;
     if (rangeEnd) onceDate.$lte = rangeEnd;
-    if (before) onceDate.$lt = before;
 
     const clauses: Record<string, unknown>[] = [{ repeat: "once", date: onceDate }];
 
     /* A once-event starting before the window but ending inside it. */
     if (rangeStart) {
       const spillDate: Record<string, string> = { $lt: rangeStart };
-      if (before) spillDate.$lt = before < rangeStart ? before : rangeStart;
       clauses.push({
         repeat: "once",
         date: spillDate,
@@ -94,20 +93,20 @@ eventsRoutes.get("/", zValidator("query", listEventsQuerySchema), async (c) => {
     }
 
     if (before) {
-      filter.$and = [{ $or: clauses }, { date: { $lt: before } }];
+      filter.$and = [{ $or: clauses }, { $or: dateIdCursorClause(before, beforeId) }];
     } else {
       filter.$or = clauses;
     }
   }
 
-  const docs = await events.find(filter).sort({ date: -1 }).limit(limit).toArray();
-  const hasMore = docs.length === limit;
-  const nextBefore = hasMore ? docs[docs.length - 1]?.date : undefined;
+  const docs = await events.find(filter).sort({ date: -1, _id: -1 }).limit(limit).toArray();
+  const { hasMore, nextBefore, nextBeforeId } = pageCursorFromDocs(docs, limit);
 
   return c.json({
     events: serializeDocs(docs),
     hasMore,
-    nextBefore: nextBefore ?? null,
+    nextBefore,
+    nextBeforeId,
   });
 });
 

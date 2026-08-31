@@ -207,6 +207,7 @@ export const listEventsQuerySchema = z.object({
   to: isoDateSchema.optional(),
   limit: z.coerce.number().int().min(1).max(5000).optional().default(2000),
   before: isoDateSchema.optional(),
+  beforeId: objectIdSchema.optional(),
 });
 
 export type ReminderDetails = z.infer<typeof reminderDetailsSchema>;

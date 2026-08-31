@@ -1,5 +1,6 @@
 import { notFound } from "@/api/lib/errors";
 import { randomObjectId } from "@/api/lib/ids";
+import { applyDateIdCursor, pageCursorFromDocs } from "@/api/lib/pagination";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -95,7 +96,7 @@ vehiclesRoutes.delete("/:id", async (c) => {
 
 vehiclesRoutes.get("/fills", zValidator("query", listVehicleFillsQuerySchema), async (c) => {
   const accountId = c.get("accountId");
-  const { vehicleId, from, limit, before } = c.req.valid("query");
+  const { vehicleId, from, limit, before, beforeId } = c.req.valid("query");
   const { vehicleFills } = getCollections(getDb());
 
   const filter: Record<string, unknown> = { accountId };
@@ -103,17 +104,18 @@ vehiclesRoutes.get("/fills", zValidator("query", listVehicleFillsQuerySchema), a
 
   const dateFilter: Record<string, string> = {};
   if (from) dateFilter.$gte = from;
-  if (before) dateFilter.$lt = before;
   if (Object.keys(dateFilter).length) filter.date = dateFilter;
 
-  const docs = await vehicleFills.find(filter).sort({ date: -1 }).limit(limit).toArray();
-  const hasMore = docs.length === limit;
-  const nextBefore = hasMore ? docs[docs.length - 1]?.date : undefined;
+  applyDateIdCursor(filter, before, beforeId);
+
+  const docs = await vehicleFills.find(filter).sort({ date: -1, _id: -1 }).limit(limit).toArray();
+  const { hasMore, nextBefore, nextBeforeId } = pageCursorFromDocs(docs, limit);
 
   return c.json({
     fills: serializeDocs(docs),
     hasMore,
-    nextBefore: nextBefore ?? null,
+    nextBefore,
+    nextBeforeId,
   });
 });
 
