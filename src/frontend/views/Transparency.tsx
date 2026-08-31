@@ -101,8 +101,8 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "date", value: '"2026-07-20"' },
       { key: "allDay / time / repeat", value: "schedule metadata" },
       { key: "exceptDates? / until?", value: "recurrence exceptions / end date" },
-      { key: "notify / lead / email", value: "reminder settings (plaintext for cron)" },
-      { key: "notifyDetails?", value: "title, hold, comments", note: "readable copy of what the reminder email says — stored only while notify is on, deleted when you switch it off" },
+      { key: "notify / lead", value: "reminder settings (plaintext for cron)" },
+      { key: "notifyDetails?", value: "title, hold, comments", note: "readable copy for email/push while notify is on — deleted when notify is off" },
       { key: "expenseId?", value: "ObjectId", note: "optional link when a bill payment was logged" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
@@ -120,7 +120,7 @@ const COLLECTIONS: CollectionDoc[] = [
   },
   {
     name: "capital_plans",
-    purpose: "Future-expense planners (marriage, trips, loans, custom) with total budget, monthly save, and a pot of savings assigned via linked transactions",
+    purpose: "Future-expense planners (marriage, trips, loans, custom) with total budget, monthly save, and a pot of savings assigned via linked transactions; paying line items draws down that pot",
     encrypted: true,
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
@@ -182,6 +182,7 @@ const COLLECTIONS: CollectionDoc[] = [
     purpose: "Authenticated browser sessions",
     fields: [
       { key: "accountId", value: '"64b6…"', note: "opaque users._id" },
+      { key: "address?", value: '"0xabc…"', note: "legacy sessions keyed by address only until backfill" },
       { key: "tokenHash", value: "hashed cookie token (rotated on sliding renewal)" },
       { key: "userAgent / ip", value: "client metadata" },
       { key: "createdAt / lastSeenAt / expiresAt", value: "Dates" },
@@ -189,26 +190,37 @@ const COLLECTIONS: CollectionDoc[] = [
     ],
   },
   {
-    name: "reminder_logs",
-    purpose: "Dedupes sent event reminder emails",
+    name: "push_subscriptions",
+    purpose: "Web Push endpoints — one row per browser; the row is the opt-in",
     fields: [
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
+      { key: "endpoint", value: "https://…", note: "unique; FCM, Mozilla, or Apple push host" },
+      { key: "keys.p256dh / keys.auth", value: "base64", note: "required verbatim to encrypt each push payload" },
+      { key: "createdAt / updatedAt", value: "ISO dates" },
+    ],
+  },
+  {
+    name: "reminder_logs",
+    purpose: "Dedupes sent event reminders per occurrence and channel (email and push)",
+    fields: [
+      { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "eventId", value: "ObjectId" },
       { key: "occurrenceIso", value: "ISO datetime" },
       { key: "lead", value: '"1d" | "at" | "span"', note: "one row per reminder kind — the chosen lead, the always-on at-event send, and multi-day ongoing sends are logged separately" },
-      { key: "email", value: '"you@mail.com"' },
-      { key: "channels?", value: '["email"]' },
-      { key: "sentAt", value: "Date" },
+      { key: "email", value: '"you@mail.com"', note: "account notify address at send time" },
+      { key: "channels?", value: '["email","push"]', note: "absent on pre-push rows (email-only)" },
+      { key: "sentAt", value: "Date", note: "TTL index (~400 days)" },
     ],
   },
   {
     name: "budget_alert_logs",
-    purpose: "Dedupes budget-near-limit email delivery (client evaluates; server delivers)",
+    purpose: "Dedupes budget-near-limit email and push delivery (client evaluates; server delivers)",
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "walletId / categoryId", value: "ids" },
       { key: "month", value: '"2026-07"' },
       { key: "level", value: '"warning" | "exceeded"' },
-      { key: "email / channels? / sentAt", value: "delivery record" },
+      { key: "email / channels? / sentAt", value: "delivery record", note: "TTL index (~400 days) on sentAt" },
     ],
   },
   {
@@ -242,6 +254,7 @@ const RELATIONSHIP_CHART = `flowchart TB
     Fills["vehicle_fills<br/>enc + payload"]
     Consent["consent"]
     Auth["auth_nonces · sessions"]
+    Push["push_subscriptions"]
     Logs["reminder_logs · budget_alert_logs"]
   end
 
@@ -266,6 +279,7 @@ const RELATIONSHIP_CHART = `flowchart TB
   Users -->|"owns"| Vehicles
   Users -->|"owns"| Consent
   Users --> Auth
+  Users --> Push
   Vehicles -->|"owns"| Fills
   Fills -.->|"optional link"| Exp
   Ev --> Logs
@@ -297,6 +311,7 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     Fills["vehicle_fills<br/>enc + payload"]
     Consent["consent"]
     Auth["auth_nonces · sessions"]
+    Push["push_subscriptions"]
     Logs["reminder_logs · budget_alert_logs"]
     Users --> Profile
     Users --> Wallets
@@ -308,7 +323,9 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
     Users --> Vehicles
     Users --> Consent
     Users --> Auth
+    Users --> Push
     Vehicles --> Fills
+    Fills -.->|"optional link"| Exp
     Ev --> Logs
     Wallets --> Logs
   end
@@ -322,7 +339,7 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
 `;
 
 const E2EE_CHART = `flowchart LR
-  Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · wallet names · budgets"]
+  Plain["Plain fields<br/>dates · kinds · schedule metadata<br/>reminder prefs · link ids"]
   Enc["AES-256-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
   DB[("MongoDB")]
@@ -336,7 +353,7 @@ const E2EE_CHART = `flowchart LR
 
 /** Mobile: same write path stacked top-to-bottom. */
 const E2EE_CHART_MOBILE = `flowchart TB
-  Plain["Plain fields<br/>titles · categories · amounts<br/>notes · tasks · wallet names · budgets"]
+  Plain["Plain fields<br/>dates · kinds · schedule metadata<br/>reminder prefs · link ids"]
   Enc["AES-256-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
   DB[("MongoDB")]
@@ -356,12 +373,14 @@ const SYSTEM_CHART = `flowchart LR
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
   Cron["cron-job.org<br/>HTTP poll every ~15 min"]
   Resend["Resend<br/>reminder / alert email"]
+  PushSvc["FCM · APNs · Mozilla<br/>Web Push delivery"]
 
   Browser -->|"HTTPS session"| Vercel
   Browser -.->|"typefaces only"| Fonts
   Vercel -->|"read/write docs"| Atlas
   Cron -->|"GET /api/cron/reminders"| Vercel
   Vercel -->|"send email"| Resend
+  Vercel -->|"send push"| PushSvc
 `;
 
 const SYSTEM_CHART_MOBILE = `flowchart TB
@@ -371,11 +390,13 @@ const SYSTEM_CHART_MOBILE = `flowchart TB
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
   Cron["cron-job.org<br/>HTTP poll every ~15 min"]
   Resend["Resend<br/>reminder / alert email"]
+  PushSvc["FCM · APNs · Mozilla<br/>Web Push delivery"]
 
   Browser --> Vercel --> Atlas
   Browser -.-> Fonts
   Cron --> Vercel
   Vercel --> Resend
+  Vercel --> PushSvc
 `;
 
 const MOBILE_MQ = "(max-width: 860px)";
@@ -515,11 +536,11 @@ export function Transparency() {
               encrypts secrets with AES-256-GCM, and syncs ciphertext to MongoDB Atlas. Vercel hosts the app and API
               (plus Analytics / Speed Insights) but does not run cron. cron-job.org is the only scheduler — it polls
               <code> GET /api/cron/reminders </code>
-              about every five minutes for email reminders and recurring expense rows. Optional email uses Resend.
-              UI typefaces (Young Serif, Schibsted Grotesk, Azeret Mono) load from Google Fonts — font files only, no
+              about every fifteen minutes for email reminders, push notifications, and recurring expense rows. Optional email uses Resend;
+              push delivery uses FCM, Apple Push, or Mozilla's service depending on the browser. UI typefaces (Young Serif, Schibsted Grotesk, Azeret Mono) load from Google Fonts — font files only, no
               ledger data. A device passphrase wraps your in-app recovery key on this browser; encrypted backups
               download to your machine only. The installable PWA may cache ciphertext locally for offline reads —
-              saves still need the network.
+              saves still need the network. Older rows may still carry legacy plaintext columns from before E2EE payloads.
             </p>
           </div>
         </div>
@@ -544,12 +565,13 @@ export function Transparency() {
               <code>accountId</code> (<code>users._id</code>); the SIWE wallet address lives only on{" "}
               <code>users</code> for login. The server can still see that address, session cookies (HttpOnly, rotated
               on sliding renewal), wallet currencies/funding modes, expense dates/kinds/recurrence flags, schedule
-              timing, reminder email addresses and lead times, and that a budget-alert email was delivered — but not
-              amounts, wallet names, category trees, notes, event titles, or to-do text. One deliberate exception:
-              email is not encrypted, so an event with email reminders switched on also stores{" "}
-              <code>notifyDetails</code> — the name, budget hold and comments that the email itself carries. It is
-              written only while that event has reminders on and an address set, and deleted the moment either goes
-              away; events without reminders keep everything in the payload. Linking a bill payment stores plaintext{" "}
+              timing, your account notify email and reminder lead times, and that a budget-alert or reminder delivery
+              occurred — but not transaction amounts, wallet names, category trees, notes, event titles, or to-do text.
+              Budget alerts are a deliberate exception: the client sends cleartext{" "}
+              <code>spent</code>, <code>budget</code>, <code>categoryName</code>, and optional <code>walletName</code>{" "}
+              so the email or push can name the category and amounts. Schedule reminders with notify on also store{" "}
+              <code>notifyDetails</code> — the title, budget hold, and comments the notification carries — only while
+              notify is enabled; switching it off deletes that copy. Linking a bill payment stores plaintext{" "}
               <code>eventId</code> / <code>expenseId</code> references only; assigning savings to a Capitals plan stores{" "}
               <code>capitalPlanId</code> on the expense (link id only, not amounts). A fuel fill's vehicle type stays
               plaintext for the vocabulary switch (car/EV/bike/van), and logging it to the ledger stores a plaintext{" "}
