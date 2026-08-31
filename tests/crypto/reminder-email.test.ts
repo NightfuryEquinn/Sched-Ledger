@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { reminderEmailHtml } from "@/api/lib/email";
+import { reminderEmailHtml } from "@/api/lib/reminder-email-html";
 
 describe("reminderEmailHtml", () => {
   test("falls back to the generic title when no plaintext copy was stored", () => {
