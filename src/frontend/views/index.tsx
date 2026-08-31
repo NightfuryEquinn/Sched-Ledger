@@ -162,6 +162,7 @@ type OverviewProps = {
   setView: (view: ViewId) => void;
   onEdit: (expense: Expense) => void;
   onEditEvent: (event: LedgerEvent) => void;
+  balanceExpenses?: Expense[];
 };
 
 // ── Overview ────────────────────────────────────────────────────────
@@ -176,14 +177,18 @@ export function Overview({
   todoLists = [],
   events = [],
   savingsTxns = [],
+  balanceExpenses,
   setView,
   onEdit,
   onEditEvent,
 }: OverviewProps) {
   const [loadedAt] = useState(() => new Date());
   const st = useMemo(
-    () => monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, month, categoryIndex),
-    [expenses, budgets, wallet, month, categoryIndex],
+    () =>
+      monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, month, categoryIndex, undefined, {
+        balanceExpenses,
+      }),
+    [expenses, budgets, wallet, month, categoryIndex, balanceExpenses],
   );
   const [hoverCat, setHoverCat] = useState<string | null>(null);
   const [expandedCat, setExpandedCat] = useState<Record<string, boolean>>({});
@@ -694,7 +699,7 @@ export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, 
   const totalBudget = st.totalBudget;
   const totalSpent = st.spent;
   const totalHeld = st.totalHeld;
-  const totalAvailable = totalBudget - totalSpent - st.saved - totalHeld;
+  const totalAvailable = totalBudget - totalSpent - (st.saved - st.withdrawn) - totalHeld;
 
   /** Open the inline budget editor for a category. */
   const startEdit = (id: string) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
