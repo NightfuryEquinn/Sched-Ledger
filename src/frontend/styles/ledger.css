@@ -2405,7 +2405,7 @@ h1, h2, h3 {
   overflow-x: auto;
   align-items: end;
   gap: 8px;
-  min-height: 68px;
+  min-height: 150px;
 }
 
 .ptrl-col {
