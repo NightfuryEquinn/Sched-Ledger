@@ -97,6 +97,7 @@ type UserReminderPrefs = {
   emailEnabled: boolean;
   pushEnabled: boolean;
   timezone: string;
+  notifyEmail: string;
 };
 
 /** Load per-channel reminder eligibility and timezone for an account. */
@@ -105,7 +106,7 @@ async function userReminderPrefs(accountId: string): Promise<UserReminderPrefs> 
   const [user, hasPush] = await Promise.all([
     users.findOne(
       { _id: new ObjectId(accountId) },
-      { projection: { emailRemindersEnabled: 1, timezone: 1 } },
+      { projection: { emailRemindersEnabled: 1, timezone: 1, notifyEmail: 1 } },
     ),
     pushConfigured() ? accountHasPushSubscription(accountId) : Promise.resolve(false),
   ]);
@@ -114,6 +115,7 @@ async function userReminderPrefs(accountId: string): Promise<UserReminderPrefs> 
     emailEnabled: user?.emailRemindersEnabled !== false,
     pushEnabled: hasPush,
     timezone: user?.timezone ?? DEFAULT_TIMEZONE,
+    notifyEmail: user?.notifyEmail?.trim() ?? "",
   };
 }
 
@@ -154,11 +156,11 @@ async function mapPool<T, R>(
 
 /** Send the "reminder enabled" confirmation email when an event turns notify on. */
 export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
-  if (!doc.notify || !doc.email?.trim()) return;
+  if (!doc.notify) return;
   if (!emailConfigured()) return;
 
   const prefs = await userReminderPrefs(doc.accountId);
-  if (!prefs.emailEnabled) return;
+  if (!prefs.emailEnabled || !prefs.notifyEmail) return;
 
   const when = formatOccurrenceWhen(doc, doc.date, prefs.timezone);
   const category = eventCategoryLabel(doc);
@@ -179,7 +181,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
     isConfirmation: true,
   });
 
-  await sendEmail({ to: doc.email.trim(), subject, html, text });
+  await sendEmail({ to: prefs.notifyEmail, subject, html, text });
 }
 
 /**
@@ -236,9 +238,9 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
       prefsCache.set(ev.accountId, prefs);
     }
 
-    /* Email needs Resend, the global opt-in, and a per-event address.
+    /* Email needs Resend, the global opt-in, and the account notify address.
        Push needs only a registered device, so it works without any of those. */
-    const email = ev.email?.trim() || "";
+    const email = prefs.notifyEmail;
     const channels: ReminderChannel[] = [];
     if (emailReady && prefs.emailEnabled && email) channels.push("email");
     if (pushReady && prefs.pushEnabled) channels.push("push");
@@ -423,7 +425,7 @@ export async function sendImmediateReminderIfDue(
   if (!doc.notify) return;
 
   const prefs = await userReminderPrefs(doc.accountId);
-  const email = doc.email?.trim() || "";
+  const email = prefs.notifyEmail;
 
   const channels: ReminderChannel[] = [];
   if (emailConfigured() && prefs.emailEnabled && email) channels.push("email");

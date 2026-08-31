@@ -117,11 +117,10 @@ eventsRoutes.post("/", zValidator("json", createEventSchema), async (c) => {
   const now = new Date();
   const { events } = getCollections(getDb());
 
-  const { expenseId, notifyDetails, ...rest } = body;
+  const { expenseId, notifyDetails, email: _ignoredEmail, ...rest } = body;
   const keepDetails = keepReminderDetails({
     details: notifyDetails,
     notify: rest.notify,
-    email: rest.email,
   });
   const result = await events.insertOne({
     _id: randomObjectId(),
@@ -185,7 +184,7 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
     });
   }
 
-  const { expenseId, notifyDetails, ...rest } = body;
+  const { expenseId, notifyDetails, email: _ignoredEmail, ...rest } = body;
   const $set: Record<string, unknown> = { ...rest, updatedAt: new Date() };
   if ("expenseId" in body) {
     if (expenseId) $set.expenseId = new ObjectId(expenseId);
@@ -196,6 +195,7 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
     comments: "",
     customLabel: "",
     customGlyph: "",
+    email: "",
   };
   if ("expenseId" in body && !expenseId) {
     $unset.expenseId = "";
@@ -204,7 +204,6 @@ eventsRoutes.patch("/:id", zValidator("json", updateEventSchema), async (c) => {
   const details = reminderDetailsUpdate({
     details: notifyDetails,
     notify: body.notify ?? existing.notify,
-    email: body.email ?? existing.email,
   });
   if (details.set) $set.notifyDetails = details.set;
   if (details.unset) $unset.notifyDetails = "";

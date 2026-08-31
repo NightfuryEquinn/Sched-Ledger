@@ -35,6 +35,7 @@ import {
 import type { EventDay } from "@/frontend/lib/data";
 import { isActiveHoldOccurrence } from "@/frontend/lib/envelope-holds";
 import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
+import { api } from "@/frontend/lib/api";
 import type { CategoryIndex, EventComment, LedgerEvent } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
@@ -501,8 +502,8 @@ export function EventModal({
   onLogPayment,
 }: EventModalProps) {
   const editing = !!(initial && initial.id);
-  const lastEmail = (() => { try { return localStorage.getItem("ledger:notifyEmail") || ""; } catch (e) { return ""; } })();
   const customMeta = EVENT_CATS.find((c) => c.id === "custom")!;
+  const [accountNotifyEmail, setAccountNotifyEmail] = useState("");
 
   const [title, setTitle] = useState(initial ? initial.title : "");
   const [catId, setCatId] = useState(initial ? initial.catId : "bill");
@@ -523,7 +524,17 @@ export function EventModal({
   const [lead, setLead] = useState(() =>
     normalizeLead(initial ? initial.lead : "1d", initial ? !!initial.allDay : true),
   );
-  const [email, setEmail] = useState(initial && initial.email ? initial.email : lastEmail);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.users.me().then(({ user }) => {
+      if (!cancelled) setAccountNotifyEmail(user.notifyEmail?.trim() || "");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [comments, setComments] = useState<EventComment[]>(
     initial && initial.comments ? initial.comments : [],
   );
@@ -610,7 +621,6 @@ export function EventModal({
     if (!valid || saving) return;
     setSaving(true);
     try {
-      if (notify && email.trim()) { try { localStorage.setItem("ledger:notifyEmail", email.trim()); } catch (e) {} }
       const holdFields = holdEnabled && holdAmountNum > 0 && resolvedHoldCategoryId
         ? {
             budgetHoldEnabled: true,
@@ -632,7 +642,7 @@ export function EventModal({
         allDay, time: allDay ? null : time,
         endTime: allDay || !endTime ? null : endTime,
         repeat,
-        notify, lead, email: email.trim(), comments,
+        notify, lead, comments,
         ...holdFields,
       });
     } finally {
@@ -816,9 +826,14 @@ export function EventModal({
                 </div>
                 <div>
                   <label className="fld-label">Send to</label>
-                  <input className="text-in" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <p className="notify-email-readout">
+                    {accountNotifyEmail || "Set your email in Data & privacy"}
+                  </p>
                 </div>
               </div>
+              <p className="notify-note">
+                Reminders go to your account email only — set it under Data &amp; privacy.
+              </p>
               <p className="notify-note">
                 You'll always get a reminder right at the event itself — the start time, or
                 9:00 AM on the day for all-day events — this lead time is an extra one sent
