@@ -77,6 +77,8 @@ export type ExpenseDocument = Omit<
   capitalPlanId?: ObjectId | string;
   recurring: Expense["recurring"] | true;
   skipped?: boolean;
+  /** Cron scan cursor — oldest / never-scanned first. */
+  lastScannedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -85,6 +87,8 @@ export type ExpenseDocument = Omit<
 export type EventDocument = Omit<Event, "createdAt" | "updatedAt" | "expenseId"> & {
   _id: ObjectId;
   expenseId?: ObjectId | string;
+  /** Cron scan cursor — oldest / never-scanned first. */
+  lastScannedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -139,6 +143,7 @@ type PushSubscriptionDocument = {
 
 export type ReminderLogDocument = {
   _id: ObjectId;
+  accountId: string;
   eventId: ObjectId;
   occurrenceIso: string;
   lead: string;

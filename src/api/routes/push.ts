@@ -5,6 +5,7 @@ import { getCollections, getDb } from "@/db";
 import { pushSubscribeSchema, pushUnsubscribeSchema } from "@/schemas/push";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 
 export const pushRoutes = new Hono<{ Variables: SessionVariables }>();
 
@@ -19,11 +20,15 @@ pushRoutes.post("/subscribe", sessionAuth, zValidator("json", pushSubscribeSchem
   const { pushSubscriptions } = getCollections(getDb());
   const now = new Date();
 
+  const existing = await pushSubscriptions.findOne({ endpoint });
+  if (existing && existing.accountId !== accountId) {
+    throw new HTTPException(409, { message: "Push endpoint is registered to another account" });
+  }
+
   await pushSubscriptions.updateOne(
-    { endpoint },
+    { endpoint, accountId },
     {
       $set: {
-        accountId,
         keys,
         userAgent: c.req.header("User-Agent")?.slice(0, 256) ?? "",
         lastSeenAt: now,

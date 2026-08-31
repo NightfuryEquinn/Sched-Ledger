@@ -97,6 +97,7 @@ type UserReminderPrefs = {
   emailEnabled: boolean;
   pushEnabled: boolean;
   timezone: string;
+  notifyEmail: string;
 };
 
 /** Load per-channel reminder eligibility and timezone for an account. */
@@ -105,7 +106,7 @@ async function userReminderPrefs(accountId: string): Promise<UserReminderPrefs> 
   const [user, hasPush] = await Promise.all([
     users.findOne(
       { _id: new ObjectId(accountId) },
-      { projection: { emailRemindersEnabled: 1, timezone: 1 } },
+      { projection: { emailRemindersEnabled: 1, timezone: 1, notifyEmail: 1 } },
     ),
     pushConfigured() ? accountHasPushSubscription(accountId) : Promise.resolve(false),
   ]);
@@ -114,6 +115,7 @@ async function userReminderPrefs(accountId: string): Promise<UserReminderPrefs> 
     emailEnabled: user?.emailRemindersEnabled !== false,
     pushEnabled: hasPush,
     timezone: user?.timezone ?? DEFAULT_TIMEZONE,
+    notifyEmail: user?.notifyEmail?.trim() ?? "",
   };
 }
 
@@ -154,11 +156,11 @@ async function mapPool<T, R>(
 
 /** Send the "reminder enabled" confirmation email when an event turns notify on. */
 export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
-  if (!doc.notify || !doc.email?.trim()) return;
+  if (!doc.notify) return;
   if (!emailConfigured()) return;
 
   const prefs = await userReminderPrefs(doc.accountId);
-  if (!prefs.emailEnabled) return;
+  if (!prefs.emailEnabled || !prefs.notifyEmail) return;
 
   const when = formatOccurrenceWhen(doc, doc.date, prefs.timezone);
   const category = eventCategoryLabel(doc);
@@ -179,7 +181,7 @@ export async function sendEventConfirmation(doc: EventDocument): Promise<void> {
     isConfirmation: true,
   });
 
-  await sendEmail({ to: doc.email.trim(), subject, html, text });
+  await sendEmail({ to: prefs.notifyEmail, subject, html, text });
 }
 
 /**
@@ -200,16 +202,7 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
   const { events, reminderLogs } = getCollections(getDb());
   const nowMs = now.getTime();
   const started = Date.now();
-
-  const notifyEvents = await events
-    .find({ notify: true })
-    .sort({ _id: 1 })
-    .limit(REMINDER_BATCH_LIMIT)
-    .toArray();
-  result.scanned = notifyEvents.length;
-  if (notifyEvents.length >= REMINDER_BATCH_LIMIT) {
-    result.truncated = true;
-  }
+  const totalNotify = await events.countDocuments({ notify: true });
 
   /* Cache per-user reminder prefs across events in this run. */
   const prefsCache = new Map<string, UserReminderPrefs>();
@@ -223,42 +216,73 @@ export async function processDueReminders(now = new Date()): Promise<ReminderPro
     channels: ReminderChannel[];
   };
   const pending: PendingSend[] = [];
+  const scannedIds = new Set<string>();
 
-  for (const ev of notifyEvents) {
-    if (Date.now() - started > CRON_TIME_BUDGET_MS) {
-      result.truncated = true;
-      break;
+  while (Date.now() - started < CRON_TIME_BUDGET_MS && scannedIds.size < totalNotify) {
+    const scanFilter: Record<string, unknown> = { notify: true };
+    if (scannedIds.size) {
+      scanFilter._id = { $nin: [...scannedIds].map((id) => new ObjectId(id)) };
     }
 
-    let prefs = prefsCache.get(ev.accountId);
-    if (!prefs) {
-      prefs = await userReminderPrefs(ev.accountId);
-      prefsCache.set(ev.accountId, prefs);
-    }
+    const batch = await events
+      .find(scanFilter)
+      .sort({ lastScannedAt: 1, _id: 1 })
+      .limit(REMINDER_BATCH_LIMIT)
+      .toArray();
+    if (!batch.length) break;
 
-    /* Email needs Resend, the global opt-in, and a per-event address.
-       Push needs only a registered device, so it works without any of those. */
-    const email = ev.email?.trim() || "";
-    const channels: ReminderChannel[] = [];
-    if (emailReady && prefs.emailEnabled && email) channels.push("email");
-    if (pushReady && prefs.pushEnabled) channels.push("push");
+    let newInBatch = 0;
+    for (const ev of batch) {
+      if (Date.now() - started > CRON_TIME_BUDGET_MS) {
+        result.truncated = true;
+        break;
+      }
 
-    if (!channels.length) {
-      result.skipped++;
-      continue;
-    }
+      const evId = ev._id.toHexString();
+      if (scannedIds.has(evId)) continue;
+      scannedIds.add(evId);
+      newInBatch++;
+      result.scanned++;
 
-    for (const target of reminderTargets(ev, now, prefs.timezone)) {
-      if (!isReminderDueNow(target.remindAtMs, nowMs)) continue;
+      let prefs = prefsCache.get(ev.accountId);
+      if (!prefs) {
+        prefs = await userReminderPrefs(ev.accountId);
+        prefsCache.set(ev.accountId, prefs);
+      }
 
-      /* Never remind about an occurrence that has already finished. */
-      if (isOccurrencePast(occurrenceEndMs(ev, target.occurrenceIso, prefs.timezone), nowMs)) {
+      const email = prefs.notifyEmail;
+      const channels: ReminderChannel[] = [];
+      if (emailReady && prefs.emailEnabled && email) channels.push("email");
+      if (pushReady && prefs.pushEnabled) channels.push("push");
+
+      if (!channels.length) {
         result.skipped++;
+        await events.updateOne({ _id: ev._id }, { $set: { lastScannedAt: new Date() } });
         continue;
       }
 
-      pending.push({ ev, target, email, timezone: prefs.timezone, channels });
+      for (const target of reminderTargets(ev, now, prefs.timezone)) {
+        if (!isReminderDueNow(target.remindAtMs, nowMs)) continue;
+
+        if (isOccurrencePast(occurrenceEndMs(ev, target.occurrenceIso, prefs.timezone), nowMs)) {
+          result.skipped++;
+          continue;
+        }
+
+        pending.push({ ev, target, email, timezone: prefs.timezone, channels });
+      }
+
+      await events.updateOne({ _id: ev._id }, { $set: { lastScannedAt: new Date() } });
     }
+
+    if (newInBatch === 0) break;
+    if (batch.length < REMINDER_BATCH_LIMIT) break;
+    if (result.truncated) break;
+    if (scannedIds.size >= totalNotify) break;
+  }
+
+  if (Date.now() - started >= CRON_TIME_BUDGET_MS) {
+    result.truncated = true;
   }
 
   if (pending.length) {
@@ -398,7 +422,7 @@ async function sendReminderOnce(
            "email already sent" from being lost on the first push. */
         $addToSet: { channels: { $each: [...logged, ...delivered] } },
         /* Filter fields are seeded from the equality match on insert. */
-        $setOnInsert: { email, sentAt: new Date() },
+        $setOnInsert: { email, accountId: ev.accountId, sentAt: new Date() },
       },
       { upsert: true },
     );
@@ -423,7 +447,7 @@ export async function sendImmediateReminderIfDue(
   if (!doc.notify) return;
 
   const prefs = await userReminderPrefs(doc.accountId);
-  const email = doc.email?.trim() || "";
+  const email = prefs.notifyEmail;
 
   const channels: ReminderChannel[] = [];
   if (emailConfigured() && prefs.emailEnabled && email) channels.push("email");

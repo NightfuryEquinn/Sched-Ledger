@@ -1,19 +1,23 @@
 import { createMiddleware } from "hono/factory";
+import {
+  API_CONTENT_SECURITY_POLICY,
+  HSTS_VALUE,
+  SECURITY_HEADER_NAMES,
+  STATIC_SECURITY_HEADERS,
+  shouldSetHsts,
+} from "@/lib/security-headers";
 
 export const securityHeaders = createMiddleware(async (c, next) => {
   await next();
-  c.header("X-Content-Type-Options", "nosniff");
-  c.header("X-Frame-Options", "DENY");
-  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  /* API responses are JSON — no inline scripts. Styles may still need
-     'unsafe-inline' on HTML surfaces; script-src stays strict here. */
-  c.header(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
-  );
+
+  for (const [key, value] of Object.entries(STATIC_SECURITY_HEADERS)) {
+    c.header(key, value);
+  }
+
+  c.header(SECURITY_HEADER_NAMES.csp, API_CONTENT_SECURITY_POLICY);
+
   const proto = c.req.header("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
-  if (proto === "https" || process.env.NODE_ENV === "production" || process.env.VERCEL) {
-    c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  if (shouldSetHsts(proto)) {
+    c.header(SECURITY_HEADER_NAMES.hsts, HSTS_VALUE);
   }
 });

@@ -34,6 +34,40 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "4.1.4",
+    date: "August 2026",
+    lead: "Security hardening, more reliable balances and budgets, encrypted backups that include Capitals and Vehicles, and clearer transparency about what the server can see.",
+    highlights: [
+      {
+        icon: "shield",
+        title: "Stronger defaults",
+        body:
+          "Security headers now cover the app document as well as API responses, push subscriptions cannot be hijacked across accounts, " +
+          "and event reminders go only to your account notify email — never an arbitrary address typed on the event.",
+      },
+      {
+        icon: "wallet",
+        title: "Balances and budgets you can trust",
+        body:
+          "Starting-mode wallet balances now include transactions older than the 36-month window, the Budgets Available header nets withdrawals " +
+          "against savings deposits, and monthly events on the 31st still appear in shorter months.",
+      },
+      {
+        icon: "download",
+        title: "Backups include Capitals and Vehicles",
+        body:
+          "Encrypted backups now carry your Capitals plans, vehicles, and fill history alongside wallets, categories, transactions, schedule, and todos.",
+      },
+      {
+        icon: "info",
+        title: "Transparency refresh",
+        body:
+          "The Transparency view documents push subscriptions, budget-alert plaintext, push subprocessors, and a 15-minute cron interval — " +
+          "matching what the server actually stores and schedules.",
+      },
+    ],
+  },
+  {
     version: "4.1.3",
     date: "August 2026",
     lead: "Deleting something no longer leaves money counted nowhere: assigned savings go back to their envelope, budget holds re-reserve, and a category with old history can no longer be deleted by mistake.",
@@ -100,7 +134,7 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
           "each plan gets its own line: what is set aside, what is left to save, the monthly pace, and whether it is " +
           "funded, on pace, or behind for its target date. Saving Insights now lives on Insights only — Piggies keeps its " +
           "totals and each card's on-track status. Piggy pace is untouched: an assigned deposit is progress on the plan, " +
-          "not the piggy.",
+          "not the piggy. (Capitals draw-down math was refined in 4.1.2.)",
       },
       {
         icon: "info",
@@ -223,7 +257,7 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
         title: "Unspent on Capitals",
         body:
           "When you add a savings deposit, optionally assign it to a Capital plan — it shows as Unspent on that plan's card " +
-          "and reduces the monthly save hint. Leave it on Piggies when no plan is selected.",
+          "and reduces the monthly save hint. Leave it on Piggies when no plan is selected. (Draw-down math was refined in 4.1.2.)",
       },
       {
         icon: "piggy",
@@ -278,7 +312,7 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
         title: "Monthly save + totals",
         body:
           "With a target date, each card shows how much to save per month: (budget − paid) ÷ months left. " +
-          "A new Monthly Saving summary card totals that amount across every plan.",
+          "A new Monthly Saving summary card totals that amount across every plan. (Monthly-save math was refined in 4.1.2.)",
       },
     ],
   },

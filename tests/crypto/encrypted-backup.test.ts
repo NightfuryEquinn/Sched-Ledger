@@ -18,6 +18,52 @@ async function testKey() {
 }
 
 describe("encrypted backup", () => {
+  test("encrypt / decrypt round-trip includes capitals and vehicles", async () => {
+    const { key, address } = await testKey();
+    const plain = buildBackupPlain({
+      address,
+      wallets: [],
+      categories: [],
+      expenses: [],
+      events: [],
+      todoLists: [],
+      capitalPlans: [
+        {
+          id: "cccccccccccccccccccccccc",
+          name: "Trip",
+          glyph: "🏖️",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          items: [],
+        },
+      ],
+      vehicles: [
+        {
+          id: "dddddddddddddddddddddddd",
+          name: "Civic",
+          model: "FK8",
+          type: "car",
+          glyph: "🚗",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      vehicleFills: [
+        {
+          id: "eeeeeeeeeeeeeeeeeeeeeeee",
+          vehicleId: "dddddddddddddddddddddddd",
+          date: "2026-07-01",
+          price: 80,
+          quantity: 40,
+          station: "Shell",
+          partial: false,
+        },
+      ],
+    });
+    const restored = await decryptBackup(key, await encryptBackup(key, plain));
+    expect(restored.capitalPlans).toEqual(plain.capitalPlans);
+    expect(restored.vehicles).toEqual(plain.vehicles);
+    expect(restored.vehicleFills).toEqual(plain.vehicleFills);
+  });
+
   test("encrypt / decrypt round-trip", async () => {
     const { key, address } = await testKey();
     const plain = buildBackupPlain({

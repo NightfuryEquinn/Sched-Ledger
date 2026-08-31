@@ -111,54 +111,61 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
 
   const { expenses } = getCollections(getDb());
   const started = Date.now();
-  const anchors = await expenses
-    .find({
-      recurring: { $in: [true, "monthly", "quarterly", "yearly"] },
-      walletId: { $exists: true },
-      skipped: { $ne: true },
-    } as Record<string, unknown>)
-    .sort({ date: -1 })
-    .limit(ANCHOR_BATCH_LIMIT)
-    .toArray();
 
-  result.scanned = anchors.length;
-  if (anchors.length >= ANCHOR_BATCH_LIMIT) {
-    result.truncated = true;
-  }
-
-  /** Latest row supplies payload/amount; earliest date supplies day-of-month (avoids clamp drift). */
-  type SeriesState = { latest: ExpenseDocument; anchorIso: string };
-  const bySeries = new Map<string, SeriesState>();
-  for (const doc of anchors) {
-    const freq = normalizeRecurring(doc.recurring);
-    if (!freq || !doc.walletId) continue;
-    const key = `${doc.accountId}|${seriesKey(doc)}`;
-    const prev = bySeries.get(key);
-    if (!prev) {
-      bySeries.set(key, { latest: doc, anchorIso: doc.date });
-      continue;
-    }
-    /* docs are sorted date desc — first seen is latest; track min date as anchor. */
-    if (doc.date < prev.anchorIso) prev.anchorIso = doc.date;
-  }
-
-  result.series = bySeries.size;
   const tzCache = new Map<string, string>();
   const pendingInserts: ExpenseDocument[] = [];
 
-  for (const { latest: template, anchorIso } of bySeries.values()) {
-    if (Date.now() - started > CRON_TIME_BUDGET_MS) {
-      result.truncated = true;
-      break;
+  while (Date.now() - started < CRON_TIME_BUDGET_MS) {
+    const anchors = await expenses
+      .find({
+        recurring: { $in: [true, "monthly", "quarterly", "yearly"] },
+        walletId: { $exists: true },
+        skipped: { $ne: true },
+      } as Record<string, unknown>)
+      .sort({ lastScannedAt: 1, _id: 1 })
+      .limit(ANCHOR_BATCH_LIMIT)
+      .toArray();
+
+    if (!anchors.length) break;
+
+    result.scanned += anchors.length;
+    const scanStamp = new Date();
+    await expenses.updateMany(
+      { _id: { $in: anchors.map((a) => a._id) } },
+      { $set: { lastScannedAt: scanStamp } },
+    );
+
+    /** Latest row supplies payload/amount; earliest date supplies day-of-month (avoids clamp drift). */
+    type SeriesState = { latest: ExpenseDocument; anchorIso: string };
+    const bySeries = new Map<string, SeriesState>();
+    for (const doc of anchors) {
+      const freq = normalizeRecurring(doc.recurring);
+      if (!freq || !doc.walletId) continue;
+      const key = `${doc.accountId}|${seriesKey(doc)}`;
+      const prev = bySeries.get(key);
+      if (!prev) {
+        bySeries.set(key, { latest: doc, anchorIso: doc.date });
+        continue;
+      }
+      if (doc.date > prev.latest.date) prev.latest = doc;
+      if (doc.date < prev.anchorIso) prev.anchorIso = doc.date;
     }
 
-    const freq = normalizeRecurring(template.recurring) as RecurringInterval;
-    if (!template.walletId) {
-      result.skipped++;
-      continue;
-    }
+    result.series += bySeries.size;
 
-    try {
+    for (const { latest: template, anchorIso } of bySeries.values()) {
+      if (Date.now() - started > CRON_TIME_BUDGET_MS) {
+        result.truncated = true;
+        break;
+      }
+
+      const freq = normalizeRecurring(template.recurring) as RecurringInterval;
+      if (!template.walletId) {
+        result.skipped++;
+        continue;
+      }
+
+      try {
       const tz = await userTimezone(template.accountId, tzCache);
       const today = zonedTodayIso(tz, now);
       const minDue = addDaysIso(today, -LOOKBACK_DAYS);
@@ -225,7 +232,15 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
           ? template.seriesKey?.slice(0, 8) ?? "encrypted"
           : template.note || template.sub || "recurring";
       result.errors.push(`${label} (${anchorIso}): ${msg}`);
+      }
     }
+
+    if (anchors.length < ANCHOR_BATCH_LIMIT) break;
+    if (result.truncated) break;
+  }
+
+  if (Date.now() - started >= CRON_TIME_BUDGET_MS) {
+    result.truncated = true;
   }
 
   if (pendingInserts.length) {

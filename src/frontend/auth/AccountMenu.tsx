@@ -4,7 +4,7 @@ import { APP_VERSION } from "@/lib/version";
 import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
-import type { Account, Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
+import type { Account, CapitalPlan, Category, CategoryIndex, Expense, FinancialWallet, FuelFill, LedgerEvent, TodoList, Vehicle } from "@/frontend/lib/types";
 import { useEffect, useRef, useState } from "react";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { ImportExportModal } from "./components/ImportExportModal";
@@ -40,6 +40,9 @@ type AccountMenuProps = {
   categoryIndex?: CategoryIndex;
   activeWalletId?: string;
   savingsTxns?: Expense[];
+  capitalPlans?: CapitalPlan[];
+  vehicles?: Vehicle[];
+  vehicleFills?: FuelFill[];
   onImportExpenses?: (
     rows: ExpenseImportRow[],
     categories?: Category[],
@@ -64,6 +67,9 @@ export function AccountMenu({
   categoryIndex,
   activeWalletId,
   savingsTxns = [],
+  capitalPlans = [],
+  vehicles = [],
+  vehicleFills = [],
   onImportExpenses,
   onImportEvents,
   onImportTodos,
@@ -251,6 +257,9 @@ export function AccountMenu({
           categoryIndex={categoryIndex}
           activeWalletId={activeWalletId}
           savingsTxns={savingsTxns}
+          capitalPlans={capitalPlans}
+          vehicles={vehicles}
+          vehicleFills={vehicleFills}
           onImportExpenses={onImportExpenses}
           onImportEvents={onImportEvents}
           onImportTodos={onImportTodos}

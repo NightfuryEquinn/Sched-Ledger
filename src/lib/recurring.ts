@@ -75,7 +75,7 @@ export function recurringOccursInMonth(
 }
 
 /** Due ISO date in `monthKey` (YYYY-MM), clamping day to month length. */
-function recurringDueDate(anchorIso: string, monthKey: string): string {
+export function recurringDueDate(anchorIso: string, monthKey: string): string {
   const anchorD = parseIsoDate(anchorIso).d;
   const { y: viewY, m: viewM } = parseMonthKey(monthKey);
   const day = Math.min(anchorD, daysInMonth(viewY, viewM));

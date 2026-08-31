@@ -5,11 +5,14 @@
 
 import { decryptJson, encryptJson } from "@/frontend/lib/crypto/e2ee";
 import type {
+  CapitalPlan,
   Category,
   Expense,
   FinancialWallet,
+  FuelFill,
   LedgerEvent,
   TodoList,
+  Vehicle,
 } from "@/frontend/lib/types";
 
 export const BACKUP_FORMAT = "sched-ledger-backup" as const;
@@ -25,6 +28,10 @@ export type LedgerBackupPlain = {
   expenses: Expense[];
   events: LedgerEvent[];
   todoLists: TodoList[];
+  /** Present on backups from 4.1.4 onward; omitted on older exports. */
+  capitalPlans?: CapitalPlan[];
+  vehicles?: Vehicle[];
+  vehicleFills?: FuelFill[];
 };
 
 type EncryptedBackupFile = {
@@ -44,6 +51,9 @@ export function buildBackupPlain(input: {
   expenses: Expense[];
   events: LedgerEvent[];
   todoLists: TodoList[];
+  capitalPlans?: CapitalPlan[];
+  vehicles?: Vehicle[];
+  vehicleFills?: FuelFill[];
 }): LedgerBackupPlain {
   return {
     format: BACKUP_FORMAT,
@@ -55,6 +65,9 @@ export function buildBackupPlain(input: {
     expenses: input.expenses,
     events: input.events,
     todoLists: input.todoLists,
+    capitalPlans: input.capitalPlans,
+    vehicles: input.vehicles,
+    vehicleFills: input.vehicleFills,
   };
 }
 
@@ -118,12 +131,11 @@ export function parseBackupFile(raw: string): EncryptedBackupFile {
 /** Trigger a browser download of the encrypted backup. */
 export function downloadEncryptedBackup(file: EncryptedBackupFile, filename?: string) {
   const stamp = file.exportedAt.slice(0, 10);
-  const name = filename ?? `sched-ledger-backup-${stamp}.json`;
   const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = name;
+  a.download = filename ?? `sched-ledger-backup-${stamp}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

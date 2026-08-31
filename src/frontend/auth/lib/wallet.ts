@@ -2,13 +2,6 @@ import type { IdentityRecord } from "@/frontend/lib/types";
 import { sessionSecrets } from "@/frontend/auth/lib/session-secrets";
 import { Wallet } from "ethers";
 
-async function fakeSign(message: string): Promise<string> {
-  const data = new TextEncoder().encode(`${message}:${Date.now()}`);
-  const buf = await crypto.subtle.digest("SHA-256", data);
-  const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `0x${hex}${hex.slice(0, 64)}1b`;
-}
-
 /** Resolve a private key from the identity or in-memory session secrets. */
 function resolvePrivateKey(idn: IdentityRecord): string | undefined {
   if (idn.privateKey) return idn.privateKey;
@@ -18,7 +11,7 @@ function resolvePrivateKey(idn: IdentityRecord): string | undefined {
 
 export const walletClient = {
   hasInjected() {
-    return typeof window.ethereum !== "undefined";
+    return typeof window !== "undefined" && typeof window.ethereum !== "undefined";
   },
   async create() {
     const w = Wallet.createRandom();
@@ -42,6 +35,7 @@ export const walletClient = {
     if (privateKey) {
       return await new Wallet(privateKey).signMessage(message);
     }
-    return await fakeSign(message);
+
+    throw new Error("No wallet signer available — connect an extension or unlock with your recovery phrase.");
   },
 };

@@ -4,7 +4,11 @@ import { processDueReminders } from "@/api/lib/reminders";
 import { connectDb, isDbConnected } from "@/db/client";
 import { REMINDER_POLL_INTERVAL_MS } from "@/lib/schedule";
 import { serve } from "bun";
-import index from "./index.html";
+import {
+  HTML_CONTENT_SECURITY_POLICY,
+  applySecurityHeaders,
+  shouldSetHsts,
+} from "@/lib/security-headers";
 
 const api = createApiApp();
 
@@ -35,7 +39,18 @@ const server = serve({
       new Response(Bun.file("public/robots.txt"), {
         headers: { "Content-Type": "text/plain; charset=utf-8" },
       }),
-    "/*": index,
+    "/*": (req) => {
+      const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
+      const proto =
+        req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase() ??
+        new URL(req.url).protocol.replace(":", "");
+      applySecurityHeaders(headers, {
+        csp: HTML_CONTENT_SECURITY_POLICY,
+        includeHsts: shouldSetHsts(proto),
+      });
+
+      return new Response(Bun.file("src/index.html"), { headers });
+    },
   },
 
   development: process.env.NODE_ENV !== "production" && {

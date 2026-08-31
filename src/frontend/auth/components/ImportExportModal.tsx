@@ -2,7 +2,7 @@ import { CsvImportPanel, type CsvImportPreview } from "@/frontend/auth/component
 import { Icon } from "@/frontend/components/ui";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { useModalMotion } from "@/frontend/lib/animate";
-import type { Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList } from "@/frontend/lib/types";
+import type { Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, CapitalPlan, Vehicle, FuelFill } from "@/frontend/lib/types";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -31,6 +31,9 @@ type ImportExportModalProps = {
   categoryIndex?: CategoryIndex;
   activeWalletId?: string;
   savingsTxns?: Expense[];
+  capitalPlans?: CapitalPlan[];
+  vehicles?: Vehicle[];
+  vehicleFills?: FuelFill[];
   onImportExpenses?: (
     rows: ExpenseImportRow[],
     categories?: Category[],
@@ -54,6 +57,9 @@ export function ImportExportModal({
   categoryIndex,
   activeWalletId,
   savingsTxns = [],
+  capitalPlans = [],
+  vehicles = [],
+  vehicleFills = [],
   onImportExpenses,
   onImportEvents,
   onImportTodos,
@@ -143,6 +149,9 @@ export function ImportExportModal({
         expenses,
         events,
         todoLists,
+        capitalPlans,
+        vehicles,
+        vehicleFills,
       });
       const file = await encryptBackup(key, plain);
       downloadEncryptedBackup(file);
@@ -350,6 +359,9 @@ export function ImportExportModal({
             {backupResult ? (
               <p className="dm-note">
                 Restored {backupResult.expenses} expenses · {backupResult.events} events · {backupResult.todos} todos
+                {backupResult.capitalPlans ? ` · ${backupResult.capitalPlans} capital plans` : ""}
+                {backupResult.vehicles ? ` · ${backupResult.vehicles} vehicles` : ""}
+                {backupResult.vehicleFills ? ` · ${backupResult.vehicleFills} fills` : ""}
                 {backupResult.wallets ? ` · ${backupResult.wallets} wallets` : ""}
                 {backupResult.categories ? " · categories" : ""}
                 {backupResult.failed ? ` · ${backupResult.failed} failed` : ""}.

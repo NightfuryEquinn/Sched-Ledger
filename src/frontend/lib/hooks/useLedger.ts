@@ -142,7 +142,7 @@ const keys = {
   wallets: (wallet: string) => ["wallets", wallet] as const,
   categories: (wallet: string) => ["categories", wallet] as const,
   expenses: (wallet: string) => ["expenses", wallet] as const,
-  savingsAll: (wallet: string) => ["savings-all", wallet] as const,
+  allExpenses: (wallet: string) => ["all-expenses", wallet] as const,
   events: (wallet: string, month: string) => ["events", wallet, month] as const,
   todoLists: (wallet: string) => ["todoLists", wallet] as const,
   capitalPlans: (wallet: string) => ["capitalPlans", wallet] as const,
@@ -292,17 +292,21 @@ export function useLedger(walletAddress: string) {
       const cryptoKey = requireKey(wallet);
       const collected: Awaited<ReturnType<typeof decodeExpense>>[] = [];
       let before: string | undefined;
+      let beforeId: string | undefined;
 
       for (;;) {
         const page = await api.expenses.list({
           from,
           limit: LIST_PAGE_LIMIT,
           before,
+          beforeId,
         });
         const decoded = await Promise.all(page.expenses.map((e) => decodeExpense(e, cryptoKey)));
         collected.push(...decoded);
         if (!page.hasMore || !page.nextBefore) break;
         before = page.nextBefore;
+        beforeId = page.nextBeforeId ?? undefined;
+        /* Cap: LIST_PAGE_LIMIT * 5 = 10,000 rows across all wallets (~36-month window). */
         if (collected.length >= LIST_PAGE_LIMIT * 5) break;
       }
 
@@ -327,28 +331,26 @@ export function useLedger(walletAddress: string) {
   );
 
   /*
-   * Piggy balances are lifetime totals, so this query is unbounded — unlike
-   * `expensesQuery`, which only looks back EXPENSE_LOOKBACK_MONTHS. Savings
-   * deposits/withdrawals are a small slice of total transaction volume for
-   * most accounts, so a full-history fetch stays cheap in practice.
-   *
-   * ponytail: fetches full history and filters client-side (the server can't
-   * read ciphertext to filter by category). Fine at personal-ledger volume;
-   * add a plaintext "savings" marker on expense meta if accounts grow large.
+   * Full account expense history (no `from` / wallet filter on the API). Used for
+   * piggy balances, usedSubIds, and starting-mode wallet balance. Cap:
+   * LIST_PAGE_LIMIT * 20 = 40,000 rows.
    */
-  const savingsAllQuery = useQuery({
-    queryKey: keys.savingsAll(wallet),
+  const allExpensesQuery = useQuery({
+    queryKey: keys.allExpenses(wallet),
     queryFn: async () => {
       const cryptoKey = requireKey(wallet);
       const collected: Awaited<ReturnType<typeof decodeExpense>>[] = [];
       let before: string | undefined;
+      let beforeId: string | undefined;
 
       for (;;) {
-        const page = await api.expenses.list({ limit: LIST_PAGE_LIMIT, before });
+        const page = await api.expenses.list({ limit: LIST_PAGE_LIMIT, before, beforeId });
         const decoded = await Promise.all(page.expenses.map((e) => decodeExpense(e, cryptoKey)));
         collected.push(...decoded);
         if (!page.hasMore || !page.nextBefore) break;
         before = page.nextBefore;
+        beforeId = page.nextBeforeId ?? undefined;
+        /* Cap: LIST_PAGE_LIMIT * 20 = 40,000 rows of full history. */
         if (collected.length >= LIST_PAGE_LIMIT * 20) break;
       }
 
@@ -359,7 +361,7 @@ export function useLedger(walletAddress: string) {
   });
 
   const savingsTxns = useMemo(() => {
-    const decoded = (savingsAllQuery.data ?? []).map((e) => ({
+    const decoded = (allExpensesQuery.data ?? []).map((e) => ({
       ...e,
       kind: e.kind ?? "expense",
       recurring: normalizeRecurring(e.recurring),
@@ -370,14 +372,25 @@ export function useLedger(walletAddress: string) {
       const cls = classifyTx(e, categoryIndex);
       return cls === "savings" || cls === "withdrawal";
     });
-  }, [savingsAllQuery.data, categoryIndex, activeWallet, livePlans]);
+  }, [allExpensesQuery.data, categoryIndex, activeWallet, livePlans]);
+
+  const balanceExpenses = useMemo(() => {
+    const decoded = (allExpensesQuery.data ?? []).map((e) => ({
+      ...e,
+      kind: e.kind ?? "expense",
+      recurring: normalizeRecurring(e.recurring),
+    }));
+    const all = livePlans ? releaseOrphanedPlanRefs(decoded, livePlans) : decoded;
+
+    return activeWallet ? all.filter((e) => e.walletId === activeWallet.id) : [];
+  }, [allExpensesQuery.data, livePlans, activeWallet]);
 
   /**
    * Subcategories with transaction history, across full history and every
    * wallet. A category holding any of these is archived rather than deleted, so
    * its past transactions keep resolving to the right type.
    *
-   * `savingsAllQuery` fetches with no `from` and no `walletId`, so its rows are
+   * `allExpensesQuery` fetches with no `from` and no `walletId`, so its rows are
    * every expense on the account — which is the point. Deriving this from the
    * windowed, wallet-scoped `expenses` let a category whose deposits sat in
    * another wallet or predated the lookback be hard-deleted, silently
@@ -389,12 +402,12 @@ export function useLedger(walletAddress: string) {
    * is exactly the failure this guards against.
    */
   const usedSubIds = useMemo(() => {
-    if (!savingsAllQuery.isSuccess) return null;
-    const subs = new Set((savingsAllQuery.data ?? []).map((e) => e.sub));
+    if (!allExpensesQuery.isSuccess) return null;
+    const subs = new Set((allExpensesQuery.data ?? []).map((e) => e.sub));
     for (const e of expensesQuery.data ?? []) subs.add(e.sub);
 
     return subs;
-  }, [savingsAllQuery.isSuccess, savingsAllQuery.data, expensesQuery.data]);
+  }, [allExpensesQuery.isSuccess, allExpensesQuery.data, expensesQuery.data]);
 
   const eventsQuery = useQuery({
     queryKey: keys.events(wallet, month),
@@ -406,9 +419,10 @@ export function useLedger(walletAddress: string) {
       const cryptoKey = requireKey(wallet);
       const collected: Awaited<ReturnType<typeof decodeEvent>>[] = [];
       let before: string | undefined;
+      let beforeId: string | undefined;
 
       for (;;) {
-        const page = await api.events.list({ month, limit: LIST_PAGE_LIMIT, before });
+        const page = await api.events.list({ month, limit: LIST_PAGE_LIMIT, before, beforeId });
         const decoded = await Promise.all(
           page.events.map(async (wire) => {
             if (!wire.enc && wire.title) {
@@ -450,6 +464,7 @@ export function useLedger(walletAddress: string) {
         collected.push(...decoded);
         if (!page.hasMore || !page.nextBefore) break;
         before = page.nextBefore;
+        beforeId = page.nextBeforeId ?? undefined;
         if (collected.length >= LIST_PAGE_LIMIT * 5) break;
       }
 
@@ -504,7 +519,7 @@ export function useLedger(walletAddress: string) {
   /*
    * Vehicles are account-scoped, not wallet-scoped, and fuel history is small
    * relative to transaction volume — an unbounded fetch stays cheap in practice,
-   * same reasoning as the savingsAllQuery above.
+   * same reasoning as the allExpensesQuery above.
    */
   const vehicleFillsQuery = useQuery({
     queryKey: keys.vehicleFills(wallet),
@@ -512,13 +527,15 @@ export function useLedger(walletAddress: string) {
       const cryptoKey = requireKey(wallet);
       const collected: Awaited<ReturnType<typeof decodeVehicleFill>>[] = [];
       let before: string | undefined;
+      let beforeId: string | undefined;
 
       for (;;) {
-        const page = await api.vehicles.fills.list({ limit: LIST_PAGE_LIMIT, before });
+        const page = await api.vehicles.fills.list({ limit: LIST_PAGE_LIMIT, before, beforeId });
         const decoded = await Promise.all(page.fills.map((f) => decodeVehicleFill(f, cryptoKey)));
         collected.push(...decoded);
         if (!page.hasMore || !page.nextBefore) break;
         before = page.nextBefore;
+        beforeId = page.nextBeforeId ?? undefined;
         if (collected.length >= LIST_PAGE_LIMIT * 5) break;
       }
 
@@ -680,7 +697,7 @@ export function useLedger(walletAddress: string) {
         return next;
       })();
       queryClient.setQueryData<Expense[]>(keys.expenses(wallet), nextExpenses);
-      void queryClient.invalidateQueries({ queryKey: keys.savingsAll(wallet) });
+      void queryClient.invalidateQueries({ queryKey: keys.allExpenses(wallet) });
       if (!variables.id) {
         setMonthMutation.mutate(expense.date.slice(0, 7));
       }
@@ -736,7 +753,7 @@ export function useLedger(walletAddress: string) {
         }
         return prev.filter((e) => e.id !== id);
       });
-      void queryClient.invalidateQueries({ queryKey: keys.savingsAll(wallet) });
+      void queryClient.invalidateQueries({ queryKey: keys.allExpenses(wallet) });
     },
   });
 
@@ -964,8 +981,8 @@ export function useLedger(walletAddress: string) {
       const release = (prev: Expense[] = []) =>
         prev.map((e) => (e.capitalPlanId === id ? { ...e, capitalPlanId: undefined } : e));
       queryClient.setQueryData<Expense[]>(keys.expenses(wallet), release);
-      queryClient.setQueryData<Expense[]>(keys.savingsAll(wallet), release);
-      void queryClient.invalidateQueries({ queryKey: keys.savingsAll(wallet) });
+      queryClient.setQueryData<Expense[]>(keys.allExpenses(wallet), release);
+      void queryClient.invalidateQueries({ queryKey: keys.allExpenses(wallet) });
     },
   });
 
@@ -1059,8 +1076,9 @@ export function useLedger(walletAddress: string) {
     allExpenses,
     expenses,
     savingsTxns,
+    balanceExpenses,
     usedSubIds,
-    savingsLoading: savingsAllQuery.isLoading,
+    savingsLoading: allExpensesQuery.isLoading,
     events: eventsQuery.data ?? [],
     todoLists: todoListsQuery.data ?? [],
     capitalPlans: capitalPlansQuery.data ?? [],

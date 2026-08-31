@@ -174,4 +174,40 @@ describe("withdrawals", () => {
     expect(st.bySub.saving).toBe(250); // savings deposit adds
     expect(st.bySub.sub_emergency).toBe(-60); // withdrawal subtracts
   });
+
+  test("budget available summary uses net saved", () => {
+    const st = monthStats(expenses, {}, wallet, "2026-07", index);
+    const available = st.totalBudget - st.spent - (st.saved - st.withdrawn);
+
+    expect(available).toBe(st.totalBudget - st.spent - st.saved + st.withdrawn);
+  });
+
+  test("walletBalance uses full-history expenses when provided", () => {
+    const windowed = expenses;
+    const fullHistory: Expense[] = [
+      ...expenses,
+      {
+        id: "old",
+        walletId: "w1",
+        sub: "groceries",
+        amount: 500,
+        date: "2020-01-01",
+        note: "",
+        recurring: false,
+        kind: "expense",
+      },
+    ];
+    const windowedBalance = monthStats(windowed, {}, wallet, "2026-07", index).balance;
+    const fullBalance = monthStats(
+      windowed,
+      {},
+      wallet,
+      "2026-07",
+      index,
+      undefined,
+      { balanceExpenses: fullHistory },
+    ).balance;
+
+    expect(fullBalance).toBe(windowedBalance - 500);
+  });
 });

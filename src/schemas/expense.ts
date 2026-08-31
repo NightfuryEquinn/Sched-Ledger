@@ -87,6 +87,7 @@ export const listExpensesQuerySchema = z.object({
   to: isoDateSchema.optional(),
   limit: z.coerce.number().int().min(1).max(5000).optional().default(2000),
   before: isoDateSchema.optional(),
+  beforeId: objectIdSchema.optional(),
   recurring: z
     .enum(["true", "false"])
     .optional()

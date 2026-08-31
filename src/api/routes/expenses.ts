@@ -6,6 +6,7 @@ import {
 } from "@/api/lib/expense-delete-scope";
 import { buildExpenseUpdate } from "@/api/lib/expense-update";
 import { idForms, randomObjectId } from "@/api/lib/ids";
+import { applyDateIdCursor, pageCursorFromDocs } from "@/api/lib/pagination";
 import { serializeDoc, serializeDocs } from "@/api/lib/serialize";
 import type { SessionVariables } from "@/api/middleware/session";
 import { sessionAuth } from "@/api/middleware/session";
@@ -28,7 +29,8 @@ expensesRoutes.use("*", sessionAuth);
 
 expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) => {
   const accountId = c.get("accountId");
-  const { month, recurring, sub, walletId, kind, from, to, limit, before } = c.req.valid("query");
+  const { month, recurring, sub, walletId, kind, from, to, limit, before, beforeId } =
+    c.req.valid("query");
   const { expenses } = getCollections(getDb());
 
   const filter: Record<string, unknown> = {
@@ -47,8 +49,9 @@ expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) 
     if (from) dateFilter.$gte = from;
     if (to) dateFilter.$lte = to;
   }
-  if (before) dateFilter.$lt = before;
   if (Object.keys(dateFilter).length) filter.date = dateFilter;
+
+  applyDateIdCursor(filter, before, beforeId);
 
   if (recurring === true) {
     filter.recurring = { $in: [true, "monthly", "quarterly", "yearly"] };
@@ -57,14 +60,14 @@ expensesRoutes.get("/", zValidator("query", listExpensesQuerySchema), async (c) 
   }
   if (sub) filter.sub = sub;
 
-  const docs = await expenses.find(filter).sort({ date: -1 }).limit(limit).toArray();
-  const hasMore = docs.length === limit;
-  const nextBefore = hasMore ? docs[docs.length - 1]?.date : undefined;
+  const docs = await expenses.find(filter).sort({ date: -1, _id: -1 }).limit(limit).toArray();
+  const { hasMore, nextBefore, nextBeforeId } = pageCursorFromDocs(docs, limit);
 
   return c.json({
     expenses: serializeDocs(docs),
     hasMore,
-    nextBefore: nextBefore ?? null,
+    nextBefore,
+    nextBeforeId,
   });
 });
 

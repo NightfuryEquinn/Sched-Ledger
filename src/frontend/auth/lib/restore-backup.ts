@@ -4,11 +4,14 @@
  */
 
 import type {
+  CapitalPlan,
   Category,
   Expense,
   FinancialWallet,
+  FuelFill,
   LedgerEvent,
   TodoList,
+  Vehicle,
 } from "@/frontend/lib/types";
 import type { LedgerBackupPlain } from "./encrypted-backup";
 
@@ -18,6 +21,9 @@ type BackupRestoreApi = {
   saveExpense: (expense: Omit<Expense, "id"> & { id?: string }) => Promise<unknown>;
   saveEvent: (event: Omit<LedgerEvent, "id"> & { id?: string }) => Promise<unknown>;
   saveTodoList: (list: Omit<TodoList, "id"> & { id?: string }) => Promise<unknown>;
+  saveCapitalPlan: (plan: Omit<CapitalPlan, "id"> & { id?: string }) => Promise<unknown>;
+  saveVehicle: (vehicle: Omit<Vehicle, "id"> & { id?: string }) => Promise<Vehicle>;
+  saveVehicleFill: (fill: Omit<FuelFill, "id"> & { id?: string }) => Promise<unknown>;
 };
 
 export type BackupRestoreResult = {
@@ -26,6 +32,9 @@ export type BackupRestoreResult = {
   expenses: number;
   events: number;
   todos: number;
+  capitalPlans: number;
+  vehicles: number;
+  vehicleFills: number;
   failed: number;
 };
 
@@ -38,6 +47,9 @@ export async function restoreBackupToLedger(
     expenses: Expense[];
     events: LedgerEvent[];
     todoLists: TodoList[];
+    capitalPlans: CapitalPlan[];
+    vehicles: Vehicle[];
+    vehicleFills: FuelFill[];
   },
   api: BackupRestoreApi,
 ): Promise<BackupRestoreResult> {
@@ -51,6 +63,9 @@ export async function restoreBackupToLedger(
     expenses: 0,
     events: 0,
     todos: 0,
+    capitalPlans: 0,
+    vehicles: 0,
+    vehicleFills: 0,
     failed: 0,
   };
 
@@ -123,6 +138,56 @@ export async function restoreBackupToLedger(
       const { id: _id, ...rest } = row;
       await api.saveTodoList(rest);
       result.todos++;
+    } catch {
+      result.failed++;
+    }
+  }
+
+  const existingPlanIds = new Set(current.capitalPlans.map((p) => p.id));
+  for (const row of plain.capitalPlans ?? []) {
+    if (existingPlanIds.has(row.id)) continue;
+    try {
+      const { id: _id, ...rest } = row;
+      await api.saveCapitalPlan(rest);
+      result.capitalPlans++;
+    } catch {
+      result.failed++;
+    }
+  }
+
+  const vehicleIdMap = new Map<string, string>();
+  for (const v of current.vehicles) {
+    vehicleIdMap.set(v.id, v.id);
+  }
+
+  const existingVehicleIds = new Set(current.vehicles.map((v) => v.id));
+  for (const row of plain.vehicles ?? []) {
+    if (existingVehicleIds.has(row.id)) {
+      vehicleIdMap.set(row.id, row.id);
+      continue;
+    }
+    try {
+      const { id: _id, ...rest } = row;
+      const created = await api.saveVehicle(rest);
+      vehicleIdMap.set(row.id, created.id);
+      result.vehicles++;
+    } catch {
+      result.failed++;
+    }
+  }
+
+  const existingFillIds = new Set(current.vehicleFills.map((f) => f.id));
+  for (const row of plain.vehicleFills ?? []) {
+    if (existingFillIds.has(row.id)) continue;
+    const vehicleId = vehicleIdMap.get(row.vehicleId);
+    if (!vehicleId) {
+      result.failed++;
+      continue;
+    }
+    try {
+      const { id: _id, ...rest } = row;
+      await api.saveVehicleFill({ ...rest, vehicleId });
+      result.vehicleFills++;
     } catch {
       result.failed++;
     }
