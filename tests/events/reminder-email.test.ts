@@ -2,20 +2,20 @@ import { createApiApp } from "@/api/app";
 import { SESSION_COOKIE } from "@/api/lib/auth";
 import { resetRateLimitsForTests } from "@/api/middleware/rate-limit";
 import { Wallet } from "ethers";
-import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { installEmailMock } from "../helpers/email-mock";
 import { installMemoryDb, uninstallMemoryDb, type MemoryDb } from "../helpers/memory-db";
 
 const emailSends: Array<{ to: string; subject: string }> = [];
 
-mock.module("@/api/lib/email", () => ({
+installEmailMock({
   emailConfigured: () => true,
-  sendEmail: async (input: { to: string; subject: string }) => {
+  sendEmail: async (input) => {
     emailSends.push({ to: input.to, subject: input.subject });
 
     return { ok: true, id: "test" };
   },
-  reminderEmailHtml: () => ({ html: "<p/>", text: "reminder", subject: "Upcoming" }),
-}));
+});
 
 const app = createApiApp();
 

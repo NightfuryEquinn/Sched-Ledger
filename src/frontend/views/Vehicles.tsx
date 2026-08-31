@@ -10,6 +10,7 @@ import {
 } from "@/frontend/lib/fuelInsights";
 import type { FuelFill, Vehicle, VehicleType } from "@/frontend/lib/types";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /*
  * Vehicles — fleet tracker + Fuel Insights
@@ -305,7 +306,7 @@ export function Vehicles({
     if (!editor) return null;
 
     if (editor.type === "add-vehicle" || editor.type === "edit-vehicle") {
-      return (
+      return createPortal(
         <div ref={vehicleScrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeEditor(); }}>
           <div ref={vehiclePanelRef} className="modal sm" role="dialog" aria-modal="true">
             <div className="modal-head">
@@ -397,12 +398,13 @@ export function Vehicles({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       );
     }
 
     const meta = VEHICLE_TYPES[selectedVehicle?.type ?? "car"];
-    return (
+    return createPortal(
       <div ref={fillScrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeFillEditor(); }}>
         <div ref={fillPanelRef} className="modal sm" role="dialog" aria-modal="true">
           <div className="modal-head">
@@ -478,7 +480,8 @@ export function Vehicles({
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }
 

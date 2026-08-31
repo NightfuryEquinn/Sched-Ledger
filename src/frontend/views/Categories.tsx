@@ -10,6 +10,7 @@ import {
 import type { Category, CategoryIndex } from "@/frontend/lib/types";
 import { CATEGORY_GLYPH_OPTIONS, DEFAULT_GLYPH, displayGlyph } from "@/lib/glyphs";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /*
  * Categories view
@@ -509,7 +510,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
         </section>
       ) : null}
 
-      {editor ? (
+      {editor ? createPortal(
         <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeEditor(); }}>
           <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
             <div className="modal-head">
@@ -585,7 +586,8 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
       {confirmDelete ? (
         <ConfirmDialog
