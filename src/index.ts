@@ -36,6 +36,14 @@ const server = serve({
 
       return new Response(Bun.file("src/index.html"), { headers });
     },
+    "/sitemap.xml": () =>
+      new Response(Bun.file("public/sitemap.xml"), {
+        headers: { "Content-Type": "application/xml; charset=utf-8" },
+      }),
+    "/robots.txt": () =>
+      new Response(Bun.file("public/robots.txt"), {
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      })
   },
 
   development: process.env.NODE_ENV !== "production" && {
