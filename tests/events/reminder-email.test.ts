@@ -1,10 +1,8 @@
 import { createApiApp } from "@/api/app";
 import { SESSION_COOKIE } from "@/api/lib/auth";
 import { resetRateLimitsForTests } from "@/api/middleware/rate-limit";
-import { COLLECTIONS } from "@/db";
 import { Wallet } from "ethers";
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
-import { ObjectId } from "mongodb";
 import { installMemoryDb, uninstallMemoryDb, type MemoryDb } from "../helpers/memory-db";
 
 const emailSends: Array<{ to: string; subject: string }> = [];

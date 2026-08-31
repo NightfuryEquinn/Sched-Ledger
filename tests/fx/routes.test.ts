@@ -76,7 +76,7 @@ describe("fx routes", () => {
           conversion_rates: { USD: 1, MYR: 4.5 },
         }),
         { status: 200 },
-      )) as typeof fetch;
+      )) as unknown as typeof fetch;
 
     const res = await app.request("/api/fx/latest/USD", { headers: { cookie } });
     expect(res.status).toBe(200);

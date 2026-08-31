@@ -642,7 +642,7 @@ export function EventModal({
         allDay, time: allDay ? null : time,
         endTime: allDay || !endTime ? null : endTime,
         repeat,
-        notify, lead, comments,
+        notify, lead, email: "", comments,
         ...holdFields,
       });
     } finally {

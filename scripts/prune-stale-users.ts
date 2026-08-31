@@ -29,6 +29,7 @@ const OWNED_BY_ACCOUNT_ID = [
   COLLECTIONS.vehicleFills,
   COLLECTIONS.consent,
   COLLECTIONS.budgetAlertLogs,
+  COLLECTIONS.reminderLogs,
   COLLECTIONS.pushSubscriptions,
   COLLECTIONS.sessions,
 ] as const;

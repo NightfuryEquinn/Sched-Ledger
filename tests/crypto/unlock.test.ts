@@ -69,13 +69,14 @@ describe("unlockLedgerKey", () => {
     await expect(decryptJson(key, cipher)).resolves.toEqual({ amount: 7 });
   });
 
-  test("unlock without private key still derives via fallback signer", async () => {
+  test("unlock without a signer rejects instead of using a weak fallback", async () => {
     const idn: IdentityRecord = {
       address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       injected: false,
       codename: "broken",
     };
-    await unlockLedgerKey(idn);
-    expect(ledgerKeyStore.isUnlocked(idn.address)).toBe(true);
+
+    await expect(unlockLedgerKey(idn)).rejects.toThrow(/no wallet signer/i);
+    expect(ledgerKeyStore.isUnlocked(idn.address)).toBe(false);
   });
 });

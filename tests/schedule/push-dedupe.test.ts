@@ -99,6 +99,7 @@ describe("reminder channel dedupe", () => {
       _id: new ObjectId(ACCOUNT_ID),
       address: "0xabc",
       codename: "tester",
+      notifyEmail: "user@example.com",
       timezone: TZ,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -121,6 +122,7 @@ describe("reminder channel dedupe", () => {
   async function addLog(eventId: ObjectId, channels?: ReminderChannel[]) {
     await memory.collection(COLLECTIONS.reminderLogs).insertOne({
       _id: new ObjectId(),
+      accountId: ACCOUNT_ID,
       eventId,
       occurrenceIso: DAY,
       lead: "at",
@@ -194,29 +196,29 @@ describe("reminder channel dedupe", () => {
     expect(result.skipped).toBe(1);
   });
 
-  test("an event with no email address still pushes", async () => {
+  test("an event with no per-event email still uses the account notify address", async () => {
     const ev = eventDoc({ email: "" });
     await memory.collection(COLLECTIONS.events).insertOne(ev);
     await addPushSubscription();
 
     const result = await processDueReminders(now);
 
-    expect(emailSends).toEqual([]);
+    expect(emailSends).toEqual(["user@example.com"]);
     expect(pushSends).toEqual(["https://push.example/abc"]);
     expect(result.sent).toBe(1);
 
     const log = await memory.collection(COLLECTIONS.reminderLogs).findOne({ eventId: ev._id });
-    expect(log?.channels).toEqual(["push"]);
+    expect((log?.channels as string[] | undefined)?.sort()).toEqual(["email", "push"]);
   });
 
-  test("an event with no email address and no push subscription is skipped", async () => {
+  test("an event with no push subscription still emails the account address", async () => {
     await memory.collection(COLLECTIONS.events).insertOne(eventDoc({ email: "" }));
 
     const result = await processDueReminders(now);
 
-    expect(emailSends).toEqual([]);
+    expect(emailSends).toEqual(["user@example.com"]);
     expect(pushSends).toEqual([]);
-    expect(result.skipped).toBe(1);
+    expect(result.sent).toBe(1);
   });
 
   test("a 410 from the push service prunes the dead subscription", async () => {
