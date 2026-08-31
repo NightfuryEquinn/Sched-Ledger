@@ -1,4 +1,5 @@
 import { DEFAULT_TIMEZONE, zonedLocalToUtcMs } from "@/lib/timezone";
+import { recurringDueDate } from "@/lib/recurring";
 import { spanDaysBetween, type LeadId } from "@/schemas/common";
 
 export type ScheduleEvent = {
@@ -124,8 +125,10 @@ export function occursOn(ev: OccurrenceEvent, iso: string): boolean {
     case "biweekly":
       /* Every other week from the start date, so a 14-day stride from `ev.date`. */
       return (isoDayNumber(iso) - isoDayNumber(ev.date)) % 14 === 0;
-    case "monthly":
-      return a.getDate() === b.getDate();
+    case "monthly": {
+      const monthKey = `${b.getFullYear()}-${String(b.getMonth() + 1).padStart(2, "0")}`;
+      return iso === recurringDueDate(ev.date, monthKey);
+    }
     case "yearly":
       return a.getDate() === b.getDate() && a.getMonth() === b.getMonth();
     default:

@@ -129,4 +129,12 @@ describe("occursOn exceptDates and until", () => {
     expect(occursOn(event, "2026-03-01")).toBe(true);
     expect(occursOn(event, "2026-04-01")).toBe(false);
   });
+
+  test("monthly on the 31st occurs on shorter months via clamping", () => {
+    const event = ev({ date: "2026-01-31", repeat: "monthly" });
+
+    expect(occursOn(event, "2026-02-28")).toBe(true);
+    expect(occursOn(event, "2026-02-27")).toBe(false);
+    expect(occursOn(event, "2026-04-30")).toBe(true);
+  });
 });
