@@ -7,6 +7,7 @@ import { serve } from "bun";
 import {
   HTML_CONTENT_SECURITY_POLICY,
   applySecurityHeaders,
+  shouldSetHsts,
 } from "@/lib/security-headers";
 
 const api = createApiApp();
@@ -30,12 +31,6 @@ const server = serve({
       new Response(Bun.file("public/sw.js"), {
         headers: { "Content-Type": "application/javascript", "Service-Worker-Allowed": "/" },
       }),
-    "/*": () => {
-      const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
-      applySecurityHeaders(headers, { csp: HTML_CONTENT_SECURITY_POLICY });
-
-      return new Response(Bun.file("src/index.html"), { headers });
-    },
     "/sitemap.xml": () =>
       new Response(Bun.file("public/sitemap.xml"), {
         headers: { "Content-Type": "application/xml; charset=utf-8" },
@@ -43,7 +38,19 @@ const server = serve({
     "/robots.txt": () =>
       new Response(Bun.file("public/robots.txt"), {
         headers: { "Content-Type": "text/plain; charset=utf-8" },
-      })
+      }),
+    "/*": (req) => {
+      const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
+      const proto =
+        req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase() ??
+        new URL(req.url).protocol.replace(":", "");
+      applySecurityHeaders(headers, {
+        csp: HTML_CONTENT_SECURITY_POLICY,
+        includeHsts: shouldSetHsts(proto),
+      });
+
+      return new Response(Bun.file("src/index.html"), { headers });
+    },
   },
 
   development: process.env.NODE_ENV !== "production" && {
