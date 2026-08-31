@@ -83,7 +83,7 @@ export const SHELL_TOUR_STEPS: TourStep[] = [
   lastStep(
     "shell-account",
     "Account",
-    "Exports & Imports, privacy settings, and sign out live here. Restart this tab's tour anytime from Take a Tour. Theme is in the top bar.",
+    "Restart this tab's tour anytime from Take a Tour, or replay any view's tour from the ? beside its title. Theme is in the top bar.",
     '[data-tour="tour-account"]',
     "bottom",
   ),
@@ -118,7 +118,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("transactions-nav", "Transactions", "Every expense and income entry for the month, grouped by day.", navTarget("transactions"), "right"),
     step("transactions-search", "Search", "Filter by note text or category name to find a specific entry.", '[data-tour="tour-txn-toolbar"]'),
     step("transactions-filters", "Category Filters", "Narrow the list to one category or income only.", '[data-tour="tour-txn-filters"]'),
-    lastStep("transactions-list", "Entries", "Transactions are grouped by date. Tap a row to edit or delete.", '[data-tour="tour-txn-list"]'),
+    lastStep("transactions-list", "Entries", "Transactions are grouped by date. Tap a row to edit; deletes ask you to confirm first.", '[data-tour="tour-txn-list"]'),
   ],
   budgets: [
     step("budgets-nav", "Budgets", "Set how much you plan to spend in each category for the month.", navTarget("budgets"), "right"),
@@ -152,7 +152,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step("capitals-nav", "Capitals", "Plan for big future expenses — marriage, trips, loans, or anything custom. Set a total budget and a target date to see how much to save each month; assign savings deposits to a plan and paying an item spends them down.", navTarget("capitals"), "right"),
     step("capitals-summary", "Totals", "Total planned, total paid, what is still unspent of everything set aside, monthly saving and what is still to save across every plan, and how many plans have an upcoming target date.", '[data-tour="tour-capitals-summary"]'),
     step("capitals-toolbar", "New Plan", "Start from a template — marriage, trip, car loan, house loan — or build a fully custom plan. You can set a total budget and optional target date.", '[data-tour="tour-capitals-toolbar"]', "bottom"),
-    lastStep("capitals-grid", "Plan Cards", "Each card shows paid vs budget on the ring, what is set aside and still unspent, what is still to save, a monthly save hint (or Overpaid), line items, and Log to record a real payment in the ledger.", '[data-tour="tour-capitals-grid"]'),
+    lastStep("capitals-grid", "Plan Cards", "Each card shows paid vs budget on the ring, what is set aside and still unspent, what is still to save, a monthly save hint (or Overpaid), line items, and Log to record a real payment in the ledger. Deleting a plan returns its assigned savings to their envelopes.", '[data-tour="tour-capitals-grid"]'),
   ],
   vehicles: [
     step("vehicles-nav", "Vehicles", "Track fuel or charging costs per vehicle — cars, EVs, bikes, and vans each get their own history and Fuel Insights.", navTarget("vehicles"), "right"),
@@ -173,6 +173,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
   transparency: [
     step("transparency-nav", "Transparency", "A read-only map of how Sched Ledger stores your data in MongoDB.", navTarget("transparency"), "right"),
     step("transparency-intro", "How Data is Stored", "Collections, document keys, and which fields are encrypted vs plaintext for reminders and queries.", '[data-tour="tour-transparency-intro"]'),
+    step("transparency-infer", "What the Server Can Infer", "Plaintext metadata, budget-alert amounts, reminder copies, and what stays ciphertext on the server.", '[data-tour="tour-transparency-infer"]'),
     step("transparency-flow", "Relationships", "See how your wallet address links users, wallets, expenses, events, and more.", '[data-tour="tour-transparency-flow"]'),
     step("transparency-e2ee", "Encryption Path", "Ledger secrets are AES-256-GCM encrypted in the browser before they hit the database.", '[data-tour="tour-transparency-e2ee"]'),
     lastStep("transparency-collections", "Keys & Values", "Browse every collection and the document fields it saves.", '[data-tour="tour-transparency-collections"]'),

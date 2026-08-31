@@ -4,7 +4,6 @@
     "src/index.ts",
     "src/vercel-api.ts",
     "src/frontend/main.tsx",
-    "build.ts",
     "scripts/**",
     "tests/**"
   ],
