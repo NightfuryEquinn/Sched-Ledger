@@ -606,6 +606,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
           {view === "overview" && (
             <Overview
               {...viewProps}
+              balanceExpenses={ledger.balanceExpenses}
               todoLists={ledger.todoLists}
               events={events}
               savingsTxns={ledger.savingsTxns}

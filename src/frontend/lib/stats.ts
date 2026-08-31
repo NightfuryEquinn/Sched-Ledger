@@ -381,6 +381,7 @@ export function monthStats(
   key: string,
   index?: CategoryIndex,
   events?: LedgerEvent[],
+  opts?: { balanceExpenses?: Expense[] },
 ) {
   const list: Expense[] = [];
   let spent = 0;
@@ -447,7 +448,7 @@ export function monthStats(
   const spendingBudget = Object.values(spendingBudgets).reduce((s, v) => s + v, 0);
   const byCatHeld = events ? holdsByCategory(events, key) : {};
   const totalHeld = events ? totalActiveHolds(events, key) : 0;
-  const balance = walletBalance(expenses, wallet, index);
+  const balance = walletBalance(opts?.balanceExpenses ?? expenses, wallet, index);
   const monthlyPool =
     wallet.fundingMode === "monthly" ? wallet.income + earned + withdrawn : earned + withdrawn;
   const remaining =
