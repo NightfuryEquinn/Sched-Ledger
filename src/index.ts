@@ -27,6 +27,14 @@ const server = serve({
       new Response(Bun.file("public/sw.js"), {
         headers: { "Content-Type": "application/javascript", "Service-Worker-Allowed": "/" },
       }),
+    "/sitemap.xml": () =>
+      new Response(Bun.file("public/sitemap.xml"), {
+        headers: { "Content-Type": "application/xml; charset=utf-8" },
+      }),
+    "/robots.txt": () =>
+      new Response(Bun.file("public/robots.txt"), {
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      }),
     "/*": index,
   },
 
