@@ -421,6 +421,9 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
         expenses: allExpenses,
         events,
         todoLists: ledger.todoLists,
+        capitalPlans: ledger.capitalPlans,
+        vehicles: ledger.vehicles,
+        vehicleFills: ledger.vehicleFills,
       },
       {
         saveCategories: ledger.saveCategories,
@@ -433,6 +436,13 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
         },
         saveTodoList: async (t) => {
           await ledger.saveTodoList(t);
+        },
+        saveCapitalPlan: async (p) => {
+          await ledger.saveCapitalPlan(p);
+        },
+        saveVehicle: async (v) => ledger.saveVehicle(v),
+        saveVehicleFill: async (f) => {
+          await ledger.saveVehicleFill(f);
         },
       },
     );
@@ -577,6 +587,9 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
                 categoryIndex={ledger.categoryIndex}
                 activeWalletId={activeWallet?.id}
                 savingsTxns={ledger.savingsTxns}
+                capitalPlans={ledger.capitalPlans}
+                vehicles={ledger.vehicles}
+                vehicleFills={ledger.vehicleFills}
                 onImportExpenses={importExpenses}
                 onImportEvents={importEvents}
                 onImportTodos={importTodos}
