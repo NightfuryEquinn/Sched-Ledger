@@ -4,7 +4,10 @@ import { processDueReminders } from "@/api/lib/reminders";
 import { connectDb, isDbConnected } from "@/db/client";
 import { REMINDER_POLL_INTERVAL_MS } from "@/lib/schedule";
 import { serve } from "bun";
-import index from "./index.html";
+import {
+  HTML_CONTENT_SECURITY_POLICY,
+  applySecurityHeaders,
+} from "@/lib/security-headers";
 
 const api = createApiApp();
 
@@ -27,7 +30,12 @@ const server = serve({
       new Response(Bun.file("public/sw.js"), {
         headers: { "Content-Type": "application/javascript", "Service-Worker-Allowed": "/" },
       }),
-    "/*": index,
+    "/*": () => {
+      const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
+      applySecurityHeaders(headers, { csp: HTML_CONTENT_SECURITY_POLICY });
+
+      return new Response(Bun.file("src/index.html"), { headers });
+    },
   },
 
   development: process.env.NODE_ENV !== "production" && {
