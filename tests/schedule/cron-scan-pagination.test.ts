@@ -1,17 +1,16 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { COLLECTIONS } from "@/db";
 import { randomObjectId } from "@/api/lib/ids";
 import type { EventDocument } from "@/db/collections";
 import { ObjectId } from "mongodb";
+import { installEmailMock } from "../helpers/email-mock";
 import { installMemoryDb, uninstallMemoryDb, type MemoryDb } from "../helpers/memory-db";
 
 const ACCOUNT_ID = "64b64c4f2f1c2e0012345678";
 
-mock.module("@/api/lib/email", () => ({
+installEmailMock({
   emailConfigured: () => false,
-  sendEmail: async () => ({ ok: true, id: "test" }),
-  reminderEmailHtml: () => ({ html: "", text: "", subject: "" }),
-}));
+});
 
 /** Build a minimal notify event row. */
 function notifyEvent(partial: Partial<EventDocument> = {}): EventDocument {

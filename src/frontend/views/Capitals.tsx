@@ -18,6 +18,7 @@ import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
 import type { CapitalItem, CapitalPlan, CapitalTemplateId, CategoryIndex, Expense } from "@/frontend/lib/types";
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /*
  * Capitals — future financial planner
@@ -310,7 +311,7 @@ export function Capitals({
 
   function renderEditor() {
     if (!editor) return null;
-    return (
+    return createPortal(
       <div
         ref={scrimRef}
         className="modal-scrim center"
@@ -412,7 +413,8 @@ export function Capitals({
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }
 

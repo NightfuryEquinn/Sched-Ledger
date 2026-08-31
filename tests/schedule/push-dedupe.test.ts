@@ -3,6 +3,7 @@ import { COLLECTIONS } from "@/db";
 import type { EventDocument, ReminderChannel } from "@/db/collections";
 import { zonedLocalToUtcMs } from "@/lib/timezone";
 import { ObjectId } from "mongodb";
+import { installEmailMock } from "../helpers/email-mock";
 import { installMemoryDb, uninstallMemoryDb, type MemoryDb } from "../helpers/memory-db";
 
 /*
@@ -22,15 +23,14 @@ const pushSends: string[] = [];
 /** Status the fake push service raises, if any (410 = endpoint gone). */
 let pushFailStatus: number | null = null;
 
-mock.module("@/api/lib/email", () => ({
+installEmailMock({
   emailConfigured: () => Boolean(process.env.RESEND_API_KEY),
-  sendEmail: async (input: { to: string }) => {
+  sendEmail: async (input) => {
     emailSends.push(input.to);
 
     return { ok: true, id: "test" };
   },
-  reminderEmailHtml: () => ({ html: "<p/>", text: "reminder", subject: "Upcoming" }),
-}));
+});
 
 mock.module("web-push", () => ({
   default: {

@@ -4,6 +4,7 @@ import { slugId } from "@/frontend/lib/categories";
 import type { TodoList, TodoTask } from "@/frontend/lib/types";
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /*
  * TO-DO List view
@@ -332,7 +333,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
         </section>
       )}
 
-      {editor ? (
+      {editor ? createPortal(
         <div
           ref={scrimRef}
           className="modal-scrim center"
@@ -399,7 +400,8 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
 
       {confirmDelete ? (
