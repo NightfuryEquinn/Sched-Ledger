@@ -3,5 +3,6 @@
   "entry": ["src/index.ts", "src/vercel-api.ts", "src/frontend/main.tsx", "scripts/**", "tests/**"],
   "project": ["src/**"],
   "exclude": ["duplicates"],
-  "ignoreExportsUsedInFile": true
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": ["lint-staged"]
 }
