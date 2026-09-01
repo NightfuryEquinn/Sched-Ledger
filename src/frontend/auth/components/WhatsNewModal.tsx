@@ -36,7 +36,7 @@ function ReleaseSection({ notes }: { notes: ReleaseNotes }) {
   );
 }
 
-/** Version changelog: one long scroll, with Got It fixed at the bottom. */
+/** Version changelog: one long scroll driven by RELEASE_NOTES (newest first), with Got It fixed at the bottom. */
 export function WhatsNewModal({ onClose }: WhatsNewModalProps) {
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);

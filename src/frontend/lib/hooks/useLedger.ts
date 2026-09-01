@@ -31,7 +31,7 @@ import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { releaseOrphanedPlanRefs } from "@/frontend/lib/capitals";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
-import { classifyTx, normalizeRecurring, recurringScheduleKey } from "@/frontend/lib/stats";
+import { classifyTx, normalizeRecurring, recurringScheduleKey, sortExpensesByDateDesc } from "@/frontend/lib/stats";
 import type { Budgets, CapitalPlan, Category, Expense, FinancialWallet, FuelFill, LedgerEvent, TodoList, Vehicle } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
@@ -111,7 +111,7 @@ async function backfillReminderDetails(
   const stale = pairs
     .filter(
       ({ wire, event }) =>
-        wire.enc === 1 && wire.payload && !wire.notifyDetails && event.notify && event.email.trim(),
+        wire.enc === 1 && wire.payload && !wire.notifyDetails && event.notify,
     )
     .slice(0, REMINDER_BACKFILL_PER_LOAD);
 
@@ -688,11 +688,11 @@ export function useLedger(walletAddress: string) {
           return e;
         });
         if (!variables.id) {
-          next = [expense, ...next].sort((a, b) =>
-            a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
-          );
+          next = sortExpensesByDateDesc([expense, ...next]);
         } else if (!next.some((e) => e.id === expense.id)) {
-          next = [expense, ...next];
+          next = sortExpensesByDateDesc([expense, ...next]);
+        } else {
+          next = sortExpensesByDateDesc(next);
         }
         return next;
       })();

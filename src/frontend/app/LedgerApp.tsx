@@ -12,8 +12,8 @@ import { WalletManageModal, WalletSwitcher } from "@/frontend/components/Wallets
 import {
   AddExpenseModal,
   Icon,
+  MobileBottomNav,
   MonthSwitcher,
-  NAV_ITEMS,
   Sidebar,
 } from "@/frontend/components/ui";
 import { CURRENT_MONTH_KEY, MONTHS, TODAY_ISO } from "@/frontend/lib/data";
@@ -61,7 +61,7 @@ const Transparency = lazy(() =>
  * LedgerApp — authenticated app shell
  * ───────────────────────────────────
  * Desktop: sidebar + topbar + scrollable view.
- * Mobile (≤860px): bottom navigation replaces the sidebar.
+ * Mobile (≤860px): tab bar + More sheet replaces the sidebar.
  * Hosts the global modals (expense, wallet management, event).
  */
 
@@ -717,22 +717,7 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
         </div>
       </main>
 
-      {/* Mobile bottom navigation (hidden on desktop via CSS) */}
-      <nav className="bottom-nav">
-        {NAV_ITEMS.map(([id, label, icon]) => (
-          <button
-            key={id}
-            type="button"
-            data-tour={`tour-nav-${id}`}
-            className={"bn-item" + (view === id ? " active" : "")}
-            onClick={() => setView(id)}
-            aria-label={label}
-          >
-            <Icon name={icon} size={21} />
-            <span className="bn-label">{id === "todos" ? "To-dos" : label}</span>
-          </button>
-        ))}
-      </nav>
+      <MobileBottomNav view={view} setView={setView} />
 
       <div ref={fabRef} data-tour="tour-fab" className={"fab-wrap" + (fabOpen ? " open" : "") + (view === "transparency" ? " fab-wrap--hidden" : "")}>
         <div className="fab-actions" aria-hidden={!fabOpen}>

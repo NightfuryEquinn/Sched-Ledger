@@ -11,6 +11,8 @@ export type Expense = {
   amount: number;
   note: string;
   recurring: RecurringInterval | false;
+  /** When the row was first saved (entry time), for same-day ordering. */
+  createdAt?: string;
   /** Optional link to a schedule event (plaintext metadata). */
   eventId?: string;
   /** Optional link to a Capitals plan when savings is assigned (plaintext metadata). */

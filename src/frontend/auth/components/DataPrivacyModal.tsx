@@ -43,6 +43,7 @@ export function DataPrivacyModal({
   const [budgetAlertsBusy, setBudgetAlertsBusy] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifyEmailDraft, setNotifyEmailDraft] = useState("");
+  const [emailLoading, setEmailLoading] = useState(true);
   const [emailBusy, setEmailBusy] = useState(false);
 
   const [sessions, setSessions] = useState<ApiSession[]>([]);
@@ -73,7 +74,8 @@ export function DataPrivacyModal({
         setNotifyEmail(email);
         setNotifyEmailDraft(email);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setEmailLoading(false));
   }, [account.address]);
 
   /* ── Handlers ─────────────────────────────────────────────────── */
@@ -266,15 +268,16 @@ export function DataPrivacyModal({
                   className="text-in"
                   type="email"
                   placeholder="you@example.com"
-                  value={notifyEmailDraft}
+                  value={emailLoading ? "Loading…" : notifyEmailDraft}
                   onChange={(e) => setNotifyEmailDraft(e.target.value)}
-                  disabled={emailBusy}
+                  disabled={emailLoading || emailBusy}
+                  readOnly={emailLoading}
                   style={{ flex: 1 }}
                 />
                 <button
                   className="ghost-btn"
                   type="button"
-                  disabled={emailBusy || notifyEmailDraft.trim() === notifyEmail}
+                  disabled={emailLoading || emailBusy || notifyEmailDraft.trim() === notifyEmail}
                   onClick={saveNotifyEmail}
                 >
                   {emailBusy ? "Saving…" : "Save"}

@@ -36,6 +36,7 @@ import {
   Clock,
   Copy,
   Database,
+  DotsThree,
   DownloadSimple,
   File,
   Info,
@@ -292,6 +293,7 @@ const ICON_MAP: Record<string, PhosphorIcon> = {
   chevU: CaretUp,
   download: DownloadSimple,
   database: Database,
+  more: DotsThree,
   calendar: CalendarBlank,
   clock: Clock,
   bell: Bell,
@@ -325,22 +327,37 @@ function CatGlyph({ glyph, id }: { glyph?: string; id?: string }) {
   );
 }
 
-/** One entry per view: [id, label, icon]. Shared by Sidebar and bottom nav. */
+/** One entry per view: [id, label, icon]. Shared by Sidebar; mobile uses TAB_BAR_ITEMS + MORE_NAV_ITEMS. */
 export const NAV_ITEMS = [
   ["overview", "Overview", "overview"],
   ["todos", "TO-DO List", "checklist"],
   ["schedule", "Schedule", "calendar"],
   ["transactions", "Transactions", "list"],
   ["budgets", "Budgets", "budget"],
+  ["recurring", "Recurring", "recurring"],
+  ["vehicles", "Vehicles", "car"],
+  ["categories", "Categories", "tags"],
   ["piggies", "Piggies", "piggy"],
   ["capitals", "Capitals", "capital"],
-  ["vehicles", "Vehicles", "car"],
   ["calculator", "Calculator", "calculator"],
-  ["categories", "Categories", "tags"],
-  ["recurring", "Recurring", "recurring"],
   ["insights", "Insights", "insights"],
   ["transparency", "Transparency", "database"],
 ] as const;
+
+/** Primary mobile tab bar entries (the rest live in the More sheet). */
+export const TAB_BAR_ITEMS = [
+  ["overview", "Overview", "overview"],
+  ["schedule", "Schedule", "calendar"],
+  ["transactions", "Transactions", "list"],
+  ["todos", "To-Do", "checklist"],
+] as const satisfies ReadonlyArray<readonly [ViewId, string, string]>;
+
+const TAB_BAR_IDS = new Set<ViewId>(TAB_BAR_ITEMS.map(([id]) => id));
+
+/** Views reachable from the mobile More sheet. */
+export const MORE_NAV_ITEMS = NAV_ITEMS.filter(([id]) => !TAB_BAR_IDS.has(id));
+
+const MORE_VIEW_IDS = new Set<ViewId>(MORE_NAV_ITEMS.map(([id]) => id));
 
 // ── Sidebar (desktop navigation) ────────────────────────────────────
 function Sidebar({ view, setView }: { view: ViewId; setView: (id: ViewId) => void }) {
@@ -357,6 +374,125 @@ function Sidebar({ view, setView }: { view: ViewId; setView: (id: ViewId) => voi
         ))}
       </nav>
     </aside>
+  );
+}
+
+/** Mobile tab bar (5 slots) plus a bottom sheet for the remaining views. */
+function MobileBottomNav({ view, setView }: { view: ViewId; setView: (id: ViewId) => void }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const moreActive = MORE_VIEW_IDS.has(view);
+  const { requestClose } = useModalMotion(scrimRef, panelRef, {
+    variant: "sheet",
+    active: moreOpen,
+  });
+
+  /** Close the sheet when navigation changes. */
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [view]);
+
+  /** Trap body scroll while the More sheet is open. */
+  useEffect(() => {
+    if (!moreOpen) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        requestClose(() => setMoreOpen(false));
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [moreOpen, requestClose]);
+
+  const pickView = (id: ViewId) => {
+    setView(id);
+    setMoreOpen(false);
+  };
+
+  const moreSheet = moreOpen ? createPortal(
+    <div
+      ref={scrimRef}
+      className="modal-scrim nav-more-scrim"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) requestClose(() => setMoreOpen(false));
+      }}
+    >
+      <div ref={panelRef} className="modal nav-more-panel" role="dialog" aria-label="More navigation">
+        <div className="nav-more-head">
+          <h3>More</h3>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Close"
+            onClick={() => requestClose(() => setMoreOpen(false))}
+          >
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+        <div className="nav-more-grid">
+          {MORE_NAV_ITEMS.map(([id, label, icon]) => (
+            <button
+              key={id}
+              type="button"
+              data-tour={`tour-nav-${id}`}
+              className={"nav-more-item" + (view === id ? " active" : "")}
+              onClick={() => pickView(id)}
+            >
+              <Icon name={icon} size={22} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  ) : null;
+
+  return (
+    <>
+      <nav className="bottom-nav" aria-label="Main navigation">
+        {TAB_BAR_ITEMS.map(([id, label, icon]) => (
+          <button
+            key={id}
+            type="button"
+            data-tour={`tour-nav-${id}`}
+            className={"bn-item" + (view === id ? " active" : "")}
+            onClick={() => {
+              setMoreOpen(false);
+              setView(id);
+            }}
+            aria-label={label}
+            aria-current={view === id ? "page" : undefined}
+          >
+            <Icon name={icon} size={21} />
+            <span className="bn-label">{label}</span>
+          </button>
+        ))}
+        <button
+          type="button"
+          data-tour="tour-nav-more"
+          className={"bn-item" + (moreActive || moreOpen ? " active" : "")}
+          onClick={() => setMoreOpen((open) => !open)}
+          aria-label="More"
+          aria-expanded={moreOpen}
+          aria-haspopup="dialog"
+        >
+          <Icon name="more" size={21} />
+          <span className="bn-label">More</span>
+        </button>
+      </nav>
+      {moreSheet}
+    </>
   );
 }
 
@@ -1130,5 +1266,5 @@ function AddExpenseModal({
 }
 
 export {
-  AddExpenseModal, CatGlyph, ConfirmDialog, DeleteScopeDialog, EmptyState, Icon, InsightFeed, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
+  AddExpenseModal, CatGlyph, ConfirmDialog, DeleteScopeDialog, EmptyState, Icon, InsightFeed, MobileBottomNav, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
 };

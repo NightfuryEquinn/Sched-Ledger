@@ -330,7 +330,7 @@ describe("crypto codec", () => {
     expect(createEventSchema.safeParse(wire).success).toBe(true);
   });
 
-  test("events without a reminder email carry no plaintext copy", async () => {
+  test("events without reminders carry no plaintext copy", async () => {
     const key = await testKey();
     const wire = await encodeEventCreate(
       {
@@ -349,8 +349,11 @@ describe("crypto codec", () => {
     );
 
     expect(wire).not.toHaveProperty("notifyDetails");
+  });
 
-    const noAddress = await encodeEventCreate(
+  test("reminder events carry a plaintext copy without a per-event email", async () => {
+    const key = await testKey();
+    const wire = await encodeEventCreate(
       {
         title: "Dentist",
         catId: "appointment",
@@ -366,7 +369,7 @@ describe("crypto codec", () => {
       key,
     );
 
-    expect(noAddress).not.toHaveProperty("notifyDetails");
+    expect(wire.notifyDetails).toEqual({ title: "Dentist" });
   });
 
   test("switching reminders off sends null so the server clears the copy", async () => {

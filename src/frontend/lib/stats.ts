@@ -282,6 +282,32 @@ export function monthExpenses(expenses: Expense[], key: string) {
   return expenses.filter((e) => inMonth(e.date, key));
 }
 
+/** Entry-time key for same-date ordering (newest first). Falls back to ObjectId time, then id. */
+function expenseEntryTime(expense: Expense): string {
+  if (expense.createdAt) return expense.createdAt;
+
+  const hex = expense.id;
+  if (/^[a-f0-9]{24}$/i.test(hex)) {
+    const secs = Number.parseInt(hex.slice(0, 8), 16);
+    if (Number.isFinite(secs)) return new Date(secs * 1000).toISOString();
+  }
+
+  return expense.id;
+}
+
+/** Sort expenses by date descending, then entry time descending (latest first). */
+export function sortExpensesByDateDesc(expenses: Expense[]): Expense[] {
+  return [...expenses].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+
+    const at = expenseEntryTime(a);
+    const bt = expenseEntryTime(b);
+    if (at !== bt) return at < bt ? 1 : -1;
+
+    return b.id.localeCompare(a.id);
+  });
+}
+
 export const isIncome = (e: Expense) => e.kind === "income";
 export const isOutgoing = (e: Expense) => e.kind !== "income";
 
@@ -457,7 +483,7 @@ export function monthStats(
       : balance;
 
   return {
-    list,
+    list: sortExpensesByDateDesc(list),
     spent,
     saved,
     earned,

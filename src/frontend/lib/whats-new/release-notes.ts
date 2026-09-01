@@ -34,6 +34,41 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "4.2.4",
+    date: "September 2026",
+    lead: "A clearer mobile home screen, reminder emails that name your events again, and polish across Overview, Transactions, Budgets, and Data & privacy.",
+    highlights: [
+      {
+        icon: "sparkle",
+        title: "Mobile tab bar + More",
+        body:
+          "On phone and tablet portrait, five primary tabs — Overview, Schedule, Transactions, To-Do, and More — replace the old scrolling bar. " +
+          "Budget, Recurring, Vehicles, Categories, Piggies, Capitals, Calculator, Insights, and Transparency live in the More sheet.",
+      },
+      {
+        icon: "bell",
+        title: "Reminder emails use the event name",
+        body:
+          "Schedule reminders again include the real event title in email and push, using your account notify address — " +
+          "not the deprecated per-event email field.",
+      },
+      {
+        icon: "list",
+        title: "Transactions that read in order",
+        body:
+          "The Transactions list and Overview recent rows sort newest-first, including by entry time on the same day. " +
+          "Category Breakdown is a responsive card grid; Budget by Category keeps status and subcategories on one row.",
+      },
+      {
+        icon: "info",
+        title: "Overview and account polish",
+        body:
+          "Overview sections use View More on the header row. Data & privacy shows Loading… while your notify email loads. " +
+          "The bottom bar stays pinned while you scroll, and sidebar / tab order matches the desktop list.",
+      },
+    ],
+  },
+  {
     version: "4.1.4",
     date: "August 2026",
     lead: "Security hardening, more reliable balances and budgets, encrypted backups that include Capitals and Vehicles, and clearer transparency about what the server can see.",

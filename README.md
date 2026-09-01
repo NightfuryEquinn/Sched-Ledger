@@ -15,7 +15,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Overview, transactions, budgets, insights, recurring** — monthly expense tracking with charts, category breakdowns, and budget progress (including **Held** amounts reserved by schedule envelope holds)
 - **Piggies** — one-glance tracker for every savings category ("piggy") and its subcategories ("piglets"): lifetime balance derived from deposits minus withdrawals (excluding savings assigned to a Capitals plan), an optional target and deadline with a progress ring, and a **Saving Insights** engine (savings rate, streak, best month, pace-vs-deadline projections) surfaced on the Insights view. Saving Insights spans **Piggies and Capitals together**: assigned deposits count toward the wallet-wide rate, net, streak, and best month (split out as piggies vs capitals) and every plan gets a pace line — set aside, left to save, monthly pace, and funded / on pace / behind / overpaid — while per-piggy pace stays capital-free. The Piggies view keeps the totals row and each card's on-track status. Linked from Overview, Budgets, and Categories; exports to its own CSV
 - **Capitals** — planner for big future expenses (marriage, trips, car/house loans, or a custom plan): start from a template or blank, set a **total budget** (or let it fall back to the sum of your item estimates), check off line items as paid, and assign savings deposits to the plan to build up its pot. **Saved** is everything you have put in, **Unspent** is what is left of it once paid items have drawn it down, and **still to save** is the unpaid budget less that remaining pot — divided by the months until your target, that is the **monthly save** hint (or **Overpaid** when paid exceeds budget). Summaries roll the same figures up across plans, **Log** records a real payment straight into a prefilled expense that links back to the item, and deleting a plan returns its assigned deposits to their savings envelopes rather than stranding them
-- **Subcategory breakdowns** — Overview's By Category card and Transactions both expand a category into its subcategories, with amounts and share of total
+- **Subcategory breakdowns** — Overview's By Category card and Transactions both expand a category into its subcategories (Transactions uses a responsive card grid when a category filter is active)
 - **Calculator** — client-side budgeting helper: deduct custom tax lines from income, allocate net by category %, then apply to wallet budgets with confirmation; includes Malaysia-oriented presets (EPF / SOCSO / EIS / PCB ballpark / SST) that never leave the browser
 - **Multiple wallets** — create wallets in 29 currencies; monthly-income or starting-balance funding modes
 - **Custom categories** — editable expense and income category/subcategory taxonomy with glyphs and colors; savings categories use the custom DatePicker for optional deadline goals
@@ -28,7 +28,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Schedule** — calendar and agenda for bills, appointments, and reminders with recurrence (daily/weekly/biweekly/monthly/yearly); events can span multiple days via `endDate`, and Upcoming shows only the next occurrence of a recurring series
 - **Budget holds** — optional encrypted envelope holds on any schedule event (amount + category); active holds reserve budget until you log payment or release the occurrence; amounts never leave the E2EE payload
 - **Log payment** — from a bill/renewal event, open a prefilled expense and link `eventId` ↔ `expenseId` (plaintext metadata only); also releases that occurrence's budget hold when present
-- **Email reminders** — optional Resend emails with per-event lead times and user timezone; every notifying event also always gets a reminder right at its own start (the clock time, or 9:00 AM on the day for all-day events) on top of the chosen lead, deduped when the lead already is "at the time of the event"; confirmation when you enable notify; the reminder includes the event name, budget hold and comments, so turning notify on stores a readable copy (`notifyDetails`) that renders both the email and the push notification — switching it off deletes that copy and events without reminders stay fully encrypted
+- **Email reminders** — optional Resend emails with per-event lead times and user timezone; delivery goes to your **account notify email** (set under Data & privacy). Every notifying event also always gets a reminder right at its own start (the clock time, or 9:00 AM on the day for all-day events) on top of the chosen lead, deduped when the lead already is "at the time of the event"; confirmation when you enable notify; the reminder includes the event name, budget hold and comments, so turning notify on stores a readable copy (`notifyDetails`) that renders both the email and the push notification — switching it off deletes that copy and events without reminders stay fully encrypted
 - **Push notifications** — opt-in Web Push per device under **Account → Preferences**, delivered on the same 15-minute poll as the reminder emails and carrying the same event name, time, hold and comments; each browser subscribes separately, and turning it off on one device leaves the others and your emails untouched
 - **TO-DO lists** — multiple named lists with inline task management
 
@@ -47,6 +47,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Budget alerts** — email when a category nears or exceeds its monthly budget (E2EE-safe: client evaluates and sends names/amounts; server only delivers)
 - **Transparency** — in-app map of hosting roles, what the server can infer, MongoDB collections, E2EE vs plaintext fields, and data relationships (Mermaid diagrams)
 - **Guided tour** — Shepherd.js walkthrough for each main view. On first sign-in a welcome modal asks whether to take the guided tour or explore alone; the answer is stored on the ledger profile (`tourPreference`), so it follows the user across devices rather than living in this browser's `localStorage`. Dismissing a tour counts as having seen it. Replay any view's tour from the **?** beside the page title, or **Account → Take a Tour**
+- **Mobile navigation** — at ≤860px the sidebar becomes a five-tab bar (Overview, Schedule, Transactions, To-Do, More) with a bottom sheet for the remaining views; the tab bar stays fixed while content scrolls
 - **What's New** — release notes open once per device per app version (see [Versioning](#versioning)), and stay reachable from **Account → What's New**
 
 ### Security
@@ -100,7 +101,7 @@ src/
     ├── auth/             # wallet sign-in, device vault, backups, account menu, session UI
     ├── assets/           # logo
     ├── charts/           # SVG charts (donut, trend, MoM bars)
-    ├── components/       # Brand, ThemeToggle, Wallets, pickers, shared UI
+    ├── components/       # Brand, ThemeToggle, Wallets, MobileBottomNav, pickers, shared UI
     ├── lib/
     │   ├── budget/         # in-tab budget-alert notifications
     │   ├── crypto/         # E2EE codec, key derivation, unlock flow
@@ -202,7 +203,7 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 | `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId`, optional `capitalPlanId` |
 | `financial_wallets` | `payload` (name, income, starting balance, budgets) via `enc` | `accountId`, `currency`, `fundingMode`, `isDefault` |
 | `category_taxonomies` | `payload` (full `categories[]` tree, incl. optional piggy `target`/`deadline` per category and sub) via `enc` | `accountId` |
-| `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, `email`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on |
+| `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on — legacy per-event `email` may remain on old rows but delivery uses `users.notifyEmail` |
 | `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
 | `capital_plans` | `payload` (name, templateId, glyph, targetDate, initialBudget, items) via `enc` | `accountId` |
 | `vehicles` | `payload` (name, model, plate, glyph, odometerStart, tankCapacity, notes) via `enc` | `accountId`, `type` |

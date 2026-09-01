@@ -41,6 +41,7 @@ export type ExpenseWire = {
   sub?: string;
   amount?: number;
   note?: string;
+  createdAt?: string;
 };
 
 export type WalletWire = Omit<FinancialWallet, "name" | "income" | "startingBalance" | "budgets"> & {
@@ -52,6 +53,15 @@ export type WalletWire = Omit<FinancialWallet, "name" | "income" | "startingBala
   payload?: string;
 };
 
+/** Pass through server metadata that decode merges onto every expense shape. */
+function expenseWireMeta(wire: ExpenseWire): Pick<Expense, "eventId" | "capitalPlanId" | "createdAt"> {
+  return {
+    ...(wire.eventId ? { eventId: wire.eventId } : {}),
+    ...(wire.capitalPlanId ? { capitalPlanId: wire.capitalPlanId } : {}),
+    ...(wire.createdAt ? { createdAt: wire.createdAt } : {}),
+  };
+}
+
 /** Decrypt expense secrets and merge with plaintext metadata. */
 export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<Expense> {
   if (wire.enc === 1 && wire.payload) {
@@ -62,8 +72,7 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
       kind: wire.kind ?? "expense",
       date: wire.date,
       recurring: normalizeRecurring(wire.recurring),
-      ...(wire.eventId ? { eventId: wire.eventId } : {}),
-      ...(wire.capitalPlanId ? { capitalPlanId: wire.capitalPlanId } : {}),
+      ...expenseWireMeta(wire),
       ...secrets,
     };
   }
@@ -79,8 +88,7 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
     amount: wire.amount,
     note: wire.note ?? "",
     recurring: normalizeRecurring(wire.recurring),
-    ...(wire.eventId ? { eventId: wire.eventId } : {}),
-    ...(wire.capitalPlanId ? { capitalPlanId: wire.capitalPlanId } : {}),
+    ...expenseWireMeta(wire),
   };
 }
 
@@ -313,7 +321,7 @@ export function buildReminderDetails(
   ctx?: ReminderContext,
 ): ReminderDetails | null {
   const title = (event.title ?? "").trim().slice(0, REMINDER_TITLE_MAX);
-  if (!event.notify || !event.email?.trim() || !title) return null;
+  if (!event.notify || !title) return null;
 
   const details: ReminderDetails = { title };
 

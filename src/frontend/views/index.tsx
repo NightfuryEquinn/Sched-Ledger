@@ -69,6 +69,7 @@ import {
   recurringMonthlyEquivalent,
   recurringScheduleKey,
   recurringSchedulesForMonth,
+  sortExpensesByDateDesc,
   spendingChartSeries,
   type ChartPeriod,
   type WalletFunding,
@@ -282,9 +283,9 @@ export function Overview({
 
       <div className="ov-grid">
         <section className="panel" data-tour="tour-overview-oldest-todo">
-          <div className="panel-head">
+          <div className="panel-head panel-head--row">
             <h2>Recent To-Do</h2>
-            <button className="link-btn" onClick={() => setView("todos")}>See All</button>
+            <button className="link-btn" onClick={() => setView("todos")}>View More</button>
           </div>
           <div className="recent-list">
             {recentTodos.length ? recentTodos.map((list) => {
@@ -316,9 +317,9 @@ export function Overview({
         </section>
 
         <section className="panel" data-tour="tour-overview-today-schedule">
-          <div className="panel-head">
+          <div className="panel-head panel-head--row">
             <h2>Recent Schedule</h2>
-            <button className="link-btn" onClick={() => setView("schedule")}>See All</button>
+            <button className="link-btn" onClick={() => setView("schedule")}>View More</button>
           </div>
           <div className="recent-list">
             {todayEvents.length ? todayEvents.map((day) => {
@@ -448,9 +449,9 @@ export function Overview({
         </section>
 
         <section className="panel" data-tour="tour-overview-recent">
-          <div className="panel-head">
+          <div className="panel-head panel-head--row">
             <h2>Recent Transaction</h2>
-            <button className="link-btn" onClick={() => setView("transactions")}>See All</button>
+            <button className="link-btn" onClick={() => setView("transactions")}>View More</button>
           </div>
           <div className="recent-list">
             {recent.length ? recent.map((e) => {
@@ -475,9 +476,9 @@ export function Overview({
       </div>
 
       <section className="panel" data-tour="tour-overview-piggies">
-        <div className="panel-head">
+        <div className="panel-head panel-head--row">
           <h2>Piggies</h2>
-          <button className="link-btn" onClick={() => setView("piggies")}>See All</button>
+          <button className="link-btn" onClick={() => setView("piggies")}>View More</button>
         </div>
         <div className="recent-list">
           {topPiggies.length ? topPiggies.map((p) => (
@@ -532,7 +533,7 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
       );
     }
     const catRows = rows;
-    const subRows = subFilter ? rows.filter((e) => e.sub === subFilter) : rows;
+    const subRows = sortExpensesByDateDesc(subFilter ? rows.filter((e) => e.sub === subFilter) : rows);
     const net = subRows.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
     const byDate: Record<string, typeof subRows> = {};
     subRows.forEach((e) => {

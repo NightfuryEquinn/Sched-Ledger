@@ -102,6 +102,7 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "allDay / time / repeat", value: "schedule metadata" },
       { key: "exceptDates? / until?", value: "recurrence exceptions / end date" },
       { key: "notify / lead", value: "reminder settings (plaintext for cron)" },
+      { key: "email?", value: '"you@mail.com"', note: "legacy per-event field; delivery uses users.notifyEmail" },
       { key: "notifyDetails?", value: "title, hold, comments", note: "readable copy for email/push while notify is on — deleted when notify is off" },
       { key: "expenseId?", value: "ObjectId", note: "optional link when a bill payment was logged" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
@@ -236,9 +237,9 @@ const COLLECTIONS: CollectionDoc[] = [
 
 const RELATIONSHIP_CHART = `flowchart TB
   subgraph Client["Browser client"]
-    UI["React UI"]
+    UI["React UI<br/>sidebar · tab bar + More sheet"]
     Key["In-memory ledger key<br/>from wallet signature"]
-    LS["localStorage<br/>identities · session · theme · tour<br/>active wallet · prefs"]
+    LS["localStorage<br/>identities · session · theme · tour<br/>active wallet · prefs · whatsnew"]
   end
 
   subgraph API["API / MongoDB"]
@@ -290,9 +291,9 @@ const RELATIONSHIP_CHART = `flowchart TB
 const RELATIONSHIP_CHART_MOBILE = `flowchart TB
   subgraph Client["Browser client"]
     direction TB
-    UI["React UI"]
+    UI["React UI<br/>sidebar · tab bar + More sheet"]
     Key["In-memory ledger key<br/>from wallet signature"]
-    LS["localStorage<br/>identities · session · theme · tour<br/>active wallet · prefs"]
+    LS["localStorage<br/>identities · session · theme · tour<br/>active wallet · prefs · whatsnew"]
     UI --> Key
     UI --> LS
   end
@@ -537,8 +538,8 @@ export function Transparency() {
               (plus Analytics / Speed Insights) but does not run cron. cron-job.org is the only scheduler — it polls
               <code> GET /api/cron/reminders </code>
               about every fifteen minutes for email reminders, push notifications, and recurring expense rows. Optional email uses Resend;
-              push delivery uses FCM, Apple Push, or Mozilla's service depending on the browser. UI typefaces (Young Serif, Schibsted Grotesk, Azeret Mono) load from Google Fonts — font files only, no
-              ledger data. A device passphrase wraps your in-app recovery key on this browser; encrypted backups
+              push delivery uses FCM, Apple Push, or Mozilla&apos;s service depending on the browser. UI typefaces (Young Serif, Schibsted Grotesk, Azeret Mono) load from Google Fonts — font files only, no
+              ledger data. On desktop you navigate from the sidebar; on phone and tablet portrait a five-tab bar (Overview, Schedule, Transactions, To-Do, More) opens a sheet for the remaining views. A device passphrase wraps your in-app recovery key on this browser; encrypted backups
               download to your machine only. The installable PWA may cache ciphertext locally for offline reads —
               saves still need the network. Older rows may still carry legacy plaintext columns from before E2EE payloads.
             </p>
