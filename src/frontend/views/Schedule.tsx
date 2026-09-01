@@ -35,7 +35,7 @@ import {
 import type { EventDay } from "@/frontend/lib/data";
 import { isActiveHoldOccurrence } from "@/frontend/lib/envelope-holds";
 import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
-import { api } from "@/frontend/lib/api";
+import { useAccountNotifyEmail } from "@/frontend/lib/hooks/useAccountNotifyEmail";
 import type { CategoryIndex, EventComment, LedgerEvent } from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
@@ -503,7 +503,7 @@ export function EventModal({
 }: EventModalProps) {
   const editing = !!(initial && initial.id);
   const customMeta = EVENT_CATS.find((c) => c.id === "custom")!;
-  const [accountNotifyEmail, setAccountNotifyEmail] = useState("");
+  const accountNotifyEmail = useAccountNotifyEmail();
 
   const [title, setTitle] = useState(initial ? initial.title : "");
   const [catId, setCatId] = useState(initial ? initial.catId : "bill");
@@ -525,16 +525,6 @@ export function EventModal({
     normalizeLead(initial ? initial.lead : "1d", initial ? !!initial.allDay : true),
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    void api.users.me().then(({ user }) => {
-      if (!cancelled) setAccountNotifyEmail(user.notifyEmail?.trim() || "");
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
   const [comments, setComments] = useState<EventComment[]>(
     initial && initial.comments ? initial.comments : [],
   );
@@ -819,17 +809,14 @@ export function EventModal({
           </div>
           {notify && (
             <div className="notify-card">
-              <div className="fld-2col tight">
+              <div className="notify-fields">
                 <div>
                   <label className="fld-label">Send</label>
                   <LeadPicker options={leadOptions} value={lead} onChange={setLead} />
                 </div>
-                <div>
-                  <label className="fld-label">Send to</label>
-                  <p className="notify-email-readout">
-                    {accountNotifyEmail || "Set your email in Data & privacy"}
-                  </p>
-                </div>
+                <p className="notify-send-to">
+                  Send to {accountNotifyEmail || "Set your email in Data & privacy"}
+                </p>
               </div>
               <p className="notify-note">
                 Reminders go to your account email only — set it under Data &amp; privacy.

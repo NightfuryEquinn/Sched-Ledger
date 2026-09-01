@@ -83,6 +83,32 @@ describe("reminderEmailHtml", () => {
     expect(html).toContain("&lt;b&gt;bold&lt;/b&gt;");
   });
 
+  test("due reminders show the title in the heading but not an Event row", () => {
+    const { html } = reminderEmailHtml({
+      title: "Dentist",
+      when: "Mon, Jul 20 · 2:30 PM",
+      category: "Appointment",
+      lead: "1 day before",
+    });
+
+    expect(html).toContain("<h2 style=\"margin:0 0 16px;font-size:20px;color:#20242b\">Dentist</h2>");
+    expect(html).not.toContain(">Event</td>");
+  });
+
+  test("confirmation emails include the Event row", () => {
+    const { html } = reminderEmailHtml({
+      title: "Dentist",
+      when: "Mon, Jul 20 · 2:30 PM",
+      category: "Appointment",
+      lead: "1 day before",
+      isConfirmation: true,
+    });
+
+    expect(html).toContain("Reminder scheduled");
+    expect(html).toContain(">Event</td>");
+    expect(html).toContain("<strong>Dentist</strong>");
+  });
+
   test("blank comments do not render an empty section", () => {
     const { html, text } = reminderEmailHtml({
       title: "Rent",

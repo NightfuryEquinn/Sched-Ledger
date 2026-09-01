@@ -1,8 +1,7 @@
+import { escapeHtml, LOGO_CONTENT_ID, wrapEmailBody } from "@/api/lib/email-layout";
 import { reminderEmailHtml } from "@/api/lib/reminder-email-html";
 
 export { reminderEmailHtml };
-
-const LOGO_CONTENT_ID = "sched-ledger-logo";
 
 /** Injected by build.ts into the Vercel API bundle; unset in local/dev. */
 declare const __EMAIL_LOGO_BASE64__: string | undefined;
@@ -58,11 +57,6 @@ async function getLogoAttachment(): Promise<LogoAttachment> {
     content_type: "image/png",
     content_id: LOGO_CONTENT_ID,
   };
-}
-
-/** Brand mark markup shared by all transactional email templates. */
-function emailLogoHtml(): string {
-  return `<img src="cid:${LOGO_CONTENT_ID}" alt="Sched Ledger" width="96" height="96" style="display:block;width:96px;height:96px;margin:0 0 20px;border:0" />`;
 }
 
 /** Send a transactional email via Resend, embedding the Sched Ledger logo. */
@@ -125,35 +119,23 @@ export function budgetAlertEmailHtml(opts: {
     ? `Your <strong>${escapeHtml(opts.categoryName)}</strong> budget is nearing its limit for ${escapeHtml(opts.monthLabel)}.`
     : `Your <strong>${escapeHtml(opts.categoryName)}</strong> budget has been exceeded for ${escapeHtml(opts.monthLabel)}.`;
 
-  const html = `<!DOCTYPE html>
-<html>
-<body style="font-family:system-ui,sans-serif;line-height:1.5;color:#2a2520;max-width:480px;margin:0 auto;padding:24px">
-  ${emailLogoHtml()}
-  <h2 style="margin:0 0 12px;font-size:20px">${near ? "Nearing budget limit" : "Budget exceeded"}</h2>
-  <p style="margin:0 0 16px">${intro}</p>
-  <table style="width:100%;border-collapse:collapse;font-size:15px">
-    <tr><td style="padding:6px 0;color:#6b6560">Category</td><td style="padding:6px 0"><strong>${escapeHtml(opts.categoryName)}</strong></td></tr>
-    <tr><td style="padding:6px 0;color:#6b6560">Spent</td><td style="padding:6px 0">${escapeHtml(opts.spentLabel)}</td></tr>
-    <tr><td style="padding:6px 0;color:#6b6560">Budget</td><td style="padding:6px 0">${escapeHtml(opts.budgetLabel)}</td></tr>
-    <tr><td style="padding:6px 0;color:#6b6560">Used</td><td style="padding:6px 0">${opts.percent}%</td></tr>
-    ${opts.walletName ? `<tr><td style="padding:6px 0;color:#6b6560">Wallet</td><td style="padding:6px 0">${escapeHtml(opts.walletName)}</td></tr>` : ""}
-  </table>
-  <p style="margin:20px 0 0;font-size:13px;color:#8a8480">— Sched Ledger</p>
-</body>
-</html>`;
+  const detailRows = [
+    { label: "Category", value: escapeHtml(opts.categoryName), strong: true },
+    { label: "Spent", value: escapeHtml(opts.spentLabel) },
+    { label: "Budget", value: escapeHtml(opts.budgetLabel) },
+    { label: "Used", value: `${opts.percent}%` },
+    ...(opts.walletName ? [{ label: "Wallet", value: escapeHtml(opts.walletName) }] : []),
+  ];
+
+  const html = wrapEmailBody({
+    heading: near ? "Nearing budget limit" : "Budget exceeded",
+    introHtml: intro,
+    detailRows,
+  });
 
   const text = near
     ? `Budget alert: ${opts.categoryName} is ${opts.percent}% used (${opts.spentLabel} of ${opts.budgetLabel}) for ${opts.monthLabel}.`
     : `Budget exceeded: ${opts.categoryName} — ${opts.spentLabel} of ${opts.budgetLabel} for ${opts.monthLabel}.`;
 
   return { html, text, subject };
-}
-
-/** Escape text for safe inclusion in HTML email bodies. */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

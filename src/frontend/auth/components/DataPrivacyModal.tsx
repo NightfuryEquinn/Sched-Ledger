@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getConsent, markSharingChoiceMade, setConsent } from "../lib/consent";
 import { clearAllLocalData } from "../lib/identity-storage";
+import { emitNotifyEmailChanged } from "@/frontend/lib/hooks/useAccountNotifyEmail";
 
 /*
  * Data & privacy modal
@@ -128,6 +129,7 @@ export function DataPrivacyModal({
       const saved = user.notifyEmail?.trim() || "";
       setNotifyEmail(saved);
       setNotifyEmailDraft(saved);
+      emitNotifyEmailChanged();
       try {
         if (saved) localStorage.setItem("ledger:notifyEmail", saved);
       } catch {
