@@ -146,6 +146,12 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
   const fabRef = useRef<HTMLDivElement>(null);
   const tourReady = !ledger.isLoading && !ledger.error && !!ledger.profile;
   const { setTourState, tourPreference, toursSeen } = ledger;
+  const {
+    isLoading: ledgerIsLoading,
+    error: ledgerError,
+    profile: ledgerProfile,
+    setMonth: syncLedgerMonth,
+  } = ledger;
 
   /* Latched so the modal survives its own exit animation: answering flips
      tourPreference off "pending", which would otherwise unmount it mid-fade. */
@@ -227,12 +233,12 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
   }, [fabOpen]);
 
   useEffect(() => {
-    if (ledger.isLoading || ledger.error || monthInitialized.current || !ledger.profile) return;
+    if (ledgerIsLoading || ledgerError || monthInitialized.current || !ledgerProfile) return;
     monthInitialized.current = true;
-    if (ledger.profile.currentMonth !== CURRENT_MONTH_KEY) {
-      ledger.setMonth(CURRENT_MONTH_KEY);
+    if (ledgerProfile.currentMonth !== CURRENT_MONTH_KEY) {
+      syncLedgerMonth(CURRENT_MONTH_KEY);
     }
-  }, [ledger.isLoading, ledger.error, ledger.profile, ledger.setMonth]);
+  }, [ledgerIsLoading, ledgerError, ledgerProfile, syncLedgerMonth]);
 
   if (ledger.isLoading) {
     return (

@@ -297,7 +297,10 @@ export function useLedger(walletAddress: string) {
    * orphaned mid-load would flash wrong balances and, worse, let an unrelated
    * edit save the cleared assignment back.
    */
-  const livePlans = capitalPlansQuery.isSuccess ? (capitalPlansQuery.data ?? []) : null;
+  const livePlans = useMemo(
+    () => (capitalPlansQuery.isSuccess ? (capitalPlansQuery.data ?? []) : null),
+    [capitalPlansQuery.isSuccess, capitalPlansQuery.data],
+  );
 
   const expensesQuery = useQuery({
     queryKey: keys.expenses(wallet),

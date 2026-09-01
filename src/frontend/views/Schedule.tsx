@@ -41,7 +41,7 @@ import type { DeleteScope } from "@/lib/delete-scope";
 import { CATEGORY_GLYPH_OPTIONS, displayGlyph } from "@/lib/glyphs";
 import { shiftIso } from "@/lib/schedule";
 import { isRepeatAllowedForSpan, spanDaysBetween } from "@/schemas/common";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 /*
@@ -608,10 +608,13 @@ export function EventModal({
    * one finishes; stretching the span past the active repeat resets it to Once
    * rather than silently promoting it to a different cadence.
    */
-  const repeatAllowed = (id: string) => isRepeatAllowedForSpan(id as never, span);
+  const repeatAllowed = useCallback(
+    (id: string) => isRepeatAllowedForSpan(id as never, span),
+    [span],
+  );
   useEffect(() => {
     if (repeat !== "once" && !repeatAllowed(repeat)) setRepeat("once");
-  }, [span, repeat]);
+  }, [repeat, repeatAllowed]);
 
   /** Keep the end on or after the start when the start moves. */
   const handleDateChange = (next: string) => {

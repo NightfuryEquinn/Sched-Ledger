@@ -87,6 +87,8 @@ export function UnlockScreen({
   const [offerBusy, setOfferBusy] = useState(false);
   const [offerError, setOfferError] = useState("");
   const idn = identityStorage.find(account.address);
+  const idnAddress = idn?.address;
+  const idnInjected = idn?.injected;
   const session = idn ? sessionSecrets.get(idn.address) : undefined;
   const needsWalletSign = !!idn?.injected || (!session && !idn?.privateKey && !idn?.vault);
   const needsPassphrase = !!idn && !idn.injected && !session && (!!idn.vault || !!idn.privateKey);
@@ -95,18 +97,18 @@ export function UnlockScreen({
   useEnter(cardRef);
 
   useEffect(() => {
-    if (!idn || idn.injected) {
+    if (!idnAddress || idnInjected) {
       setCanBiometricUnlock(false);
       return;
     }
     let live = true;
     void biometricSupported().then((supported) => {
-      if (live) setCanBiometricUnlock(supported && biometricEnrolled(idn.address));
+      if (live) setCanBiometricUnlock(supported && biometricEnrolled(idnAddress));
     });
     return () => {
       live = false;
     };
-  }, [idn?.address, idn?.injected]);
+  }, [idnAddress, idnInjected]);
 
   async function unlock(passphraseOverride?: string, viaBiometric = false) {
     if (!idn) {

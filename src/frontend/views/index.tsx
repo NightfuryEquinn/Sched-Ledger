@@ -95,7 +95,7 @@ import type {
 } from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import type { DeleteScope } from "@/lib/delete-scope";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /*
  * Ledger views
@@ -1277,15 +1277,18 @@ export function Insights({
 
   // ── Income ────────────────────────────────────────────────────────
   /** Income totals per subcategory for one month's transactions. */
-  const incomeBySub = (list: Expense[]) => {
-    const totals: Record<string, number> = {};
-    for (const e of list) {
-      if (classifyTx(e, categoryIndex) !== "income") continue;
-      totals[e.sub] = (totals[e.sub] || 0) + e.amount;
-    }
+  const incomeBySub = useCallback(
+    (list: Expense[]) => {
+      const totals: Record<string, number> = {};
+      for (const e of list) {
+        if (classifyTx(e, categoryIndex) !== "income") continue;
+        totals[e.sub] = (totals[e.sub] || 0) + e.amount;
+      }
 
-    return totals;
-  };
+      return totals;
+    },
+    [categoryIndex],
+  );
 
   /** One row per income source that has ever paid out inside the chart window. */
   const incomeRows = useMemo(() => {
@@ -1334,6 +1337,7 @@ export function Insights({
     currency,
     displayCurrency,
     fxRates,
+    incomeBySub,
   ]);
 
   // top income sources this month

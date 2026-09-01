@@ -15,7 +15,7 @@ import {
   VEHICLE_TYPES,
 } from "@/frontend/lib/fuelInsights";
 import type { FuelFill, Vehicle, VehicleType } from "@/frontend/lib/types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 /*
@@ -112,14 +112,22 @@ export function Vehicles({
     setSelectedId(vehicleList[0]?.id ?? null);
   }, [vehicleList, selectedId]);
 
-  const money = (n: number) => fmtMoney(n, { currency });
+  const money = useCallback((n: number) => fmtMoney(n, { currency }), [currency]);
   const selectedVehicle = vehicleList.find((v) => v.id === selectedId) ?? null;
   const selectedMeta = VEHICLE_TYPES[selectedVehicle?.type ?? "car"];
 
   const fillsFor = (vehicleId: string) =>
     fillList.filter((f) => f.vehicleId === vehicleId).sort((a, b) => (a.date < b.date ? 1 : -1));
 
-  const selectedFills = selectedVehicle ? fillsFor(selectedVehicle.id) : [];
+  const selectedFills = useMemo(
+    () =>
+      selectedVehicle
+        ? fillList
+            .filter((f) => f.vehicleId === selectedVehicle.id)
+            .sort((a, b) => (a.date < b.date ? 1 : -1))
+        : [],
+    [selectedVehicle, fillList],
+  );
   const assessment = useMemo(() => assessVehicleFuel(selectedFills), [selectedFills]);
   const insights = useMemo(() => {
     if (assessment.status !== "ready" || !selectedVehicle) return [];
@@ -127,7 +135,7 @@ export function Vehicles({
     return computeFuelInsights(assessment.metrics, selectedMeta, assessment.confidence, {
       money,
     });
-  }, [assessment, selectedMeta, selectedVehicle, currency]);
+  }, [assessment, selectedMeta, selectedVehicle, money]);
 
   const totalSpend = useMemo(
     () => roundMoney(fillList.reduce((s, f) => s + f.price, 0)),
