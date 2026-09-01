@@ -80,14 +80,17 @@ describe.each(sites)("$name sitemap", ({ sitemapPath, htmlPath, robotsPath }) =>
     expect(robotsMeta![1]).not.toContain("noindex");
   });
 
-  test.if(Boolean(robotsPath))("robots.txt Sitemap directive matches the canonical origin", async () => {
-    const html = await Bun.file(htmlPath).text();
-    const robots = await Bun.file(robotsPath!).text();
+  test.if(Boolean(robotsPath))(
+    "robots.txt Sitemap directive matches the canonical origin",
+    async () => {
+      const html = await Bun.file(htmlPath).text();
+      const robots = await Bun.file(robotsPath!).text();
 
-    const canonical = extractCanonical(html);
-    expect(canonical).toBeDefined();
-    const origin = new URL(canonical!).origin;
+      const canonical = extractCanonical(html);
+      expect(canonical).toBeDefined();
+      const origin = new URL(canonical!).origin;
 
-    expect(robots).toContain(`Sitemap: ${origin}/sitemap.xml`);
-  });
+      expect(robots).toContain(`Sitemap: ${origin}/sitemap.xml`);
+    },
+  );
 });

@@ -82,7 +82,12 @@ export function Root() {
     <ThemeProvider>
       {account ? (
         cryptoReady || ledgerKeyStore.isUnlocked(account.address) ? (
-          <LedgerApp key={account.address} account={account} onSignOut={signOut} signingOut={signingOut} />
+          <LedgerApp
+            key={account.address}
+            account={account}
+            onSignOut={signOut}
+            signingOut={signingOut}
+          />
         ) : (
           <UnlockScreen
             account={account}

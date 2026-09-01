@@ -93,10 +93,7 @@ export function computeNet(gross: number, taxPercents: number[]): number {
  * any rounding remainder goes to the last category with a positive
  * percentage and the map totals net rounded to the nearest cent.
  */
-export function allocateBudgets(
-  net: number,
-  allocations: AllocationRow[],
-): Record<string, number> {
+export function allocateBudgets(net: number, allocations: AllocationRow[]): Record<string, number> {
   const targetCents = Math.max(0, Math.round((Number.isFinite(net) ? net : 0) * 100));
   const centsById: Record<string, number> = {};
 

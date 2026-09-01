@@ -10,4 +10,3 @@ export const authVerifySchema = z.object({
   message: z.string().min(1).max(4096),
   signature: z.string().regex(/^0x[a-fA-F0-9]+$/, "Invalid signature"),
 });
-

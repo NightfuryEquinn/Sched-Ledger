@@ -3,12 +3,7 @@ import { CURRENT_MONTH_KEY, monthLabel, monthsWindow, roundMoney } from "./data"
 import { mean } from "./stat-helpers";
 import type { CategoryIndex } from "./categories";
 import type { Piggy } from "./piggies";
-import {
-  classifyTx,
-  isRecurring,
-  recurringMonthlyEquivalent,
-  recurringScheduleKey,
-} from "./stats";
+import { classifyTx, isRecurring, recurringMonthlyEquivalent, recurringScheduleKey } from "./stats";
 import type { CapitalPlan, Expense } from "./types";
 
 type SavingsHeadline = {
@@ -216,7 +211,9 @@ function paceFor(
   let onTrack: boolean | null = null;
   if (piggy.target !== undefined && piggy.target > 0 && piggy.deadline) {
     const deadlineMonth = piggy.deadline.slice(0, 7);
-    onTrack = piggy.balance >= piggy.target || (projectedCompletion !== null && projectedCompletion <= deadlineMonth);
+    onTrack =
+      piggy.balance >= piggy.target ||
+      (projectedCompletion !== null && projectedCompletion <= deadlineMonth);
   }
 
   let requiredMonthly: number | null = null;

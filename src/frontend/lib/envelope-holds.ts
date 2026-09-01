@@ -16,9 +16,7 @@ function holdAmountValue(amount: unknown): number {
 /** Whether the event has an active encrypted hold configuration. */
 function hasBudgetHoldConfig(ev: LedgerEvent): boolean {
   return Boolean(
-    ev.budgetHoldEnabled &&
-      holdAmountValue(ev.budgetHoldAmount) > 0 &&
-      ev.budgetHoldCategoryId,
+    ev.budgetHoldEnabled && holdAmountValue(ev.budgetHoldAmount) > 0 && ev.budgetHoldCategoryId,
   );
 }
 

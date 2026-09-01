@@ -6,7 +6,12 @@ type SendEmailResult = { ok: true; id: string } | { ok: false; error: string };
 
 type EmailMockOverrides = {
   emailConfigured?: () => boolean;
-  sendEmail?: (input: { to: string; subject: string; html: string; text?: string }) => Promise<SendEmailResult>;
+  sendEmail?: (input: {
+    to: string;
+    subject: string;
+    html: string;
+    text?: string;
+  }) => Promise<SendEmailResult>;
 };
 
 /** Mock outbound email while keeping real HTML template implementations. */

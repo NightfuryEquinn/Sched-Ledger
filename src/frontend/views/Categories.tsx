@@ -70,7 +70,10 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   >(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: !!editor });
+  const { requestClose } = useModalMotion(scrimRef, panelRef, {
+    variant: "center",
+    active: !!editor,
+  });
   const closeEditor = () => requestClose(() => setEditor(null));
 
   useEffect(() => {
@@ -147,7 +150,10 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   };
 
   /** Open the rename-subcategory editor. */
-  const openEditSub = (catId: string, sub: { id: string; name: string; target?: number; deadline?: string }) => {
+  const openEditSub = (
+    catId: string,
+    sub: { id: string; name: string; target?: number; deadline?: string },
+  ) => {
     setEditor({ type: "edit-sub", catId, subId: sub.id });
     setName(sub.name);
     setTarget(sub.target != null ? String(sub.target) : "");
@@ -346,13 +352,25 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
           onChange={setFilter}
         />
         <div className="cat-toolbar-actions">
-          <button className="primary-btn primary-btn--expense" type="button" onClick={() => openAddCat("expense")}>
+          <button
+            className="primary-btn primary-btn--expense"
+            type="button"
+            onClick={() => openAddCat("expense")}
+          >
             <Icon name="plus" size={15} /> Expense
           </button>
-          <button className="primary-btn primary-btn--savings" type="button" onClick={() => openAddCat("savings")}>
+          <button
+            className="primary-btn primary-btn--savings"
+            type="button"
+            onClick={() => openAddCat("savings")}
+          >
             <Icon name="plus" size={15} /> Savings
           </button>
-          <button className="primary-btn primary-btn--income" type="button" onClick={() => openAddCat("income")}>
+          <button
+            className="primary-btn primary-btn--income"
+            type="button"
+            onClick={() => openAddCat("income")}
+          >
             <Icon name="plus" size={15} /> Income
           </button>
         </div>
@@ -371,101 +389,148 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
         </div>
 
         <div className="cat-tree" data-tour="tour-categories-tree">
-          {activeCategories.length ? activeCategories.map((cat) => {
-            const catType = resolveCategoryType(cat);
-            const open = expanded[cat.id] ?? true;
-            const filteredOut = !catMatches(cat);
+          {activeCategories.length ? (
+            activeCategories.map((cat) => {
+              const catType = resolveCategoryType(cat);
+              const open = expanded[cat.id] ?? true;
+              const filteredOut = !catMatches(cat);
 
-            return (
-              <div
-                key={cat.id}
-                className={
-                  "cat-block"
-                  + (open ? "" : " is-collapsed")
-                  + (filteredOut ? " is-filtered-out" : "")
-                }
-                aria-hidden={filteredOut || undefined}
-              >
-                <div className="cat-block-head">
-                  <button
-                    type="button"
-                    className="cat-expand"
-                    onClick={() => setExpanded((e) => ({ ...e, [cat.id]: !open }))}
-                    aria-expanded={open}
-                    tabIndex={filteredOut ? -1 : undefined}
-                  >
-                    <Icon name="chevD" size={16} />
-                  </button>
-                  <span className="cat-block-glyph" style={glyphTint(cat.color)}>
-                    {displayGlyph(cat.glyph, cat.id)}
-                  </span>
-                  <div className="cat-block-main">
-                    <div className="cat-block-name">{cat.name}</div>
-                    <div className="cat-block-tags">
-                      {cat.builtin ? <span className="wallet-badge">Built-in</span> : null}
-                      <span className="wallet-badge">{typeLabel(catType)}</span>
-                    </div>
-                    <div className="cat-block-meta">
-                      {cat.subs.length} subcategories
-                      {catType === "savings" && cat.target ? ` · goal ${cat.target}` : ""}
-                      {catType === "savings" && cat.deadline ? ` by ${cat.deadline}` : ""}
-                    </div>
-                  </div>
-                  <div className="cat-block-actions">
-                    <button type="button" disabled={busy} onClick={() => openEditCat(cat)} aria-label="Edit" tabIndex={filteredOut ? -1 : undefined}>
-                      <Icon name="edit" size={16} />
+              return (
+                <div
+                  key={cat.id}
+                  className={
+                    "cat-block" +
+                    (open ? "" : " is-collapsed") +
+                    (filteredOut ? " is-filtered-out" : "")
+                  }
+                  aria-hidden={filteredOut || undefined}
+                >
+                  <div className="cat-block-head">
+                    <button
+                      type="button"
+                      className="cat-expand"
+                      onClick={() => setExpanded((e) => ({ ...e, [cat.id]: !open }))}
+                      aria-expanded={open}
+                      tabIndex={filteredOut ? -1 : undefined}
+                    >
+                      <Icon name="chevD" size={16} />
                     </button>
-                    <button type="button" disabled={busy} onClick={() => openAddSub(cat.id)} aria-label="Add Subcategory" tabIndex={filteredOut ? -1 : undefined}>
-                      <Icon name="plus" size={16} />
-                    </button>
-                    {!cat.builtin ? (
+                    <span className="cat-block-glyph" style={glyphTint(cat.color)}>
+                      {displayGlyph(cat.glyph, cat.id)}
+                    </span>
+                    <div className="cat-block-main">
+                      <div className="cat-block-name">{cat.name}</div>
+                      <div className="cat-block-tags">
+                        {cat.builtin ? <span className="wallet-badge">Built-in</span> : null}
+                        <span className="wallet-badge">{typeLabel(catType)}</span>
+                      </div>
+                      <div className="cat-block-meta">
+                        {cat.subs.length} subcategories
+                        {catType === "savings" && cat.target ? ` · goal ${cat.target}` : ""}
+                        {catType === "savings" && cat.deadline ? ` by ${cat.deadline}` : ""}
+                      </div>
+                    </div>
+                    <div className="cat-block-actions">
                       <button
                         type="button"
-                        className="danger"
                         disabled={busy}
-                        onClick={() => (catInUse(cat) ? removeCategory(cat.id) : setConfirmDelete({ type: "cat", id: cat.id }))}
-                        aria-label={busy ? (catInUse(cat) ? "Archiving" : "Deleting") : catInUse(cat) ? "Archive" : "Delete"}
-                        title={
-                          busy
-                            ? catInUse(cat) ? "Archiving…" : "Deleting…"
-                            : catInUse(cat)
-                            ? "Archive — keeps past transactions classified correctly"
-                            : "Delete"
-                        }
+                        onClick={() => openEditCat(cat)}
+                        aria-label="Edit"
                         tabIndex={filteredOut ? -1 : undefined}
                       >
-                        <Icon name={catInUse(cat) ? "archive" : "trash"} size={16} />
+                        <Icon name="edit" size={16} />
                       </button>
-                    ) : null}
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => openAddSub(cat.id)}
+                        aria-label="Add Subcategory"
+                        tabIndex={filteredOut ? -1 : undefined}
+                      >
+                        <Icon name="plus" size={16} />
+                      </button>
+                      {!cat.builtin ? (
+                        <button
+                          type="button"
+                          className="danger"
+                          disabled={busy}
+                          onClick={() =>
+                            catInUse(cat)
+                              ? removeCategory(cat.id)
+                              : setConfirmDelete({ type: "cat", id: cat.id })
+                          }
+                          aria-label={
+                            busy
+                              ? catInUse(cat)
+                                ? "Archiving"
+                                : "Deleting"
+                              : catInUse(cat)
+                                ? "Archive"
+                                : "Delete"
+                          }
+                          title={
+                            busy
+                              ? catInUse(cat)
+                                ? "Archiving…"
+                                : "Deleting…"
+                              : catInUse(cat)
+                                ? "Archive — keeps past transactions classified correctly"
+                                : "Delete"
+                          }
+                          tabIndex={filteredOut ? -1 : undefined}
+                        >
+                          <Icon name={catInUse(cat) ? "archive" : "trash"} size={16} />
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="cat-sub-reveal">
+                    <ul className="cat-sub-list">
+                      {cat.subs.map((sub) => (
+                        <li key={sub.id} className="cat-sub-row">
+                          <div className="cat-sub-main">
+                            <span className="cat-sub-name">{sub.name}</span>
+                            <span className="cat-sub-id num">{sub.id}</span>
+                          </div>
+                          <div className="cat-sub-actions">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => openEditSub(cat.id, sub)}
+                              aria-label="Rename"
+                              tabIndex={filteredOut || !open ? -1 : undefined}
+                            >
+                              <Icon name="edit" size={16} />
+                            </button>
+                            {cat.subs.length > 1 ? (
+                              <button
+                                type="button"
+                                className="danger"
+                                disabled={busy}
+                                onClick={() =>
+                                  setConfirmDelete({ type: "sub", catId: cat.id, subId: sub.id })
+                                }
+                                aria-label={busy ? "Removing" : "Remove"}
+                                title={busy ? "Removing…" : "Remove"}
+                                tabIndex={filteredOut || !open ? -1 : undefined}
+                              >
+                                <Icon name="trash" size={16} />
+                              </button>
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-
-                <div className="cat-sub-reveal">
-                  <ul className="cat-sub-list">
-                    {cat.subs.map((sub) => (
-                      <li key={sub.id} className="cat-sub-row">
-                        <div className="cat-sub-main">
-                          <span className="cat-sub-name">{sub.name}</span>
-                          <span className="cat-sub-id num">{sub.id}</span>
-                        </div>
-                        <div className="cat-sub-actions">
-                          <button type="button" disabled={busy} onClick={() => openEditSub(cat.id, sub)} aria-label="Rename" tabIndex={filteredOut || !open ? -1 : undefined}>
-                            <Icon name="edit" size={16} />
-                          </button>
-                          {cat.subs.length > 1 ? (
-                            <button type="button" className="danger" disabled={busy} onClick={() => setConfirmDelete({ type: "sub", catId: cat.id, subId: sub.id })} aria-label={busy ? "Removing" : "Remove"} title={busy ? "Removing…" : "Remove"} tabIndex={filteredOut || !open ? -1 : undefined}>
-                              <Icon name="trash" size={16} />
-                            </button>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            );
-          }) : (
-            <EmptyState title="No Categories" sub="Add a category to start organizing transactions." />
+              );
+            })
+          ) : (
+            <EmptyState
+              title="No Categories"
+              sub="Add a category to start organizing transactions."
+            />
           )}
           {activeCategories.length && !visibleCount ? (
             <EmptyState title="Nothing Matches" sub="Try a different filter." />
@@ -479,8 +544,8 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
             <div>
               <h2>Archived</h2>
               <p className="panel-sub">
-                Retired categories, kept so past transactions keep their type. Hidden from
-                pickers and budgets.
+                Retired categories, kept so past transactions keep their type. Hidden from pickers
+                and budgets.
               </p>
             </div>
           </div>
@@ -511,82 +576,122 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
         </section>
       ) : null}
 
-      {editor ? createPortal(
-        <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeEditor(); }}>
-          <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
-            <div className="modal-head">
-              <h3>{editorTitle}</h3>
-              <button className="icon-btn" type="button" onClick={closeEditor} aria-label="Close" disabled={busy}>
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-            <div className="modal-body modal-scroll">
-              <div className="dm-sec">
-                <label className="fld-label" htmlFor="cat-name">Name</label>
-                <input
-                  id="cat-name"
-                  className="text-in wallet-field"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoFocus
-                  placeholder={editor.type === "add-sub" || editor.type === "edit-sub" ? "Subcategory name" : "Category name"}
-                />
-
-                {editor.type === "add-cat" || editor.type === "edit-cat" ? (
-                  <>
-                    <label className="fld-label">Color</label>
-                    <CategoryColorPicker value={color} onChange={setColor} />
-
-                    <label className="fld-label">Icon</label>
-                    <div className="cat-glyph-row">
-                      {GLYPHS.map((g) => (
-                        <button
-                          key={g}
-                          type="button"
-                          className={"cat-glyph-btn" + (glyph === g ? " active" : "")}
-                          style={glyph === g ? { borderColor: color, color } : undefined}
-                          onClick={() => setGlyph(g)}
-                        >
-                          {g}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
-
-                {editorIsSavings ? (
-                  <>
-                    <label className="fld-label" htmlFor="cat-target">Target Amount (optional)</label>
-                    <input
-                      id="cat-target"
-                      className="text-in wallet-field"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="No goal"
-                      value={target}
-                      onChange={(e) => setTarget(e.target.value)}
-                    />
-
-                    <label className="fld-label" htmlFor="cat-deadline">Deadline (optional)</label>
-                    <DatePicker value={deadline} onChange={setDeadline} className="wallet-field" />
-                  </>
-                ) : null}
-
-                {error ? <p className="auth-error">{error}</p> : null}
-
-                <div className="wallet-form-actions">
-                  <button className="ghost-btn full" type="button" onClick={closeEditor} disabled={busy}>Cancel</button>
-                  <button className="primary-btn full" type="button" disabled={busy || !name.trim()} onClick={submitEditor}>
-                    {busy ? "Saving…" : "Save"}
+      {editor
+        ? createPortal(
+            <div
+              ref={scrimRef}
+              className="modal-scrim center"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget && !busy) closeEditor();
+              }}
+            >
+              <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
+                <div className="modal-head">
+                  <h3>{editorTitle}</h3>
+                  <button
+                    className="icon-btn"
+                    type="button"
+                    onClick={closeEditor}
+                    aria-label="Close"
+                    disabled={busy}
+                  >
+                    <Icon name="close" size={18} />
                   </button>
                 </div>
+                <div className="modal-body modal-scroll">
+                  <div className="dm-sec">
+                    <label className="fld-label" htmlFor="cat-name">
+                      Name
+                    </label>
+                    <input
+                      id="cat-name"
+                      className="text-in wallet-field"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      autoFocus
+                      placeholder={
+                        editor.type === "add-sub" || editor.type === "edit-sub"
+                          ? "Subcategory name"
+                          : "Category name"
+                      }
+                    />
+
+                    {editor.type === "add-cat" || editor.type === "edit-cat" ? (
+                      <>
+                        <label className="fld-label">Color</label>
+                        <CategoryColorPicker value={color} onChange={setColor} />
+
+                        <label className="fld-label">Icon</label>
+                        <div className="cat-glyph-row">
+                          {GLYPHS.map((g) => (
+                            <button
+                              key={g}
+                              type="button"
+                              className={"cat-glyph-btn" + (glyph === g ? " active" : "")}
+                              style={glyph === g ? { borderColor: color, color } : undefined}
+                              onClick={() => setGlyph(g)}
+                            >
+                              {g}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
+
+                    {editorIsSavings ? (
+                      <>
+                        <label className="fld-label" htmlFor="cat-target">
+                          Target Amount (optional)
+                        </label>
+                        <input
+                          id="cat-target"
+                          className="text-in wallet-field"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="No goal"
+                          value={target}
+                          onChange={(e) => setTarget(e.target.value)}
+                        />
+
+                        <label className="fld-label" htmlFor="cat-deadline">
+                          Deadline (optional)
+                        </label>
+                        <DatePicker
+                          value={deadline}
+                          onChange={setDeadline}
+                          className="wallet-field"
+                        />
+                      </>
+                    ) : null}
+
+                    {error ? <p className="auth-error">{error}</p> : null}
+
+                    <div className="wallet-form-actions">
+                      <button
+                        className="ghost-btn full"
+                        type="button"
+                        onClick={closeEditor}
+                        disabled={busy}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="primary-btn full"
+                        type="button"
+                        disabled={busy || !name.trim()}
+                        onClick={submitEditor}
+                      >
+                        {busy ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>,
-        document.body,
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
       {confirmDelete ? (
         <ConfirmDialog
           title={confirmDelete.type === "cat" ? "Delete Category" : "Remove Subcategory"}

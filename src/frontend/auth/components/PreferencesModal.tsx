@@ -35,8 +35,10 @@ type PreferencesModalProps = {
 /* Unlike the other preference toggles, a failure here is not silently
    reverted — a denied permission can only be undone in browser settings. */
 const FAILURE_NOTE: Record<string, string> = {
-  unsupported: "This browser cannot receive push notifications. On iPhone or iPad, add Sched Ledger to your Home Screen first.",
-  denied: "Notifications are blocked for this site. Allow them in your browser's site settings, then try again.",
+  unsupported:
+    "This browser cannot receive push notifications. On iPhone or iPad, add Sched Ledger to your Home Screen first.",
+  denied:
+    "Notifications are blocked for this site. Allow them in your browser's site settings, then try again.",
   unconfigured: "Push notifications are not configured on this server yet.",
   failed: "Could not enable notifications. Please try again.",
 };
@@ -99,7 +101,11 @@ export function PreferencesModal({ account, onClose }: PreferencesModalProps) {
       return;
     }
     try {
-      const ok = await enrollBiometric(account.address, idn.codename || codenameFor(account.address), bioConfirmPass);
+      const ok = await enrollBiometric(
+        account.address,
+        idn.codename || codenameFor(account.address),
+        bioConfirmPass,
+      );
       if (ok) {
         setBioOn(true);
         setBioConfirming(false);
@@ -127,25 +133,43 @@ export function PreferencesModal({ account, onClose }: PreferencesModalProps) {
   const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   return createPortal(
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !modalBusy) requestClose(onClose); }}>
+    <div
+      ref={scrimRef}
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !modalBusy) requestClose(onClose);
+      }}
+    >
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>Preferences</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={modalBusy}><Icon name="close" size={18} /></button>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onClose)}
+            aria-label="Close"
+            disabled={modalBusy}
+          >
+            <Icon name="close" size={18} />
+          </button>
         </div>
 
         <div className="modal-body modal-scroll">
           <div className="dm-sec">
             <span className="fld-label">Push notifications</span>
             <p className="dm-lead">
-              Get event reminders on this device at the same time the reminder email goes out — even when Sched Ledger is closed. Reminders are checked every 15 minutes.
+              Get event reminders on this device at the same time the reminder email goes out — even
+              when Sched Ledger is closed. Reminders are checked every 15 minutes.
             </p>
             <div className="consent-card">
               <div className="consent-top">
                 <div>
                   <div className="consent-title">Notify Me On This Device</div>
                   <p className="consent-desc">
-                    The notification shows the event name, time and any budget hold or comments you saved with it — the same details as the email. Each device is enabled separately, and turning this off here does not affect your other devices or your reminder emails.
+                    The notification shows the event name, time and any budget hold or comments you
+                    saved with it — the same details as the email. Each device is enabled
+                    separately, and turning this off here does not affect your other devices or your
+                    reminder emails.
                   </p>
                 </div>
                 <label className="switch">
@@ -179,14 +203,18 @@ export function PreferencesModal({ account, onClose }: PreferencesModalProps) {
               <div className="dm-sec">
                 <span className="fld-label">Face ID</span>
                 <p className="dm-lead">
-                  Unlock Sched Ledger on this device with Face ID or Touch ID instead of typing your device passphrase.
+                  Unlock Sched Ledger on this device with Face ID or Touch ID instead of typing your
+                  device passphrase.
                 </p>
                 <div className="consent-card">
                   <div className="consent-top">
                     <div>
                       <div className="consent-title">Unlock With Face ID</div>
                       <p className="consent-desc">
-                        Your passphrase is encrypted with a key tied to your biometric check and never leaves this device. Turning this off removes it from Sched Ledger — the saved Face ID/Touch ID entry itself stays in your device's settings until removed there.
+                        Your passphrase is encrypted with a key tied to your biometric check and
+                        never leaves this device. Turning this off removes it from Sched Ledger —
+                        the saved Face ID/Touch ID entry itself stays in your device's settings
+                        until removed there.
                       </p>
                     </div>
                     <label className="switch">
@@ -220,9 +248,16 @@ export function PreferencesModal({ account, onClose }: PreferencesModalProps) {
                         onChange={(e) => setBioConfirmPass(e.target.value)}
                         disabled={bioBusy}
                         style={{ flex: 1 }}
-                        onKeyDown={(e) => { if (e.key === "Enter") void confirmBioEnroll(); }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void confirmBioEnroll();
+                        }}
                       />
-                      <button className="ghost-btn" type="button" disabled={bioBusy || !bioConfirmPass} onClick={() => void confirmBioEnroll()}>
+                      <button
+                        className="ghost-btn"
+                        type="button"
+                        disabled={bioBusy || !bioConfirmPass}
+                        onClick={() => void confirmBioEnroll()}
+                      >
                         {bioBusy ? "Checking…" : "Confirm"}
                       </button>
                     </div>

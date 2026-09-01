@@ -15,7 +15,13 @@ import {
 import { CAPITAL_TEMPLATES, type CapitalTemplate } from "@/frontend/lib/capitalTemplates";
 import { dayLabel, fmtMoney } from "@/frontend/lib/data";
 import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
-import type { CapitalItem, CapitalPlan, CapitalTemplateId, CategoryIndex, Expense } from "@/frontend/lib/types";
+import type {
+  CapitalItem,
+  CapitalPlan,
+  CapitalTemplateId,
+  CategoryIndex,
+  Expense,
+} from "@/frontend/lib/types";
 import { TODO_ICON_OPTIONS } from "@/lib/glyphs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -76,7 +82,10 @@ export function Capitals({
   >(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: !!editor });
+  const { requestClose } = useModalMotion(scrimRef, panelRef, {
+    variant: "center",
+    active: !!editor,
+  });
   const closeEditor = () => requestClose(() => setEditor(null));
 
   useEffect(() => {
@@ -103,10 +112,7 @@ export function Capitals({
       ),
     [plans, savingsTxns, categoryIndex],
   );
-  const upcoming = useMemo(
-    () => plans.filter((p) => planIsUpcoming(p)).length,
-    [plans],
-  );
+  const upcoming = useMemo(() => plans.filter((p) => planIsUpcoming(p)).length, [plans]);
   const totalMonthlySave = useMemo(
     () => plansTotalMonthlySave(plans, new Date(), savingsTxns, categoryIndex),
     [plans, savingsTxns, categoryIndex],
@@ -121,7 +127,9 @@ export function Capitals({
     setError("");
     try {
       const saved = await onSavePlan(data);
-      setPlans((prev) => (data.id ? prev.map((p) => (p.id === saved.id ? saved : p)) : [...prev, saved]));
+      setPlans((prev) =>
+        data.id ? prev.map((p) => (p.id === saved.id ? saved : p)) : [...prev, saved],
+      );
       return saved;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save plan");
@@ -146,7 +154,9 @@ export function Capitals({
     setName(plan.name);
     setGlyph(plan.glyph);
     setTargetDate(plan.targetDate ?? "");
-    setInitialBudget(plan.initialBudget != null && plan.initialBudget > 0 ? String(plan.initialBudget) : "");
+    setInitialBudget(
+      plan.initialBudget != null && plan.initialBudget > 0 ? String(plan.initialBudget) : "",
+    );
     setError("");
   };
 
@@ -298,7 +308,10 @@ export function Capitals({
   if (!plans.length && !editor) {
     return (
       <div ref={viewRef} className="view">
-        <EmptyState title="No Plans Yet" sub="Start a plan for a big future expense — set a budget and target date to see how much to save each month." />
+        <EmptyState
+          title="No Plans Yet"
+          sub="Start a plan for a big future expense — set a budget and target date to see how much to save each month."
+        />
         <div className="todo-empty-action">
           <button className="primary-btn" type="button" onClick={openAddPlan}>
             <Icon name="plus" size={15} /> New Plan
@@ -322,7 +335,13 @@ export function Capitals({
         <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
           <div className="modal-head">
             <h3>{editorTitle}</h3>
-            <button className="icon-btn" type="button" onClick={closeEditor} aria-label="Close" disabled={busy}>
+            <button
+              className="icon-btn"
+              type="button"
+              onClick={closeEditor}
+              aria-label="Close"
+              disabled={busy}
+            >
               <Icon name="close" size={18} />
             </button>
           </div>
@@ -365,9 +384,7 @@ export function Capitals({
                 placeholder="e.g. Our Wedding, Bali Trip"
               />
 
-              <label className="fld-label">
-                Target date (optional)
-              </label>
+              <label className="fld-label">Target date (optional)</label>
               <DatePicker value={targetDate} onChange={setTargetDate} className="wallet-field" />
 
               <label className="fld-label" htmlFor="capital-plan-budget">
@@ -400,7 +417,14 @@ export function Capitals({
               {error ? <p className="auth-error">{error}</p> : null}
 
               <div className="wallet-form-actions">
-                <button className="ghost-btn full" type="button" onClick={closeEditor} disabled={busy}>Cancel</button>
+                <button
+                  className="ghost-btn full"
+                  type="button"
+                  onClick={closeEditor}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
                 <button
                   className="primary-btn full"
                   type="button"
@@ -421,11 +445,36 @@ export function Capitals({
   return (
     <div ref={viewRef} className="view">
       <div ref={gridRef} className="summary-grid sg-5" data-tour="tour-capitals-summary">
-        <SummaryCard label="Total Planned" value={money(totals.planned)} sub={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`} />
-        <SummaryCard label="Total Paid" tone="saved" value={money(totals.paid)} sub={totals.planned ? `${Math.round((totals.paid / totals.planned) * 100)}% of planned` : ""} />
-        <SummaryCard label="Total Unspent" tone="ok" value={money(totals.unspent)} sub={`of ${money(totals.saved)} set aside`} />
-        <SummaryCard label="Monthly Saving" tone="ok" value={money(totalMonthlySave)} sub={`${money(totals.remaining)} still to save`} />
-        <SummaryCard label="Upcoming" value={String(upcoming)} sub="plans with a future target date" />
+        <SummaryCard
+          label="Total Planned"
+          value={money(totals.planned)}
+          sub={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`}
+        />
+        <SummaryCard
+          label="Total Paid"
+          tone="saved"
+          value={money(totals.paid)}
+          sub={
+            totals.planned ? `${Math.round((totals.paid / totals.planned) * 100)}% of planned` : ""
+          }
+        />
+        <SummaryCard
+          label="Total Unspent"
+          tone="ok"
+          value={money(totals.unspent)}
+          sub={`of ${money(totals.saved)} set aside`}
+        />
+        <SummaryCard
+          label="Monthly Saving"
+          tone="ok"
+          value={money(totalMonthlySave)}
+          sub={`${money(totals.remaining)} still to save`}
+        />
+        <SummaryCard
+          label="Upcoming"
+          value={String(upcoming)}
+          sub="plans with a future target date"
+        />
       </div>
 
       <div className="todo-toolbar" data-tour="tour-capitals-toolbar">
@@ -445,13 +494,18 @@ export function Capitals({
           const monthlySave = planMonthlySave(plan, new Date(), savingsTxns, categoryIndex);
           /* Three arcs so the grey one is what is genuinely left to fund, not
              budget − paid: money already in the pot covers part of that. */
-          const donutData = m.budget > 0
-            ? [
-                { id: "paid", value: Math.min(m.paid, m.budget), color: overbudget ? "var(--danger)" : "var(--saved)" },
-                { id: "unspent", value: Math.min(m.unspent, m.outstanding), color: "var(--ok)" },
-                { id: "remain", value: m.remainingNeed, color: "var(--hair)" },
-              ]
-            : [{ id: "empty", value: 1, color: "var(--hair)" }];
+          const donutData =
+            m.budget > 0
+              ? [
+                  {
+                    id: "paid",
+                    value: Math.min(m.paid, m.budget),
+                    color: overbudget ? "var(--danger)" : "var(--saved)",
+                  },
+                  { id: "unspent", value: Math.min(m.unspent, m.outstanding), color: "var(--ok)" },
+                  { id: "remain", value: m.remainingNeed, color: "var(--hair)" },
+                ]
+              : [{ id: "empty", value: 1, color: "var(--hair)" }];
 
           return (
             <div key={plan.id} className="capital-card">
@@ -459,7 +513,9 @@ export function Capitals({
                 <span className="capital-card-glyph">{plan.glyph}</span>
                 <div className="capital-card-title">
                   <h3>{plan.name}</h3>
-                  {plan.targetDate ? <span className="capital-tag">Due {dayLabel(plan.targetDate)}</span> : null}
+                  {plan.targetDate ? (
+                    <span className="capital-tag">Due {dayLabel(plan.targetDate)}</span>
+                  ) : null}
                 </div>
                 <div className="capital-card-actions">
                   <button type="button" onClick={() => openEditPlan(plan)} aria-label="Edit Plan">
@@ -480,7 +536,13 @@ export function Capitals({
 
               <div className="capital-card-body">
                 <div className="capital-ring">
-                  <Donut data={donutData} size={80} thickness={10} onHover={() => {}} activeId={null} />
+                  <Donut
+                    data={donutData}
+                    size={80}
+                    thickness={10}
+                    onHover={() => {}}
+                    activeId={null}
+                  />
                   <div className="capital-ring-label">
                     {progress !== null ? `${Math.round(progress * 100)}%` : "—"}
                   </div>
@@ -488,11 +550,15 @@ export function Capitals({
                 <div className="capital-card-stats">
                   <div className="capital-total">
                     {money(m.budget)}
-                    {derivedBudget ? <span className="capital-tag">from item estimates</span> : null}
+                    {derivedBudget ? (
+                      <span className="capital-tag">from item estimates</span>
+                    ) : null}
                   </div>
                   <div className="capital-paid">
                     {money(m.paid)} paid
-                    {m.saved > 0 && m.outOfPocket > 0 ? ` · ${money(m.outOfPocket)} out of pocket` : ""}
+                    {m.saved > 0 && m.outOfPocket > 0
+                      ? ` · ${money(m.outOfPocket)} out of pocket`
+                      : ""}
                   </div>
                   {m.saved > 0 ? (
                     <div className="capital-unspent">
@@ -517,7 +583,10 @@ export function Capitals({
                   [...plan.items]
                     .sort((a, b) => Number(a.paid) - Number(b.paid))
                     .map((item) => (
-                      <div key={item.id} className={"capital-item-row" + (item.paid ? " capital-item-paid" : "")}>
+                      <div
+                        key={item.id}
+                        className={"capital-item-row" + (item.paid ? " capital-item-paid" : "")}
+                      >
                         <button
                           type="button"
                           className={"todo-check" + (item.paid ? " checked" : "")}
@@ -543,16 +612,36 @@ export function Capitals({
                             onBlur={() => void commitCost(plan, item)}
                           />
                         ) : (
-                          <button type="button" className="capital-item-cost" onClick={() => startEditCost(item)}>
-                            {money(item.paid ? item.actualCost ?? item.estimatedCost : item.estimatedCost)}
+                          <button
+                            type="button"
+                            className="capital-item-cost"
+                            onClick={() => startEditCost(item)}
+                          >
+                            {money(
+                              item.paid
+                                ? (item.actualCost ?? item.estimatedCost)
+                                : item.estimatedCost,
+                            )}
                           </button>
                         )}
                         {!item.paid ? (
-                          <button type="button" className="ghost-btn sm" onClick={() => onLogItem(plan, item)}>
+                          <button
+                            type="button"
+                            className="ghost-btn sm"
+                            onClick={() => onLogItem(plan, item)}
+                          >
                             Log
                           </button>
                         ) : null}
-                        <button type="button" className="capital-item-remove" disabled={itemBusy} onClick={() => setConfirmDelete({ type: "item", planId: plan.id, itemId: item.id })} aria-label="Remove item">
+                        <button
+                          type="button"
+                          className="capital-item-remove"
+                          disabled={itemBusy}
+                          onClick={() =>
+                            setConfirmDelete({ type: "item", planId: plan.id, itemId: item.id })
+                          }
+                          aria-label="Remove item"
+                        >
                           <Icon name="close" size={13} />
                         </button>
                       </div>
@@ -586,13 +675,29 @@ export function Capitals({
                       if (e.key === "Enter") void submitAddItem(plan);
                     }}
                   />
-                  <button className="primary-btn" type="button" disabled={itemBusy || !itemName.trim()} onClick={() => void submitAddItem(plan)}>
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    disabled={itemBusy || !itemName.trim()}
+                    onClick={() => void submitAddItem(plan)}
+                  >
                     {itemBusy ? "Adding…" : "Add"}
                   </button>
                 </div>
               ) : (
-                <button type="button" className="ghost-btn full capital-add-item-btn" disabled={itemBusy} onClick={() => openAddItem(plan.id)}>
-                  {itemBusy ? "Saving…" : <><Icon name="plus" size={14} /> Add Item</>}
+                <button
+                  type="button"
+                  className="ghost-btn full capital-add-item-btn"
+                  disabled={itemBusy}
+                  onClick={() => openAddItem(plan.id)}
+                >
+                  {itemBusy ? (
+                    "Saving…"
+                  ) : (
+                    <>
+                      <Icon name="plus" size={14} /> Add Item
+                    </>
+                  )}
                 </button>
               )}
             </div>

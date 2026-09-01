@@ -38,7 +38,10 @@ export function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
 }
 
 /** Derive an AES-GCM key from a passphrase and salt. */
-async function deriveVaultKey(passphrase: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
+async function deriveVaultKey(
+  passphrase: string,
+  salt: Uint8Array<ArrayBuffer>,
+): Promise<CryptoKey> {
   const material = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(passphrase),
@@ -67,10 +70,7 @@ export function isValidPassphrase(passphrase: string): boolean {
 }
 
 /** Encrypt mnemonic + privateKey for on-device storage. */
-export async function wrapSecrets(
-  passphrase: string,
-  secrets: VaultSecrets,
-): Promise<VaultBlob> {
+export async function wrapSecrets(passphrase: string, secrets: VaultSecrets): Promise<VaultBlob> {
   if (!isValidPassphrase(passphrase)) {
     throw new Error("Passphrase must be at least 8 characters.");
   }
@@ -90,10 +90,7 @@ export async function wrapSecrets(
 }
 
 /** Decrypt a vault blob with the device passphrase. */
-export async function unwrapSecrets(
-  passphrase: string,
-  vault: VaultBlob,
-): Promise<VaultSecrets> {
+export async function unwrapSecrets(passphrase: string, vault: VaultBlob): Promise<VaultSecrets> {
   if (vault.v !== VAULT_VERSION) {
     throw new Error("Unsupported vault format.");
   }

@@ -43,10 +43,12 @@ export async function ensureIndexes(db: Db): Promise<void> {
   await Promise.all([
     db.collection(COLLECTIONS.users).createIndex({ address: 1 }, { unique: true }),
     db.collection(COLLECTIONS.ledgerProfiles).createIndex({ accountId: 1 }, { unique: true }),
-    db.collection(COLLECTIONS.financialWallets).createIndex(
-      { accountId: 1, isDefault: 1 },
-      { partialFilterExpression: { isDefault: true } },
-    ),
+    db
+      .collection(COLLECTIONS.financialWallets)
+      .createIndex(
+        { accountId: 1, isDefault: 1 },
+        { partialFilterExpression: { isDefault: true } },
+      ),
     db.collection(COLLECTIONS.categoryTaxonomies).createIndex({ accountId: 1 }, { unique: true }),
     db.collection(COLLECTIONS.expenses).createIndex({ accountId: 1, walletId: 1, date: -1 }),
     db.collection(COLLECTIONS.expenses).createIndex({ accountId: 1, date: -1 }),
@@ -91,28 +93,30 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db.collection(COLLECTIONS.sessions).createIndex({ tokenHash: 1 }, { unique: true }),
     db.collection(COLLECTIONS.sessions).createIndex({ accountId: 1, createdAt: -1 }),
     db.collection(COLLECTIONS.sessions).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
-    db.collection(COLLECTIONS.events).createIndex(
-      { notify: 1, lastScannedAt: 1 },
-      { partialFilterExpression: { notify: true }, name: "events_notify_last_scanned" },
-    ),
+    db
+      .collection(COLLECTIONS.events)
+      .createIndex(
+        { notify: 1, lastScannedAt: 1 },
+        { partialFilterExpression: { notify: true }, name: "events_notify_last_scanned" },
+      ),
     db.collection(COLLECTIONS.expenses).createIndex({ lastScannedAt: 1, _id: 1 }),
     db
       .collection(COLLECTIONS.reminderLogs)
       .createIndex({ eventId: 1, occurrenceIso: 1, lead: 1 }, { unique: true }),
-    db.collection(COLLECTIONS.reminderLogs).createIndex(
-      { sentAt: 1 },
-      { expireAfterSeconds: 400 * 24 * 60 * 60 },
-    ),
-    db.collection(COLLECTIONS.budgetAlertLogs).createIndex(
-      { accountId: 1, walletId: 1, categoryId: 1, month: 1, level: 1 },
-      { unique: true },
-    ),
+    db
+      .collection(COLLECTIONS.reminderLogs)
+      .createIndex({ sentAt: 1 }, { expireAfterSeconds: 400 * 24 * 60 * 60 }),
+    db
+      .collection(COLLECTIONS.budgetAlertLogs)
+      .createIndex(
+        { accountId: 1, walletId: 1, categoryId: 1, month: 1, level: 1 },
+        { unique: true },
+      ),
     /* Month-keyed dedupe markers that nothing resolves back to a wallet or
        category, so they are pure growth once their month is past. */
-    db.collection(COLLECTIONS.budgetAlertLogs).createIndex(
-      { sentAt: 1 },
-      { expireAfterSeconds: 400 * 24 * 60 * 60 },
-    ),
+    db
+      .collection(COLLECTIONS.budgetAlertLogs)
+      .createIndex({ sentAt: 1 }, { expireAfterSeconds: 400 * 24 * 60 * 60 }),
     db.collection(COLLECTIONS.todoLists).createIndex({ accountId: 1, createdAt: 1 }),
     db.collection(COLLECTIONS.capitalPlans).createIndex({ accountId: 1, createdAt: 1 }),
     db.collection(COLLECTIONS.vehicles).createIndex({ accountId: 1, createdAt: 1 }),
@@ -122,14 +126,13 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db.collection(COLLECTIONS.pushSubscriptions).createIndex({ endpoint: 1 }, { unique: true }),
     db.collection(COLLECTIONS.pushSubscriptions).createIndex({ accountId: 1 }),
     /* TTL cleanup for shared rate-limit buckets (resetAt is epoch ms). */
-    db.collection(COLLECTIONS.rateLimits).createIndex(
-      { resetAt: 1 },
-      { expireAfterSeconds: 0 },
-    ),
+    db.collection(COLLECTIONS.rateLimits).createIndex({ resetAt: 1 }, { expireAfterSeconds: 0 }),
     /* Cron reminder scan: only events that opted into email notify. */
-    db.collection(COLLECTIONS.events).createIndex(
-      { notify: 1 },
-      { partialFilterExpression: { notify: true }, name: "events_notify_true" },
-    ),
+    db
+      .collection(COLLECTIONS.events)
+      .createIndex(
+        { notify: 1 },
+        { partialFilterExpression: { notify: true }, name: "events_notify_true" },
+      ),
   ]);
 }

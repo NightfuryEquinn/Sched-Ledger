@@ -51,7 +51,6 @@ export function applyTheme(dark: boolean): void {
 /** Read the live accent token (used by SVG charts that can't use CSS vars). */
 export function getAccent(): string {
   return (
-    getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() ||
-    DEFAULT_ACCENT
+    getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || DEFAULT_ACCENT
   );
 }

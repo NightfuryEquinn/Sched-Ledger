@@ -5,7 +5,9 @@ import { occursOn, type ScheduleEvent } from "@/lib/schedule";
 import { createEventSchema } from "@/schemas/event";
 
 /** Build a minimal repeating schedule event for occursOn tests. */
-function ev(partial: Partial<ScheduleEvent> & Pick<ScheduleEvent, "date" | "repeat">): ScheduleEvent {
+function ev(
+  partial: Partial<ScheduleEvent> & Pick<ScheduleEvent, "date" | "repeat">,
+): ScheduleEvent {
   return {
     allDay: true,
     time: null,

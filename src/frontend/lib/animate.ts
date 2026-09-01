@@ -1,10 +1,5 @@
 import { animate, stagger, type JSAnimation } from "animejs";
-import {
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  type RefObject,
-} from "react";
+import { useCallback, useLayoutEffect, useRef, type RefObject } from "react";
 
 const DUR = { fast: 198, base: 308, modal: 220, sheet: 286, scrim: 165, picker: 132 } as const;
 

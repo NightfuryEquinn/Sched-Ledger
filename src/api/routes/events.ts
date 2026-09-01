@@ -241,7 +241,7 @@ eventsRoutes.delete("/:id", zValidator("query", deleteScopeQuerySchema), async (
   if (!doc) notFound("Event not found");
 
   const repeating = doc.repeat && doc.repeat !== "once";
-  const effectiveScope = repeating ? scope ?? "all" : "all";
+  const effectiveScope = repeating ? (scope ?? "all") : "all";
   const effectiveFrom = fromDate ?? doc.date;
 
   if (!repeating || effectiveScope === "all") {

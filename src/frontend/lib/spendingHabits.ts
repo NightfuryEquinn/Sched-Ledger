@@ -1,4 +1,11 @@
-import { CURRENT_MONTH_KEY, TODAY_ISO, dayLabel, isoFromDate, monthsWindow, weekdayLabel } from "./data";
+import {
+  CURRENT_MONTH_KEY,
+  TODAY_ISO,
+  dayLabel,
+  isoFromDate,
+  monthsWindow,
+  weekdayLabel,
+} from "./data";
 import type { CategoryIndex } from "./categories";
 import {
   DEFAULT_FORMATTERS,
@@ -21,12 +28,7 @@ import type { Expense } from "./types";
 export type HabitPeriod = "month" | "year" | "rolling90";
 
 export type HabitStyleId =
-  | "clockwork"
-  | "burst"
-  | "dripper"
-  | "peakValley"
-  | "accumulator"
-  | "nomad";
+  "clockwork" | "burst" | "dripper" | "peakValley" | "accumulator" | "nomad";
 
 type HabitStyleMeta = {
   id: HabitStyleId;
@@ -94,8 +96,7 @@ export const HABIT_STYLES: Record<HabitStyleId, HabitStyleMeta> = {
     title: "The Erratic Nomad",
     trait: "Erratic",
     temperament: "Chaotic / Unstructured",
-    pattern:
-      "Irregular intervals and unpredictable amounts with no clear link to calendar cycles.",
+    pattern: "Irregular intervals and unpredictable amounts with no clear link to calendar cycles.",
     behavior:
       "Spending follows whims or chaotic scheduling more than a structured budget or routine.",
   },
@@ -296,7 +297,12 @@ function peakValleyScore(points: TxPoint[]) {
       if (series[i]! <= series[i - 1]! * 1.05) declines += 1;
     }
     const taper = declines / (series.length - 1);
-    const peakShare = bestAmt / Math.max(1, series.reduce((s, v) => s + v, 0));
+    const peakShare =
+      bestAmt /
+      Math.max(
+        1,
+        series.reduce((s, v) => s + v, 0),
+      );
     monthScores.push(clamp01(taper * 0.65 + peakShare * 0.35));
   }
 
@@ -593,7 +599,12 @@ export function computeHabitMetrics(
   // ── attribution (pass 2, opt-out) ──
   let attributionFields: Pick<
     HabitMetrics,
-    "categories" | "driverByAmount" | "driverByCount" | "driverInPeak" | "driverInCluster" | "driverRecurring"
+    | "categories"
+    | "driverByAmount"
+    | "driverByCount"
+    | "driverInPeak"
+    | "driverInCluster"
+    | "driverRecurring"
   >;
 
   if (attribution) {
@@ -602,7 +613,8 @@ export function computeHabitMetrics(
     const recurringBuckets = new Map<string, { amount: number; txCount: number }>();
 
     for (const p of points) {
-      if (p.dayOfWeek === topDow || p.dayOfMonth === topDom) addCatBucket(peakBuckets, p, index, metaCache);
+      if (p.dayOfWeek === topDow || p.dayOfMonth === topDom)
+        addCatBucket(peakBuckets, p, index, metaCache);
       if (p.cluster === biggestClusterIdx) addCatBucket(clusterBuckets, p, index, metaCache);
       if (p.recurring) addCatBucket(recurringBuckets, p, index, metaCache);
     }
@@ -697,10 +709,7 @@ function pickFromRanked(ranked: [HabitStyleId, number][]): HabitStyleId {
 }
 
 /** Confidence in the winning style, from the score separation and sample size. */
-function habitConfidence(
-  ranked: [HabitStyleId, number][],
-  metrics: HabitMetrics,
-): HabitConfidence {
+function habitConfidence(ranked: [HabitStyleId, number][], metrics: HabitMetrics): HabitConfidence {
   const topScore = ranked[0]![1];
   const runnerUp = ranked[1];
   const margin = topScore - (runnerUp?.[1] ?? 0);
@@ -713,7 +722,9 @@ function habitConfidence(
   );
   const level: HabitConfidenceLevel = confidenceLevel(value);
 
-  const reasons: string[] = [`${metrics.activeDays} active day${metrics.activeDays === 1 ? "" : "s"}`];
+  const reasons: string[] = [
+    `${metrics.activeDays} active day${metrics.activeDays === 1 ? "" : "s"}`,
+  ];
   if (runnerUp) {
     const runnerUpTitle = HABIT_STYLES[runnerUp[0]].title;
     reasons.push(
@@ -795,7 +806,9 @@ export function buildHabitNarrative(
         behaviorParts.push(`${m.driverInCluster.name} drove that spree.`);
       }
       if (m.amountCv > 0) {
-        behaviorParts.push(`Amounts swing widely inside a burst (${m.amountCv.toFixed(2)}x variability).`);
+        behaviorParts.push(
+          `Amounts swing widely inside a burst (${m.amountCv.toFixed(2)}x variability).`,
+        );
       }
       break;
     }
@@ -822,7 +835,9 @@ export function buildHabitNarrative(
         );
       }
       if (m.total > 0 && m.topDomAmount > 0) {
-        patternParts.push(`That's ${pct(m.topDomAmount / m.total)} of the period's total in one day.`);
+        patternParts.push(
+          `That's ${pct(m.topDomAmount / m.total)} of the period's total in one day.`,
+        );
       }
       if (m.driverInPeak) {
         behaviorParts.push(`${m.driverInPeak.name} leads the front-loaded spend.`);
@@ -845,7 +860,9 @@ export function buildHabitNarrative(
     }
     case "nomad": {
       if (m.txCount > 0) {
-        patternParts.push(`Charges range from ${money(m.minAmt)} to ${money(m.maxAmt)}, with no fixed rhythm.`);
+        patternParts.push(
+          `Charges range from ${money(m.minAmt)} to ${money(m.maxAmt)}, with no fixed rhythm.`,
+        );
       }
       if (m.amountCv > 0 || m.gapCv > 0) {
         patternParts.push(
@@ -853,7 +870,9 @@ export function buildHabitNarrative(
         );
       }
       if (m.driverByAmount) {
-        behaviorParts.push(`${m.driverByAmount.name} is the biggest single slice, at ${pct(m.driverByAmount.share)} of spend.`);
+        behaviorParts.push(
+          `${m.driverByAmount.name} is the biggest single slice, at ${pct(m.driverByAmount.share)} of spend.`,
+        );
       }
       break;
     }

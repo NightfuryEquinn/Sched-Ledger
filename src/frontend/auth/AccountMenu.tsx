@@ -4,7 +4,18 @@ import { APP_VERSION } from "@/lib/version";
 import { TimezonePicker } from "@/frontend/components/TimezonePicker";
 import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
-import type { Account, CapitalPlan, Category, CategoryIndex, Expense, FinancialWallet, FuelFill, LedgerEvent, TodoList, Vehicle } from "@/frontend/lib/types";
+import type {
+  Account,
+  CapitalPlan,
+  Category,
+  CategoryIndex,
+  Expense,
+  FinancialWallet,
+  FuelFill,
+  LedgerEvent,
+  TodoList,
+  Vehicle,
+} from "@/frontend/lib/types";
 import { useEffect, useRef, useState } from "react";
 import { DataPrivacyModal } from "./components/DataPrivacyModal";
 import { ImportExportModal } from "./components/ImportExportModal";
@@ -46,12 +57,19 @@ type AccountMenuProps = {
   onImportExpenses?: (
     rows: ExpenseImportRow[],
     categories?: Category[],
-  ) => Promise<{ imported: number; failed: number; newCategories: number; newSubcategories: number }>;
+  ) => Promise<{
+    imported: number;
+    failed: number;
+    newCategories: number;
+    newSubcategories: number;
+  }>;
   onImportEvents?: (rows: EventImportRow[]) => Promise<{ imported: number; failed: number }>;
-  onImportTodos?: (lists: TodoImportList[]) => Promise<{ importedLists: number; importedTasks: number; failed: number }>;
-  onRestoreBackup?: (plain: import("./lib/encrypted-backup").LedgerBackupPlain) => Promise<
-    import("./lib/restore-backup").BackupRestoreResult
-  >;
+  onImportTodos?: (
+    lists: TodoImportList[],
+  ) => Promise<{ importedLists: number; importedTasks: number; failed: number }>;
+  onRestoreBackup?: (
+    plain: import("./lib/encrypted-backup").LedgerBackupPlain,
+  ) => Promise<import("./lib/restore-backup").BackupRestoreResult>;
   onTakeTour?: () => void;
   onWhatsNew?: () => void;
 };
@@ -168,13 +186,15 @@ export function AccountMenu({
           </div>
           <div className="am-tz">
             <p className="am-tz-hint am-tz-hint--warn">
-              Accounts inactive for over {ACCOUNT_STALE_DAYS} days may be deleted along with their data.
+              Accounts inactive for over {ACCOUNT_STALE_DAYS} days may be deleted along with their
+              data.
             </p>
             <label className="am-tz-label" htmlFor="acct-tz">
               Default timezone
             </label>
             <p className="am-tz-hint">
-              Event times and email reminders follow this zone. Reminders are checked every 15 minutes.
+              Event times and email reminders follow this zone. Reminders are checked every 15
+              minutes.
             </p>
             <TimezonePicker
               id="acct-tz"
@@ -184,23 +204,55 @@ export function AccountMenu({
               onChange={saveTimezone}
             />
             {!timezoneSaved ? (
-              <p className="am-tz-note">Pick your timezone so reminders fire at the right local time.</p>
+              <p className="am-tz-note">
+                Pick your timezone so reminders fire at the right local time.
+              </p>
             ) : null}
           </div>
           <div className="am-div" />
           {onWhatsNew ? (
-            <button className="am-item" type="button" onClick={() => { onWhatsNew(); setOpen(false); }}>
+            <button
+              className="am-item"
+              type="button"
+              onClick={() => {
+                onWhatsNew();
+                setOpen(false);
+              }}
+            >
               <Icon name="sparkle" size={16} /> What&apos;s New
             </button>
           ) : null}
-          <button className="am-item" type="button" onClick={() => { setPrefsOpen(true); setOpen(false); }}>
+          <button
+            className="am-item"
+            type="button"
+            onClick={() => {
+              setPrefsOpen(true);
+              setOpen(false);
+            }}
+          >
             <Icon name="bell" size={16} /> Preferences
           </button>
-          <button className="am-item" type="button" onClick={() => { copyText(account.address); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>
-            <Icon name={copied ? "check" : "copy"} size={16} /> {copied ? "Address Copied" : "Copy Address"}
+          <button
+            className="am-item"
+            type="button"
+            onClick={() => {
+              copyText(account.address);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1200);
+            }}
+          >
+            <Icon name={copied ? "check" : "copy"} size={16} />{" "}
+            {copied ? "Address Copied" : "Copy Address"}
           </button>
           {stored?.vault || stored?.mnemonic || sessionSecrets.get(account.address)?.mnemonic ? (
-            <button className="am-item" type="button" onClick={() => { setReveal(true); setOpen(false); }}>
+            <button
+              className="am-item"
+              type="button"
+              onClick={() => {
+                setReveal(true);
+                setOpen(false);
+              }}
+            >
               <Icon name="key" size={16} /> Recovery Phrase
             </button>
           ) : null}
@@ -209,29 +261,65 @@ export function AccountMenu({
               <Icon name="wallet" size={16} /> Browser Wallet
             </div>
           ) : null}
-          <button className="am-item" type="button" onClick={() => { setDataOpen(true); setOpen(false); }}>
+          <button
+            className="am-item"
+            type="button"
+            onClick={() => {
+              setDataOpen(true);
+              setOpen(false);
+            }}
+          >
             <Icon name="database" size={16} /> Data &amp; Privacy
           </button>
           <button
             className="am-item"
             type="button"
-            onClick={() => { setCsvOpen(true); setOpen(false); }}
+            onClick={() => {
+              setCsvOpen(true);
+              setOpen(false);
+            }}
           >
             <Icon name="download" size={16} /> Exports &amp; Imports
           </button>
-          <button className="am-item" type="button" onClick={() => { setTermsOpen(true); setOpen(false); }}>
+          <button
+            className="am-item"
+            type="button"
+            onClick={() => {
+              setTermsOpen(true);
+              setOpen(false);
+            }}
+          >
             <Icon name="file" size={16} /> Terms &amp; Conditions
           </button>
-          <button className="am-item" type="button" onClick={() => { setCopyrightOpen(true); setOpen(false); }}>
+          <button
+            className="am-item"
+            type="button"
+            onClick={() => {
+              setCopyrightOpen(true);
+              setOpen(false);
+            }}
+          >
             <Icon name="info" size={16} /> Copyright
           </button>
           <div className="am-div" />
           {onTakeTour ? (
-            <button className="am-item" type="button" onClick={() => { onTakeTour(); setOpen(false); }}>
+            <button
+              className="am-item"
+              type="button"
+              onClick={() => {
+                onTakeTour();
+                setOpen(false);
+              }}
+            >
               <Icon name="info" size={16} /> Take a Tour
             </button>
           ) : null}
-          <button className="am-item danger" type="button" disabled={signingOut} onClick={onSignOut}>
+          <button
+            className="am-item danger"
+            type="button"
+            disabled={signingOut}
+            onClick={onSignOut}
+          >
             <Icon name="logout" size={16} /> {signingOut ? "Signing Out…" : "Sign Out"}
           </button>
           <div className="am-version num">v{APP_VERSION}</div>
@@ -267,7 +355,9 @@ export function AccountMenu({
           onClose={() => setCsvOpen(false)}
         />
       ) : null}
-      {prefsOpen ? <PreferencesModal account={account} onClose={() => setPrefsOpen(false)} /> : null}
+      {prefsOpen ? (
+        <PreferencesModal account={account} onClose={() => setPrefsOpen(false)} />
+      ) : null}
       {termsOpen ? <TermsModal onClose={() => setTermsOpen(false)} /> : null}
       {copyrightOpen ? <CopyrightModal onClose={() => setCopyrightOpen(false)} /> : null}
     </div>

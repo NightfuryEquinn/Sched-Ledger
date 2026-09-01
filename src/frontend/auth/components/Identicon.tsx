@@ -18,11 +18,25 @@ export function Identicon({ address, size = 44, radius = 12 }: IdenticonProps) {
     for (let x = 0; x < 3; x++) {
       if ((bytes[y * 3 + x] ?? 0) % 2 === 0) {
         rects.push(
-          <rect key={`${x}-${y}`} x={x * cell} y={y * cell} width={cell + 0.6} height={cell + 0.6} fill={on} />,
+          <rect
+            key={`${x}-${y}`}
+            x={x * cell}
+            y={y * cell}
+            width={cell + 0.6}
+            height={cell + 0.6}
+            fill={on}
+          />,
         );
         if (x < 2) {
           rects.push(
-            <rect key={`m${x}-${y}`} x={(4 - x) * cell} y={y * cell} width={cell + 0.6} height={cell + 0.6} fill={on} />,
+            <rect
+              key={`m${x}-${y}`}
+              x={(4 - x) * cell}
+              y={y * cell}
+              width={cell + 0.6}
+              height={cell + 0.6}
+              fill={on}
+            />,
           );
         }
       }
@@ -30,7 +44,12 @@ export function Identicon({ address, size = 44, radius = 12 }: IdenticonProps) {
   }
   return (
     <span className="identicon" style={{ width: size, height: size, borderRadius: radius }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ background: bg, display: "block" }}>
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        style={{ background: bg, display: "block" }}
+      >
         {rects}
       </svg>
     </span>

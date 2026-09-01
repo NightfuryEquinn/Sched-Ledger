@@ -54,20 +54,29 @@ export function TourWelcomeModal({ onGuided, onExplore, onClosed }: TourWelcomeM
     /* Deliberately not closable by scrim or Escape: this is asked once, and a
        stray click should not silently answer it. */
     <div ref={scrimRef} className="modal-scrim center">
-      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="tour-welcome-title">
+      <div
+        ref={panelRef}
+        className="modal sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tour-welcome-title"
+      >
         <div className="modal-head">
           <h3 id="tour-welcome-title">Welcome to Sched Ledger</h3>
         </div>
 
         <div className="modal-body">
           <p className="dm-lead">
-            Would you like a quick tour of how everything fits together, or would you rather look around on your own?
+            Would you like a quick tour of how everything fits together, or would you rather look
+            around on your own?
           </p>
 
           <div className="wn-list">
             {CHOICES.map((choice) => (
               <div className="wn-item" key={choice.title}>
-                <span className="wn-item-icon" aria-hidden><Icon name={choice.icon} size={18} /></span>
+                <span className="wn-item-icon" aria-hidden>
+                  <Icon name={choice.icon} size={18} />
+                </span>
                 <div className="wn-item-text">
                   <span className="wn-item-title">{choice.title}</span>
                   <p className="legal-p">{choice.body}</p>
@@ -85,7 +94,9 @@ export function TourWelcomeModal({ onGuided, onExplore, onClosed }: TourWelcomeM
               disabled={!!choosing}
               onClick={() => void choose("explore", onExplore)}
             >
-              <span className="btn-label">{choosing === "explore" ? "Saving…" : "I'll explore"}</span>
+              <span className="btn-label">
+                {choosing === "explore" ? "Saving…" : "I'll explore"}
+              </span>
             </button>
             <button
               className="primary-btn full"
@@ -93,7 +104,9 @@ export function TourWelcomeModal({ onGuided, onExplore, onClosed }: TourWelcomeM
               disabled={!!choosing}
               onClick={() => void choose("guided", onGuided)}
             >
-              <span className="btn-label">{choosing === "guided" ? "Saving…" : "Show me around"}</span>
+              <span className="btn-label">
+                {choosing === "guided" ? "Saving…" : "Show me around"}
+              </span>
             </button>
           </div>
         </div>

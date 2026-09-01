@@ -53,7 +53,7 @@ if (process.env.NODE_ENV !== "production" && process.env.CRON_SECRET?.trim()) {
       /* Either channel alone is enough — push works without Resend. */
       const canRemind = Boolean(
         process.env.RESEND_API_KEY?.trim() ||
-          (process.env.VAPID_PUBLIC_KEY?.trim() && process.env.VAPID_PRIVATE_KEY?.trim()),
+        (process.env.VAPID_PUBLIC_KEY?.trim() && process.env.VAPID_PRIVATE_KEY?.trim()),
       );
       const [reminders, recurring] = await Promise.all([
         canRemind ? processDueReminders() : Promise.resolve(null),

@@ -10,7 +10,8 @@ import {
 describe("device vault", () => {
   test("wrapSecrets / unwrapSecrets round-trip", async () => {
     const secrets = {
-      mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      mnemonic:
+        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
       privateKey: "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     };
     const vault = await wrapSecrets("correct horse battery", secrets);

@@ -1,6 +1,20 @@
 /** Legacy geometric markers replaced by emojis. */
 const LEGACY_GLYPHS = new Set([
-  "◓", "◇", "◈", "△", "◐", "◆", "●", "◎", "◉", "□", "☑", "✦", "★", "♥", "⚡",
+  "◓",
+  "◇",
+  "◈",
+  "△",
+  "◐",
+  "◆",
+  "●",
+  "◎",
+  "◉",
+  "□",
+  "☑",
+  "✦",
+  "★",
+  "♥",
+  "⚡",
 ]);
 
 const BUILTIN_GLYPHS: Record<string, string> = {
@@ -22,15 +36,60 @@ export const DEFAULT_GLYPH = "📁";
 
 /** Emoji picker when adding or editing a category. */
 export const CATEGORY_GLYPH_OPTIONS = [
-  "🍽️", "🚗", "💡", "🏃", "🎬", "🐷", "💵", "🏠", "👕", "✈️",
-  "🛒", "💊", "🎓", "📱", "🐾", "🎁", "☕", "🧾", "📅", "⭐",
-  "💼", "🏦", "🎮", "📚", "🧘", "🍕", "🚌", "💳", "🔧", "🌿",
+  "🍽️",
+  "🚗",
+  "💡",
+  "🏃",
+  "🎬",
+  "🐷",
+  "💵",
+  "🏠",
+  "👕",
+  "✈️",
+  "🛒",
+  "💊",
+  "🎓",
+  "📱",
+  "🐾",
+  "🎁",
+  "☕",
+  "🧾",
+  "📅",
+  "⭐",
+  "💼",
+  "🏦",
+  "🎮",
+  "📚",
+  "🧘",
+  "🍕",
+  "🚌",
+  "💳",
+  "🔧",
+  "🌿",
 ] as const;
 
 /** Emoji picker for to-do list icons. */
 export const TODO_ICON_OPTIONS = [
-  "📋", "✅", "🛒", "💼", "🏠", "✈️", "🎯", "⭐", "💡", "🎉",
-  "📝", "🏋️", "🍽️", "🎓", "💊", "🐾", "🎁", "☕", "📅", "🔔",
+  "📋",
+  "✅",
+  "🛒",
+  "💼",
+  "🏠",
+  "✈️",
+  "🎯",
+  "⭐",
+  "💡",
+  "🎉",
+  "📝",
+  "🏋️",
+  "🍽️",
+  "🎓",
+  "💊",
+  "🐾",
+  "🎁",
+  "☕",
+  "📅",
+  "🔔",
 ] as const;
 
 export function displayGlyph(glyph: string | undefined, id?: string): string {

@@ -5,9 +5,30 @@ import { computeTxInsights } from "@/frontend/lib/insights/txInsights";
 import type { Category, Expense } from "@/frontend/lib/types";
 
 const CATEGORIES: Category[] = [
-  { id: "income", name: "Income", color: "#6f8b6f", glyph: "💵", type: "income", subs: [{ id: "sub_salary", name: "Salary" }] },
-  { id: "groceries", name: "Groceries", color: "#4a6fa5", glyph: "🛒", type: "expense", subs: [{ id: "sub_groceries", name: "Groceries" }] },
-  { id: "transport", name: "Transport", color: "#a06f95", glyph: "🚌", type: "expense", subs: [{ id: "sub_transport", name: "Transport" }] },
+  {
+    id: "income",
+    name: "Income",
+    color: "#6f8b6f",
+    glyph: "💵",
+    type: "income",
+    subs: [{ id: "sub_salary", name: "Salary" }],
+  },
+  {
+    id: "groceries",
+    name: "Groceries",
+    color: "#4a6fa5",
+    glyph: "🛒",
+    type: "expense",
+    subs: [{ id: "sub_groceries", name: "Groceries" }],
+  },
+  {
+    id: "transport",
+    name: "Transport",
+    color: "#a06f95",
+    glyph: "🚌",
+    type: "expense",
+    subs: [{ id: "sub_transport", name: "Transport" }],
+  },
 ];
 
 const INDEX = buildCategoryIndex(CATEGORIES);
@@ -28,6 +49,14 @@ function tx(overrides: Partial<Expense> & Pick<Expense, "date" | "sub" | "amount
   };
 }
 
+/** Whether a neutral month-end forecast clears the default rank floor (0.05). */
+function neutralForecastClearsRankFloor(elapsedDay: number, daysInMonth: number): boolean {
+  const elapsedFrac = Math.min(1, Math.max(0, elapsedDay / daysInMonth));
+  const confidence = Math.min(1, Math.max(0, 0.25 + 0.65 * elapsedFrac));
+
+  return 0.15 * confidence >= 0.05;
+}
+
 describe("computeTxInsights forecast — current month only", () => {
   test("the month-end forecast is suppressed for a past month", () => {
     const expenses = [tx({ date: "2023-06-05", sub: "sub_groceries", amount: 50 })];
@@ -38,7 +67,11 @@ describe("computeTxInsights forecast — current month only", () => {
 
   test("projects month-end spend from elapsed-day pace with no budget set", () => {
     const elapsedDay = Number(TODAY_ISO.slice(8, 10));
-    const daysInMonth = new Date(Number(CURRENT_MONTH_KEY.slice(0, 4)), Number(CURRENT_MONTH_KEY.slice(5, 7)), 0).getDate();
+    const daysInMonth = new Date(
+      Number(CURRENT_MONTH_KEY.slice(0, 4)),
+      Number(CURRENT_MONTH_KEY.slice(5, 7)),
+      0,
+    ).getDate();
     const dailyAmount = 10;
     const expenses = Array.from({ length: elapsedDay }, (_, i) =>
       tx({ date: `${CURRENT_MONTH_KEY}-${pad(i + 1)}`, sub: "sub_groceries", amount: dailyAmount }),
@@ -46,6 +79,13 @@ describe("computeTxInsights forecast — current month only", () => {
 
     const insights = computeTxInsights(expenses, {}, CURRENT_MONTH_KEY, INDEX, 0, identityMoney);
     const forecast = insights.find((i) => i.kind === "forecast:month-end");
+    const clearsFloor = neutralForecastClearsRankFloor(elapsedDay, daysInMonth);
+
+    if (!clearsFloor) {
+      expect(forecast).toBeUndefined();
+
+      return;
+    }
 
     expect(forecast).toBeDefined();
     expect(forecast!.tone).toBe("neutral");
@@ -59,7 +99,14 @@ describe("computeTxInsights forecast — current month only", () => {
       tx({ date: `${CURRENT_MONTH_KEY}-${pad(i + 1)}`, sub: "sub_groceries", amount: 100 }),
     );
 
-    const insights = computeTxInsights(expenses, { groceries: 50 }, CURRENT_MONTH_KEY, INDEX, 50, identityMoney);
+    const insights = computeTxInsights(
+      expenses,
+      { groceries: 50 },
+      CURRENT_MONTH_KEY,
+      INDEX,
+      50,
+      identityMoney,
+    );
     const forecast = insights.find((i) => i.kind === "forecast:month-end");
 
     expect(forecast).toBeDefined();
@@ -72,14 +119,28 @@ describe("computeTxInsights forecast — current month only", () => {
       tx({ date: `${CURRENT_MONTH_KEY}-${pad(i + 1)}`, sub: "sub_groceries", amount: 100 }),
     );
 
-    const insights = computeTxInsights(expenses, { groceries: 50 }, CURRENT_MONTH_KEY, INDEX, 50, identityMoney);
+    const insights = computeTxInsights(
+      expenses,
+      { groceries: 50 },
+      CURRENT_MONTH_KEY,
+      INDEX,
+      50,
+      identityMoney,
+    );
 
     expect(insights.some((i) => i.kind === "budget-risk:groceries")).toBe(true);
   });
 
   test("a past month never emits budget-risk cards either", () => {
     const expenses = [tx({ date: "2023-06-05", sub: "sub_groceries", amount: 1000 })];
-    const insights = computeTxInsights(expenses, { groceries: 10 }, "2023-06", INDEX, 10, identityMoney);
+    const insights = computeTxInsights(
+      expenses,
+      { groceries: 10 },
+      "2023-06",
+      INDEX,
+      10,
+      identityMoney,
+    );
 
     expect(insights.some((i) => i.kind.startsWith("budget-risk:"))).toBe(false);
   });
@@ -93,7 +154,14 @@ describe("computeTxInsights anomaly detection", () => {
     const typical = [18, 20, 22];
     months.forEach((mo, mi) => {
       typical.forEach((amt, ai) => {
-        baseline.push(tx({ date: `${mo}-${pad(ai + 1)}`, sub: "sub_transport", amount: amt, id: `base_${mi}_${ai}` }));
+        baseline.push(
+          tx({
+            date: `${mo}-${pad(ai + 1)}`,
+            sub: "sub_transport",
+            amount: amt,
+            id: `base_${mi}_${ai}`,
+          }),
+        );
       });
     });
     const outlier = tx({ date: `${month}-15`, sub: "sub_transport", amount: 500 });
@@ -112,7 +180,14 @@ describe("computeTxInsights anomaly detection", () => {
     const expenses: Expense[] = [];
     months.forEach((mo, mi) => {
       for (let d = 0; d < 3; d++) {
-        expenses.push(tx({ date: `${mo}-${pad(d + 1)}`, sub: "sub_transport", amount: 20, id: `flat_${mi}_${d}` }));
+        expenses.push(
+          tx({
+            date: `${mo}-${pad(d + 1)}`,
+            sub: "sub_transport",
+            amount: 20,
+            id: `flat_${mi}_${d}`,
+          }),
+        );
       }
     });
 
@@ -124,7 +199,9 @@ describe("computeTxInsights anomaly detection", () => {
 describe("computeTxInsights category drift", () => {
   test("a material, sustained rise in a category vs its baseline is flagged as a rising drift", () => {
     const month = "2023-06";
-    const baselineMonths = monthsWindow(month, 6).map((m) => m.key).slice(0, -1);
+    const baselineMonths = monthsWindow(month, 6)
+      .map((m) => m.key)
+      .slice(0, -1);
     const expenses: Expense[] = baselineMonths.map((mo, i) =>
       tx({ date: `${mo}-10`, sub: "sub_groceries", amount: 100, id: `baseline_${i}` }),
     );
@@ -139,7 +216,9 @@ describe("computeTxInsights category drift", () => {
 
   test("a small, immaterial change is not flagged as drift", () => {
     const month = "2023-06";
-    const baselineMonths = monthsWindow(month, 6).map((m) => m.key).slice(0, -1);
+    const baselineMonths = monthsWindow(month, 6)
+      .map((m) => m.key)
+      .slice(0, -1);
     const expenses: Expense[] = baselineMonths.map((mo, i) =>
       tx({ date: `${mo}-10`, sub: "sub_groceries", amount: 100, id: `baseline_${i}` }),
     );
@@ -154,7 +233,15 @@ describe("computeTxInsights category drift", () => {
 describe("computeTxInsights recurring changes", () => {
   test("detects a new recurring series starting this month", () => {
     const month = "2023-06";
-    const expenses = [tx({ date: `${month}-05`, sub: "sub_transport", amount: 50, note: "New Streaming Plan", recurring: "monthly" })];
+    const expenses = [
+      tx({
+        date: `${month}-05`,
+        sub: "sub_transport",
+        amount: 50,
+        note: "New Streaming Plan",
+        recurring: "monthly",
+      }),
+    ];
 
     const insights = computeTxInsights(expenses, {}, month, INDEX, 0, identityMoney);
     expect(insights.some((i) => i.kind.startsWith("recurring:new:"))).toBe(true);
@@ -163,7 +250,15 @@ describe("computeTxInsights recurring changes", () => {
   test("detects a recurring series that went quiet on schedule", () => {
     const month = "2023-06";
     const priorMonth = monthsWindow(month, 2)[0]!.key;
-    const expenses = [tx({ date: `${priorMonth}-05`, sub: "sub_transport", amount: 30, note: "Gym Membership", recurring: "monthly" })];
+    const expenses = [
+      tx({
+        date: `${priorMonth}-05`,
+        sub: "sub_transport",
+        amount: 30,
+        note: "Gym Membership",
+        recurring: "monthly",
+      }),
+    ];
 
     const insights = computeTxInsights(expenses, {}, month, INDEX, 0, identityMoney);
     expect(insights.some((i) => i.kind.startsWith("recurring:stopped:"))).toBe(true);
@@ -173,7 +268,14 @@ describe("computeTxInsights recurring changes", () => {
     const month = "2023-06";
     const months = monthsWindow(month, 3).map((m) => m.key);
     const expenses = months.map((mo, i) =>
-      tx({ date: `${mo}-05`, sub: "sub_transport", amount: 20 + i * 3, note: "Cloud Storage", recurring: "monthly", id: `creep_${i}` }),
+      tx({
+        date: `${mo}-05`,
+        sub: "sub_transport",
+        amount: 20 + i * 3,
+        note: "Cloud Storage",
+        recurring: "monthly",
+        id: `creep_${i}`,
+      }),
     );
 
     const insights = computeTxInsights(expenses, {}, month, INDEX, 0, identityMoney);
@@ -191,9 +293,22 @@ describe("computeTxInsights guards", () => {
     const month = "2023-06";
     const expenses = [
       tx({ date: `${month}-05`, sub: "sub_groceries", amount: 40 }),
-      tx({ date: `${month}-10`, sub: "sub_transport", amount: 60, note: "Toll Pass", recurring: "monthly" }),
+      tx({
+        date: `${month}-10`,
+        sub: "sub_transport",
+        amount: 60,
+        note: "Toll Pass",
+        recurring: "monthly",
+      }),
     ];
-    const insights = computeTxInsights(expenses, { groceries: 100 }, month, INDEX, 100, identityMoney);
+    const insights = computeTxInsights(
+      expenses,
+      { groceries: 100 },
+      month,
+      INDEX,
+      100,
+      identityMoney,
+    );
 
     for (const insight of insights) {
       expect(Number.isFinite(insight.score)).toBe(true);

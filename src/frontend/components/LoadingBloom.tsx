@@ -29,13 +29,7 @@ function randomMessage() {
   return RANDOM_MESSAGES[Math.floor(Math.random() * RANDOM_MESSAGES.length)];
 }
 
-export function LoadingBloom({
-  label,
-  size = "md",
-}: {
-  label?: string;
-  size?: "sm" | "md";
-}) {
+export function LoadingBloom({ label, size = "md" }: { label?: string; size?: "sm" | "md" }) {
   const [fallback] = useState(randomMessage);
   return (
     <div className={`loading-bloom loading-bloom--${size}`}>

@@ -8,7 +8,10 @@ export const ensureDb = createMiddleware(async (c, next) => {
     await Promise.race([
       connectDb(),
       new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Database connection timed out")), DB_MIDDLEWARE_TIMEOUT_MS);
+        setTimeout(
+          () => reject(new Error("Database connection timed out")),
+          DB_MIDDLEWARE_TIMEOUT_MS,
+        );
       }),
     ]);
   } catch (err) {

@@ -1,10 +1,5 @@
 import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
-import {
-  CatGlyph,
-  EmptyState,
-  Icon,
-  SummaryCard,
-} from "@/frontend/components/ui";
+import { CatGlyph, EmptyState, Icon, SummaryCard } from "@/frontend/components/ui";
 import {
   allocateBudgets,
   computeNet,
@@ -80,7 +75,10 @@ export function Calculator({
   const titleId = useId();
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: confirmOpen });
+  const { requestClose } = useModalMotion(scrimRef, panelRef, {
+    variant: "center",
+    active: confirmOpen,
+  });
   const closeConfirm = () => requestClose(() => setConfirmOpen(false));
 
   /** Prefill income from the active wallet when the wallet changes. */
@@ -120,7 +118,8 @@ export function Calculator({
   );
 
   const allocSum = sumPercents(allocations.map((a) => a.pct));
-  const allocOk = expenseCategories.length > 0 && isValidAllocationTotal(allocations.map((a) => a.pct));
+  const allocOk =
+    expenseCategories.length > 0 && isValidAllocationTotal(allocations.map((a) => a.pct));
   const canApply = gross > 0 && taxOk && allocOk;
 
   const computed = useMemo(
@@ -226,7 +225,9 @@ export function Calculator({
       <section className="panel" data-tour="tour-calculator-tax">
         <div className="panel-head">
           <h2>Tax Collection</h2>
-          <p className="panel-sub">Custom titles and percentages — not saved. MY presets are estimates only.</p>
+          <p className="panel-sub">
+            Custom titles and percentages — not saved. MY presets are estimates only.
+          </p>
         </div>
         <div className="calculator-presets">
           {MY_TAX_PRESETS.map((preset) => (
@@ -319,7 +320,10 @@ export function Calculator({
         </div>
 
         {!expenseCategories.length ? (
-          <EmptyState title="No Expense Categories" sub="Add categories first, then return here to allocate." />
+          <EmptyState
+            title="No Expense Categories"
+            sub="Add categories first, then return here to allocate."
+          />
         ) : (
           <>
             <div className="calculator-alloc-list">
@@ -354,9 +358,7 @@ export function Calculator({
                       />
                       <span className="calculator-pct-suffix">%</span>
                     </div>
-                    <div className="calculator-alloc-amt num">
-                      {fmtMoney(amount, { currency })}
-                    </div>
+                    <div className="calculator-alloc-amt num">{fmtMoney(amount, { currency })}</div>
                   </div>
                 );
               })}
@@ -400,7 +402,13 @@ export function Calculator({
             if (e.target === e.currentTarget && !budgetsSaving) closeConfirm();
           }}
         >
-          <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+          <div
+            ref={panelRef}
+            className="modal sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+          >
             <div className="modal-head">
               <h3 id={titleId}>Apply Calculator Budgets?</h3>
               <button
@@ -424,9 +432,7 @@ export function Calculator({
                     <span className="calculator-confirm-name">
                       <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
                     </span>
-                    <span className="num">
-                      {fmtMoney(computed[c.id] ?? 0, { currency })}
-                    </span>
+                    <span className="num">{fmtMoney(computed[c.id] ?? 0, { currency })}</span>
                   </li>
                 ))}
               </ul>
@@ -434,10 +440,20 @@ export function Calculator({
             <div className="modal-foot">
               <span />
               <div className="mf-right">
-                <button type="button" className="ghost-btn" disabled={budgetsSaving} onClick={closeConfirm}>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={budgetsSaving}
+                  onClick={closeConfirm}
+                >
                   Cancel
                 </button>
-                <button type="button" className="primary-btn" disabled={budgetsSaving} onClick={applyBudgets}>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  disabled={budgetsSaving}
+                  onClick={applyBudgets}
+                >
                   {budgetsSaving ? "Applying…" : "Confirm Apply"}
                 </button>
               </div>

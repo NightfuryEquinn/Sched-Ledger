@@ -62,8 +62,7 @@ function bindButtons(tour: Tour, steps: ReturnType<typeof getViewTourSteps>) {
       return { ...rest, action: () => tour.next() };
     }),
     beforeShowPromise: async () => {
-      const selector =
-        typeof step.attachTo?.element === "string" ? step.attachTo.element : null;
+      const selector = typeof step.attachTo?.element === "string" ? step.attachTo.element : null;
       if (selector) await waitForElement(selector);
       if (step.beforeShowPromise) await step.beforeShowPromise();
     },

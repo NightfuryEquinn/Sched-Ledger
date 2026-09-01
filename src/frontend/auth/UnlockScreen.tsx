@@ -73,7 +73,12 @@ async function materializeIdentity(
   return idn;
 }
 
-export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = false }: UnlockScreenProps) {
+export function UnlockScreen({
+  account,
+  onUnlocked,
+  onSignOut,
+  signingOut = false,
+}: UnlockScreenProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [passphrase, setPassphrase] = useState("");
@@ -90,12 +95,17 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
   useEnter(cardRef);
 
   useEffect(() => {
-    if (!idn || idn.injected) { setCanBiometricUnlock(false); return; }
+    if (!idn || idn.injected) {
+      setCanBiometricUnlock(false);
+      return;
+    }
     let live = true;
     void biometricSupported().then((supported) => {
       if (live) setCanBiometricUnlock(supported && biometricEnrolled(idn.address));
     });
-    return () => { live = false; };
+    return () => {
+      live = false;
+    };
   }, [idn?.address, idn?.injected]);
 
   async function unlock(passphraseOverride?: string, viaBiometric = false) {
@@ -109,7 +119,12 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
       const passValue = passphraseOverride ?? passphrase;
       const ready = await materializeIdentity(idn, passValue);
       await unlockLedgerKey(ready);
-      if (!viaBiometric && needsPassphrase && await biometricSupported() && !wasAskedToEnrollBiometric(idn.address)) {
+      if (
+        !viaBiometric &&
+        needsPassphrase &&
+        (await biometricSupported()) &&
+        !wasAskedToEnrollBiometric(idn.address)
+      ) {
         setBusy(false);
         setShowOffer(true);
         return;
@@ -139,7 +154,11 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
     setOfferBusy(true);
     setOfferError("");
     try {
-      const ok = await enrollBiometric(idn.address, idn.codename || codenameFor(idn.address), passphrase);
+      const ok = await enrollBiometric(
+        idn.address,
+        idn.codename || codenameFor(idn.address),
+        passphrase,
+      );
       if (!ok) setOfferError("Face ID isn't available on this device.");
     } catch {
       setOfferError("Could not set up Face ID.");
@@ -161,13 +180,25 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
           <Brand />
           <h1>Use Face ID on this Device?</h1>
           <p className="auth-lead">
-            Skip typing your passphrase next time — unlock Sched Ledger with Face ID or Touch ID on this browser. Your passphrase is encrypted with your biometric key and never leaves this device.
+            Skip typing your passphrase next time — unlock Sched Ledger with Face ID or Touch ID on
+            this browser. Your passphrase is encrypted with your biometric key and never leaves this
+            device.
           </p>
           {offerError ? <p className="auth-error">{offerError}</p> : null}
-          <button type="button" className="primary-btn lg full" disabled={offerBusy} onClick={() => void acceptBiometricOffer()}>
+          <button
+            type="button"
+            className="primary-btn lg full"
+            disabled={offerBusy}
+            onClick={() => void acceptBiometricOffer()}
+          >
             <Icon name="shield" size={17} /> {offerBusy ? "Setting up…" : "Enable Face ID"}
           </button>
-          <button type="button" className="ghost-btn full u-gap-top" disabled={offerBusy} onClick={declineBiometricOffer}>
+          <button
+            type="button"
+            className="ghost-btn full u-gap-top"
+            disabled={offerBusy}
+            onClick={declineBiometricOffer}
+          >
             Not Now
           </button>
         </div>
@@ -191,25 +222,41 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
               : "Your encryption key will be derived from your wallet."}
         </p>
         {canBiometricUnlock ? (
-          <button type="button" className="primary-btn lg full face-id-btn" disabled={busy} onClick={() => void biometricUnlock()}>
+          <button
+            type="button"
+            className="primary-btn lg full face-id-btn"
+            disabled={busy}
+            onClick={() => void biometricUnlock()}
+          >
             <Icon name="shield" size={17} /> Unlock with Face ID
           </button>
         ) : null}
         {needsPassphrase ? (
           <label className="fld-label">
-            {migrating ? "New device passphrase" : canBiometricUnlock ? "Or enter your passphrase" : "Device passphrase"}
+            {migrating
+              ? "New device passphrase"
+              : canBiometricUnlock
+                ? "Or enter your passphrase"
+                : "Device passphrase"}
             <input
               className="text-in"
               type="password"
               autoComplete={migrating ? "new-password" : "current-password"}
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") void unlock(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void unlock();
+              }}
             />
           </label>
         ) : null}
         {error && <p className="auth-error">{error}</p>}
-        <button type="button" className={canBiometricUnlock ? "ghost-btn full" : "primary-btn lg full"} disabled={busy || (needsPassphrase && !passphrase)} onClick={() => void unlock()}>
+        <button
+          type="button"
+          className={canBiometricUnlock ? "ghost-btn full" : "primary-btn lg full"}
+          disabled={busy || (needsPassphrase && !passphrase)}
+          onClick={() => void unlock()}
+        >
           {busy ? "Unlocking…" : needsWalletSign ? "Sign to Unlock" : "Unlock"}
         </button>
         {!idn && walletClient.hasInjected() && (
@@ -222,7 +269,12 @@ export function UnlockScreen({ account, onUnlocked, onSignOut, signingOut = fals
             Connect Wallet
           </button>
         )}
-        <button type="button" className="ghost-btn full u-gap-top" disabled={busy || signingOut} onClick={onSignOut}>
+        <button
+          type="button"
+          className="ghost-btn full u-gap-top"
+          disabled={busy || signingOut}
+          onClick={onSignOut}
+        >
           {signingOut ? "Signing Out…" : "Sign Out"}
         </button>
       </div>

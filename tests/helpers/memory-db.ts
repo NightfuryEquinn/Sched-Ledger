@@ -16,11 +16,18 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
       continue;
     }
     if (key === "_id") {
-      if (value && typeof value === "object" && !(value instanceof ObjectId) && !(value instanceof Date) && !Array.isArray(value)) {
+      if (
+        value &&
+        typeof value === "object" &&
+        !(value instanceof ObjectId) &&
+        !(value instanceof Date) &&
+        !Array.isArray(value)
+      ) {
         const ops = value as Record<string, unknown>;
         if ("$ne" in ops) {
           const right = ops.$ne;
-          if (right instanceof ObjectId && doc._id instanceof ObjectId && doc._id.equals(right)) return false;
+          if (right instanceof ObjectId && doc._id instanceof ObjectId && doc._id.equals(right))
+            return false;
           if (typeof right === "string" && String(doc._id) === right) return false;
           continue;
         }
@@ -38,27 +45,29 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
             if (docId.toHexString() <= ops.$gt.toHexString()) return false;
             continue;
           }
-        if ("$gte" in ops && ops.$gte instanceof ObjectId) {
-          if (docId.toHexString() < ops.$gte.toHexString()) return false;
-          continue;
-        }
-        if ("$nin" in ops) {
-          const list = ops.$nin as ObjectId[];
-          if (list.some((candidate) => docId.equals(candidate))) return false;
-          continue;
+          if ("$gte" in ops && ops.$gte instanceof ObjectId) {
+            if (docId.toHexString() < ops.$gte.toHexString()) return false;
+            continue;
+          }
+          if ("$nin" in ops) {
+            const list = ops.$nin as ObjectId[];
+            if (list.some((candidate) => docId.equals(candidate))) return false;
+            continue;
+          }
         }
       }
-      }
-      const id =
-        value instanceof ObjectId
-          ? value.toHexString()
-          : String(value);
-      const docId =
-        doc._id instanceof ObjectId ? doc._id.toHexString() : String(doc._id);
+      const id = value instanceof ObjectId ? value.toHexString() : String(value);
+      const docId = doc._id instanceof ObjectId ? doc._id.toHexString() : String(doc._id);
       if (docId !== id) return false;
       continue;
     }
-    if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date) && !(value instanceof ObjectId)) {
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      !(value instanceof Date) &&
+      !(value instanceof ObjectId)
+    ) {
       const ops = value as Record<string, unknown>;
       if ("$exists" in ops) {
         const exists = doc[key] !== undefined;
@@ -74,7 +83,8 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
         }
         if (!(left instanceof Date && right instanceof Date && left.getTime() > right.getTime())) {
           if (!(typeof left === "number" && typeof right === "number" && left > right)) {
-            if (!(typeof left === "string" && typeof right === "string" && left > right)) return false;
+            if (!(typeof left === "string" && typeof right === "string" && left > right))
+              return false;
           }
         }
         continue;
@@ -88,7 +98,8 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
         }
         if (!(left instanceof Date && right instanceof Date && left.getTime() >= right.getTime())) {
           if (!(typeof left === "number" && typeof right === "number" && left >= right)) {
-            if (!(typeof left === "string" && typeof right === "string" && left >= right)) return false;
+            if (!(typeof left === "string" && typeof right === "string" && left >= right))
+              return false;
           }
         }
         continue;
@@ -102,7 +113,8 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
         }
         if (!(left instanceof Date && right instanceof Date && left.getTime() < right.getTime())) {
           if (!(typeof left === "number" && typeof right === "number" && left < right)) {
-            if (!(typeof left === "string" && typeof right === "string" && left < right)) return false;
+            if (!(typeof left === "string" && typeof right === "string" && left < right))
+              return false;
           }
         }
         continue;
@@ -116,7 +128,8 @@ function matches(doc: Doc, filter: Record<string, unknown>): boolean {
         }
         if (!(left instanceof Date && right instanceof Date && left.getTime() <= right.getTime())) {
           if (!(typeof left === "number" && typeof right === "number" && left <= right)) {
-            if (!(typeof left === "string" && typeof right === "string" && left <= right)) return false;
+            if (!(typeof left === "string" && typeof right === "string" && left <= right))
+              return false;
           }
         }
         continue;
@@ -298,7 +311,7 @@ function createCollection() {
               for (const { key, dir } of state.sortKeys) {
                 const av = a[key];
                 const bv = b[key];
-                let cmp = 0;
+                let cmp: number;
                 if (av instanceof ObjectId && bv instanceof ObjectId) {
                   cmp = av.toHexString().localeCompare(bv.toHexString());
                 } else if (av instanceof Date && bv instanceof Date) {

@@ -21,7 +21,6 @@ export const updateVehicleSchema = z
     message: "At least one field is required",
   });
 
-
 const vehicleFillMetaSchema = z.object({
   vehicleId: objectIdSchema,
   date: isoDateSchema,
@@ -54,4 +53,3 @@ export const listVehicleFillsQuerySchema = z.object({
   before: isoDateSchema.optional(),
   beforeId: objectIdSchema.optional(),
 });
-

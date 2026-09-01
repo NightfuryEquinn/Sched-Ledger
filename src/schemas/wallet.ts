@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  accountIdSchema,
-  budgetsSchema,
-} from "./common";
+import { accountIdSchema, budgetsSchema } from "./common";
 import { encryptedPayloadSchema, e2eeVersionSchema } from "./encryption";
 
 export const CURRENCY_CODES = [

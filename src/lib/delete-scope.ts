@@ -23,9 +23,7 @@ export function dayBeforeIso(iso: string): string {
 }
 
 type EventDeleteAction =
-  | { type: "except"; date: string }
-  | { type: "until"; until: string }
-  | { type: "delete" };
+  { type: "except"; date: string } | { type: "until"; until: string } | { type: "delete" };
 
 /**
  * Resolve how a recurring event should change for a delete scope.

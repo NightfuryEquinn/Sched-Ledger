@@ -33,7 +33,12 @@ export async function fetchFxRates(base: string): Promise<FxRates> {
   return entry;
 }
 
-export function fxConvert(amount: number, from: string, to: string, rates: Record<string, number> | null | undefined) {
+export function fxConvert(
+  amount: number,
+  from: string,
+  to: string,
+  rates: Record<string, number> | null | undefined,
+) {
   const a = from.toUpperCase();
   const b = to.toUpperCase();
   if (a === b || !Number.isFinite(amount)) return amount;
@@ -43,7 +48,11 @@ export function fxConvert(amount: number, from: string, to: string, rates: Recor
   return amount * rate;
 }
 
-export function fxRateLabel(from: string, to: string, rates: Record<string, number> | null | undefined) {
+export function fxRateLabel(
+  from: string,
+  to: string,
+  rates: Record<string, number> | null | undefined,
+) {
   const a = from.toUpperCase();
   const b = to.toUpperCase();
   if (a === b) return `1 ${a} = 1 ${b}`;

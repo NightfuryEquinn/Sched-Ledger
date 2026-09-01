@@ -1,4 +1,11 @@
-import { CURRENT_MONTH_KEY, dayLabel, monthLabel, monthsWindow, roundMoney, TODAY_ISO } from "@/frontend/lib/data";
+import {
+  CURRENT_MONTH_KEY,
+  dayLabel,
+  monthLabel,
+  monthsWindow,
+  roundMoney,
+  TODAY_ISO,
+} from "@/frontend/lib/data";
 import type { CategoryIndex } from "@/frontend/lib/categories";
 import { isSpendingCategory } from "@/frontend/lib/categories";
 import { pushInsight } from "@/frontend/lib/insights/build";
@@ -14,7 +21,11 @@ import {
   stats1D,
   type Formatters,
 } from "@/frontend/lib/stat-helpers";
-import { recurringMonthlyEquivalent, recurringScheduleKey, type RecurringField } from "@/lib/recurring";
+import {
+  recurringMonthlyEquivalent,
+  recurringScheduleKey,
+  type RecurringField,
+} from "@/lib/recurring";
 import type { Budgets, Expense } from "@/frontend/lib/types";
 
 const REVIEW_WINDOW_SIZE = 6;
@@ -194,7 +205,12 @@ function forecastInsights(
     });
   }
 
-  const overrunCandidates: Array<{ catId: string; projectedCat: number; limit: number; ratio: number }> = [];
+  const overrunCandidates: Array<{
+    catId: string;
+    projectedCat: number;
+    limit: number;
+    ratio: number;
+  }> = [];
   for (const [catId, limit] of Object.entries(budgets)) {
     const cat = index.catById[catId];
     if (!cat || !isSpendingCategory(cat) || !(limit > 0)) continue;
@@ -224,7 +240,11 @@ function forecastInsights(
 }
 
 /** Robust (median/MAD) outlier detection on this month's individual spend transactions. */
-function outlierInsights(prepass: Prepass, index: CategoryIndex, formatters: Formatters): Insight[] {
+function outlierInsights(
+  prepass: Prepass,
+  index: CategoryIndex,
+  formatters: Formatters,
+): Insight[] {
   const out: Insight[] = [];
   if (prepass.windowAmounts.length < 8 || prepass.currentMonthTx.length === 0) return out;
 
@@ -241,7 +261,8 @@ function outlierInsights(prepass: Prepass, index: CategoryIndex, formatters: For
     .sort((a, b) => b.e.amount - a.e.amount)
     .slice(0, OUTLIER_MAX_CARDS);
 
-  const totalMonthSpend = prepass.monthly.get(prepass.currentMonthTx[0]!.date.slice(0, 7))?.spent ?? 0;
+  const totalMonthSpend =
+    prepass.monthly.get(prepass.currentMonthTx[0]!.date.slice(0, 7))?.spent ?? 0;
   const sampleValue = clamp01(prepass.windowAmounts.length / 40);
 
   for (const { e, z } of flagged) {
@@ -254,7 +275,9 @@ function outlierInsights(prepass: Prepass, index: CategoryIndex, formatters: For
       title: `Unusually large ${name} charge`,
       body: `${money(e.amount)} on ${dayLabel(e.date)} is about ${multiple}× your typical charge.`,
       tone: "warning",
-      impact: clamp01(0.4 * Math.min(1, z / 6) + 0.6 * clamp01(e.amount / Math.max(1, totalMonthSpend))),
+      impact: clamp01(
+        0.4 * Math.min(1, z / 6) + 0.6 * clamp01(e.amount / Math.max(1, totalMonthSpend)),
+      ),
       confidence: {
         level: confidenceLevel(sampleValue),
         value: sampleValue,
@@ -287,13 +310,22 @@ function driftInsights(
     for (const id of prepass.monthly.get(key)?.byCat.keys() ?? []) catIds.add(id);
   }
 
-  const movers: Array<{ catId: string; currentAmt: number; baselineMean: number; delta: number; z: number; nonZeroMonths: number }> = [];
+  const movers: Array<{
+    catId: string;
+    currentAmt: number;
+    baselineMean: number;
+    delta: number;
+    z: number;
+    nonZeroMonths: number;
+  }> = [];
 
   for (const catId of catIds) {
     const cat = index.catById[catId];
     if (!cat || !isSpendingCategory(cat)) continue;
 
-    const baselineAmounts = baselineMonths.map((key) => prepass.monthly.get(key)?.byCat.get(catId) ?? 0);
+    const baselineAmounts = baselineMonths.map(
+      (key) => prepass.monthly.get(key)?.byCat.get(catId) ?? 0,
+    );
     const { mean: baselineMean, stdev: baselineStdev } = stats1D(baselineAmounts);
     const currentAmt = current.byCat.get(catId) ?? 0;
     const delta = currentAmt - baselineMean;
@@ -366,7 +398,12 @@ function recurringChangeInsights(
         body: `${name} started this month at ${money(last.amount)}, repeating ${freq}.`,
         tone: "neutral",
         impact: clamp01(monthlyEquivalent / Math.max(1, monthlyEquivalent * 4)),
-        confidence: { level: confidenceLevel(0.5), value: 0.5, margin: 0, reasons: ["first occurrence observed this month"] },
+        confidence: {
+          level: confidenceLevel(0.5),
+          value: 0.5,
+          margin: 0,
+          reasons: ["first occurrence observed this month"],
+        },
         metric: { label: name, value: money(last.amount) },
       });
       continue;
@@ -383,7 +420,12 @@ function recurringChangeInsights(
         body: `${name} usually charges ${money(last.amount)} ${freq}, but hasn't posted since ${monthLabel(lastMonth, true)}.`,
         tone: "neutral",
         impact: clamp01(monthlyEquivalent / Math.max(1, monthlyEquivalent * 3)),
-        confidence: { level: confidenceLevel(0.55), value: 0.55, margin: 0, reasons: [`expected again by ${monthLabel(nextExpectedMonth, false)}`] },
+        confidence: {
+          level: confidenceLevel(0.55),
+          value: 0.55,
+          margin: 0,
+          reasons: [`expected again by ${monthLabel(nextExpectedMonth, false)}`],
+        },
         metric: { label: name, value: money(last.amount) },
       });
     }
@@ -429,7 +471,12 @@ function priceCreepInsights(
       body: `From ${money(first.amount)} to ${money(last.amount)} across ${sortedList.length} charges.`,
       tone: "warning",
       impact: clamp01(riseRatio),
-      confidence: { level: confidenceLevel(clamp01(sortedList.length / 8)), value: clamp01(sortedList.length / 8), margin: 0, reasons: [`${sortedList.length} occurrences on record`] },
+      confidence: {
+        level: confidenceLevel(clamp01(sortedList.length / 8)),
+        value: clamp01(sortedList.length / 8),
+        margin: 0,
+        reasons: [`${sortedList.length} occurrences on record`],
+      },
       metric: { label: name, value: money(last.amount) },
     });
   }

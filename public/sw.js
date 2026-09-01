@@ -4,15 +4,21 @@ const SHELL_URLS = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_URLS)).then(() => self.skipWaiting()),
+    caches
+      .open(SHELL_CACHE)
+      .then((cache) => cache.addAll(SHELL_URLS))
+      .then(() => self.skipWaiting()),
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== SHELL_CACHE).map((k) => caches.delete(k))),
-    ).then(() => self.clients.claim()),
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== SHELL_CACHE).map((k) => caches.delete(k))),
+      )
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -28,7 +34,10 @@ self.addEventListener("fetch", (event) => {
     fetch(req)
       .then((res) => {
         const copy = res.clone();
-        if (res.ok && (url.pathname === "/" || url.pathname.endsWith(".js") || url.pathname.endsWith(".css"))) {
+        if (
+          res.ok &&
+          (url.pathname === "/" || url.pathname.endsWith(".js") || url.pathname.endsWith(".css"))
+        ) {
           void caches.open(SHELL_CACHE).then((cache) => cache.put(req, copy));
         }
         return res;
@@ -77,7 +86,9 @@ self.addEventListener("notificationclick", (event) => {
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
         if (client.url.startsWith(self.location.origin) && "focus" in client) {
-          return client.navigate ? client.navigate(url).then((c) => c && c.focus()) : client.focus();
+          return client.navigate
+            ? client.navigate(url).then((c) => c && c.focus())
+            : client.focus();
         }
       }
       return self.clients.openWindow(url);

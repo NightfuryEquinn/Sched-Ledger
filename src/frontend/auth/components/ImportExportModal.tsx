@@ -2,7 +2,17 @@ import { CsvImportPanel, type CsvImportPreview } from "@/frontend/auth/component
 import { Icon } from "@/frontend/components/ui";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { useModalMotion } from "@/frontend/lib/animate";
-import type { Category, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, CapitalPlan, Vehicle, FuelFill } from "@/frontend/lib/types";
+import type {
+  Category,
+  CategoryIndex,
+  Expense,
+  FinancialWallet,
+  LedgerEvent,
+  TodoList,
+  CapitalPlan,
+  Vehicle,
+  FuelFill,
+} from "@/frontend/lib/types";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -37,7 +47,12 @@ type ImportExportModalProps = {
   onImportExpenses?: (
     rows: ExpenseImportRow[],
     categories?: Category[],
-  ) => Promise<{ imported: number; failed: number; newCategories: number; newSubcategories: number }>;
+  ) => Promise<{
+    imported: number;
+    failed: number;
+    newCategories: number;
+    newSubcategories: number;
+  }>;
   onImportEvents?: (
     rows: ReturnType<typeof parseEventsCsv>["rows"],
   ) => Promise<{ imported: number; failed: number }>;
@@ -207,18 +222,33 @@ export function ImportExportModal({
   const readSchedFile = async (file: File) => {
     if (!onImportEvents) return;
     if (!isCsvFile(file)) {
-      setSchedPreview({ rows: [], errors: [{ row: 0, message: "Please choose a .csv file." }], notices: [], stats: { skipped: 0 } });
+      setSchedPreview({
+        rows: [],
+        errors: [{ row: 0, message: "Please choose a .csv file." }],
+        notices: [],
+        stats: { skipped: 0 },
+      });
       setSchedResult(null);
       return;
     }
-    setSchedPreview(parseEventsCsv(await file.text(), events.map((e) => e.id)));
+    setSchedPreview(
+      parseEventsCsv(
+        await file.text(),
+        events.map((e) => e.id),
+      ),
+    );
     setSchedResult(null);
   };
 
   const readTodoFile = async (file: File) => {
     if (!onImportTodos) return;
     if (!isCsvFile(file)) {
-      setTodoPreview({ lists: [], errors: [{ row: 0, message: "Please choose a .csv file." }], notices: [], stats: { newLists: 0, newTasks: 0 } });
+      setTodoPreview({
+        lists: [],
+        errors: [{ row: 0, message: "Please choose a .csv file." }],
+        notices: [],
+        stats: { newLists: 0, newTasks: 0 },
+      });
       setTodoResult(null);
       return;
     }
@@ -232,7 +262,9 @@ export function ImportExportModal({
     try {
       const { stats, categories } = txnPreview;
       const taxonomyChanged = stats.newCategories > 0 || stats.newSubcategories > 0;
-      setTxnResult(await onImportExpenses(txnPreview.rows, taxonomyChanged ? categories : undefined));
+      setTxnResult(
+        await onImportExpenses(txnPreview.rows, taxonomyChanged ? categories : undefined),
+      );
       setTxnPreview(null);
     } finally {
       setTxnBusy(false);
@@ -263,10 +295,18 @@ export function ImportExportModal({
 
   const txnExtraStats = txnPreview
     ? [
-        txnPreview.stats.newCategories > 0 ? `${txnPreview.stats.newCategories} new categories` : "",
-        txnPreview.stats.newSubcategories > 0 ? `${txnPreview.stats.newSubcategories} new subcategories` : "",
-        txnPreview.stats.walletRemapped > 0 ? `${txnPreview.stats.walletRemapped} wallet remapped` : "",
-      ].filter(Boolean).join(" · ")
+        txnPreview.stats.newCategories > 0
+          ? `${txnPreview.stats.newCategories} new categories`
+          : "",
+        txnPreview.stats.newSubcategories > 0
+          ? `${txnPreview.stats.newSubcategories} new subcategories`
+          : "",
+        txnPreview.stats.walletRemapped > 0
+          ? `${txnPreview.stats.walletRemapped} wallet remapped`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")
     : "";
 
   const txnPanelPreview: CsvImportPreview | null = txnPreview
@@ -297,9 +337,15 @@ export function ImportExportModal({
   const todoTaskReady = todoPreview?.lists.reduce((n, l) => n + l.tasks.length, 0) ?? 0;
   const todoExtraStats = todoPreview
     ? [
-        todoPreview.stats.newLists > 0 ? `${todoPreview.stats.newLists} new list${todoPreview.stats.newLists === 1 ? "" : "s"}` : "",
-        todoPreview.stats.newTasks > 0 ? `${todoPreview.stats.newTasks} new task${todoPreview.stats.newTasks === 1 ? "" : "s"}` : "",
-      ].filter(Boolean).join(" · ")
+        todoPreview.stats.newLists > 0
+          ? `${todoPreview.stats.newLists} new list${todoPreview.stats.newLists === 1 ? "" : "s"}`
+          : "",
+        todoPreview.stats.newTasks > 0
+          ? `${todoPreview.stats.newTasks} new task${todoPreview.stats.newTasks === 1 ? "" : "s"}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")
     : "";
 
   const todoPanelPreview: CsvImportPreview | null = todoPreview
@@ -316,19 +362,44 @@ export function ImportExportModal({
     : null;
 
   return createPortal(
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !modalBusy) requestClose(onClose); }}>
-      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="ie-modal-title">
+    <div
+      ref={scrimRef}
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !modalBusy) requestClose(onClose);
+      }}
+    >
+      <div
+        ref={panelRef}
+        className="modal sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ie-modal-title"
+      >
         <div className="modal-head">
           <h3 id="ie-modal-title">Exports &amp; Imports</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={modalBusy}><Icon name="close" size={18} /></button>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onClose)}
+            aria-label="Close"
+            disabled={modalBusy}
+          >
+            <Icon name="close" size={18} />
+          </button>
         </div>
 
         <div className="modal-body modal-scroll">
           <div className="dm-sec">
-            <p className="dm-lead">Download or restore your ledger. Prefer the encrypted backup for private portability; use CSV when you need a spreadsheet.</p>
+            <p className="dm-lead">
+              Download or restore your ledger. Prefer the encrypted backup for private portability;
+              use CSV when you need a spreadsheet.
+            </p>
 
             <p className="dm-subhead">Encrypted Backup</p>
-            <p className="dm-note">Client-side AES pack unlocked with your ledger key. Not stored on the server.</p>
+            <p className="dm-note">
+              Client-side AES pack unlocked with your ledger key. Not stored on the server.
+            </p>
             <button
               className="primary-btn full"
               type="button"
@@ -336,7 +407,11 @@ export function ImportExportModal({
               onClick={() => void exportEncryptedBackup()}
             >
               <Icon name={backupExported ? "check" : "download"} size={17} />
-              {backupBusy ? "Working…" : backupExported ? "Downloaded" : "Download Encrypted Backup"}
+              {backupBusy
+                ? "Working…"
+                : backupExported
+                  ? "Downloaded"
+                  : "Download Encrypted Backup"}
             </button>
             {onRestoreBackup ? (
               <label className="ghost-btn full u-gap-top ie-file-label">
@@ -358,7 +433,8 @@ export function ImportExportModal({
             {backupError ? <p className="auth-error">{backupError}</p> : null}
             {backupResult ? (
               <p className="dm-note">
-                Restored {backupResult.expenses} expenses · {backupResult.events} events · {backupResult.todos} todos
+                Restored {backupResult.expenses} expenses · {backupResult.events} events ·{" "}
+                {backupResult.todos} todos
                 {backupResult.capitalPlans ? ` · ${backupResult.capitalPlans} capital plans` : ""}
                 {backupResult.vehicles ? ` · ${backupResult.vehicles} vehicles` : ""}
                 {backupResult.vehicleFills ? ` · ${backupResult.vehicleFills} fills` : ""}
@@ -382,7 +458,10 @@ export function ImportExportModal({
                 preview={txnPanelPreview}
                 importBusy={txnBusy}
                 onImport={() => void runTxnImport()}
-                onClear={() => { setTxnPreview(null); setTxnResult(null); }}
+                onClear={() => {
+                  setTxnPreview(null);
+                  setTxnResult(null);
+                }}
                 resultSummary={
                   txnResult
                     ? `Imported ${txnResult.imported} transaction${txnResult.imported === 1 ? "" : "s"}${txnResult.newCategories > 0 ? ` · ${txnResult.newCategories} categories created` : ""}${txnResult.newSubcategories > 0 ? ` · ${txnResult.newSubcategories} subcategories created` : ""}${txnResult.failed ? ` · ${txnResult.failed} failed` : ""}.${txnResult.imported > 0 ? " Refresh your views to see them." : ""}`
@@ -397,7 +476,9 @@ export function ImportExportModal({
                   <Icon name={txnExported ? "check" : "download"} size={17} />
                   {txnExported ? "Downloaded" : "Export Transactions"}
                 </button>
-                <p className="dm-note">{txnCount} transaction{txnCount === 1 ? "" : "s"} across all wallets.</p>
+                <p className="dm-note">
+                  {txnCount} transaction{txnCount === 1 ? "" : "s"} across all wallets.
+                </p>
               </>
             )}
 
@@ -415,7 +496,10 @@ export function ImportExportModal({
                 preview={schedPanelPreview}
                 importBusy={schedBusy}
                 onImport={() => void runSchedImport()}
-                onClear={() => { setSchedPreview(null); setSchedResult(null); }}
+                onClear={() => {
+                  setSchedPreview(null);
+                  setSchedResult(null);
+                }}
                 resultSummary={
                   schedResult
                     ? `Imported ${schedResult.imported} event${schedResult.imported === 1 ? "" : "s"}${schedResult.failed ? ` · ${schedResult.failed} failed` : ""}.${schedResult.imported > 0 ? " Refresh Schedule to see them." : ""}`
@@ -430,7 +514,9 @@ export function ImportExportModal({
                   <Icon name={schedExported ? "check" : "download"} size={17} />
                   {schedExported ? "Downloaded" : "Export Schedule"}
                 </button>
-                <p className="dm-note">{eventCount} event{eventCount === 1 ? "" : "s"} in your calendar.</p>
+                <p className="dm-note">
+                  {eventCount} event{eventCount === 1 ? "" : "s"} in your calendar.
+                </p>
               </>
             )}
 
@@ -448,7 +534,10 @@ export function ImportExportModal({
                 preview={todoPanelPreview}
                 importBusy={todoBusy}
                 onImport={() => void runTodoImport()}
-                onClear={() => { setTodoPreview(null); setTodoResult(null); }}
+                onClear={() => {
+                  setTodoPreview(null);
+                  setTodoResult(null);
+                }}
                 resultSummary={
                   todoResult
                     ? `Imported ${todoResult.importedTasks} task${todoResult.importedTasks === 1 ? "" : "s"}${todoResult.importedLists > 0 ? ` into ${todoResult.importedLists} new list${todoResult.importedLists === 1 ? "" : "s"}` : ""}${todoResult.failed ? ` · ${todoResult.failed} failed` : ""}.${todoResult.importedTasks > 0 ? " Refresh TO-DO List to see them." : ""}`
@@ -463,7 +552,10 @@ export function ImportExportModal({
                   <Icon name={todoExported ? "check" : "download"} size={17} />
                   {todoExported ? "Downloaded" : "Export To-Do Lists"}
                 </button>
-                <p className="dm-note">{todoLists.length} list{todoLists.length === 1 ? "" : "s"} · {todoTaskCount} task{todoTaskCount === 1 ? "" : "s"}.</p>
+                <p className="dm-note">
+                  {todoLists.length} list{todoLists.length === 1 ? "" : "s"} · {todoTaskCount} task
+                  {todoTaskCount === 1 ? "" : "s"}.
+                </p>
               </>
             )}
 
@@ -477,7 +569,8 @@ export function ImportExportModal({
                   {piggiesExported ? "Downloaded" : "Export Piggies"}
                 </button>
                 <p className="dm-note">
-                  Every savings category and subcategory with its current balance, target, and deadline. A report, not a re-importable source.
+                  Every savings category and subcategory with its current balance, target, and
+                  deadline. A report, not a re-importable source.
                 </p>
               </>
             ) : null}

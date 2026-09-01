@@ -14,35 +14,40 @@ export const budgetAlertsRoutes = new Hono<{ Variables: SessionVariables }>();
  * Client-evaluated budget alerts (amounts stay E2EE). The server only delivers
  * email using the posted alert summaries and dedupes per category/month/level.
  */
-budgetAlertsRoutes.post("/", sessionAuth, zValidator("json", createBudgetAlertsSchema), async (c) => {
-  const accountId = c.get("accountId");
-  const body = c.req.valid("json");
-  const { financialWallets } = getCollections(getDb());
+budgetAlertsRoutes.post(
+  "/",
+  sessionAuth,
+  zValidator("json", createBudgetAlertsSchema),
+  async (c) => {
+    const accountId = c.get("accountId");
+    const body = c.req.valid("json");
+    const { financialWallets } = getCollections(getDb());
 
-  const wallet = await financialWallets.findOne({
-    _id: new ObjectId(body.walletId),
-    accountId,
-  });
-  if (!wallet) notFound("Wallet not found");
+    const wallet = await financialWallets.findOne({
+      _id: new ObjectId(body.walletId),
+      accountId,
+    });
+    if (!wallet) notFound("Wallet not found");
 
-  /* Reject obviously inconsistent ratios so a buggy client cannot spam emails. */
-  for (const alert of body.alerts) {
-    const ratio = alert.spent / alert.budget;
-    if (alert.level === "warning" && (ratio < 0.5 || ratio >= 1.0001)) {
-      badRequest("Warning alert ratio out of range");
+    /* Reject obviously inconsistent ratios so a buggy client cannot spam emails. */
+    for (const alert of body.alerts) {
+      const ratio = alert.spent / alert.budget;
+      if (alert.level === "warning" && (ratio < 0.5 || ratio >= 1.0001)) {
+        badRequest("Warning alert ratio out of range");
+      }
+      if (alert.level === "exceeded" && ratio < 0.99) {
+        badRequest("Exceeded alert ratio out of range");
+      }
     }
-    if (alert.level === "exceeded" && ratio < 0.99) {
-      badRequest("Exceeded alert ratio out of range");
-    }
-  }
 
-  const result = await sendBudgetAlerts({
-    accountId,
-    walletId: body.walletId,
-    walletName: body.walletName,
-    month: body.month,
-    alerts: body.alerts,
-  });
+    const result = await sendBudgetAlerts({
+      accountId,
+      walletId: body.walletId,
+      walletName: body.walletName,
+      month: body.month,
+      alerts: body.alerts,
+    });
 
-  return c.json({ ok: true, ...result });
-});
+    return c.json({ ok: true, ...result });
+  },
+);

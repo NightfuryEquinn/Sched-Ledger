@@ -255,9 +255,9 @@ describe("computeFuelInsights money formatter seam", () => {
     if (assessment.status !== "ready") throw new Error("expected ready");
 
     const insights = computeFuelInsights(metrics, VEHICLE_TYPES.car, assessment.confidence);
-    expect(insights.some((i) => i.kind === "fuel-cadence" && i.title.includes("Longer than usual"))).toBe(
-      false,
-    );
+    expect(
+      insights.some((i) => i.kind === "fuel-cadence" && i.title.includes("Longer than usual")),
+    ).toBe(false);
   });
 
   test("odometer coverage nudge appears when most fills are missing a reading", () => {

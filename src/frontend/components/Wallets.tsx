@@ -31,7 +31,9 @@ export function WalletSwitcher({ wallets, activeId, onChange, onManage }: Wallet
 type WalletManageModalProps = {
   wallets: FinancialWallet[];
   activeId: string;
-  onSave: (data: Partial<FinancialWallet> & { id?: string; name?: string; currency?: string }) => Promise<unknown>;
+  onSave: (
+    data: Partial<FinancialWallet> & { id?: string; name?: string; currency?: string },
+  ) => Promise<unknown>;
   onDelete: (id: string) => Promise<unknown>;
   onClose: () => void;
 };
@@ -46,8 +48,12 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   const [startingBalance, setStartingBalance] = useState("");
   const incomeEvaluated = useMemo(() => evaluateExpression(income), [income]);
   const incomeIsExpression = incomeEvaluated !== null && !isPlainNumber(income);
-  const startingBalanceEvaluated = useMemo(() => evaluateExpression(startingBalance), [startingBalance]);
-  const startingBalanceIsExpression = startingBalanceEvaluated !== null && !isPlainNumber(startingBalance);
+  const startingBalanceEvaluated = useMemo(
+    () => evaluateExpression(startingBalance),
+    [startingBalance],
+  );
+  const startingBalanceIsExpression =
+    startingBalanceEvaluated !== null && !isPlainNumber(startingBalance);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -56,7 +62,9 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy && !confirmDelete) requestClose(onClose); };
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy && !confirmDelete) requestClose(onClose);
+    };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [busy, confirmDelete, onClose, requestClose]);
@@ -89,7 +97,10 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   };
 
   const submit = async () => {
-    if (!name.trim()) { setError("Name is required"); return; }
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -99,7 +110,8 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
         currency,
         fundingMode,
         income: fundingMode === "monthly" ? Math.max(0, Math.round(incomeEvaluated ?? 0)) : 0,
-        startingBalance: fundingMode === "starting" ? Math.max(0, Math.round(startingBalanceEvaluated ?? 0)) : 0,
+        startingBalance:
+          fundingMode === "starting" ? Math.max(0, Math.round(startingBalanceEvaluated ?? 0)) : 0,
       });
       setMode("list");
     } catch (err) {
@@ -125,11 +137,23 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
   const title = mode === "list" ? "Wallets" : mode === "add" ? "Add Wallet" : "Edit Wallet";
 
   return createPortal(
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy && !confirmDelete) requestClose(onClose); }}>
+    <div
+      ref={scrimRef}
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !busy && !confirmDelete) requestClose(onClose);
+      }}
+    >
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={busy}>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onClose)}
+            aria-label="Close"
+            disabled={busy}
+          >
             <Icon name="close" size={18} />
           </button>
         </div>
@@ -139,7 +163,8 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
             <div className="dm-sec">
               <span className="fld-label">Your wallets</span>
               <p className="dm-lead">
-                Track spending in separate purses — each wallet has its own currency, income, and budgets.
+                Track spending in separate purses — each wallet has its own currency, income, and
+                budgets.
               </p>
               <div className="session-list">
                 {wallets.map((w) => {
@@ -158,7 +183,9 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                             : `Income ${cur.symbol}${w.income.toLocaleString()}/mo`}
                         </div>
                       </div>
-                      <button className="ghost-btn" type="button" onClick={() => startEdit(w)}>Edit</button>
+                      <button className="ghost-btn" type="button" onClick={() => startEdit(w)}>
+                        Edit
+                      </button>
                     </div>
                   );
                 })}
@@ -166,7 +193,10 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
               <button className="primary-btn full u-gap-top" type="button" onClick={startAdd}>
                 <Icon name="plus" size={17} /> Add Wallet
               </button>
-              <p className="dm-note">{wallets.length} wallet{wallets.length === 1 ? "" : "s"} · switch between them from the top bar.</p>
+              <p className="dm-note">
+                {wallets.length} wallet{wallets.length === 1 ? "" : "s"} · switch between them from
+                the top bar.
+              </p>
             </div>
           ) : (
             <div className="dm-sec">
@@ -177,7 +207,9 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                   : "Update the wallet name or funding settings."}
               </p>
 
-              <label className="fld-label" htmlFor="wallet-name">Name</label>
+              <label className="fld-label" htmlFor="wallet-name">
+                Name
+              </label>
               <input
                 id="wallet-name"
                 className="text-in wallet-field"
@@ -188,7 +220,9 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                 autoFocus
               />
 
-              <label className="fld-label" htmlFor="wallet-currency">Currency</label>
+              <label className="fld-label" htmlFor="wallet-currency">
+                Currency
+              </label>
               <CurrencyPicker
                 id="wallet-currency"
                 className="wallet-field"
@@ -221,7 +255,9 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                 <>
                   <label className="fld-label">Monthly Income</label>
                   {incomeIsExpression ? (
-                    <FadeIn className="amount-live-total" as="div">= {fmtMoney(incomeEvaluated, { currency })}</FadeIn>
+                    <FadeIn className="amount-live-total" as="div">
+                      = {fmtMoney(incomeEvaluated, { currency })}
+                    </FadeIn>
                   ) : null}
                   <div className="amount-field compact wallet-amount">
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
@@ -231,7 +267,9 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                       placeholder="0"
                       value={income}
                       onChange={(e) => setIncome(e.target.value)}
-                      onBlur={() => { if (incomeIsExpression) setIncome(String(incomeEvaluated)); }}
+                      onBlur={() => {
+                        if (incomeIsExpression) setIncome(String(incomeEvaluated));
+                      }}
                     />
                   </div>
                 </>
@@ -239,7 +277,9 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                 <>
                   <label className="fld-label">Starting Balance</label>
                   {startingBalanceIsExpression ? (
-                    <FadeIn className="amount-live-total" as="div">= {fmtMoney(startingBalanceEvaluated, { currency })}</FadeIn>
+                    <FadeIn className="amount-live-total" as="div">
+                      = {fmtMoney(startingBalanceEvaluated, { currency })}
+                    </FadeIn>
                   ) : null}
                   <div className="amount-field compact wallet-amount">
                     <span className="amount-cur">{getCurrency(currency).symbol}</span>
@@ -249,7 +289,10 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                       placeholder="0"
                       value={startingBalance}
                       onChange={(e) => setStartingBalance(e.target.value)}
-                      onBlur={() => { if (startingBalanceIsExpression) setStartingBalance(String(startingBalanceEvaluated)); }}
+                      onBlur={() => {
+                        if (startingBalanceIsExpression)
+                          setStartingBalance(String(startingBalanceEvaluated));
+                      }}
                     />
                   </div>
                 </>
@@ -261,16 +304,30 @@ export function WalletManageModal({ wallets, onSave, onDelete, onClose }: Wallet
                 <>
                   <div className="dm-div" />
                   <span className="fld-label">Remove wallet</span>
-                  <p className="dm-lead">Delete this wallet only if it has no transactions. This cannot be undone.</p>
-                  <button className="ghost-btn danger full" type="button" disabled={busy} onClick={() => setConfirmDelete(true)}>
+                  <p className="dm-lead">
+                    Delete this wallet only if it has no transactions. This cannot be undone.
+                  </p>
+                  <button
+                    className="ghost-btn danger full"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setConfirmDelete(true)}
+                  >
                     {busy ? "Deleting…" : "Delete Wallet"}
                   </button>
                 </>
               ) : null}
 
               <div className="wallet-form-actions">
-                <button className="ghost-btn full" type="button" onClick={backToList}>Back</button>
-                <button className="primary-btn full" type="button" disabled={busy || !name.trim()} onClick={submit}>
+                <button className="ghost-btn full" type="button" onClick={backToList}>
+                  Back
+                </button>
+                <button
+                  className="primary-btn full"
+                  type="button"
+                  disabled={busy || !name.trim()}
+                  onClick={submit}
+                >
                   {busy ? "Saving…" : mode === "add" ? "Add Wallet" : "Save Changes"}
                 </button>
               </div>

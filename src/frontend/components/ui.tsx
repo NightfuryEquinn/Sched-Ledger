@@ -142,15 +142,29 @@ function DeleteScopeDialog({
         if (e.target === e.currentTarget && !busy) requestClose(onCancel);
       }}
     >
-      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="delete-scope-title">
+      <div
+        ref={panelRef}
+        className="modal sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-scope-title"
+      >
         <div className="modal-head">
           <h3 id="delete-scope-title">{title}</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onCancel)} aria-label="Close" disabled={busy}>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onCancel)}
+            aria-label="Close"
+            disabled={busy}
+          >
             <Icon name="close" size={18} />
           </button>
         </div>
         <div className="modal-body">
-          <p className="dm-lead">Choose how much of this series to remove. This cannot be undone.</p>
+          <p className="dm-lead">
+            Choose how much of this series to remove. This cannot be undone.
+          </p>
           <div className="delete-scope-list" role="radiogroup" aria-label="Delete Scope">
             {DELETE_SCOPE_OPTIONS.map((o) => (
               <label key={o.v} className={"delete-scope-option" + (scope === o.v ? " active" : "")}>
@@ -170,7 +184,12 @@ function DeleteScopeDialog({
           </div>
         </div>
         <div className="modal-foot">
-          <button className="ghost-btn" type="button" onClick={() => requestClose(onCancel)} disabled={busy}>
+          <button
+            className="ghost-btn"
+            type="button"
+            onClick={() => requestClose(onCancel)}
+            disabled={busy}
+          >
             Cancel
           </button>
           <button className="ghost-btn danger" type="button" onClick={confirm} disabled={busy}>
@@ -233,10 +252,22 @@ function ConfirmDialog({
         if (e.target === e.currentTarget && !busy) requestClose(onCancel);
       }}
     >
-      <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+      <div
+        ref={panelRef}
+        className="modal sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+      >
         <div className="modal-head">
           <h3 id="confirm-dialog-title">{title}</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onCancel)} aria-label="Close" disabled={busy}>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onCancel)}
+            aria-label="Close"
+            disabled={busy}
+          >
             <Icon name="close" size={18} />
           </button>
         </div>
@@ -244,10 +275,20 @@ function ConfirmDialog({
           <p className="dm-lead">{message}</p>
         </div>
         <div className="modal-foot">
-          <button className="ghost-btn" type="button" onClick={() => requestClose(onCancel)} disabled={busy}>
+          <button
+            className="ghost-btn"
+            type="button"
+            onClick={() => requestClose(onCancel)}
+            disabled={busy}
+          >
             Cancel
           </button>
-          <button className={"ghost-btn" + (danger ? " danger" : "")} type="button" onClick={confirm} disabled={busy}>
+          <button
+            className={"ghost-btn" + (danger ? " danger" : "")}
+            type="button"
+            onClick={confirm}
+            disabled={busy}
+          >
             {busy ? pendingLabel : confirmLabel}
           </button>
         </div>
@@ -367,7 +408,12 @@ function Sidebar({ view, setView }: { view: ViewId; setView: (id: ViewId) => voi
       <Brand variant="sidebar" />
       <nav className="nav">
         {items.map(([id, label, icon]) => (
-          <button key={id} data-tour={`tour-nav-${id}`} className={"nav-item" + (view === id ? " active" : "")} onClick={() => setView(id)}>
+          <button
+            key={id}
+            data-tour={`tour-nav-${id}`}
+            className={"nav-item" + (view === id ? " active" : "")}
+            onClick={() => setView(id)}
+          >
             <Icon name={icon} size={20} />
             <span>{label}</span>
           </button>
@@ -419,44 +465,51 @@ function MobileBottomNav({ view, setView }: { view: ViewId; setView: (id: ViewId
     setMoreOpen(false);
   };
 
-  const moreSheet = moreOpen ? createPortal(
-    <div
-      ref={scrimRef}
-      className="modal-scrim nav-more-scrim"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) requestClose(() => setMoreOpen(false));
-      }}
-    >
-      <div ref={panelRef} className="modal nav-more-panel" role="dialog" aria-label="More navigation">
-        <div className="nav-more-head">
-          <h3>More</h3>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Close"
-            onClick={() => requestClose(() => setMoreOpen(false))}
+  const moreSheet = moreOpen
+    ? createPortal(
+        <div
+          ref={scrimRef}
+          className="modal-scrim nav-more-scrim"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) requestClose(() => setMoreOpen(false));
+          }}
+        >
+          <div
+            ref={panelRef}
+            className="modal nav-more-panel"
+            role="dialog"
+            aria-label="More navigation"
           >
-            <Icon name="close" size={18} />
-          </button>
-        </div>
-        <div className="nav-more-grid">
-          {MORE_NAV_ITEMS.map(([id, label, icon]) => (
-            <button
-              key={id}
-              type="button"
-              data-tour={`tour-nav-${id}`}
-              className={"nav-more-item" + (view === id ? " active" : "")}
-              onClick={() => pickView(id)}
-            >
-              <Icon name={icon} size={22} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>,
-    document.body,
-  ) : null;
+            <div className="nav-more-head">
+              <h3>More</h3>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Close"
+                onClick={() => requestClose(() => setMoreOpen(false))}
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+            <div className="nav-more-grid">
+              {MORE_NAV_ITEMS.map(([id, label, icon]) => (
+                <button
+                  key={id}
+                  type="button"
+                  data-tour={`tour-nav-${id}`}
+                  className={"nav-more-item" + (view === id ? " active" : "")}
+                  onClick={() => pickView(id)}
+                >
+                  <Icon name={icon} size={22} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <>
@@ -497,7 +550,20 @@ function MobileBottomNav({ view, setView }: { view: ViewId; setView: (id: ViewId
 }
 
 // ── MonthSwitcher: prev / label picker / next ─────────────────────
-const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 /** Viewport height left below a fixed dropdown, keeping the bottom nav clear. */
 function dropdownMaxHeightPx(anchorBottom: number) {
@@ -608,13 +674,31 @@ function MonthSwitcher({
   useFadeIn(menuRef, { active: open });
 
   const picker = open ? (
-    <div ref={menuRef} className="month-pick-menu" style={menuStyle} role="dialog" aria-modal="true">
+    <div
+      ref={menuRef}
+      className="month-pick-menu"
+      style={menuStyle}
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="picker-cal-head">
-        <button type="button" className="picker-nav-btn" disabled={!canPrevYear} onClick={() => goYear(-1)} aria-label="Previous Year">
+        <button
+          type="button"
+          className="picker-nav-btn"
+          disabled={!canPrevYear}
+          onClick={() => goYear(-1)}
+          aria-label="Previous Year"
+        >
           <Icon name="chevL" size={16} />
         </button>
         <span className="picker-cal-title">{pickY}</span>
-        <button type="button" className="picker-nav-btn" disabled={!canNextYear} onClick={() => goYear(1)} aria-label="Next Year">
+        <button
+          type="button"
+          className="picker-nav-btn"
+          disabled={!canNextYear}
+          onClick={() => goYear(1)}
+          aria-label="Next Year"
+        >
           <Icon name="chevR" size={16} />
         </button>
       </div>
@@ -629,7 +713,9 @@ function MonthSwitcher({
             <button
               key={label}
               type="button"
-              className={"month-pick-cell" + (active ? " active" : "") + (today && !active ? " today" : "")}
+              className={
+                "month-pick-cell" + (active ? " active" : "") + (today && !active ? " today" : "")
+              }
               disabled={!enabled || changing}
               onClick={() => pickMonth(month)}
             >
@@ -643,7 +729,14 @@ function MonthSwitcher({
 
   return (
     <div className="month-switch" data-tour="tour-month" ref={rootRef}>
-      <button className="msbtn" disabled={idx <= 0 || changing} onClick={() => go(-1)} aria-label="Previous Month"><Icon name="chevL" size={18} /></button>
+      <button
+        className="msbtn"
+        disabled={idx <= 0 || changing}
+        onClick={() => go(-1)}
+        aria-label="Previous Month"
+      >
+        <Icon name="chevL" size={18} />
+      </button>
       <button
         ref={labelRef}
         className="ms-label-btn"
@@ -656,7 +749,14 @@ function MonthSwitcher({
         <span>{monthLabel(current, true)}</span>
         <Icon name="chevD" size={14} />
       </button>
-      <button className="msbtn" disabled={idx >= months.length - 1 || changing} onClick={() => go(1)} aria-label="Next Month"><Icon name="chevR" size={18} /></button>
+      <button
+        className="msbtn"
+        disabled={idx >= months.length - 1 || changing}
+        onClick={() => go(1)}
+        aria-label="Next Month"
+      >
+        <Icon name="chevR" size={18} />
+      </button>
       {picker ? createPortal(picker, document.body) : null}
     </div>
   );
@@ -724,17 +824,34 @@ function TransactionRow({
         <div className="txn-day">{new Date(exp.date + "T00:00:00").getDate()}</div>
         <div className="txn-wd">{weekdayLabel(exp.date)}</div>
       </div>
-      <div className="txn-glyph" style={glyphTint(cat.color)}>{displayGlyph(cat.glyph, cat.id)}</div>
+      <div className="txn-glyph" style={glyphTint(cat.color)}>
+        {displayGlyph(cat.glyph, cat.id)}
+      </div>
       <div className="txn-main">
-        <div className="txn-note">{exp.note}{isRecurring(exp) ? <span className="txn-rep" title={recurringLabel(exp.recurring)}><Icon name="repeat" size={13} /></span> : null}</div>
-        <div className="txn-cat">{cat.name} · {sub.name}{walletName ? <span className="txn-wallet"> · {walletName}</span> : null}</div>
+        <div className="txn-note">
+          {exp.note}
+          {isRecurring(exp) ? (
+            <span className="txn-rep" title={recurringLabel(exp.recurring)}>
+              <Icon name="repeat" size={13} />
+            </span>
+          ) : null}
+        </div>
+        <div className="txn-cat">
+          {cat.name} · {sub.name}
+          {walletName ? <span className="txn-wallet"> · {walletName}</span> : null}
+        </div>
       </div>
       <div className={"txn-amt" + (exp.kind === "income" ? " income" : " expense")}>
-        {exp.kind === "income" ? "+" : "−"}{fmtMoney(exp.amount, { currency })}
+        {exp.kind === "income" ? "+" : "−"}
+        {fmtMoney(exp.amount, { currency })}
       </div>
       <div className="txn-actions">
-        <button onClick={() => onEdit(exp)} aria-label="Edit"><Icon name="edit" size={16} /></button>
-        <button onClick={requestDelete} aria-label="Delete" disabled={deleting}><Icon name="trash" size={16} /></button>
+        <button onClick={() => onEdit(exp)} aria-label="Edit">
+          <Icon name="edit" size={16} />
+        </button>
+        <button onClick={requestDelete} aria-label="Delete" disabled={deleting}>
+          <Icon name="trash" size={16} />
+        </button>
       </div>
       {scopeOpen ? (
         <DeleteScopeDialog
@@ -779,7 +896,13 @@ function Segmented<T extends string>({
   return (
     <div className="seg">
       {options.map((o) => (
-        <button key={o.v} className={"seg-btn" + (value === o.v ? " active" : "")} onClick={() => onChange(o.v)}>{o.label}</button>
+        <button
+          key={o.v}
+          className={"seg-btn" + (value === o.v ? " active" : "")}
+          onClick={() => onChange(o.v)}
+        >
+          {o.label}
+        </button>
       ))}
     </div>
   );
@@ -787,7 +910,13 @@ function Segmented<T extends string>({
 
 // ── EmptyState: centered placeholder for empty lists ────────────────
 function EmptyState({ title, sub }: { title: ReactNode; sub?: ReactNode }) {
-  return <div className="empty"><div className="empty-mark">◌</div><div className="empty-title">{title}</div>{sub ? <div className="empty-sub">{sub}</div> : null}</div>;
+  return (
+    <div className="empty">
+      <div className="empty-mark">◌</div>
+      <div className="empty-title">{title}</div>
+      {sub ? <div className="empty-sub">{sub}</div> : null}
+    </div>
+  );
 }
 
 // ── InsightFeed: ranked findings, shared by Transaction and Fuel Insights ──
@@ -813,7 +942,13 @@ function InsightCard({ insight }: { insight: Insight }) {
 }
 
 /** Render a ranked insight feed, or a quiet empty state when nothing stands out. */
-function InsightFeed({ insights, emptyLabel = "Nothing stands out right now." }: { insights: Insight[]; emptyLabel?: string }) {
+function InsightFeed({
+  insights,
+  emptyLabel = "Nothing stands out right now.",
+}: {
+  insights: Insight[];
+  emptyLabel?: string;
+}) {
   if (!insights.length) {
     return <p className="panel-sub insight-feed-empty">{emptyLabel}</p>;
   }
@@ -895,17 +1030,29 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
             key={w.id}
             type="button"
             className={"wallet-menu-item" + (w.id === selected.id ? " active" : "")}
-            onClick={() => { onChange(w.id); setOpen(false); }}
+            onClick={() => {
+              onChange(w.id);
+              setOpen(false);
+            }}
           >
             <span className="wmi-name">{w.name}</span>
-            <span className="wmi-cur num">{cur.code} · {cur.symbol}</span>
+            <span className="wmi-cur num">
+              {cur.code} · {cur.symbol}
+            </span>
           </button>
         );
       })}
       {onManage ? (
         <>
           <div className="am-div" />
-          <button type="button" className="wallet-menu-item manage" onClick={() => { onManage(); setOpen(false); }}>
+          <button
+            type="button"
+            className="wallet-menu-item manage"
+            onClick={() => {
+              onManage();
+              setOpen(false);
+            }}
+          >
             <Icon name="edit" size={15} /> Manage Wallets
           </button>
         </>
@@ -914,7 +1061,11 @@ function WalletPicker({ wallets, value, onChange, onManage, className }: WalletP
   ) : null;
 
   return (
-    <div className={"wallet-switch" + (className ? ` ${className}` : "")} data-tour="tour-wallet" ref={rootRef}>
+    <div
+      className={"wallet-switch" + (className ? ` ${className}` : "")}
+      data-tour="tour-wallet"
+      ref={rootRef}
+    >
       <button
         ref={chipRef}
         className="wallet-chip"
@@ -1017,10 +1168,15 @@ function AddExpenseModal({
   const panelRef = useRef<HTMLDivElement>(null);
   const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
-  useEffect(() => { if (amtRef.current) amtRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !confirmOpen && !busy) requestClose(onClose); };
-    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+    if (amtRef.current) amtRef.current.focus();
+  }, []);
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !scopeOpen && !confirmOpen && !busy) requestClose(onClose);
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, [scopeOpen, confirmOpen, busy, onClose, requestClose]);
 
   const switchKind = (next: "expense" | "income") => {
@@ -1080,11 +1236,26 @@ function AddExpenseModal({
   };
 
   return (
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !confirmOpen && !busy) requestClose(onClose); }}>
+    <div
+      ref={scrimRef}
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !scopeOpen && !confirmOpen && !busy)
+          requestClose(onClose);
+      }}
+    >
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title ?? (editing ? "Edit Transaction" : "Add Transaction")}</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={busy}><Icon name="close" size={18} /></button>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onClose)}
+            aria-label="Close"
+            disabled={busy}
+          >
+            <Icon name="close" size={18} />
+          </button>
         </div>
 
         <div className="modal-body modal-scroll">
@@ -1092,7 +1263,10 @@ function AddExpenseModal({
             <>
               <label className="fld-label">Type</label>
               <Segmented
-                options={[{ v: "expense", label: "Expense" }, { v: "income", label: "Income" }]}
+                options={[
+                  { v: "expense", label: "Expense" },
+                  { v: "income", label: "Income" },
+                ]}
                 value={kind}
                 onChange={switchKind}
               />
@@ -1112,13 +1286,20 @@ function AddExpenseModal({
           ) : null}
 
           {amountIsExpression ? (
-            <FadeIn className="amount-live-total">= {fmtMoney(amountEvaluated, { currency: selectedWallet?.currency })}</FadeIn>
+            <FadeIn className="amount-live-total">
+              = {fmtMoney(amountEvaluated, { currency: selectedWallet?.currency })}
+            </FadeIn>
           ) : null}
           {overMax ? (
-            <FadeIn className="amount-live-total is-down">Max {fmtMoney(maxAmount, { currency: selectedWallet?.currency })} available</FadeIn>
+            <FadeIn className="amount-live-total is-down">
+              Max {fmtMoney(maxAmount, { currency: selectedWallet?.currency })} available
+            </FadeIn>
           ) : null}
           <div className={"amount-field" + (kind === "income" ? " amount-field--income" : "")}>
-            <span className="amount-cur">{kind === "income" ? "+" : ""}{cur.symbol}</span>
+            <span className="amount-cur">
+              {kind === "income" ? "+" : ""}
+              {cur.symbol}
+            </span>
             <input
               ref={amtRef}
               type="text"
@@ -1126,8 +1307,12 @@ function AddExpenseModal({
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-              onBlur={() => { if (amountIsExpression) setAmount(String(amountEvaluated)); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+              onBlur={() => {
+                if (amountIsExpression) setAmount(String(amountEvaluated));
+              }}
             />
           </div>
 
@@ -1137,10 +1322,20 @@ function AddExpenseModal({
               <label className="fld-label">{kind === "income" ? "Source" : "Category"}</label>
               <div className="cat-grid">
                 {visibleCategories.map((c) => (
-                  <button key={c.id} type="button" className={"cat-chip" + (catId === c.id ? " active" : "")}
-                    style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : undefined}
-                    onClick={() => chooseCat(c.id)}>
-                    <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={"cat-chip" + (catId === c.id ? " active" : "")}
+                    style={
+                      catId === c.id
+                        ? { borderColor: c.color, background: c.color + "16" }
+                        : undefined
+                    }
+                    onClick={() => chooseCat(c.id)}
+                  >
+                    <span className="cc-glyph" style={{ color: c.color }}>
+                      {displayGlyph(c.glyph, c.id)}
+                    </span>
                     <span className="cc-label">{c.name}</span>
                   </button>
                 ))}
@@ -1150,7 +1345,14 @@ function AddExpenseModal({
               <label className="fld-label">Subcategory</label>
               <div className="sub-row">
                 {catById[catId]?.subs.map((s) => (
-                  <button key={s.id} type="button" className={"sub-chip" + (sub === s.id ? " active" : "")} onClick={() => setSub(s.id)}>{s.name}</button>
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={"sub-chip" + (sub === s.id ? " active" : "")}
+                    onClick={() => setSub(s.id)}
+                  >
+                    {s.name}
+                  </button>
                 ))}
               </div>
               <div className="event-div" />
@@ -1190,7 +1392,13 @@ function AddExpenseModal({
             </div>
             <div>
               <label className="fld-label">Note</label>
-              <input className="text-in" type="text" placeholder="Optional" value={note} onChange={(e) => setNote(e.target.value)} />
+              <input
+                className="text-in"
+                type="text"
+                placeholder="Optional"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
             </div>
           </div>
 
@@ -1223,14 +1431,41 @@ function AddExpenseModal({
 
         <div className="modal-foot">
           {editing ? (
-            <button className="ghost-btn danger" type="button" onClick={requestDelete} disabled={busy}>
+            <button
+              className="ghost-btn danger"
+              type="button"
+              onClick={requestDelete}
+              disabled={busy}
+            >
               {deleting ? "Deleting…" : "Delete"}
             </button>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
           <div className="mf-right">
-            <button className="ghost-btn" type="button" onClick={() => requestClose(onClose)} disabled={busy}>Cancel</button>
-            <button className="primary-btn" type="button" disabled={!valid || busy} onClick={submit}>
-              {saving ? "Saving…" : locked ? "Withdraw" : editing ? "Save Changes" : kind === "income" ? "Add Income" : "Add Expense"}
+            <button
+              className="ghost-btn"
+              type="button"
+              onClick={() => requestClose(onClose)}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              className="primary-btn"
+              type="button"
+              disabled={!valid || busy}
+              onClick={submit}
+            >
+              {saving
+                ? "Saving…"
+                : locked
+                  ? "Withdraw"
+                  : editing
+                    ? "Save Changes"
+                    : kind === "income"
+                      ? "Add Income"
+                      : "Add Expense"}
             </button>
           </div>
         </div>
@@ -1266,5 +1501,19 @@ function AddExpenseModal({
 }
 
 export {
-  AddExpenseModal, CatGlyph, ConfirmDialog, DeleteScopeDialog, EmptyState, Icon, InsightFeed, MobileBottomNav, MonthSwitcher, Segmented, Sidebar, SummaryCard, TransactionRow, WalletPicker, glyphTint
+  AddExpenseModal,
+  CatGlyph,
+  ConfirmDialog,
+  DeleteScopeDialog,
+  EmptyState,
+  Icon,
+  InsightFeed,
+  MobileBottomNav,
+  MonthSwitcher,
+  Segmented,
+  Sidebar,
+  SummaryCard,
+  TransactionRow,
+  WalletPicker,
+  glyphTint,
 };

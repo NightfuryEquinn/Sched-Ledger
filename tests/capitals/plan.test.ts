@@ -289,7 +289,9 @@ describe("planMonthlySave", () => {
 
   test("divides (budget − paid) by months until target", () => {
     // budget 10000 − paid 6800 = 3200; Aug → Nov = 3 months → ~1066.67/mo
-    expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 10000 }), today)).toBeCloseTo(3200 / 3);
+    expect(
+      planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 10000 }), today),
+    ).toBeCloseTo(3200 / 3);
   });
 
   test("still saves monthly when all items are paid but budget remains", () => {
@@ -306,7 +308,9 @@ describe("planMonthlySave", () => {
   });
 
   test("returns null when overbudget (UI shows Overpaid)", () => {
-    expect(planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 5000 }), today)).toBeNull();
+    expect(
+      planMonthlySave(plan({ targetDate: "2026-11-01", initialBudget: 5000 }), today),
+    ).toBeNull();
   });
 
   test("returns 0 when paid exactly equals budget", () => {
@@ -322,7 +326,9 @@ describe("planMonthlySave", () => {
   });
 
   test("returns null when the target month is past", () => {
-    expect(planMonthlySave(plan({ targetDate: "2026-01-01", initialBudget: 10000 }), today)).toBeNull();
+    expect(
+      planMonthlySave(plan({ targetDate: "2026-01-01", initialBudget: 10000 }), today),
+    ).toBeNull();
   });
 
   test("returns null for a plan with neither a budget nor items", () => {

@@ -21,7 +21,17 @@ import { releaseHoldForOccurrence, restoreHoldForOccurrence } from "@/frontend/l
 import { useLedger } from "@/frontend/lib/hooks/useLedger";
 import { useLedgerTour, type TourKind } from "@/frontend/lib/tour";
 import { useWhatsNew } from "@/frontend/lib/whats-new";
-import type { Account, CapitalItem, CapitalPlan, Category, Expense, FuelFill, LedgerEvent, Vehicle, ViewId } from "@/frontend/lib/types";
+import type {
+  Account,
+  CapitalItem,
+  CapitalPlan,
+  Category,
+  Expense,
+  FuelFill,
+  LedgerEvent,
+  Vehicle,
+  ViewId,
+} from "@/frontend/lib/types";
 import { VEHICLE_TYPES } from "@/frontend/lib/fuelInsights";
 import {
   Budgets as BudgetsView,
@@ -93,7 +103,9 @@ function PageTitle({ view }: { view: ViewId }) {
   useEnter(titleRef, { y: 4 });
 
   return (
-    <h1 ref={titleRef} className="page-title">{VIEW_TITLES[view]}</h1>
+    <h1 ref={titleRef} className="page-title">
+      {VIEW_TITLES[view]}
+    </h1>
   );
 }
 
@@ -118,13 +130,14 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
     | null
   >(null);
   /** Set while the AddExpenseModal is open to log a capital plan item's payment. */
-  const [capitalLogTarget, setCapitalLogTarget] = useState<
-    { plan: CapitalPlan; item: CapitalItem } | null
-  >(null);
+  const [capitalLogTarget, setCapitalLogTarget] = useState<{
+    plan: CapitalPlan;
+    item: CapitalItem;
+  } | null>(null);
   /** Set while the AddExpenseModal is open to log a fuel fill's payment. */
-  const [fillLogTarget, setFillLogTarget] = useState<
-    { vehicle: Vehicle; fill: FuelFill } | null
-  >(null);
+  const [fillLogTarget, setFillLogTarget] = useState<{ vehicle: Vehicle; fill: FuelFill } | null>(
+    null,
+  );
   const [evModal, setEvModal] = useState<LedgerEvent | { add: true; date: string } | null>(null);
   const [evOccurrenceIso, setEvOccurrenceIso] = useState<string | undefined>(undefined);
   const [walletModal, setWalletModal] = useState(false);
@@ -171,7 +184,11 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
     onSeen: markTourSeen,
   });
 
-  const { open: whatsNewOpen, openWhatsNew, closeWhatsNew } = useWhatsNew({
+  const {
+    open: whatsNewOpen,
+    openWhatsNew,
+    closeWhatsNew,
+  } = useWhatsNew({
     ready: tourReady,
     accountCreatedAt: ledger.profile?.createdAt,
     blocked: welcomeOpen,
@@ -235,7 +252,23 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
     );
   }
 
-  const { expenses, allExpenses, budgets, wallet, currency, events, month, wallets, activeWallet, setMonth, setBudgets, isBudgetsPending, isMonthPending, isSaving, setActiveWalletId } = ledger;
+  const {
+    expenses,
+    allExpenses,
+    budgets,
+    wallet,
+    currency,
+    events,
+    month,
+    wallets,
+    activeWallet,
+    setMonth,
+    setBudgets,
+    isBudgetsPending,
+    isMonthPending,
+    isSaving,
+    setActiveWalletId,
+  } = ledger;
 
   const saveExpense = async (data: Omit<Expense, "id"> & { id?: string }) => {
     const walletId = data.walletId || activeWallet?.id;
@@ -261,7 +294,12 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
       try {
         const items = plan.items.map((i) =>
           i.id === item.id
-            ? { ...i, paid: true, actualCost: saved.expense.amount, loggedExpenseId: saved.expense.id }
+            ? {
+                ...i,
+                paid: true,
+                actualCost: saved.expense.amount,
+                loggedExpenseId: saved.expense.id,
+              }
             : i,
         );
         await ledger.saveCapitalPlan({ id: plan.id, items });
@@ -308,7 +346,12 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
   };
 
   /** Open expense modal prefilled from a schedule event. */
-  const logPaymentFromEvent = (ev: { id: string; title: string; date: string; expenseId?: string }) => {
+  const logPaymentFromEvent = (ev: {
+    id: string;
+    title: string;
+    date: string;
+    expenseId?: string;
+  }) => {
     if (ev.expenseId) {
       const linked = allExpenses.find((e) => e.id === ev.expenseId);
       if (linked) {
@@ -481,17 +524,17 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
      resolution the event modal does before showing "View Linked Payment". */
   const liveExpenseIds = new Set(allExpenses.map((e) => e.id));
 
-  const deleteExpense = async (id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) => {
+  const deleteExpense = async (
+    id: string,
+    opts?: { scope?: "this" | "future" | "all"; fromDate?: string },
+  ) => {
     /* Snapshot the dates before the delete — the rows are gone afterwards. */
     const datesById = new Map(allExpenses.map((e) => [e.id, e.date]));
 
     const res = await ledger.deleteExpense(id, opts);
     /* A skipped occurrence is gone from every read path too, so its links are
        dead as well — and the server unlinks it for the same reason. */
-    const affected = [
-      ...(res?.deletedIds ?? []),
-      ...(res?.skippedId ? [res.skippedId] : []),
-    ];
+    const affected = [...(res?.deletedIds ?? []), ...(res?.skippedId ? [res.skippedId] : [])];
     const deletedIds = affected.length ? affected : [id];
 
     /*
@@ -526,7 +569,10 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
     setEvOccurrenceIso(undefined);
   };
 
-  const deleteEvent = async (id: string, opts?: { scope?: "this" | "future" | "all"; fromDate?: string }) => {
+  const deleteEvent = async (
+    id: string,
+    opts?: { scope?: "this" | "future" | "all"; fromDate?: string },
+  ) => {
     await ledger.deleteEvent(id, opts);
     setEvModal(null);
     setEvOccurrenceIso(undefined);
@@ -555,7 +601,14 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
     });
   };
 
-  const viewProps = { expenses, budgets, wallet, month, currency, categoryIndex: ledger.categoryIndex };
+  const viewProps = {
+    expenses,
+    budgets,
+    wallet,
+    month,
+    currency,
+    categoryIndex: ledger.categoryIndex,
+  };
 
   return (
     <div className="app">
@@ -609,117 +662,142 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
                   onManage={() => setWalletModal(true)}
                 />
               ) : null}
-              <MonthSwitcher months={MONTHS} current={month} onChange={setMonth} changing={isMonthPending} />
+              <MonthSwitcher
+                months={MONTHS}
+                current={month}
+                onChange={setMonth}
+                changing={isMonthPending}
+              />
             </div>
           ) : null}
         </header>
 
         <div className="scroll">
-        <Suspense fallback={<div className="view-loading"><LoadingBloom /></div>}>
-          {view === "overview" && (
-            <Overview
-              {...viewProps}
-              balanceExpenses={ledger.balanceExpenses}
-              todoLists={ledger.todoLists}
-              events={events}
-              savingsTxns={ledger.savingsTxns}
-              setView={setView}
-              onEdit={setModal}
-              onEditEvent={(ev: LedgerEvent) => openEvent(ev, TODAY_ISO)}
-            />
-          )}
-          {view === "schedule" && (
-            <Schedule
-              events={events}
-              month={month}
-              currency={currency}
-              onAddEvent={(iso: string) => {
-                setEvOccurrenceIso(undefined);
-                setEvModal({ add: true, date: iso });
-              }}
-              onEditEvent={openEvent}
-            />
-          )}
-          {view === "todos" && (
-            <TodoListView
-              todoLists={ledger.todoLists}
-              onSave={ledger.saveTodoList}
-              onDelete={ledger.deleteTodoList}
-            />
-          )}
-          {view === "transactions" && (
-            <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
-          )}
-          {view === "budgets" && (
-            <BudgetsView {...viewProps} events={events} setBudgets={setBudgets} budgetsSaving={isBudgetsPending} setView={setView} />
-          )}
-          {view === "calculator" && (
-            <Calculator
-              wallet={wallet}
-              budgets={budgets}
-              setBudgets={setBudgets}
-              budgetsSaving={isBudgetsPending}
-              currency={currency}
-              categoryIndex={ledger.categoryIndex}
-            />
-          )}
-          {view === "categories" && (
-            <CategoriesView
-              categoryIndex={ledger.categoryIndex}
-              onSave={ledger.saveCategories}
-              usedSubIds={ledger.usedSubIds}
-            />
-          )}
-          {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}
-          {view === "piggies" && (
-            <Piggies
-              savingsTxns={ledger.savingsTxns}
-              savingsLoading={ledger.savingsLoading}
-              allExpenses={allExpenses}
-              categoryIndex={ledger.categoryIndex}
-              currency={currency}
-              month={month}
-              onAddDeposit={addPiggyDeposit}
-              onWithdraw={withdrawFromPiggy}
-            />
-          )}
-          {view === "capitals" && (
-            <Capitals
-              capitalPlans={ledger.capitalPlans}
-              savingsTxns={ledger.savingsTxns}
-              categoryIndex={ledger.categoryIndex}
-              currency={currency}
-              onSavePlan={ledger.saveCapitalPlan}
-              onDeletePlan={ledger.deleteCapitalPlan}
-              onLogItem={logCapitalItem}
-            />
-          )}
-          {view === "vehicles" && (
-            <Vehicles
-              vehicles={ledger.vehicles}
-              fills={ledger.vehicleFills}
-              fillsLoading={ledger.vehicleFillsLoading}
-              currency={currency}
-              onSaveVehicle={ledger.saveVehicle}
-              onDeleteVehicle={ledger.deleteVehicle}
-              onSaveFill={ledger.saveVehicleFill}
-              onDeleteFill={ledger.deleteVehicleFill}
-              onLogFill={logFuelFill}
-              linkedExpenseIds={liveExpenseIds}
-            />
-          )}
-          {view === "insights" && (
-            <Insights {...viewProps} capitalPlans={ledger.capitalPlans} setMonth={setMonth} />
-          )}
-          {view === "transparency" && <Transparency />}
-          <div className="scroll-pad" />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div className="view-loading">
+                <LoadingBloom />
+              </div>
+            }
+          >
+            {view === "overview" && (
+              <Overview
+                {...viewProps}
+                balanceExpenses={ledger.balanceExpenses}
+                todoLists={ledger.todoLists}
+                events={events}
+                savingsTxns={ledger.savingsTxns}
+                setView={setView}
+                onEdit={setModal}
+                onEditEvent={(ev: LedgerEvent) => openEvent(ev, TODAY_ISO)}
+              />
+            )}
+            {view === "schedule" && (
+              <Schedule
+                events={events}
+                month={month}
+                currency={currency}
+                onAddEvent={(iso: string) => {
+                  setEvOccurrenceIso(undefined);
+                  setEvModal({ add: true, date: iso });
+                }}
+                onEditEvent={openEvent}
+              />
+            )}
+            {view === "todos" && (
+              <TodoListView
+                todoLists={ledger.todoLists}
+                onSave={ledger.saveTodoList}
+                onDelete={ledger.deleteTodoList}
+              />
+            )}
+            {view === "transactions" && (
+              <Transactions {...viewProps} onEdit={setModal} onDelete={deleteExpense} />
+            )}
+            {view === "budgets" && (
+              <BudgetsView
+                {...viewProps}
+                events={events}
+                setBudgets={setBudgets}
+                budgetsSaving={isBudgetsPending}
+                setView={setView}
+              />
+            )}
+            {view === "calculator" && (
+              <Calculator
+                wallet={wallet}
+                budgets={budgets}
+                setBudgets={setBudgets}
+                budgetsSaving={isBudgetsPending}
+                currency={currency}
+                categoryIndex={ledger.categoryIndex}
+              />
+            )}
+            {view === "categories" && (
+              <CategoriesView
+                categoryIndex={ledger.categoryIndex}
+                onSave={ledger.saveCategories}
+                usedSubIds={ledger.usedSubIds}
+              />
+            )}
+            {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}
+            {view === "piggies" && (
+              <Piggies
+                savingsTxns={ledger.savingsTxns}
+                savingsLoading={ledger.savingsLoading}
+                allExpenses={allExpenses}
+                categoryIndex={ledger.categoryIndex}
+                currency={currency}
+                month={month}
+                onAddDeposit={addPiggyDeposit}
+                onWithdraw={withdrawFromPiggy}
+              />
+            )}
+            {view === "capitals" && (
+              <Capitals
+                capitalPlans={ledger.capitalPlans}
+                savingsTxns={ledger.savingsTxns}
+                categoryIndex={ledger.categoryIndex}
+                currency={currency}
+                onSavePlan={ledger.saveCapitalPlan}
+                onDeletePlan={ledger.deleteCapitalPlan}
+                onLogItem={logCapitalItem}
+              />
+            )}
+            {view === "vehicles" && (
+              <Vehicles
+                vehicles={ledger.vehicles}
+                fills={ledger.vehicleFills}
+                fillsLoading={ledger.vehicleFillsLoading}
+                currency={currency}
+                onSaveVehicle={ledger.saveVehicle}
+                onDeleteVehicle={ledger.deleteVehicle}
+                onSaveFill={ledger.saveVehicleFill}
+                onDeleteFill={ledger.deleteVehicleFill}
+                onLogFill={logFuelFill}
+                linkedExpenseIds={liveExpenseIds}
+              />
+            )}
+            {view === "insights" && (
+              <Insights {...viewProps} capitalPlans={ledger.capitalPlans} setMonth={setMonth} />
+            )}
+            {view === "transparency" && <Transparency />}
+            <div className="scroll-pad" />
+          </Suspense>
         </div>
       </main>
 
       <MobileBottomNav view={view} setView={setView} />
 
-      <div ref={fabRef} data-tour="tour-fab" className={"fab-wrap" + (fabOpen ? " open" : "") + (view === "transparency" ? " fab-wrap--hidden" : "")}>
+      <div
+        ref={fabRef}
+        data-tour="tour-fab"
+        className={
+          "fab-wrap" +
+          (fabOpen ? " open" : "") +
+          (view === "transparency" ? " fab-wrap--hidden" : "")
+        }
+      >
         <div className="fab-actions" aria-hidden={!fabOpen}>
           <button
             className="fab-action"
@@ -811,9 +889,9 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
           defaultDate={"add" in evModal ? evModal.date : undefined}
           occurrenceIso={"add" in evModal ? undefined : evOccurrenceIso}
           hasLinkedPayment={
-            !("add" in evModal)
-            && !!evModal.expenseId
-            && allExpenses.some((expense) => expense.id === evModal.expenseId)
+            !("add" in evModal) &&
+            !!evModal.expenseId &&
+            allExpenses.some((expense) => expense.id === evModal.expenseId)
           }
           categoryIndex={ledger.categoryIndex}
           currency={currency}

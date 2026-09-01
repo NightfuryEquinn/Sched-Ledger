@@ -12,10 +12,7 @@ import {
   encodeTodoListCreate,
   encodeWalletFinancials,
 } from "@/frontend/lib/crypto/codec";
-import {
-  buildDerivationMessage,
-  deriveKeyFromSignature,
-} from "@/frontend/lib/crypto/e2ee";
+import { buildDerivationMessage, deriveKeyFromSignature } from "@/frontend/lib/crypto/e2ee";
 import { createEventSchema, updateEventSchema } from "@/schemas/event";
 import { Wallet } from "ethers";
 
@@ -97,10 +94,7 @@ describe("crypto codec", () => {
       },
       key,
     );
-    const decoded = await decodeExpense(
-      { id: "exp1", ...wire },
-      key,
-    );
+    const decoded = await decodeExpense({ id: "exp1", ...wire }, key);
     expect(decoded).toMatchObject({
       id: "exp1",
       sub: "meal",

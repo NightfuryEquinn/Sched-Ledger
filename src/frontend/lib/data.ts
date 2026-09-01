@@ -463,7 +463,12 @@ export function leadLabel(id: string, allDay = false) {
 export function fmtCommentTime(iso: string) {
   const d = new Date(iso);
 
-  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 // ── Formatting helpers ──────────────────────────────────────────────
@@ -511,7 +516,10 @@ export function monthLabel(key: string, long?: boolean) {
   const [y, mm] = key.split("-").map(Number);
   const d = new Date(y!, mm! - 1, 1);
 
-  return d.toLocaleString("en-US", { month: long ? "long" : "short", year: long ? "numeric" : undefined });
+  return d.toLocaleString("en-US", {
+    month: long ? "long" : "short",
+    year: long ? "numeric" : undefined,
+  });
 }
 
 /** Format an ISO date as day + short month. */

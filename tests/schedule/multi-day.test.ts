@@ -94,10 +94,18 @@ describe("span geometry", () => {
     });
 
     expect(coveredDays(weekly)).toEqual([
-      "2026-08-03", "2026-08-04", "2026-08-05",
-      "2026-08-10", "2026-08-11", "2026-08-12",
-      "2026-08-17", "2026-08-18", "2026-08-19",
-      "2026-08-24", "2026-08-25", "2026-08-26",
+      "2026-08-03",
+      "2026-08-04",
+      "2026-08-05",
+      "2026-08-10",
+      "2026-08-11",
+      "2026-08-12",
+      "2026-08-17",
+      "2026-08-18",
+      "2026-08-19",
+      "2026-08-24",
+      "2026-08-25",
+      "2026-08-26",
       "2026-08-31",
     ]);
   });
@@ -134,8 +142,16 @@ describe("span geometry", () => {
     const trip = ev({ id: "t", date: "2026-08-10", endDate: "2026-08-13", repeat: "once" });
     const byDay = eventDaysByMonth([trip], MONTH);
 
-    expect(byDay.get("2026-08-10")![0]).toMatchObject({ dayIndex: 0, span: 4, startIso: "2026-08-10" });
-    expect(byDay.get("2026-08-12")![0]).toMatchObject({ dayIndex: 2, span: 4, startIso: "2026-08-10" });
+    expect(byDay.get("2026-08-10")![0]).toMatchObject({
+      dayIndex: 0,
+      span: 4,
+      startIso: "2026-08-10",
+    });
+    expect(byDay.get("2026-08-12")![0]).toMatchObject({
+      dayIndex: 2,
+      span: 4,
+      startIso: "2026-08-10",
+    });
   });
 });
 
@@ -168,16 +184,20 @@ describe("repeat ladder", () => {
     };
 
     /* 3-day run, daily repeat — the second run would start mid-first. */
-    expect(createEventSchema.safeParse({ ...base, endDate: "2026-08-12", repeat: "daily" }).success)
-      .toBe(false);
+    expect(
+      createEventSchema.safeParse({ ...base, endDate: "2026-08-12", repeat: "daily" }).success,
+    ).toBe(false);
     /* 8-day run, weekly repeat. */
-    expect(createEventSchema.safeParse({ ...base, endDate: "2026-08-17", repeat: "weekly" }).success)
-      .toBe(false);
+    expect(
+      createEventSchema.safeParse({ ...base, endDate: "2026-08-17", repeat: "weekly" }).success,
+    ).toBe(false);
     /* 7-day run ends exactly as the next begins. */
-    expect(createEventSchema.safeParse({ ...base, endDate: "2026-08-16", repeat: "weekly" }).success)
-      .toBe(true);
-    expect(createEventSchema.safeParse({ ...base, endDate: "2026-08-12", repeat: "weekly" }).success)
-      .toBe(true);
+    expect(
+      createEventSchema.safeParse({ ...base, endDate: "2026-08-16", repeat: "weekly" }).success,
+    ).toBe(true);
+    expect(
+      createEventSchema.safeParse({ ...base, endDate: "2026-08-12", repeat: "weekly" }).success,
+    ).toBe(true);
   });
 
   test("createEventSchema rejects a backwards end and an all-day end time", () => {
@@ -188,11 +208,16 @@ describe("repeat ladder", () => {
       payload: "x".repeat(24),
     };
 
-    expect(createEventSchema.safeParse({ ...base, allDay: true, endDate: "2026-08-09" }).success)
-      .toBe(false);
     expect(
-      createEventSchema.safeParse({ ...base, allDay: true, endDate: "2026-08-12", endTime: "11:00" })
-        .success,
+      createEventSchema.safeParse({ ...base, allDay: true, endDate: "2026-08-09" }).success,
+    ).toBe(false);
+    expect(
+      createEventSchema.safeParse({
+        ...base,
+        allDay: true,
+        endDate: "2026-08-12",
+        endTime: "11:00",
+      }).success,
     ).toBe(false);
     expect(
       createEventSchema.safeParse({
@@ -250,7 +275,13 @@ describe("budget holds", () => {
 describe("agenda collapsing", () => {
   /** Covered days from today onward, the way the Schedule agenda builds them. */
   function agenda(events: SpanEvent[], todayIso: string) {
-    const out: Array<{ iso: string; ev: SpanEvent; startIso: string; dayIndex: number; span: number }> = [];
+    const out: Array<{
+      iso: string;
+      ev: SpanEvent;
+      startIso: string;
+      dayIndex: number;
+      span: number;
+    }> = [];
     for (const [, list] of eventDaysByMonth(events, MONTH)) out.push(...list);
 
     return out.filter((o) => o.iso >= todayIso).sort((a, b) => a.iso.localeCompare(b.iso));

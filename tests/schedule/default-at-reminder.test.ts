@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { ALL_DAY_REMINDER_TIME, reminderTargets, remindAtMs, type ScheduleEvent } from "@/lib/schedule";
+import {
+  ALL_DAY_REMINDER_TIME,
+  reminderTargets,
+  remindAtMs,
+  type ScheduleEvent,
+} from "@/lib/schedule";
 import { zonedLocalToUtcMs } from "@/lib/timezone";
 
 const TZ = "Asia/Kuala_Lumpur";
@@ -36,7 +41,9 @@ describe("always-on at-event reminder", () => {
 
     expect(leadTarget).toBeDefined();
     expect(atTarget).toBeDefined();
-    expect(atTarget.remindAtMs).toBe(remindAtMs({ ...timedEvent, lead: "at" }, timedEvent.date, TZ));
+    expect(atTarget.remindAtMs).toBe(
+      remindAtMs({ ...timedEvent, lead: "at" }, timedEvent.date, TZ),
+    );
     expect(leadTarget.remindAtMs).toBeLessThan(atTarget.remindAtMs);
   });
 
@@ -56,12 +63,16 @@ describe("always-on at-event reminder", () => {
 
     const atTarget = targets.find((t) => t.logLead === "at")!;
     expect(atTarget).toBeDefined();
-    expect(atTarget.remindAtMs).toBe(zonedLocalToUtcMs(allDayEvent.date, ALL_DAY_REMINDER_TIME, TZ));
+    expect(atTarget.remindAtMs).toBe(
+      zonedLocalToUtcMs(allDayEvent.date, ALL_DAY_REMINDER_TIME, TZ),
+    );
   });
 
   test("a multi-day all-day event never emits two targets at the same instant", () => {
     const multiDay: ScheduleEvent = { ...allDayEvent, endDate: "2026-08-12" };
-    const targets = reminderTargets(multiDay, NOW, TZ).filter((t) => t.occurrenceIso === multiDay.date);
+    const targets = reminderTargets(multiDay, NOW, TZ).filter(
+      (t) => t.occurrenceIso === multiDay.date,
+    );
 
     const seen = new Set<number>();
     for (const t of targets) {

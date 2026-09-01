@@ -25,11 +25,7 @@ type DataPrivacyModalProps = {
   onSignedOut?: () => void;
 };
 
-export function DataPrivacyModal({
-  account,
-  onClose,
-  onSignedOut,
-}: DataPrivacyModalProps) {
+export function DataPrivacyModal({ account, onClose, onSignedOut }: DataPrivacyModalProps) {
   /* Consent: server is the source of truth; localStorage is a warm cache. */
   const [consent, setConsentState] = useState(() => getConsent(account.address));
   const [consentBusy, setConsentBusy] = useState(false);
@@ -57,7 +53,10 @@ export function DataPrivacyModal({
   const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center" });
 
   useEffect(() => {
-    api.auth.sessions().then(({ sessions: list }) => setSessions(list)).catch(() => {});
+    api.auth
+      .sessions()
+      .then(({ sessions: list }) => setSessions(list))
+      .catch(() => {});
     api.consent
       .get()
       .then(({ consent: record }) => {
@@ -179,33 +178,71 @@ export function DataPrivacyModal({
   /* ── Render ───────────────────────────────────────────────────── */
 
   return createPortal(
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !clearBusy) requestClose(onClose); }}>
+    <div
+      ref={scrimRef}
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !clearBusy) requestClose(onClose);
+      }}
+    >
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>Data &amp; Privacy</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={clearBusy}><Icon name="close" size={18} /></button>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onClose)}
+            aria-label="Close"
+            disabled={clearBusy}
+          >
+            <Icon name="close" size={18} />
+          </button>
         </div>
 
         <div className="modal-body modal-scroll">
           {/* 1. Active sessions */}
           <div className="dm-sec">
             <span className="fld-label">Active sessions</span>
-            <p className="dm-lead">Each sign-in creates a secure session on this device or browser. Revoke any session you do not recognize to protect against phishing or unauthorized access.</p>
+            <p className="dm-lead">
+              Each sign-in creates a secure session on this device or browser. Revoke any session
+              you do not recognize to protect against phishing or unauthorized access.
+            </p>
             <div className="session-list">
-              {sessions.length ? sessions.map((s) => (
-                <div key={s.id} className="session-row">
-                  <div className="session-main">
-                    <div className="session-device">{s.device}{s.current ? " · This device" : ""}</div>
-                    <div className="session-meta num">Last active {new Date(s.lastSeenAt).toLocaleString()}</div>
+              {sessions.length ? (
+                sessions.map((s) => (
+                  <div key={s.id} className="session-row">
+                    <div className="session-main">
+                      <div className="session-device">
+                        {s.device}
+                        {s.current ? " · This device" : ""}
+                      </div>
+                      <div className="session-meta num">
+                        Last active {new Date(s.lastSeenAt).toLocaleString()}
+                      </div>
+                    </div>
+                    {!s.current ? (
+                      <button
+                        className="ghost-btn"
+                        type="button"
+                        disabled={sessionsBusy}
+                        onClick={() => setConfirmRevoke(s.id)}
+                      >
+                        {sessionsBusy ? "Revoking…" : "Revoke"}
+                      </button>
+                    ) : null}
                   </div>
-                  {!s.current ? (
-                    <button className="ghost-btn" type="button" disabled={sessionsBusy} onClick={() => setConfirmRevoke(s.id)}>{sessionsBusy ? "Revoking…" : "Revoke"}</button>
-                  ) : null}
-                </div>
-              )) : <p className="dm-note">No active sessions found.</p>}
+                ))
+              ) : (
+                <p className="dm-note">No active sessions found.</p>
+              )}
             </div>
             {sessions.some((s) => !s.current) ? (
-              <button className="ghost-btn full u-gap-top" type="button" disabled={sessionsBusy} onClick={() => setConfirmRevokeOthers(true)}>
+              <button
+                className="ghost-btn full u-gap-top"
+                type="button"
+                disabled={sessionsBusy}
+                onClick={() => setConfirmRevokeOthers(true)}
+              >
                 {sessionsBusy ? "Signing Out…" : "Sign Out All Other Devices"}
               </button>
             ) : null}
@@ -220,16 +257,29 @@ export function DataPrivacyModal({
               <div className="consent-top">
                 <div>
                   <div className="consent-title">Allow Reminder Emails</div>
-                  <p className="consent-desc">Events can send you email reminders when you turn them on per event. Those emails include the event name, budget hold and comments, so events with reminders on keep a readable copy on the server for delivery — turn an event's reminder off to delete it. Switching this off stops all reminder delivery at once, without editing each event.</p>
+                  <p className="consent-desc">
+                    Events can send you email reminders when you turn them on per event. Those
+                    emails include the event name, budget hold and comments, so events with
+                    reminders on keep a readable copy on the server for delivery — turn an event's
+                    reminder off to delete it. Switching this off stops all reminder delivery at
+                    once, without editing each event.
+                  </p>
                 </div>
                 <label className="switch">
-                  <input type="checkbox" checked={remindersOn} disabled={remindersBusy} onChange={toggleReminders} />
+                  <input
+                    type="checkbox"
+                    checked={remindersOn}
+                    disabled={remindersBusy}
+                    onChange={toggleReminders}
+                  />
                   <span className="toggle-ui" />
                 </label>
               </div>
               <div className={`consent-status ${remindersOn ? "cs-on" : "cs-off"}`}>
                 <span className="cs-dot" />
-                {remindersOn ? "Enabled — events you opt into will email you" : "Disabled — no reminder emails will be sent"}
+                {remindersOn
+                  ? "Enabled — events you opt into will email you"
+                  : "Disabled — no reminder emails will be sent"}
               </div>
             </div>
           </div>
@@ -239,15 +289,26 @@ export function DataPrivacyModal({
           {/* 3. Budget alerts */}
           <div className="dm-sec">
             <span className="fld-label">Budget alerts</span>
-            <p className="dm-lead">When a category reaches 80% of its monthly budget (or goes over), Sched Ledger can notify you. Spend amounts stay encrypted — only the alert summary is sent.</p>
+            <p className="dm-lead">
+              When a category reaches 80% of its monthly budget (or goes over), Sched Ledger can
+              notify you. Spend amounts stay encrypted — only the alert summary is sent.
+            </p>
             <div className="consent-card">
               <div className="consent-top">
                 <div>
                   <div className="consent-title">Email When Nearing a Limit</div>
-                  <p className="consent-desc">Uses the notification email below. One email per category per month at the warning and exceeded levels.</p>
+                  <p className="consent-desc">
+                    Uses the notification email below. One email per category per month at the
+                    warning and exceeded levels.
+                  </p>
                 </div>
                 <label className="switch">
-                  <input type="checkbox" checked={budgetAlertsOn} disabled={budgetAlertsBusy} onChange={toggleBudgetAlerts} />
+                  <input
+                    type="checkbox"
+                    checked={budgetAlertsOn}
+                    disabled={budgetAlertsBusy}
+                    onChange={toggleBudgetAlerts}
+                  />
                   <span className="toggle-ui" />
                 </label>
               </div>
@@ -296,14 +357,21 @@ export function DataPrivacyModal({
                 <div>
                   <div className="consent-title">Share Anonymized Category Totals</div>
                   <p className="consent-desc">
-                    Sched Ledger is free on the official host with full features. We are a freemium, customer-based app and
-                    may fund the service with optional insights. When on, we share de-identified category totals with vetted
-                    research &amp; advertising partners — not your name, wallet address, notes, or decrypted amounts (those
-                    stay end-to-end encrypted). Opt in or out anytime; free features stay the same either way.
+                    Sched Ledger is free on the official host with full features. We are a freemium,
+                    customer-based app and may fund the service with optional insights. When on, we
+                    share de-identified category totals with vetted research &amp; advertising
+                    partners — not your name, wallet address, notes, or decrypted amounts (those
+                    stay end-to-end encrypted). Opt in or out anytime; free features stay the same
+                    either way.
                   </p>
                 </div>
                 <label className="switch">
-                  <input type="checkbox" checked={consent} disabled={consentBusy} onChange={toggleConsent} />
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    disabled={consentBusy}
+                    onChange={toggleConsent}
+                  />
                   <span className="toggle-ui" />
                 </label>
               </div>
@@ -312,7 +380,10 @@ export function DataPrivacyModal({
                 {consent ? "Opted in — sharing is active" : "Opted out — nothing is shared"}
               </div>
             </div>
-            <p className="dm-note">Your choice is saved to your account and applies on every device. Turning this off stops sharing for future periods.</p>
+            <p className="dm-note">
+              Your choice is saved to your account and applies on every device. Turning this off
+              stops sharing for future periods.
+            </p>
           </div>
 
           <div className="dm-div" />
@@ -320,8 +391,17 @@ export function DataPrivacyModal({
           {/* 5. Clear local data */}
           <div className="dm-sec">
             <span className="fld-label">Cookies &amp; local data</span>
-            <p className="dm-lead">Sign out everywhere and remove Ledger data stored in this browser, including saved identities and preferences. Your ledger itself stays on the server — restore it anytime with your recovery phrase.</p>
-            <button className="ghost-btn danger full" type="button" disabled={clearBusy} onClick={() => setConfirmClear(true)}>
+            <p className="dm-lead">
+              Sign out everywhere and remove Ledger data stored in this browser, including saved
+              identities and preferences. Your ledger itself stays on the server — restore it
+              anytime with your recovery phrase.
+            </p>
+            <button
+              className="ghost-btn danger full"
+              type="button"
+              disabled={clearBusy}
+              onClick={() => setConfirmClear(true)}
+            >
               {clearBusy ? "Clearing…" : "Clear Sessions, Cookies & Local Data"}
             </button>
           </div>

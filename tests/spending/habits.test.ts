@@ -306,7 +306,13 @@ describe("scoreHabitStyles backward compatibility", () => {
 
   test("unsorted input yields identical scores and signals to the sorted original", () => {
     const sortedFixture = ARCHETYPE_FIXTURES.clockwork;
-    const shuffled = [sortedFixture[4]!, sortedFixture[1]!, sortedFixture[3]!, sortedFixture[0]!, sortedFixture[2]!];
+    const shuffled = [
+      sortedFixture[4]!,
+      sortedFixture[1]!,
+      sortedFixture[3]!,
+      sortedFixture[0]!,
+      sortedFixture[2]!,
+    ];
     const a = computeHabitMetrics(sortedFixture);
     const b = computeHabitMetrics(shuffled);
     expect(b.scores).toEqual(a.scores);
@@ -411,24 +417,49 @@ describe("rolling 90-day window", () => {
 describe("habitTrajectory", () => {
   const points = [
     // Jan: clockwork
-    tx("2026-01-01", 40), tx("2026-01-08", 40), tx("2026-01-15", 40), tx("2026-01-22", 40), tx("2026-01-29", 40),
+    tx("2026-01-01", 40),
+    tx("2026-01-08", 40),
+    tx("2026-01-15", 40),
+    tx("2026-01-22", 40),
+    tx("2026-01-29", 40),
     // Feb: clockwork
-    tx("2026-02-02", 40), tx("2026-02-08", 40), tx("2026-02-14", 40), tx("2026-02-20", 40), tx("2026-02-26", 40),
+    tx("2026-02-02", 40),
+    tx("2026-02-08", 40),
+    tx("2026-02-14", 40),
+    tx("2026-02-20", 40),
+    tx("2026-02-26", 40),
     // Mar: insufficient (only 3 active days)
-    tx("2026-03-01", 40), tx("2026-03-02", 40), tx("2026-03-03", 40),
+    tx("2026-03-01", 40),
+    tx("2026-03-02", 40),
+    tx("2026-03-03", 40),
     // Apr: clockwork
-    tx("2026-04-01", 40), tx("2026-04-08", 40), tx("2026-04-15", 40), tx("2026-04-22", 40), tx("2026-04-29", 40),
+    tx("2026-04-01", 40),
+    tx("2026-04-08", 40),
+    tx("2026-04-15", 40),
+    tx("2026-04-22", 40),
+    tx("2026-04-29", 40),
     // May: clockwork
-    tx("2026-05-01", 40), tx("2026-05-08", 40), tx("2026-05-15", 40), tx("2026-05-22", 40), tx("2026-05-29", 40),
+    tx("2026-05-01", 40),
+    tx("2026-05-08", 40),
+    tx("2026-05-15", 40),
+    tx("2026-05-22", 40),
+    tx("2026-05-29", 40),
     // Jun: dripper (anchor month)
-    ...Array.from({ length: 22 }, (_, i) => tx(`2026-06-${String(i + 1).padStart(2, "0")}`, 4 + (i % 5), `j${i}`)),
+    ...Array.from({ length: 22 }, (_, i) =>
+      tx(`2026-06-${String(i + 1).padStart(2, "0")}`, 4 + (i % 5), `j${i}`),
+    ),
   ];
 
   test("covers the trailing 6 months, marking the sparse month insufficient", () => {
     const trail = habitTrajectory(points, "2026-06");
     expect(trail).toHaveLength(6);
     expect(trail.map((p) => p.monthKey)).toEqual([
-      "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+      "2026-06",
     ]);
     expect(trail[2]!.status).toBe("insufficient");
     expect(trail[2]!.styleId).toBeNull();
@@ -447,8 +478,28 @@ describe("habitTrajectory", () => {
 
   test("describeHabitShift reports insufficient history for under two ready months", () => {
     const shift = describeHabitShift([
-      { monthKey: "2026-06", label: "06", status: "ready", styleId: "clockwork", trait: "Clockwork", topScore: 0.5, activeDays: 5, txCount: 5, spend: 100 },
-      { monthKey: "2026-05", label: "05", status: "insufficient", styleId: null, trait: "", topScore: 0, activeDays: 2, txCount: 2, spend: 20 },
+      {
+        monthKey: "2026-06",
+        label: "06",
+        status: "ready",
+        styleId: "clockwork",
+        trait: "Clockwork",
+        topScore: 0.5,
+        activeDays: 5,
+        txCount: 5,
+        spend: 100,
+      },
+      {
+        monthKey: "2026-05",
+        label: "05",
+        status: "insufficient",
+        styleId: null,
+        trait: "",
+        topScore: 0,
+        activeDays: 2,
+        txCount: 2,
+        spend: 20,
+      },
     ]);
     expect(shift).toBe("Not enough history to compare yet.");
   });
@@ -484,9 +535,11 @@ describe("narrative and nudge generation", () => {
       const nudge = buildHabitNudge(id, richMetrics, fmt);
       // Not every style's copy quotes a currency figure, so only assert the
       // marker appears when the fallback static prose (which never does) was not used.
-      const usesMoney = narrative.pattern.includes("≈") || narrative.behavior.includes("≈") || nudge.includes("≈");
+      const usesMoney =
+        narrative.pattern.includes("≈") || narrative.behavior.includes("≈") || nudge.includes("≈");
       const isFallback =
-        narrative.pattern === HABIT_STYLES[id].pattern && narrative.behavior === HABIT_STYLES[id].behavior;
+        narrative.pattern === HABIT_STYLES[id].pattern &&
+        narrative.behavior === HABIT_STYLES[id].behavior;
       expect(usesMoney || isFallback).toBe(true);
     });
 

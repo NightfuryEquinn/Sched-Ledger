@@ -42,9 +42,7 @@ export function planPaidTotal(plan: CapitalPlan): number {
 
 /** Sum of estimated cost for items not yet paid. */
 export function planUnpaidTotal(plan: CapitalPlan): number {
-  return plan.items
-    .filter((i) => !i.paid)
-    .reduce((s, i) => s + i.estimatedCost, 0);
+  return plan.items.filter((i) => !i.paid).reduce((s, i) => s + i.estimatedCost, 0);
 }
 
 /** Budget as the user typed it, treating missing as 0. Prefer `planEffectiveBudget`. */
@@ -172,7 +170,11 @@ export function planMoney(
  * this down, because money you set aside and then spent cannot also be sitting
  * there waiting for the rest of the budget.
  */
-export function planUnspentTotal(plan: CapitalPlan, txns: Expense[], index?: CategoryIndex): number {
+export function planUnspentTotal(
+  plan: CapitalPlan,
+  txns: Expense[],
+  index?: CategoryIndex,
+): number {
   return planMoney(plan, txns, index).unspent;
 }
 

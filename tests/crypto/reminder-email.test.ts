@@ -91,7 +91,7 @@ describe("reminderEmailHtml", () => {
       lead: "1 day before",
     });
 
-    expect(html).toContain("<h2 style=\"margin:0 0 16px;font-size:20px;color:#20242b\">Dentist</h2>");
+    expect(html).toContain('<h2 style="margin:0 0 16px;font-size:20px;color:#20242b">Dentist</h2>');
     expect(html).not.toContain(">Event</td>");
   });
 

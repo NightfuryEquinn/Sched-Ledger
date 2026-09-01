@@ -216,14 +216,17 @@ function buildSegments(sortedFills: FuelFill[]): FuelSegment[] {
  * aggregates off the prebuilt arrays.
  */
 export function computeFuelMetrics(fills: FuelFill[]): FuelMetrics {
-  const sortedFills = [...fills].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id.localeCompare(b.id)));
+  const sortedFills = [...fills].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : a.id.localeCompare(b.id),
+  );
   const fillCount = sortedFills.length;
   const totalSpend = roundMoney(sortedFills.reduce((s, f) => s + f.price, 0));
   const totalQuantity = sortedFills.reduce((s, f) => s + f.quantity, 0);
 
   const first = sortedFills[0];
   const last = sortedFills[fillCount - 1];
-  const spanDays = first && last ? Math.max(1, isoToUtcDay(last.date) - isoToUtcDay(first.date)) : 0;
+  const spanDays =
+    first && last ? Math.max(1, isoToUtcDay(last.date) - isoToUtcDay(first.date)) : 0;
 
   const unitPrices = sortedFills.filter((f) => f.quantity > 0).map((f) => f.price / f.quantity);
   const sortedUnitPrices = sorted(unitPrices);
@@ -233,7 +236,8 @@ export function computeFuelMetrics(fills: FuelFill[]): FuelMetrics {
   const unitPriceMax = sortedUnitPrices[sortedUnitPrices.length - 1] ?? 0;
   const latestUnitPrice = last && last.quantity > 0 ? last.price / last.quantity : 0;
   const unitPriceBaseline = unitPriceMedian;
-  const priceVsBaselinePct = unitPriceBaseline > 0 ? (latestUnitPrice - unitPriceBaseline) / unitPriceBaseline : 0;
+  const priceVsBaselinePct =
+    unitPriceBaseline > 0 ? (latestUnitPrice - unitPriceBaseline) / unitPriceBaseline : 0;
 
   const segments = buildSegments(sortedFills);
   const totalDistanceKm = segments.reduce((s, seg) => s + seg.distanceKm, 0);
@@ -248,7 +252,9 @@ export function computeFuelMetrics(fills: FuelFill[]): FuelMetrics {
     dayGaps.push(isoToUtcDay(sortedFills[i]!.date) - isoToUtcDay(sortedFills[i - 1]!.date));
   }
   const medianDaysBetweenFills = median(dayGaps);
-  const medianDistanceBetweenFills = segments.length ? median(segments.map((s) => s.distanceKm)) : null;
+  const medianDistanceBetweenFills = segments.length
+    ? median(segments.map((s) => s.distanceKm))
+    : null;
 
   const monthlyRunningCost =
     spanDays > 0
@@ -311,7 +317,10 @@ function fuelConfidence(metrics: FuelMetrics): Confidence {
     .filter((s) => s.distanceKm > 0)
     .map((s) => (s.quantity / s.distanceKm) * 100);
   const { cv } = stats1D(perSegmentConsumption);
-  const reasons = [`${metrics.segments.length} full-to-full segments`, `${metrics.spanDays} days of history`];
+  const reasons = [
+    `${metrics.segments.length} full-to-full segments`,
+    `${metrics.spanDays} days of history`,
+  ];
 
   const value = clamp01(
     0.35 * clamp01(metrics.segments.length / 6) +
@@ -361,12 +370,17 @@ export function computeFuelInsights(
         pushInsight(out, {
           id: "fuel-consumption-trend",
           kind: "fuel-consumption-trend",
-          title: worse ? `${meta.efficiencyLabel} crept up on your last ${meta.fillNoun}` : `${meta.efficiencyLabel} improved on your last ${meta.fillNoun}`,
+          title: worse
+            ? `${meta.efficiencyLabel} crept up on your last ${meta.fillNoun}`
+            : `${meta.efficiencyLabel} improved on your last ${meta.fillNoun}`,
           body: `Your last stretch used ${lastPer100.toFixed(1)} ${meta.efficiencyLabel}, vs a ${baselinePer100.toFixed(1)} average before it (${worse ? "+" : ""}${Math.round(deltaPct * 100)}%).`,
           tone: worse ? "warning" : "positive",
           impact: clamp01(Math.abs(deltaPct)),
           confidence,
-          metric: { label: meta.efficiencyLabel, value: `${lastPer100.toFixed(1)} ${meta.efficiencyLabel}` },
+          metric: {
+            label: meta.efficiencyLabel,
+            value: `${lastPer100.toFixed(1)} ${meta.efficiencyLabel}`,
+          },
         });
       }
     }
@@ -377,7 +391,9 @@ export function computeFuelInsights(
     pushInsight(out, {
       id: "fuel-price-timing",
       kind: "fuel-price-timing",
-      title: above ? `Paid above your usual price ${meta.unitPriceLabel}` : `Great price on your last ${meta.fillNoun}`,
+      title: above
+        ? `Paid above your usual price ${meta.unitPriceLabel}`
+        : `Great price on your last ${meta.fillNoun}`,
       body: `${money(metrics.latestUnitPrice)} ${meta.unitPriceLabel} vs your usual ${money(metrics.unitPriceBaseline)} (${above ? "+" : ""}${Math.round(metrics.priceVsBaselinePct * 100)}%).`,
       tone: above ? "warning" : "positive",
       impact: clamp01(Math.abs(metrics.priceVsBaselinePct)),
@@ -434,8 +450,16 @@ export function computeFuelInsights(
       body: `${metrics.missingOdometerCount} of ${metrics.fillCount} ${meta.fillNoun}s are missing an odometer reading — add it next time to see ${meta.efficiencyLabel}.`,
       tone: "neutral",
       impact: 0.15,
-      confidence: { level: confidenceLevel(1), value: 1, margin: 0, reasons: ["direct count, no estimation"] },
-      metric: { label: "Missing odometer", value: `${metrics.missingOdometerCount}/${metrics.fillCount}` },
+      confidence: {
+        level: confidenceLevel(1),
+        value: 1,
+        margin: 0,
+        reasons: ["direct count, no estimation"],
+      },
+      metric: {
+        label: "Missing odometer",
+        value: `${metrics.missingOdometerCount}/${metrics.fillCount}`,
+      },
     });
   }
 

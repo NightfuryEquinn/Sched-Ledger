@@ -76,9 +76,7 @@ async function main(): Promise<void> {
 
   const yes = args.includes("--yes") || args.includes("-y");
   const dropAll = args.includes("--all") || args.includes("-a");
-  const targets = args
-    .filter((a) => !a.startsWith("-"))
-    .map(resolveName);
+  const targets = args.filter((a) => !a.startsWith("-")).map(resolveName);
 
   if (!dropAll && !targets.length) {
     console.error("Pass collection names or --all. Use --help for usage.");
@@ -105,11 +103,11 @@ async function main(): Promise<void> {
   try {
     await client.connect();
     const db = client.db(dbName);
-    const existing = (await db.listCollections({}, { nameOnly: true }).toArray()).map((c) => c.name);
+    const existing = (await db.listCollections({}, { nameOnly: true }).toArray()).map(
+      (c) => c.name,
+    );
 
-    const toDrop = dropAll
-      ? existing
-      : [...new Set(targets)];
+    const toDrop = dropAll ? existing : [...new Set(targets)];
 
     if (!toDrop.length) {
       console.log(`No collections to drop in "${dbName}".`);

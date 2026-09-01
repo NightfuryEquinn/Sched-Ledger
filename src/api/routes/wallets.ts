@@ -59,10 +59,7 @@ async function migrateLegacyData(accountId: string) {
     { $set: { fundingMode: "monthly" } },
   );
 
-  await expenses.updateMany(
-    { accountId, kind: { $exists: false } },
-    { $set: { kind: "expense" } },
-  );
+  await expenses.updateMany({ accountId, kind: { $exists: false } }, { $set: { kind: "expense" } });
 
   const created = await financialWallets.findOne({ _id: result.insertedId });
   return created ? [created] : [];
@@ -75,10 +72,7 @@ async function getUserWallets(accountId: string) {
     { accountId, fundingMode: { $exists: false } },
     { $set: { fundingMode: "monthly" } },
   );
-  await expenses.updateMany(
-    { accountId, kind: { $exists: false } },
-    { $set: { kind: "expense" } },
-  );
+  await expenses.updateMany({ accountId, kind: { $exists: false } }, { $set: { kind: "expense" } });
   if (wallets.length > 0) {
     return financialWallets.find({ accountId }).sort({ createdAt: 1 }).toArray();
   }
@@ -165,7 +159,12 @@ walletsRoutes.patch("/:id", zValidator("json", updateWalletSchema), async (c) =>
     "enc" in body && body.enc === 1
       ? {
           $set: patch,
-          $unset: { name: "" as const, income: "" as const, startingBalance: "" as const, budgets: "" as const },
+          $unset: {
+            name: "" as const,
+            income: "" as const,
+            startingBalance: "" as const,
+            budgets: "" as const,
+          },
         }
       : { $set: patch };
 
@@ -193,7 +192,12 @@ walletsRoutes.put("/:id/budgets", zValidator("json", encryptedBudgetsSchema), as
     { _id: new ObjectId(id.data), accountId },
     {
       $set: { enc: 1, payload: body.payload, updatedAt: new Date() },
-      $unset: { name: "" as const, income: "" as const, startingBalance: "" as const, budgets: "" as const },
+      $unset: {
+        name: "" as const,
+        income: "" as const,
+        startingBalance: "" as const,
+        budgets: "" as const,
+      },
     },
     { returnDocument: "after" },
   );

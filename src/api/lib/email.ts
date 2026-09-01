@@ -60,7 +60,9 @@ async function getLogoAttachment(): Promise<LogoAttachment> {
 }
 
 /** Send a transactional email via Resend, embedding the Sched Ledger logo. */
-export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+export async function sendEmail(
+  input: SendEmailInput,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
 
   if (!apiKey) {

@@ -139,9 +139,14 @@ describe("computeSavingsInsights pace and projection", () => {
     const a = computeSavingsInsights(deposits, deposits, piggiesA, INDEX, ANCHOR, 6).perPiggy.find(
       (p) => p.catId === "cat_emergency",
     )!;
-    const b = computeSavingsInsights(withWithdrawal, withWithdrawal, piggiesB, INDEX, ANCHOR, 6).perPiggy.find(
-      (p) => p.catId === "cat_emergency",
-    )!;
+    const b = computeSavingsInsights(
+      withWithdrawal,
+      withWithdrawal,
+      piggiesB,
+      INDEX,
+      ANCHOR,
+      6,
+    ).perPiggy.find((p) => p.catId === "cat_emergency")!;
 
     expect(piggiesB.find((p) => p.catId === "cat_emergency")!.balance).toBeLessThan(
       piggiesA.find((p) => p.catId === "cat_emergency")!.balance,

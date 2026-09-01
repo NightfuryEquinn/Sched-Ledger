@@ -56,9 +56,9 @@ describe("auth helpers", () => {
   });
 
   test("verifyAuthSignature rejects garbage signatures", () => {
-    expect(verifyAuthSignature("hello", "0xdead", "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")).toBe(
-      false,
-    );
+    expect(
+      verifyAuthSignature("hello", "0xdead", "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+    ).toBe(false);
   });
 
   test("parseDeviceLabel maps common user agents", () => {

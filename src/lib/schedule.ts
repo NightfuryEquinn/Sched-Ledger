@@ -169,10 +169,7 @@ export function coversOn(ev: SpanningEvent, iso: string): boolean {
 }
 
 /** Inclusive last covered day of the occurrence starting on `startIso`. */
-function occurrenceEndIso(
-  ev: { date: string; endDate?: string | null },
-  startIso: string,
-): string {
+function occurrenceEndIso(ev: { date: string; endDate?: string | null }, startIso: string): string {
   const span = spanDays(ev);
 
   return span === 1 ? startIso : shiftIso(startIso, span - 1);
@@ -184,7 +181,13 @@ function occurrenceEndIso(
  * runs to the same anchor hour an all-day event would use.
  */
 export function occurrenceEndMs(
-  ev: { date: string; endDate?: string | null; endTime?: string | null; time: string | null; allDay: boolean },
+  ev: {
+    date: string;
+    endDate?: string | null;
+    endTime?: string | null;
+    time: string | null;
+    allDay: boolean;
+  },
   startIso: string,
   timeZone = DEFAULT_TIMEZONE,
 ): number {
@@ -229,7 +232,11 @@ function eventTimeMs(
   return zonedLocalToUtcMs(iso, hhmm, timeZone);
 }
 
-export function remindAtMs(ev: ScheduleEvent, occurrenceIso: string, timeZone = DEFAULT_TIMEZONE): number {
+export function remindAtMs(
+  ev: ScheduleEvent,
+  occurrenceIso: string,
+  timeZone = DEFAULT_TIMEZONE,
+): number {
   return eventTimeMs(occurrenceIso, ev.time, ev.allDay, timeZone) - leadOffsetMs(ev.lead);
 }
 
@@ -255,9 +262,10 @@ export function formatOccurrenceWhen(
   if (endIso === startIso) return start;
 
   /* Without an end time the closing day is covered whole, so read it as all-day. */
-  const end = ev.allDay || !ev.endTime
-    ? formatEventWhen(endIso, null, true, timeZone)
-    : formatEventWhen(endIso, ev.endTime, false, timeZone);
+  const end =
+    ev.allDay || !ev.endTime
+      ? formatEventWhen(endIso, null, true, timeZone)
+      : formatEventWhen(endIso, ev.endTime, false, timeZone);
 
   return `${start} — ${end}`;
 }

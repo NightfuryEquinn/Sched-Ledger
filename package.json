@@ -9,6 +9,12 @@
     "test": "bun test tests",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
+    "prepare": "husky",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "bun run lint && bun run format:check && bun test tests && bun run typecheck && bun run knip",
     "db:list": "bun scripts/drop-collections.ts --list",
     "db:drop": "bun scripts/drop-collections.ts",
     "db:drop:all": "bun scripts/drop-collections.ts --all",
@@ -34,11 +40,29 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "husky": "^9.1.7",
     "knip": "^5.44.0",
-    "typescript": "^6.0.3"
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.69.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{js,mjs,cjs,json,css,md,html,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

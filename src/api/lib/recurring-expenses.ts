@@ -100,7 +100,9 @@ function collectDueDates(
  * Idempotent: skips dates that already have a matching series row.
  * Prefetches existing dates and uses insertMany to avoid N+1 writes.
  */
-export async function processDueRecurringExpenses(now = new Date()): Promise<RecurringMaterializeResult> {
+export async function processDueRecurringExpenses(
+  now = new Date(),
+): Promise<RecurringMaterializeResult> {
   const result: RecurringMaterializeResult = {
     scanned: 0,
     series: 0,
@@ -166,72 +168,68 @@ export async function processDueRecurringExpenses(now = new Date()): Promise<Rec
       }
 
       try {
-      const tz = await userTimezone(template.accountId, tzCache);
-      const today = zonedTodayIso(tz, now);
-      const minDue = addDaysIso(today, -LOOKBACK_DAYS);
-      const dues = collectDueDates(anchorIso, freq, template.date, today, minDue);
-      if (!dues.length) continue;
+        const tz = await userTimezone(template.accountId, tzCache);
+        const today = zonedTodayIso(tz, now);
+        const minDue = addDaysIso(today, -LOOKBACK_DAYS);
+        const dues = collectDueDates(anchorIso, freq, template.date, today, minDue);
+        if (!dues.length) continue;
 
-      const encrypted = template.enc === 1;
-      const existingFilter = encrypted
-        ? {
-            accountId: template.accountId,
-            walletId: template.walletId,
-            seriesKey: template.seriesKey,
-            date: { $in: dues },
-            recurring:
-              freq === "monthly" ? ({ $in: ["monthly", true] } as const) : freq,
+        const encrypted = template.enc === 1;
+        const existingFilter = encrypted
+          ? {
+              accountId: template.accountId,
+              walletId: template.walletId,
+              seriesKey: template.seriesKey,
+              date: { $in: dues },
+              recurring: freq === "monthly" ? ({ $in: ["monthly", true] } as const) : freq,
+            }
+          : {
+              accountId: template.accountId,
+              walletId: template.walletId,
+              sub: template.sub,
+              note: template.note,
+              date: { $in: dues },
+              recurring: freq === "monthly" ? ({ $in: ["monthly", true] } as const) : freq,
+            };
+
+        const existing = await expenses.find(existingFilter as Record<string, unknown>).toArray();
+        const existingDates = new Set(existing.map((row) => row.date));
+
+        const stamp = new Date();
+        for (const due of dues) {
+          if (existingDates.has(due)) {
+            result.skipped++;
+            continue;
           }
-        : {
+          pendingInserts.push({
+            _id: randomObjectId(),
             accountId: template.accountId,
             walletId: template.walletId,
-            sub: template.sub,
-            note: template.note,
-            date: { $in: dues },
-            recurring:
-              freq === "monthly" ? ({ $in: ["monthly", true] } as const) : freq,
-          };
-
-      const existing = await expenses
-        .find(existingFilter as Record<string, unknown>)
-        .toArray();
-      const existingDates = new Set(existing.map((row) => row.date));
-
-      const stamp = new Date();
-      for (const due of dues) {
-        if (existingDates.has(due)) {
-          result.skipped++;
-          continue;
+            kind: template.kind ?? "expense",
+            date: due,
+            recurring: freq,
+            ...(encrypted
+              ? {
+                  enc: 1 as const,
+                  payload: template.payload!,
+                  seriesKey: template.seriesKey,
+                }
+              : {
+                  sub: template.sub!,
+                  amount: template.amount!,
+                  note: template.note ?? "",
+                }),
+            createdAt: stamp,
+            updatedAt: stamp,
+          } as ExpenseDocument);
         }
-        pendingInserts.push({
-          _id: randomObjectId(),
-          accountId: template.accountId,
-          walletId: template.walletId,
-          kind: template.kind ?? "expense",
-          date: due,
-          recurring: freq,
-          ...(encrypted
-            ? {
-                enc: 1 as const,
-                payload: template.payload!,
-                seriesKey: template.seriesKey,
-              }
-            : {
-                sub: template.sub!,
-                amount: template.amount!,
-                note: template.note ?? "",
-              }),
-          createdAt: stamp,
-          updatedAt: stamp,
-        } as ExpenseDocument);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const label =
-        template.enc === 1
-          ? template.seriesKey?.slice(0, 8) ?? "encrypted"
-          : template.note || template.sub || "recurring";
-      result.errors.push(`${label} (${anchorIso}): ${msg}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const label =
+          template.enc === 1
+            ? (template.seriesKey?.slice(0, 8) ?? "encrypted")
+            : template.note || template.sub || "recurring";
+        result.errors.push(`${label} (${anchorIso}): ${msg}`);
       }
     }
 

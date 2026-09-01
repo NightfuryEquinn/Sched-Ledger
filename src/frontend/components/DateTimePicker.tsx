@@ -19,7 +19,13 @@ const PICKER_ICONS = {
   chevD: CaretDown,
 };
 
-function PickerIcon({ name, size = 16 }: { name: "calendar" | "clock" | "chevL" | "chevR" | "chevD"; size?: number }) {
+function PickerIcon({
+  name,
+  size = 16,
+}: {
+  name: "calendar" | "clock" | "chevL" | "chevR" | "chevD";
+  size?: number;
+}) {
   const Glyph = PICKER_ICONS[name];
   return <Glyph size={size} />;
 }
@@ -143,42 +149,58 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
     <div
       ref={scrimRef}
       className="picker-scrim"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose(() => setOpen(false)); }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) requestClose(() => setOpen(false));
+      }}
     >
       <div ref={menuRef} className="picker-menu picker-menu--date" role="dialog" aria-modal="true">
         <div className="picker-cal-head">
-        <button type="button" className="picker-nav-btn" disabled={!canPrev} onClick={() => goMonth(-1)} aria-label="Previous Month">
-          <PickerIcon name="chevL" />
-        </button>
-        <span className="picker-cal-title">{monthLabel(viewKey, true)}</span>
-        <button type="button" className="picker-nav-btn" disabled={!canNext} onClick={() => goMonth(1)} aria-label="Next Month">
-          <PickerIcon name="chevR" />
-        </button>
+          <button
+            type="button"
+            className="picker-nav-btn"
+            disabled={!canPrev}
+            onClick={() => goMonth(-1)}
+            aria-label="Previous Month"
+          >
+            <PickerIcon name="chevL" />
+          </button>
+          <span className="picker-cal-title">{monthLabel(viewKey, true)}</span>
+          <button
+            type="button"
+            className="picker-nav-btn"
+            disabled={!canNext}
+            onClick={() => goMonth(1)}
+            aria-label="Next Month"
+          >
+            <PickerIcon name="chevR" />
+          </button>
+        </div>
+        <div className="picker-cal-wd">
+          {WD.map((d) => (
+            <span key={d}>{d}</span>
+          ))}
+        </div>
+        <div className="picker-cal-grid">
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1;
+            const pos = startOffset + i;
+            const iso = `${viewY}-${pad(viewM)}-${pad(day)}`;
+            const selected = iso === value;
+            const today = iso === TODAY_ISO;
+            return (
+              <button
+                key={day}
+                type="button"
+                className={"picker-cal-day" + (selected ? " active" : "") + (today ? " today" : "")}
+                style={{ gridColumn: (pos % 7) + 1, gridRow: Math.floor(pos / 7) + 1 }}
+                onClick={() => pickDay(day)}
+              >
+                {day}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="picker-cal-wd">
-        {WD.map((d) => <span key={d}>{d}</span>)}
-      </div>
-      <div className="picker-cal-grid">
-        {Array.from({ length: daysInMonth }, (_, i) => {
-          const day = i + 1;
-          const pos = startOffset + i;
-          const iso = `${viewY}-${pad(viewM)}-${pad(day)}`;
-          const selected = iso === value;
-          const today = iso === TODAY_ISO;
-          return (
-            <button
-              key={day}
-              type="button"
-              className={"picker-cal-day" + (selected ? " active" : "") + (today ? " today" : "")}
-              style={{ gridColumn: (pos % 7) + 1, gridRow: Math.floor(pos / 7) + 1 }}
-              onClick={() => pickDay(day)}
-            >
-              {day}
-            </button>
-          );
-        })}
-      </div>
-    </div>
     </div>
   ) : null;
 
@@ -215,7 +237,10 @@ type TimePickerProps = {
 export function TimePicker({ value, onChange, className, disabled, placeholder }: TimePickerProps) {
   const { open, setOpen, rootRef, triggerRef, menuRef } = usePickerPortal();
   const scrimRef = useRef<HTMLDivElement>(null);
-  const { requestClose } = useModalMotion(scrimRef, menuRef, { variant: "picker", active: open && !disabled });
+  const { requestClose } = useModalMotion(scrimRef, menuRef, {
+    variant: "picker",
+    active: open && !disabled,
+  });
   const parsed = parseTime24(value);
   const hourRef = useRef<HTMLButtonElement>(null);
   const minRef = useRef<HTMLButtonElement>(null);
@@ -230,65 +255,73 @@ export function TimePicker({ value, onChange, className, disabled, placeholder }
     onChange(toTime24(h12, m, ap));
   };
 
-  const menu = open && !disabled ? (
-    <div
-      ref={scrimRef}
-      className="picker-scrim"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose(() => setOpen(false)); }}
-    >
-      <div ref={menuRef} className="picker-menu picker-menu--time" role="dialog" aria-modal="true">
-        <div className="picker-time-cols">
-        <div className="picker-time-col">
-          <span className="picker-time-label">Hour</span>
-          <div className="picker-time-list">
-            {HOURS.map((h) => (
-              <button
-                key={h}
-                ref={parsed.h12 === h ? hourRef : undefined}
-                type="button"
-                className={"picker-time-item" + (parsed.h12 === h ? " active" : "")}
-                onClick={() => setPart(h, parsed.m, parsed.ap)}
-              >
-                {h}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="picker-time-col">
-          <span className="picker-time-label">Min</span>
-          <div className="picker-time-list">
-            {MINUTES.map((m) => (
-              <button
-                key={m}
-                ref={parsed.m === m ? minRef : undefined}
-                type="button"
-                className={"picker-time-item num" + (parsed.m === m ? " active" : "")}
-                onClick={() => setPart(parsed.h12, m, parsed.ap)}
-              >
-                {pad(m)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="picker-time-col picker-time-col--ap">
-          <span className="picker-time-label"> </span>
-          <div className="picker-time-list">
-            {(["AM", "PM"] as const).map((ap) => (
-              <button
-                key={ap}
-                type="button"
-                className={"picker-time-item" + (parsed.ap === ap ? " active" : "")}
-                onClick={() => setPart(parsed.h12, parsed.m, ap)}
-              >
-                {ap}
-              </button>
-            ))}
+  const menu =
+    open && !disabled ? (
+      <div
+        ref={scrimRef}
+        className="picker-scrim"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) requestClose(() => setOpen(false));
+        }}
+      >
+        <div
+          ref={menuRef}
+          className="picker-menu picker-menu--time"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="picker-time-cols">
+            <div className="picker-time-col">
+              <span className="picker-time-label">Hour</span>
+              <div className="picker-time-list">
+                {HOURS.map((h) => (
+                  <button
+                    key={h}
+                    ref={parsed.h12 === h ? hourRef : undefined}
+                    type="button"
+                    className={"picker-time-item" + (parsed.h12 === h ? " active" : "")}
+                    onClick={() => setPart(h, parsed.m, parsed.ap)}
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="picker-time-col">
+              <span className="picker-time-label">Min</span>
+              <div className="picker-time-list">
+                {MINUTES.map((m) => (
+                  <button
+                    key={m}
+                    ref={parsed.m === m ? minRef : undefined}
+                    type="button"
+                    className={"picker-time-item num" + (parsed.m === m ? " active" : "")}
+                    onClick={() => setPart(parsed.h12, m, parsed.ap)}
+                  >
+                    {pad(m)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="picker-time-col picker-time-col--ap">
+              <span className="picker-time-label"> </span>
+              <div className="picker-time-list">
+                {(["AM", "PM"] as const).map((ap) => (
+                  <button
+                    key={ap}
+                    type="button"
+                    className={"picker-time-item" + (parsed.ap === ap ? " active" : "")}
+                    onClick={() => setPart(parsed.h12, parsed.m, ap)}
+                  >
+                    {ap}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    </div>
-  ) : null;
+    ) : null;
 
   return (
     <div className={"picker-wrap" + (className ? ` ${className}` : "")} ref={rootRef}>

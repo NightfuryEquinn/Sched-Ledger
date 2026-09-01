@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover"
+    />
     <title>Sched Ledger — Private, encrypted expense ledger and schedule</title>
     <meta
       name="description"
@@ -15,8 +18,7 @@
         var pref = localStorage.getItem("ledger:theme");
         var dark =
           pref === "dark" ||
-          (pref !== "light" &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches);
+          (pref !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
         document.documentElement.style.colorScheme = dark ? "dark" : "light";
       })();
@@ -31,7 +33,10 @@
     <meta property="og:site_name" content="Sched Ledger" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://sched-ledger.vercel.app/" />
-    <meta property="og:title" content="Sched Ledger — Private, encrypted expense ledger and schedule" />
+    <meta
+      property="og:title"
+      content="Sched Ledger — Private, encrypted expense ledger and schedule"
+    />
     <meta
       property="og:description"
       content="Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext."
@@ -40,16 +45,25 @@
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Sched Ledger — your money and schedule, encrypted end-to-end." />
+    <meta
+      property="og:image:alt"
+      content="Sched Ledger — your money and schedule, encrypted end-to-end."
+    />
     <meta property="og:see_also" content="https://nightfuryequinn.github.io/Sched-Ledger/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Sched Ledger — Private, encrypted expense ledger and schedule" />
+    <meta
+      name="twitter:title"
+      content="Sched Ledger — Private, encrypted expense ledger and schedule"
+    />
     <meta
       name="twitter:description"
       content="Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext."
     />
     <meta name="twitter:image" content="https://sched-ledger.vercel.app/og-image.png" />
-    <meta name="twitter:image:alt" content="Sched Ledger — your money and schedule, encrypted end-to-end." />
+    <meta
+      name="twitter:image:alt"
+      content="Sched Ledger — your money and schedule, encrypted end-to-end."
+    />
     <link
       href="https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,400..700;1,400..700&family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=Young+Serif&display=swap"
       rel="stylesheet"

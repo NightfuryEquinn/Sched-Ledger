@@ -36,27 +36,32 @@ function sessionOwnershipFilter(accountId: string, address?: string): Filter<Ses
   return { $or: [{ accountId }, { address }, { address: address.toLowerCase() }] };
 }
 
-authRoutes.post("/challenge", authChallengeRateLimit, zValidator("json", authChallengeSchema), async (c) => {
-  const { address } = c.req.valid("json");
-  const normalized = getAddress(address).toLowerCase();
-  const nonce = generateNonce();
-  const uri = getRequestUri(c);
-  const message = buildAuthMessage(normalized, nonce, uri);
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 5 * 60_000);
+authRoutes.post(
+  "/challenge",
+  authChallengeRateLimit,
+  zValidator("json", authChallengeSchema),
+  async (c) => {
+    const { address } = c.req.valid("json");
+    const normalized = getAddress(address).toLowerCase();
+    const nonce = generateNonce();
+    const uri = getRequestUri(c);
+    const message = buildAuthMessage(normalized, nonce, uri);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 5 * 60_000);
 
-  const { authNonces } = getCollections(getDb());
-  await authNonces.insertOne({
-    _id: new ObjectId(),
-    address: normalized,
-    nonce,
-    message,
-    expiresAt,
-    createdAt: now,
-  });
+    const { authNonces } = getCollections(getDb());
+    await authNonces.insertOne({
+      _id: new ObjectId(),
+      address: normalized,
+      nonce,
+      message,
+      expiresAt,
+      createdAt: now,
+    });
 
-  return c.json({ message, nonce, expiresAt: expiresAt.toISOString(), uri });
-});
+    return c.json({ message, nonce, expiresAt: expiresAt.toISOString(), uri });
+  },
+);
 
 authRoutes.post("/verify", authVerifyRateLimit, zValidator("json", authVerifySchema), async (c) => {
   const { address, message, signature } = c.req.valid("json");
@@ -142,7 +147,8 @@ authRoutes.get("/me", sessionAuth, async (c) => {
   const user = await users.findOne({ _id: new ObjectId(accountId) });
   const session = await sessions.findOne({ _id: new ObjectId(sessionId) });
 
-  if (!user || !session || session.revokedAt) unauthorized("Session expired or invalid. Sign in again.");
+  if (!user || !session || session.revokedAt)
+    unauthorized("Session expired or invalid. Sign in again.");
 
   return c.json({
     account: {
@@ -225,7 +231,8 @@ authRoutes.delete("/sessions/:id", sessionAuth, async (c) => {
   if (!parsed.success) notFound("Session not found");
 
   const targetId = parsed.data;
-  if (targetId === sessionId) badRequest("Cannot revoke your current session from here. Sign out instead.");
+  if (targetId === sessionId)
+    badRequest("Cannot revoke your current session from here. Sign out instead.");
 
   const { sessions, users } = getCollections(getDb());
   const user = await users.findOne({ _id: new ObjectId(accountId) });

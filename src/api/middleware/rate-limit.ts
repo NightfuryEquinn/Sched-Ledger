@@ -76,11 +76,7 @@ async function checkLimitMongo(
 }
 
 /** Prefer Mongo when connected so limits hold across serverless isolates. */
-async function checkLimit(
-  key: string,
-  limit: number,
-  windowMs: number,
-): Promise<number | null> {
+async function checkLimit(key: string, limit: number, windowMs: number): Promise<number | null> {
   if (isDbConnected()) {
     try {
       return await checkLimitMongo(key, limit, windowMs);

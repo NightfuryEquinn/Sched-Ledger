@@ -124,13 +124,21 @@ describe("vehicles routes", () => {
     const createRes = await app.request("/api/vehicles/fills", {
       method: "POST",
       headers: { "Content-Type": "application/json", cookie },
-      body: JSON.stringify({ vehicleId, date: "2026-08-01", partial: false, enc: 1, payload: "fill-1" }),
+      body: JSON.stringify({
+        vehicleId,
+        date: "2026-08-01",
+        partial: false,
+        enc: 1,
+        payload: "fill-1",
+      }),
     });
     expect(createRes.status).toBe(201);
     const { fill } = (await createRes.json()) as { fill: { id: string; vehicleId: string } };
     expect(fill.vehicleId).toBe(vehicleId);
 
-    const listRes = await app.request(`/api/vehicles/fills?vehicleId=${vehicleId}`, { headers: { cookie } });
+    const listRes = await app.request(`/api/vehicles/fills?vehicleId=${vehicleId}`, {
+      headers: { cookie },
+    });
     const { fills } = (await listRes.json()) as { fills: Array<{ id: string }> };
     expect(fills).toHaveLength(1);
 
@@ -140,7 +148,9 @@ describe("vehicles routes", () => {
       body: JSON.stringify({ enc: 1, payload: "fill-1-updated", partial: true }),
     });
     expect(patchRes.status).toBe(200);
-    const { fill: updated } = (await patchRes.json()) as { fill: { partial: boolean; payload: string } };
+    const { fill: updated } = (await patchRes.json()) as {
+      fill: { partial: boolean; payload: string };
+    };
     expect(updated.partial).toBe(true);
     expect(updated.payload).toBe("fill-1-updated");
 
@@ -150,7 +160,9 @@ describe("vehicles routes", () => {
     });
     expect(deleteRes.status).toBe(200);
 
-    const afterDelete = await app.request(`/api/vehicles/fills?vehicleId=${vehicleId}`, { headers: { cookie } });
+    const afterDelete = await app.request(`/api/vehicles/fills?vehicleId=${vehicleId}`, {
+      headers: { cookie },
+    });
     const { fills: remaining } = (await afterDelete.json()) as { fills: unknown[] };
     expect(remaining).toHaveLength(0);
   });
@@ -162,7 +174,13 @@ describe("vehicles routes", () => {
     await app.request("/api/vehicles/fills", {
       method: "POST",
       headers: { "Content-Type": "application/json", cookie },
-      body: JSON.stringify({ vehicleId, date: "2026-08-01", partial: false, enc: 1, payload: "fill-1" }),
+      body: JSON.stringify({
+        vehicleId,
+        date: "2026-08-01",
+        partial: false,
+        enc: 1,
+        payload: "fill-1",
+      }),
     });
 
     const deleteRes = await app.request(`/api/vehicles/${vehicleId}`, {
@@ -171,7 +189,9 @@ describe("vehicles routes", () => {
     });
     expect(deleteRes.status).toBe(200);
 
-    const fillsRes = await app.request(`/api/vehicles/fills?vehicleId=${vehicleId}`, { headers: { cookie } });
+    const fillsRes = await app.request(`/api/vehicles/fills?vehicleId=${vehicleId}`, {
+      headers: { cookie },
+    });
     const { fills } = (await fillsRes.json()) as { fills: unknown[] };
     expect(fills).toHaveLength(0);
   });
@@ -216,7 +236,13 @@ describe("vehicles routes", () => {
     const otherRes = await app.request("/api/vehicles/fills", {
       method: "POST",
       headers: { "Content-Type": "application/json", cookie },
-      body: JSON.stringify({ vehicleId, date: "2026-08-02", partial: false, enc: 1, payload: "other" }),
+      body: JSON.stringify({
+        vehicleId,
+        date: "2026-08-02",
+        partial: false,
+        enc: 1,
+        payload: "other",
+      }),
     });
     const { fill: otherFill } = (await otherRes.json()) as { fill: { id: string } };
 

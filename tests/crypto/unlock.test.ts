@@ -26,8 +26,12 @@ describe("ledgerKeyStore", () => {
     const a = Wallet.createRandom();
     const b = Wallet.createRandom();
     const { deriveKeyFromSignature } = await import("@/frontend/lib/crypto/e2ee");
-    const keyA = await deriveKeyFromSignature(await a.signMessage(buildDerivationMessage(a.address)));
-    const keyB = await deriveKeyFromSignature(await b.signMessage(buildDerivationMessage(b.address)));
+    const keyA = await deriveKeyFromSignature(
+      await a.signMessage(buildDerivationMessage(a.address)),
+    );
+    const keyB = await deriveKeyFromSignature(
+      await b.signMessage(buildDerivationMessage(b.address)),
+    );
     ledgerKeyStore.set(a.address, keyA);
     ledgerKeyStore.set(b.address, keyB);
     ledgerKeyStore.clear(a.address);

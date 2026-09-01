@@ -32,7 +32,10 @@ export function CurrencyPicker({
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
-  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "picker", active: open && !disabled });
+  const { requestClose } = useModalMotion(scrimRef, panelRef, {
+    variant: "picker",
+    active: open && !disabled,
+  });
   const selected = getCurrency(value);
 
   useEffect(() => {
@@ -59,47 +62,48 @@ export function CurrencyPicker({
     setOpen(false);
   };
 
-  const menu = open && !disabled ? (
-    <div
-      ref={scrimRef}
-      className="picker-scrim"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) requestClose(() => setOpen(false));
-      }}
-    >
+  const menu =
+    open && !disabled ? (
       <div
-        ref={panelRef}
-        className="picker-menu picker-menu--currency"
-        role="listbox"
-        aria-label="Currency"
+        ref={scrimRef}
+        className="picker-scrim"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) requestClose(() => setOpen(false));
+        }}
       >
-        <div className="picker-currency-list">
-          {CURRENCIES.map((c) => {
-            const active = c.code === selected.code;
-            const badge = badgeFor?.(c.code);
-            return (
-              <button
-                key={c.code}
-                ref={active ? activeRef : undefined}
-                type="button"
-                role="option"
-                aria-selected={active}
-                className={"picker-currency-item" + (active ? " active" : "")}
-                onClick={() => choose(c.code)}
-              >
-                <span className="pci-code num">{c.code}</span>
-                <span className="pci-label">
-                  {c.label}
-                  {badge ? <span className="pci-badge"> · {badge}</span> : null}
-                </span>
-                <span className="pci-sym num">{c.symbol}</span>
-              </button>
-            );
-          })}
+        <div
+          ref={panelRef}
+          className="picker-menu picker-menu--currency"
+          role="listbox"
+          aria-label="Currency"
+        >
+          <div className="picker-currency-list">
+            {CURRENCIES.map((c) => {
+              const active = c.code === selected.code;
+              const badge = badgeFor?.(c.code);
+              return (
+                <button
+                  key={c.code}
+                  ref={active ? activeRef : undefined}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  className={"picker-currency-item" + (active ? " active" : "")}
+                  onClick={() => choose(c.code)}
+                >
+                  <span className="pci-code num">{c.code}</span>
+                  <span className="pci-label">
+                    {c.label}
+                    {badge ? <span className="pci-badge"> · {badge}</span> : null}
+                  </span>
+                  <span className="pci-sym num">{c.symbol}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   return (
     <div className={"picker-wrap" + (className ? ` ${className}` : "")} ref={rootRef}>

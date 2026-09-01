@@ -1,5 +1,11 @@
 import { DatePicker } from "@/frontend/components/DateTimePicker";
-import { ConfirmDialog, EmptyState, Icon, InsightFeed, SummaryCard } from "@/frontend/components/ui";
+import {
+  ConfirmDialog,
+  EmptyState,
+  Icon,
+  InsightFeed,
+  SummaryCard,
+} from "@/frontend/components/ui";
 import { dayLabel, fmtMoney, roundMoney } from "@/frontend/lib/data";
 import { useEnter, useModalMotion, useStagger } from "@/frontend/lib/animate";
 import {
@@ -70,7 +76,8 @@ export function Vehicles({
   const vehiclePanelRef = useRef<HTMLDivElement>(null);
   const fillScrimRef = useRef<HTMLDivElement>(null);
   const fillPanelRef = useRef<HTMLDivElement>(null);
-  const vehicleEditorOpen = !!editor && (editor.type === "add-vehicle" || editor.type === "edit-vehicle");
+  const vehicleEditorOpen =
+    !!editor && (editor.type === "add-vehicle" || editor.type === "edit-vehicle");
   const fillEditorOpen = !!editor && (editor.type === "add-fill" || editor.type === "edit-fill");
   const { requestClose: requestCloseVehicle } = useModalMotion(vehicleScrimRef, vehiclePanelRef, {
     variant: "center",
@@ -122,7 +129,10 @@ export function Vehicles({
     });
   }, [assessment, selectedMeta, selectedVehicle, currency]);
 
-  const totalSpend = useMemo(() => roundMoney(fillList.reduce((s, f) => s + f.price, 0)), [fillList]);
+  const totalSpend = useMemo(
+    () => roundMoney(fillList.reduce((s, f) => s + f.price, 0)),
+    [fillList],
+  );
   const lastFill = useMemo(
     () => [...fillList].sort((a, b) => (a.date < b.date ? 1 : -1))[0] ?? null,
     [fillList],
@@ -133,7 +143,9 @@ export function Vehicles({
     setError("");
     try {
       const saved = await onSaveVehicle(data);
-      setVehicleList((prev) => (data.id ? prev.map((v) => (v.id === saved.id ? saved : v)) : [...prev, saved]));
+      setVehicleList((prev) =>
+        data.id ? prev.map((v) => (v.id === saved.id ? saved : v)) : [...prev, saved],
+      );
       return saved;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save vehicle");
@@ -148,7 +160,9 @@ export function Vehicles({
     setError("");
     try {
       const saved = await onSaveFill(data);
-      setFillList((prev) => (data.id ? prev.map((f) => (f.id === saved.id ? saved : f)) : [...prev, saved]));
+      setFillList((prev) =>
+        data.id ? prev.map((f) => (f.id === saved.id ? saved : f)) : [...prev, saved],
+      );
       return saved;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save fill");
@@ -181,7 +195,12 @@ export function Vehicles({
   };
 
   const submitVehicleEditor = async () => {
-    if (!name.trim() || !editor || (editor.type !== "add-vehicle" && editor.type !== "edit-vehicle")) return;
+    if (
+      !name.trim() ||
+      !editor ||
+      (editor.type !== "add-vehicle" && editor.type !== "edit-vehicle")
+    )
+      return;
     const meta = VEHICLE_TYPES[type];
     const payload = {
       name: name.trim(),
@@ -247,13 +266,17 @@ export function Vehicles({
       return;
     }
 
-    const vehicleId = editor.type === "add-fill" ? editor.vehicleId : fillList.find((f) => f.id === editor.fillId)?.vehicleId;
+    const vehicleId =
+      editor.type === "add-fill"
+        ? editor.vehicleId
+        : fillList.find((f) => f.id === editor.fillId)?.vehicleId;
     if (!vehicleId) return;
 
     /* Carry the ledger link through: encodeVehicleFillUpdate sends
        `expenseId ?? null`, so omitting it here reads as an explicit unlink and
        silently re-enables Log — letting the same fill be logged twice. */
-    const existingFill = editor.type === "edit-fill" ? fillList.find((f) => f.id === editor.fillId) : undefined;
+    const existingFill =
+      editor.type === "edit-fill" ? fillList.find((f) => f.id === editor.fillId) : undefined;
     const payload = {
       vehicleId,
       date: fillDate,
@@ -291,7 +314,10 @@ export function Vehicles({
   if (!vehicleList.length && !editor) {
     return (
       <div ref={viewRef} className="view">
-        <EmptyState title="No Vehicles Yet" sub="Add a car, EV, bike, or van to start tracking fuel or charging costs." />
+        <EmptyState
+          title="No Vehicles Yet"
+          sub="Add a car, EV, bike, or van to start tracking fuel or charging costs."
+        />
         <div className="todo-empty-action">
           <button className="primary-btn" type="button" onClick={openAddVehicle}>
             <Icon name="plus" size={15} /> Add Vehicle
@@ -307,11 +333,23 @@ export function Vehicles({
 
     if (editor.type === "add-vehicle" || editor.type === "edit-vehicle") {
       return createPortal(
-        <div ref={vehicleScrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeEditor(); }}>
+        <div
+          ref={vehicleScrimRef}
+          className="modal-scrim center"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !busy) closeEditor();
+          }}
+        >
           <div ref={vehiclePanelRef} className="modal sm" role="dialog" aria-modal="true">
             <div className="modal-head">
               <h3>{editor.type === "add-vehicle" ? "Add Vehicle" : "Edit Vehicle"}</h3>
-              <button className="icon-btn" type="button" onClick={closeEditor} aria-label="Close" disabled={busy}>
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={closeEditor}
+                aria-label="Close"
+                disabled={busy}
+              >
                 <Icon name="close" size={18} />
               </button>
             </div>
@@ -331,7 +369,9 @@ export function Vehicles({
                   ))}
                 </div>
 
-                <label className="fld-label" htmlFor="vehicle-name">Name</label>
+                <label className="fld-label" htmlFor="vehicle-name">
+                  Name
+                </label>
                 <input
                   id="vehicle-name"
                   className="text-in wallet-field"
@@ -341,7 +381,9 @@ export function Vehicles({
                   placeholder="e.g. My Daily Driver"
                 />
 
-                <label className="fld-label" htmlFor="vehicle-model">Model</label>
+                <label className="fld-label" htmlFor="vehicle-model">
+                  Model
+                </label>
                 <input
                   id="vehicle-model"
                   className="text-in wallet-field"
@@ -350,7 +392,9 @@ export function Vehicles({
                   placeholder="e.g. Honda Civic 2022"
                 />
 
-                <label className="fld-label" htmlFor="vehicle-plate">Plate (optional)</label>
+                <label className="fld-label" htmlFor="vehicle-plate">
+                  Plate (optional)
+                </label>
                 <input
                   id="vehicle-plate"
                   className="text-in wallet-field"
@@ -358,7 +402,9 @@ export function Vehicles({
                   onChange={(e) => setPlate(e.target.value)}
                 />
 
-                <label className="fld-label" htmlFor="vehicle-odo-start">Starting odometer, km (optional)</label>
+                <label className="fld-label" htmlFor="vehicle-odo-start">
+                  Starting odometer, km (optional)
+                </label>
                 <input
                   id="vehicle-odo-start"
                   className="text-in wallet-field"
@@ -370,7 +416,9 @@ export function Vehicles({
                 />
 
                 <label className="fld-label" htmlFor="vehicle-tank">
-                  {VEHICLE_TYPES[type].mode === "power" ? "Battery capacity, kWh (optional)" : "Tank capacity, litres (optional)"}
+                  {VEHICLE_TYPES[type].mode === "power"
+                    ? "Battery capacity, kWh (optional)"
+                    : "Tank capacity, litres (optional)"}
                 </label>
                 <input
                   id="vehicle-tank"
@@ -385,7 +433,14 @@ export function Vehicles({
                 {error ? <p className="auth-error">{error}</p> : null}
 
                 <div className="wallet-form-actions">
-                  <button className="ghost-btn full" type="button" onClick={closeEditor} disabled={busy}>Cancel</button>
+                  <button
+                    className="ghost-btn full"
+                    type="button"
+                    onClick={closeEditor}
+                    disabled={busy}
+                  >
+                    Cancel
+                  </button>
                   <button
                     className="primary-btn full"
                     type="button"
@@ -405,11 +460,23 @@ export function Vehicles({
 
     const meta = VEHICLE_TYPES[selectedVehicle?.type ?? "car"];
     return createPortal(
-      <div ref={fillScrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closeFillEditor(); }}>
+      <div
+        ref={fillScrimRef}
+        className="modal-scrim center"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget && !busy) closeFillEditor();
+        }}
+      >
         <div ref={fillPanelRef} className="modal sm" role="dialog" aria-modal="true">
           <div className="modal-head">
             <h3>{editor.type === "add-fill" ? meta.fillVerb : `Edit ${meta.fillNoun}`}</h3>
-            <button className="icon-btn" type="button" onClick={closeFillEditor} aria-label="Close" disabled={busy}>
+            <button
+              className="icon-btn"
+              type="button"
+              onClick={closeFillEditor}
+              aria-label="Close"
+              disabled={busy}
+            >
               <Icon name="close" size={18} />
             </button>
           </div>
@@ -418,7 +485,9 @@ export function Vehicles({
               <label className="fld-label">Date</label>
               <DatePicker value={fillDate} onChange={setFillDate} className="wallet-field" />
 
-              <label className="fld-label" htmlFor="fill-price">Total price</label>
+              <label className="fld-label" htmlFor="fill-price">
+                Total price
+              </label>
               <input
                 id="fill-price"
                 className="text-in wallet-field"
@@ -429,7 +498,9 @@ export function Vehicles({
                 placeholder="0"
               />
 
-              <label className="fld-label" htmlFor="fill-quantity">{meta.unitLong[0]!.toUpperCase() + meta.unitLong.slice(1)}s ({meta.unit})</label>
+              <label className="fld-label" htmlFor="fill-quantity">
+                {meta.unitLong[0]!.toUpperCase() + meta.unitLong.slice(1)}s ({meta.unit})
+              </label>
               <input
                 id="fill-quantity"
                 className="text-in wallet-field"
@@ -440,7 +511,9 @@ export function Vehicles({
                 placeholder="0"
               />
 
-              <label className="fld-label" htmlFor="fill-odometer">Odometer, km (optional)</label>
+              <label className="fld-label" htmlFor="fill-odometer">
+                Odometer, km (optional)
+              </label>
               <input
                 id="fill-odometer"
                 className="text-in wallet-field"
@@ -451,7 +524,9 @@ export function Vehicles({
                 placeholder="0"
               />
 
-              <label className="fld-label" htmlFor="fill-station">{meta.stationNoun[0]!.toUpperCase() + meta.stationNoun.slice(1)} (optional)</label>
+              <label className="fld-label" htmlFor="fill-station">
+                {meta.stationNoun[0]!.toUpperCase() + meta.stationNoun.slice(1)} (optional)
+              </label>
               <input
                 id="fill-station"
                 className="text-in wallet-field"
@@ -460,14 +535,25 @@ export function Vehicles({
               />
 
               <label className="toggle-line tight">
-                <input type="checkbox" checked={fillPartial} onChange={(e) => setFillPartial(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={fillPartial}
+                  onChange={(e) => setFillPartial(e.target.checked)}
+                />
                 Partial {meta.fillNoun} — did not fill to full
               </label>
 
               {error ? <p className="auth-error">{error}</p> : null}
 
               <div className="wallet-form-actions">
-                <button className="ghost-btn full" type="button" onClick={closeFillEditor} disabled={busy}>Cancel</button>
+                <button
+                  className="ghost-btn full"
+                  type="button"
+                  onClick={closeFillEditor}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
                 <button
                   className="primary-btn full"
                   type="button"
@@ -492,10 +578,18 @@ export function Vehicles({
         <SummaryCard label="Total Spend" value={money(totalSpend)} sub="across all vehicles" />
         <SummaryCard
           label="Cost / km"
-          value={assessment.status === "ready" && assessment.metrics.costPerKm != null ? money(assessment.metrics.costPerKm) : "—"}
+          value={
+            assessment.status === "ready" && assessment.metrics.costPerKm != null
+              ? money(assessment.metrics.costPerKm)
+              : "—"
+          }
           sub={selectedVehicle ? selectedVehicle.name : ""}
         />
-        <SummaryCard label="Last Logged" value={lastFill ? dayLabel(lastFill.date) : "—"} sub={fillsLoading ? "loading…" : ""} />
+        <SummaryCard
+          label="Last Logged"
+          value={lastFill ? dayLabel(lastFill.date) : "—"}
+          sub={fillsLoading ? "loading…" : ""}
+        />
       </div>
 
       <div className="todo-toolbar" data-tour="tour-vehicles-toolbar">
@@ -514,7 +608,11 @@ export function Vehicles({
           const active = vehicle.id === selectedId;
 
           return (
-            <div key={vehicle.id} className={"capital-card" + (active ? " is-selected" : "")} onClick={() => setSelectedId(vehicle.id)}>
+            <div
+              key={vehicle.id}
+              className={"capital-card" + (active ? " is-selected" : "")}
+              onClick={() => setSelectedId(vehicle.id)}
+            >
               <div className="capital-card-head">
                 <span className="capital-card-glyph">{meta.glyph}</span>
                 <div className="capital-card-title">
@@ -522,14 +620,24 @@ export function Vehicles({
                   <span className="capital-tag">{vehicle.model || meta.label}</span>
                 </div>
                 <div className="capital-card-actions">
-                  <button type="button" onClick={(e) => { e.stopPropagation(); openEditVehicle(vehicle); }} aria-label="Edit Vehicle">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditVehicle(vehicle);
+                    }}
+                    aria-label="Edit Vehicle"
+                  >
                     <Icon name="edit" size={15} />
                   </button>
                   <button
                     type="button"
                     className="danger"
                     disabled={busy}
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: "vehicle", id: vehicle.id }); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDelete({ type: "vehicle", id: vehicle.id });
+                    }}
                     aria-label={busy ? "Deleting…" : "Delete Vehicle"}
                   >
                     <Icon name="trash" size={15} />
@@ -544,18 +652,24 @@ export function Vehicles({
                         ? `${vAssessment.metrics.consumptionPer100.toFixed(1)} ${meta.efficiencyLabel}`
                         : "Add another full " + meta.fillNoun}
                     </div>
-                    <div className="capital-paid">{vFills.length} {meta.fillNoun}s logged</div>
+                    <div className="capital-paid">
+                      {vFills.length} {meta.fillNoun}s logged
+                    </div>
                   </>
                 ) : (
                   <div className="capital-paid">
-                    {vAssessment.fillsHave} of {vAssessment.fillsNeeded} {meta.fillNoun}s to unlock insights
+                    {vAssessment.fillsHave} of {vAssessment.fillsNeeded} {meta.fillNoun}s to unlock
+                    insights
                   </div>
                 )}
               </div>
               <button
                 type="button"
                 className="ghost-btn full capital-add-item-btn"
-                onClick={(e) => { e.stopPropagation(); openAddFill(vehicle.id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openAddFill(vehicle.id);
+                }}
               >
                 <Icon name="plus" size={14} /> {meta.fillVerb}
               </button>
@@ -568,7 +682,10 @@ export function Vehicles({
         <>
           <section className="panel" data-tour="tour-vehicles-log">
             <div className="panel-head">
-              <h2>{selectedVehicle.name} — {selectedMeta.fillNoun[0]!.toUpperCase() + selectedMeta.fillNoun.slice(1)} Log</h2>
+              <h2>
+                {selectedVehicle.name} —{" "}
+                {selectedMeta.fillNoun[0]!.toUpperCase() + selectedMeta.fillNoun.slice(1)} Log
+              </h2>
             </div>
             {selectedFills.length ? (
               <div className="capital-item-list">
@@ -580,11 +697,20 @@ export function Vehicles({
                       {fill.odometer != null ? ` · ${fill.odometer.toLocaleString()} km` : ""}
                       {fill.station ? ` · ${fill.station}` : ""}
                     </span>
-                    <button type="button" className="capital-item-cost" disabled={busy} onClick={() => openEditFill(fill)}>
+                    <button
+                      type="button"
+                      className="capital-item-cost"
+                      disabled={busy}
+                      onClick={() => openEditFill(fill)}
+                    >
                       {money(fill.price)}
                     </button>
                     {!fill.expenseId || !linkedExpenseIds.has(fill.expenseId) ? (
-                      <button type="button" className="ghost-btn sm" onClick={() => onLogFill(selectedVehicle, fill)}>
+                      <button
+                        type="button"
+                        className="ghost-btn sm"
+                        onClick={() => onLogFill(selectedVehicle, fill)}
+                      >
                         Log
                       </button>
                     ) : null}
@@ -609,14 +735,20 @@ export function Vehicles({
             <div className="panel-head">
               <h2>Fuel Insights</h2>
               <p className="panel-sub">
-                {selectedMeta.mode === "power" ? "Charging behaviour and cost, generated from this vehicle's history." : "Fuel behaviour and cost, generated from this vehicle's history."}
+                {selectedMeta.mode === "power"
+                  ? "Charging behaviour and cost, generated from this vehicle's history."
+                  : "Fuel behaviour and cost, generated from this vehicle's history."}
               </p>
             </div>
             {assessment.status === "insufficient" ? (
               <div className="profile-locked">
-                <div className="profile-locked-mark" aria-hidden="true">◌</div>
+                <div className="profile-locked-mark" aria-hidden="true">
+                  ◌
+                </div>
                 <div className="profile-locked-copy">
-                  <p className="profile-locked-title">Insights unlock after {FUEL_MIN_FILLS} {selectedMeta.fillNoun}s</p>
+                  <p className="profile-locked-title">
+                    Insights unlock after {FUEL_MIN_FILLS} {selectedMeta.fillNoun}s
+                  </p>
                   <p className="profile-locked-sub">
                     {assessment.fillsHave} of {assessment.fillsNeeded} logged so far.
                   </p>
@@ -636,7 +768,10 @@ export function Vehicles({
                 </div>
               </div>
             ) : (
-              <InsightFeed insights={insights} emptyLabel="Nothing stands out for this vehicle right now." />
+              <InsightFeed
+                insights={insights}
+                emptyLabel="Nothing stands out for this vehicle right now."
+              />
             )}
           </section>
         </>

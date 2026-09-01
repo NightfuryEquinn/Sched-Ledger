@@ -56,7 +56,12 @@ export function parseTodosCsv(text: string, existingLists: TodoList[] = []): Par
 
   const parsed = parseCsv(stripBom(text));
   if (!parsed.length) {
-    return { lists: [], errors: [{ row: 0, message: "The file is empty." }], notices, stats: { newLists: 0, newTasks: 0 } };
+    return {
+      lists: [],
+      errors: [{ row: 0, message: "The file is empty." }],
+      notices,
+      stats: { newLists: 0, newTasks: 0 },
+    };
   }
 
   const headerMap = Object.fromEntries(parsed[0]!.map((h, i) => [h.trim().toLowerCase(), i]));
@@ -68,7 +73,12 @@ export function parseTodosCsv(text: string, existingLists: TodoList[] = []): Par
   const doneIdx = colIndex(headerMap, "done");
 
   if (listNameIdx === undefined) {
-    return { lists: [], errors: [{ row: 0, message: "Missing required column: ListName." }], notices, stats: { newLists: 0, newTasks: 0 } };
+    return {
+      lists: [],
+      errors: [{ row: 0, message: "Missing required column: ListName." }],
+      notices,
+      stats: { newLists: 0, newTasks: 0 },
+    };
   }
 
   parsed.slice(1).forEach((cells, i) => {
@@ -92,7 +102,12 @@ export function parseTodosCsv(text: string, existingLists: TodoList[] = []): Par
       /* Empty list placeholder row */
       const key = listKey(csvListId, listName);
       if (!grouped.has(key)) {
-        grouped.set(key, { listId: csvListId || undefined, name: listName, icon: normalizeIcon(get(listIconIdx)), tasks: [] });
+        grouped.set(key, {
+          listId: csvListId || undefined,
+          name: listName,
+          icon: normalizeIcon(get(listIconIdx)),
+          tasks: [],
+        });
       }
       return;
     }
@@ -124,7 +139,12 @@ export function parseTodosCsv(text: string, existingLists: TodoList[] = []): Par
         !existingListNames.has(listName.toLowerCase());
       if (isNew) newLists++;
       if (!seenListKeys.has(key)) seenListKeys.add(key);
-      entry = { listId: csvListId || undefined, name: listName, icon: normalizeIcon(get(listIconIdx)), tasks: [] };
+      entry = {
+        listId: csvListId || undefined,
+        name: listName,
+        icon: normalizeIcon(get(listIconIdx)),
+        tasks: [],
+      };
       grouped.set(key, entry);
     }
 

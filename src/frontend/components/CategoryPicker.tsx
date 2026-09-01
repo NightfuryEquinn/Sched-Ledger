@@ -33,7 +33,10 @@ export function CategoryPicker({
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
-  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "picker", active: open && !disabled });
+  const { requestClose } = useModalMotion(scrimRef, panelRef, {
+    variant: "picker",
+    active: open && !disabled,
+  });
   const selected = categories.find((c) => c.id === value) ?? categories[0];
 
   useEffect(() => {
@@ -67,44 +70,45 @@ export function CategoryPicker({
 
   if (!selected) return null;
 
-  const menu = open && !disabled ? (
-    <div
-      ref={scrimRef}
-      className="picker-scrim"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) requestClose(() => setOpen(false));
-      }}
-    >
+  const menu =
+    open && !disabled ? (
       <div
-        ref={panelRef}
-        className="picker-menu picker-menu--category"
-        role="listbox"
-        aria-label="Category"
+        ref={scrimRef}
+        className="picker-scrim"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) requestClose(() => setOpen(false));
+        }}
       >
-        <div className="picker-category-list">
-          {categories.map((c) => {
-            const active = c.id === selected.id;
-            return (
-              <button
-                key={c.id}
-                ref={active ? activeRef : undefined}
-                type="button"
-                role="option"
-                aria-selected={active}
-                className={"picker-category-item" + (active ? " active" : "")}
-                onClick={() => choose(c.id)}
-              >
-                <span className="pci-glyph" style={{ color: c.color }}>
-                  {displayGlyph(c.glyph, c.id)}
-                </span>
-                <span className="pci-label">{c.name}</span>
-              </button>
-            );
-          })}
+        <div
+          ref={panelRef}
+          className="picker-menu picker-menu--category"
+          role="listbox"
+          aria-label="Category"
+        >
+          <div className="picker-category-list">
+            {categories.map((c) => {
+              const active = c.id === selected.id;
+              return (
+                <button
+                  key={c.id}
+                  ref={active ? activeRef : undefined}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  className={"picker-category-item" + (active ? " active" : "")}
+                  onClick={() => choose(c.id)}
+                >
+                  <span className="pci-glyph" style={{ color: c.color }}>
+                    {displayGlyph(c.glyph, c.id)}
+                  </span>
+                  <span className="pci-label">{c.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   return (
     <div className={"picker-wrap" + (className ? ` ${className}` : "")} ref={rootRef}>

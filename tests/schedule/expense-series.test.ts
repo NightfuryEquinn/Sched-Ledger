@@ -1,13 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import {
-  expenseSeriesFilter,
-  shouldRetireOldExpenseSeries,
-} from "@/api/lib/expense-delete-scope";
+import { expenseSeriesFilter, shouldRetireOldExpenseSeries } from "@/api/lib/expense-delete-scope";
 import type { ExpenseDocument } from "@/db/collections";
 import { ObjectId } from "mongodb";
 
 /** Build a minimal expense document for series-filter tests. */
-function doc(partial: Partial<ExpenseDocument> & Pick<ExpenseDocument, "date" | "recurring">): ExpenseDocument {
+function doc(
+  partial: Partial<ExpenseDocument> & Pick<ExpenseDocument, "date" | "recurring">,
+): ExpenseDocument {
   return {
     _id: new ObjectId(),
     accountId: "64b64c4f2f1c2e0012345678",

@@ -56,11 +56,7 @@ function cacheKey(address: string, path: string): string {
 }
 
 /** Persist a successful GET response body. */
-export async function putCipherCache(
-  address: string,
-  path: string,
-  body: unknown,
-): Promise<void> {
+export async function putCipherCache(address: string, path: string, body: unknown): Promise<void> {
   if (typeof indexedDB === "undefined") return;
 
   try {
@@ -84,10 +80,7 @@ export async function putCipherCache(
 }
 
 /** Read a cached GET body, or null if missing. */
-export async function getCipherCache<T>(
-  address: string,
-  path: string,
-): Promise<T | null> {
+export async function getCipherCache<T>(address: string, path: string): Promise<T | null> {
   if (typeof indexedDB === "undefined") return null;
 
   try {

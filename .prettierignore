@@ -1,0 +1,5 @@
+dist
+node_modules
+api/index.js
+bun.lock
+.vercel

@@ -23,9 +23,7 @@ export function reminderEmailHtml(opts: {
   comments?: string[];
   isConfirmation?: boolean;
 }): { html: string; text: string; subject: string } {
-  const subject = opts.isConfirmation
-    ? `Reminder set: ${opts.title}`
-    : `Upcoming: ${opts.title}`;
+  const subject = opts.isConfirmation ? `Reminder set: ${opts.title}` : `Upcoming: ${opts.title}`;
 
   const intro = opts.isConfirmation
     ? `We'll email you <strong>${escapeHtml(opts.lead)}</strong> this event.`

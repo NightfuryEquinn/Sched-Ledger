@@ -48,8 +48,7 @@ export async function pushStatus(): Promise<PushStatus> {
 }
 
 type EnablePushResult =
-  | { ok: true }
-  | { ok: false; reason: "unsupported" | "denied" | "unconfigured" | "failed" };
+  { ok: true } | { ok: false; reason: "unsupported" | "denied" | "unconfigured" | "failed" };
 
 /** Request permission, subscribe, and register the endpoint with the server. */
 export async function enablePush(): Promise<EnablePushResult> {

@@ -69,9 +69,7 @@ export async function sendBudgetAlerts(opts: {
       month: opts.month,
     })
     .toArray();
-  const existingKeys = new Set(
-    existingLogs.map((log) => `${log.categoryId}|${log.level}`),
-  );
+  const existingKeys = new Set(existingLogs.map((log) => `${log.categoryId}|${log.level}`));
 
   for (const alert of opts.alerts) {
     const dedupeKey = `${alert.categoryId}|${alert.level}`;

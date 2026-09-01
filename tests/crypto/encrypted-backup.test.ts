@@ -5,10 +5,7 @@ import {
   encryptBackup,
   parseBackupFile,
 } from "@/frontend/auth/lib/encrypted-backup";
-import {
-  buildDerivationMessage,
-  deriveKeyFromSignature,
-} from "@/frontend/lib/crypto/e2ee";
+import { buildDerivationMessage, deriveKeyFromSignature } from "@/frontend/lib/crypto/e2ee";
 import { Wallet } from "ethers";
 
 async function testKey() {
@@ -94,6 +91,8 @@ describe("encrypted backup", () => {
 
   test("parseBackupFile rejects garbage", () => {
     expect(() => parseBackupFile("{not json")).toThrow();
-    expect(() => parseBackupFile(JSON.stringify({ format: "other" }))).toThrow(/Not a Sched Ledger/);
+    expect(() => parseBackupFile(JSON.stringify({ format: "other" }))).toThrow(
+      /Not a Sched Ledger/,
+    );
   });
 });

@@ -1,8 +1,5 @@
 import { useModalMotion } from "@/frontend/lib/animate";
-import {
-  timezoneOptions,
-  timezoneShortName,
-} from "@/lib/timezone";
+import { timezoneOptions, timezoneShortName } from "@/lib/timezone";
 import { CaretDown } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -23,20 +20,17 @@ type TimezonePickerProps = {
   id?: string;
 };
 
-export function TimezonePicker({
-  value,
-  onChange,
-  className,
-  disabled,
-  id,
-}: TimezonePickerProps) {
+export function TimezonePicker({ value, onChange, className, disabled, id }: TimezonePickerProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
-  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "picker", active: open && !disabled });
+  const { requestClose } = useModalMotion(scrimRef, panelRef, {
+    variant: "picker",
+    active: open && !disabled,
+  });
   const options = useMemo(() => timezoneOptions(value), [value]);
   const offset = timezoneShortName(value);
   const city = timezoneCity(value);
@@ -65,42 +59,43 @@ export function TimezonePicker({
     setOpen(false);
   };
 
-  const menu = open && !disabled ? (
-    <div
-      ref={scrimRef}
-      className="picker-scrim"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) requestClose(() => setOpen(false));
-      }}
-    >
+  const menu =
+    open && !disabled ? (
       <div
-        ref={panelRef}
-        className="picker-menu picker-menu--timezone"
-        role="listbox"
-        aria-label="Timezone"
+        ref={scrimRef}
+        className="picker-scrim"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) requestClose(() => setOpen(false));
+        }}
       >
-        <div className="picker-timezone-list">
-          {options.map((tz) => {
-            const active = tz === value;
-            return (
-              <button
-                key={tz}
-                ref={active ? activeRef : undefined}
-                type="button"
-                role="option"
-                aria-selected={active}
-                className={"picker-timezone-item" + (active ? " active" : "")}
-                onClick={() => choose(tz)}
-              >
-                <span className="pti-offset num">{timezoneShortName(tz)}</span>
-                <span className="pti-label">{timezoneCity(tz)}</span>
-              </button>
-            );
-          })}
+        <div
+          ref={panelRef}
+          className="picker-menu picker-menu--timezone"
+          role="listbox"
+          aria-label="Timezone"
+        >
+          <div className="picker-timezone-list">
+            {options.map((tz) => {
+              const active = tz === value;
+              return (
+                <button
+                  key={tz}
+                  ref={active ? activeRef : undefined}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  className={"picker-timezone-item" + (active ? " active" : "")}
+                  onClick={() => choose(tz)}
+                >
+                  <span className="pti-offset num">{timezoneShortName(tz)}</span>
+                  <span className="pti-label">{timezoneCity(tz)}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   return (
     <div className={"picker-wrap" + (className ? ` ${className}` : "")} ref={rootRef}>

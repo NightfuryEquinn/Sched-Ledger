@@ -37,27 +37,7 @@ export const VERCEL_HTML_HEADERS: Array<{ key: string; value: string }> = [
   { key: SECURITY_HEADER_NAMES.hsts, value: HSTS_VALUE },
 ];
 
-/** Apply shared security headers to a Headers instance. */
-export function applySecurityHeaders(
-  headers: Headers,
-  opts: { csp: string; includeHsts?: boolean },
-): void {
-  for (const [key, value] of Object.entries(STATIC_SECURITY_HEADERS)) {
-    headers.set(key, value);
-  }
-
-  headers.set(SECURITY_HEADER_NAMES.csp, opts.csp);
-
-  if (opts.includeHsts) {
-    headers.set(SECURITY_HEADER_NAMES.hsts, HSTS_VALUE);
-  }
-}
-
 /** Whether HSTS should be set for this request. */
 export function shouldSetHsts(proto: string | undefined): boolean {
-  return (
-    proto === "https" ||
-    process.env.NODE_ENV === "production" ||
-    Boolean(process.env.VERCEL)
-  );
+  return proto === "https" || process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
 }

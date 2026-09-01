@@ -113,7 +113,12 @@ function LeadPicker({ options, value, onChange }: LeadPickerProps) {
         if (e.target === e.currentTarget) requestClose(() => setOpen(false));
       }}
     >
-      <div ref={panelRef} className="picker-menu picker-menu--lead" role="listbox" aria-label="Reminder lead time">
+      <div
+        ref={panelRef}
+        className="picker-menu picker-menu--lead"
+        role="listbox"
+        aria-label="Reminder lead time"
+      >
         <div className="picker-timezone-list">
           {options.map((option) => {
             const active = option.id === selected.id;
@@ -176,7 +181,9 @@ function AgendaEventRow({
   const spanLabel = eventSpanLabel(day);
   return (
     <button type="button" className="agenda-row" onClick={() => onEditEvent(ev, startIso)}>
-      <span className="ag-glyph" style={glyphTint(c.color)}>{displayGlyph(c.glyph, c.id)}</span>
+      <span className="ag-glyph" style={glyphTint(c.color)}>
+        {displayGlyph(c.glyph, c.id)}
+      </span>
       <span className="ag-main">
         <span className="ag-title">
           {ev.title}
@@ -320,11 +327,26 @@ export function Schedule({
   return (
     <div ref={viewRef} className="view">
       <div ref={gridRef} className="summary-grid sg-3" data-tour="tour-schedule-summary">
-        <SummaryCard label="Events this Month" value={String(occStarts.length)} sub={monthLabel(month, true)} />
-        <SummaryCard label="Next Reminder" tone="ok"
+        <SummaryCard
+          label="Events this Month"
+          value={String(occStarts.length)}
+          sub={monthLabel(month, true)}
+        />
+        <SummaryCard
+          label="Next Reminder"
+          tone="ok"
           value={nextRem ? dayLabel(nextRem.iso) : "—"}
-          sub={nextRem ? `${nextRem.ev.title} · ${leadLabel(nextRem.ev.lead, nextRem.ev.allDay).toLowerCase()}` : "no upcoming reminders"} />
-        <SummaryCard label="Email Reminders" value={String(alertsCount)} sub="occurrences will notify you" />
+          sub={
+            nextRem
+              ? `${nextRem.ev.title} · ${leadLabel(nextRem.ev.lead, nextRem.ev.allDay).toLowerCase()}`
+              : "no upcoming reminders"
+          }
+        />
+        <SummaryCard
+          label="Email Reminders"
+          value={String(alertsCount)}
+          sub="occurrences will notify you"
+        />
       </div>
 
       <section className="panel" data-tour="tour-schedule-agenda">
@@ -369,7 +391,12 @@ export function Schedule({
                   </div>
                   <div className="agenda-items">
                     {days.map((day) => (
-                      <AgendaEventRow key={`${iso}-${day.ev.id}`} day={day} currency={currency} onEditEvent={onEditEvent} />
+                      <AgendaEventRow
+                        key={`${iso}-${day.ev.id}`}
+                        day={day}
+                        currency={currency}
+                        onEditEvent={onEditEvent}
+                      />
                     ))}
                   </div>
                 </div>
@@ -388,7 +415,12 @@ export function Schedule({
               </div>
               <div className="agenda-items">
                 {focusedEvents.map((day) => (
-                  <AgendaEventRow key={day.ev.id} day={day} currency={currency} onEditEvent={onEditEvent} />
+                  <AgendaEventRow
+                    key={day.ev.id}
+                    day={day}
+                    currency={currency}
+                    onEditEvent={onEditEvent}
+                  />
                 ))}
               </div>
             </div>
@@ -407,14 +439,21 @@ export function Schedule({
             <h2>{monthLabel(month, true)}</h2>
             <p className="panel-sub">Click a day to view or add · click an event to edit</p>
           </div>
-          <button className="add-btn add-btn--top" onClick={() => onAddEvent(selectedDay ?? TODAY_ISO)}>
+          <button
+            className="add-btn add-btn--top"
+            onClick={() => onAddEvent(selectedDay ?? TODAY_ISO)}
+          >
             <Icon name="plus" size={17} /> <span className="abt-txt">New Event</span>
           </button>
         </div>
 
         <div className="cal" data-tour="tour-schedule-cal">
           <div className="cal-wd">
-            {WD.map((d) => <div key={d} className="cal-wd-c">{d}</div>)}
+            {WD.map((d) => (
+              <div key={d} className="cal-wd-c">
+                {d}
+              </div>
+            ))}
           </div>
           <div className="cal-grid">
             {cells.map((d, i) => {
@@ -427,10 +466,10 @@ export function Schedule({
                 <div
                   key={i}
                   className={
-                    "cal-cell"
-                    + (today ? " today" : "")
-                    + (past ? " past" : "")
-                    + (viewDay === iso ? " selected" : "")
+                    "cal-cell" +
+                    (today ? " today" : "") +
+                    (past ? " past" : "") +
+                    (viewDay === iso ? " selected" : "")
                   }
                   onClick={() => handleDayClick(iso, list)}
                 >
@@ -440,22 +479,31 @@ export function Schedule({
                       const { ev, dayIndex, span } = day;
                       const c = eventCatMeta(ev) ?? FALLBACK_CAT_META;
                       /* Flatten the inner edges so a run reads as one bar. */
-                      const runCls = span === 1
-                        ? ""
-                        : dayIndex === 0
-                          ? " cal-chip--run cal-chip--run-start"
-                          : dayIndex === span - 1
-                            ? " cal-chip--run cal-chip--run-end"
-                            : " cal-chip--run cal-chip--run-mid";
-                      const label = dayIndex > 0
-                        ? ev.title
-                        : ev.allDay || !ev.time
+                      const runCls =
+                        span === 1
+                          ? ""
+                          : dayIndex === 0
+                            ? " cal-chip--run cal-chip--run-start"
+                            : dayIndex === span - 1
+                              ? " cal-chip--run cal-chip--run-end"
+                              : " cal-chip--run cal-chip--run-mid";
+                      const label =
+                        dayIndex > 0
                           ? ev.title
-                          : `${fmtTime(ev.time)} ${ev.title}`;
+                          : ev.allDay || !ev.time
+                            ? ev.title
+                            : `${fmtTime(ev.time)} ${ev.title}`;
                       return (
-                        <button key={ev.id} className={"cal-chip" + runCls} style={{ background: c.color + "1c", color: c.color }}
+                        <button
+                          key={ev.id}
+                          className={"cal-chip" + runCls}
+                          style={{ background: c.color + "1c", color: c.color }}
                           title={ev.title}
-                          onClick={(e) => { e.stopPropagation(); onEditEvent(ev, day.startIso); }}>
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditEvent(ev, day.startIso);
+                          }}
+                        >
                           {dayIndex === 0 ? (
                             <span className="cal-chip-glyph">{displayGlyph(c.glyph, c.id)}</span>
                           ) : null}
@@ -509,7 +557,7 @@ export function EventModal({
   const [catId, setCatId] = useState(initial ? initial.catId : "bill");
   const [customLabel, setCustomLabel] = useState(initial?.customLabel ?? "");
   const [customGlyph, setCustomGlyph] = useState(initial?.customGlyph ?? customMeta.glyph);
-  const [date, setDate] = useState(initial ? initial.date : (defaultDate || TODAY_ISO));
+  const [date, setDate] = useState(initial ? initial.date : defaultDate || TODAY_ISO);
   const [endDate, setEndDate] = useState(
     initial?.endDate || initial?.date || defaultDate || TODAY_ISO,
   );
@@ -553,8 +601,7 @@ export function EventModal({
 
   const span = spanDaysBetween(date, endDate);
   const spanValid = endDate >= date;
-  const endTimeValid =
-    allDay || !endTime || endDate > date || (!!time && endTime > time);
+  const endTimeValid = allDay || !endTime || endDate > date || (!!time && endTime > time);
 
   /*
    * A repeat is only offered while the next occurrence would start after this
@@ -573,10 +620,15 @@ export function EventModal({
   };
 
   const titleRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (titleRef.current) titleRef.current.focus(); }, []);
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && !scopeOpen && !confirmOpen && !busy) requestClose(onClose); };
-    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+    if (titleRef.current) titleRef.current.focus();
+  }, []);
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !scopeOpen && !confirmOpen && !busy) requestClose(onClose);
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, [scopeOpen, confirmOpen, busy, onClose, requestClose]);
 
   const handleAllDayChange = (checked: boolean) => {
@@ -611,28 +663,35 @@ export function EventModal({
     if (!valid || saving) return;
     setSaving(true);
     try {
-      const holdFields = holdEnabled && holdAmountNum > 0 && resolvedHoldCategoryId
-        ? {
-            budgetHoldEnabled: true,
-            budgetHoldAmount: holdAmountNum,
-            budgetHoldCategoryId: resolvedHoldCategoryId,
-            budgetHoldReleasedDates: initial?.budgetHoldReleasedDates,
-          }
-        : {
-            budgetHoldEnabled: false,
-          };
+      const holdFields =
+        holdEnabled && holdAmountNum > 0 && resolvedHoldCategoryId
+          ? {
+              budgetHoldEnabled: true,
+              budgetHoldAmount: holdAmountNum,
+              budgetHoldCategoryId: resolvedHoldCategoryId,
+              budgetHoldReleasedDates: initial?.budgetHoldReleasedDates,
+            }
+          : {
+              budgetHoldEnabled: false,
+            };
       await onSave({
         /* Empty id (rather than omitted) still reads as "new" downstream — data.id is checked for truthiness. */
-        id: initial?.id ?? "", title: title.trim(), catId,
+        id: initial?.id ?? "",
+        title: title.trim(),
+        catId,
         customLabel: catId === "custom" ? customLabel.trim() : undefined,
         customGlyph: catId === "custom" ? customGlyph : undefined,
         date,
         /* Both null for a plain single-day event, so its payload is unchanged. */
         endDate: endDate > date ? endDate : null,
-        allDay, time: allDay ? null : time,
+        allDay,
+        time: allDay ? null : time,
         endTime: allDay || !endTime ? null : endTime,
         repeat,
-        notify, lead, email: "", comments,
+        notify,
+        lead,
+        email: "",
+        comments,
         ...holdFields,
       });
     } finally {
@@ -658,33 +717,68 @@ export function EventModal({
   };
 
   return (
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !scopeOpen && !confirmOpen && !busy) requestClose(onClose); }}>
+    <div
+      ref={scrimRef}
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !scopeOpen && !confirmOpen && !busy)
+          requestClose(onClose);
+      }}
+    >
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{editing ? "Edit Event" : "New Event"}</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={busy}><Icon name="close" size={18} /></button>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onClose)}
+            aria-label="Close"
+            disabled={busy}
+          >
+            <Icon name="close" size={18} />
+          </button>
         </div>
 
         <div className="modal-body modal-scroll">
-          <input ref={titleRef} className="ev-title-in" type="text" placeholder="Event title"
-            value={title} onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+          <input
+            ref={titleRef}
+            className="ev-title-in"
+            type="text"
+            placeholder="Event title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+          />
 
           <div className="event-div" />
           <label className="fld-label">Type</label>
           <div className="cat-grid">
             {EVENT_CATS.filter((c) => c.id !== "custom").map((c) => (
-              <button key={c.id} type="button" className={"cat-chip" + (catId === c.id ? " active" : "")}
-                style={catId === c.id ? { borderColor: c.color, background: c.color + "16" } : undefined}
-                onClick={() => chooseCat(c.id)}>
-                <span className="cc-glyph" style={{ color: c.color }}>{displayGlyph(c.glyph, c.id)}</span>
+              <button
+                key={c.id}
+                type="button"
+                className={"cat-chip" + (catId === c.id ? " active" : "")}
+                style={
+                  catId === c.id ? { borderColor: c.color, background: c.color + "16" } : undefined
+                }
+                onClick={() => chooseCat(c.id)}
+              >
+                <span className="cc-glyph" style={{ color: c.color }}>
+                  {displayGlyph(c.glyph, c.id)}
+                </span>
                 <span className="cc-label">{c.name}</span>
               </button>
             ))}
             <button
               type="button"
               className={"cat-chip cat-chip--span2" + (catId === "custom" ? " active" : "")}
-              style={catId === "custom" ? { borderColor: customMeta.color, background: customMeta.color + "16" } : undefined}
+              style={
+                catId === "custom"
+                  ? { borderColor: customMeta.color, background: customMeta.color + "16" }
+                  : undefined
+              }
               onClick={() => chooseCat("custom")}
             >
               <span className="cc-glyph" style={{ color: customMeta.color }}>
@@ -696,7 +790,9 @@ export function EventModal({
 
           {catId === "custom" ? (
             <div className="ev-custom">
-              <label className="fld-label" htmlFor="ev-custom-name">Custom type name</label>
+              <label className="fld-label" htmlFor="ev-custom-name">
+                Custom type name
+              </label>
               <input
                 id="ev-custom-name"
                 className="text-in"
@@ -713,7 +809,11 @@ export function EventModal({
                     key={g}
                     type="button"
                     className={"cat-glyph-btn" + (customGlyph === g ? " active" : "")}
-                    style={customGlyph === g ? { borderColor: customMeta.color, color: customMeta.color } : undefined}
+                    style={
+                      customGlyph === g
+                        ? { borderColor: customMeta.color, color: customMeta.color }
+                        : undefined
+                    }
                     onClick={() => setCustomGlyph(g)}
                   >
                     {g}
@@ -731,9 +831,11 @@ export function EventModal({
             </div>
             <div>
               <label className="fld-label">Time</label>
-              {allDay
-                ? <div className="time-allday">All day</div>
-                : <TimePicker value={time} onChange={setTime} />}
+              {allDay ? (
+                <div className="time-allday">All day</div>
+              ) : (
+                <TimePicker value={time} onChange={setTime} />
+              )}
             </div>
           </div>
 
@@ -759,7 +861,11 @@ export function EventModal({
                   </button>
                 </div>
               ) : (
-                <button type="button" className="ghost-btn end-time-add" onClick={() => setEndTime(time)}>
+                <button
+                  type="button"
+                  className="ghost-btn end-time-add"
+                  onClick={() => setEndTime(time)}
+                >
                   <Icon name="plus" size={14} /> End time
                 </button>
               )}
@@ -774,7 +880,11 @@ export function EventModal({
           ) : null}
 
           <label className="toggle-line tight">
-            <input type="checkbox" checked={allDay} onChange={(e) => handleAllDayChange(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={allDay}
+              onChange={(e) => handleAllDayChange(e.target.checked)}
+            />
             <span className="toggle-ui" /> <span>All-day event</span>
           </label>
 
@@ -789,7 +899,11 @@ export function EventModal({
                   type="button"
                   className={"sub-chip" + (repeat === r.id ? " active" : "")}
                   disabled={!allowed}
-                  title={allowed ? undefined : `A ${span}-day event can't repeat ${r.label.toLowerCase()}`}
+                  title={
+                    allowed
+                      ? undefined
+                      : `A ${span}-day event can't repeat ${r.label.toLowerCase()}`
+                  }
                   onClick={() => setRepeat(r.id)}
                 >
                   {r.label}
@@ -803,8 +917,15 @@ export function EventModal({
           <div className="event-div" />
           <div className="notify-head">
             <label className="toggle-line tight">
-              <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-              <span className="toggle-ui" /> <span><Icon name="bell" size={15} /> Email reminder</span>
+              <input
+                type="checkbox"
+                checked={notify}
+                onChange={(e) => setNotify(e.target.checked)}
+              />
+              <span className="toggle-ui" />{" "}
+              <span>
+                <Icon name="bell" size={15} /> Email reminder
+              </span>
             </label>
           </div>
           {notify && (
@@ -822,9 +943,8 @@ export function EventModal({
                 Reminders go to your account email only — set it under Data &amp; privacy.
               </p>
               <p className="notify-note">
-                You'll always get a reminder right at the event itself — the start time, or
-                9:00 AM on the day for all-day events — this lead time is an extra one sent
-                earlier.
+                You'll always get a reminder right at the event itself — the start time, or 9:00 AM
+                on the day for all-day events — this lead time is an extra one sent earlier.
               </p>
               <p className="notify-note">
                 The email includes this event's name, budget hold and comments. Email is not
@@ -842,7 +962,9 @@ export function EventModal({
                 onChange={(e) => setHoldEnabled(e.target.checked)}
               />
               <span className="toggle-ui" />
-              <span><Icon name="lock" size={15} /> Hold from budget</span>
+              <span>
+                <Icon name="lock" size={15} /> Hold from budget
+              </span>
             </label>
           </div>
           {holdEnabled ? (
@@ -851,7 +973,9 @@ export function EventModal({
                 <div className="hold-fields-grid__amount">
                   <label className="fld-label">Amount</label>
                   {holdAmountIsExpression ? (
-                    <FadeIn className="amount-live-total">= {fmtMoney(holdAmountEvaluated, { cents: false, currency })}</FadeIn>
+                    <FadeIn className="amount-live-total">
+                      = {fmtMoney(holdAmountEvaluated, { cents: false, currency })}
+                    </FadeIn>
                   ) : null}
                   <div className="hold-amt-row">
                     <span className="hold-cur">{getCurrency(currency).symbol}</span>
@@ -862,7 +986,9 @@ export function EventModal({
                       placeholder="0"
                       value={holdAmount}
                       onChange={(e) => setHoldAmount(e.target.value)}
-                      onBlur={() => { if (holdAmountIsExpression) setHoldAmount(String(holdAmountEvaluated)); }}
+                      onBlur={() => {
+                        if (holdAmountIsExpression) setHoldAmount(String(holdAmountEvaluated));
+                      }}
                     />
                   </div>
                 </div>
@@ -881,17 +1007,39 @@ export function EventModal({
 
           <label className="fld-label">Comments</label>
           <div className="cmt-thread">
-            {comments.length ? comments.map((c) => (
-              <div key={c.id} className="cmt">
-                <div className="cmt-bubble">{c.text}</div>
-                <div className="cmt-time">{fmtCommentTime(c.at)}</div>
-              </div>
-            )) : <div className="cmt-empty">No comments yet — add a note, context, or follow-up.</div>}
+            {comments.length ? (
+              comments.map((c) => (
+                <div key={c.id} className="cmt">
+                  <div className="cmt-bubble">{c.text}</div>
+                  <div className="cmt-time">{fmtCommentTime(c.at)}</div>
+                </div>
+              ))
+            ) : (
+              <div className="cmt-empty">No comments yet — add a note, context, or follow-up.</div>
+            )}
             <div className="cmt-composer">
-              <input className="cmt-in" type="text" placeholder="Add a comment…" value={draft}
+              <input
+                className="cmt-in"
+                type="text"
+                placeholder="Add a comment…"
+                value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addComment(); } }} />
-              <button className="cmt-send" type="button" disabled={!draft.trim()} onClick={addComment} aria-label="Post Comment"><Icon name="send" size={17} /></button>
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addComment();
+                  }
+                }}
+              />
+              <button
+                className="cmt-send"
+                type="button"
+                disabled={!draft.trim()}
+                onClick={addComment}
+                aria-label="Post Comment"
+              >
+                <Icon name="send" size={17} />
+              </button>
             </div>
           </div>
         </div>
@@ -899,7 +1047,14 @@ export function EventModal({
         <div className={"modal-foot" + (showLogPayment ? " modal-foot-stacked" : "")}>
           {showLogPayment ? (
             <div className="mf-row mf-row-full">
-              <button className="ghost-btn danger" type="button" disabled={deleting} onClick={requestDelete}><span className="btn-label">{deleting ? "Deleting…" : "Delete"}</span></button>
+              <button
+                className="ghost-btn danger"
+                type="button"
+                disabled={deleting}
+                onClick={requestDelete}
+              >
+                <span className="btn-label">{deleting ? "Deleting…" : "Delete"}</span>
+              </button>
               <button
                 className="ghost-btn"
                 type="button"
@@ -913,15 +1068,40 @@ export function EventModal({
                   });
                 }}
               >
-                <span className="btn-label">{hasLinkedPayment ? "View Linked Payment" : "Log Payment"}</span>
+                <span className="btn-label">
+                  {hasLinkedPayment ? "View Linked Payment" : "Log Payment"}
+                </span>
               </button>
             </div>
+          ) : editing ? (
+            <button
+              className="ghost-btn danger"
+              type="button"
+              disabled={deleting}
+              onClick={requestDelete}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
           ) : (
-            editing ? <button className="ghost-btn danger" type="button" disabled={deleting} onClick={requestDelete}>{deleting ? "Deleting…" : "Delete"}</button> : <span />
+            <span />
           )}
           <div className="mf-right">
-            <button className="ghost-btn" type="button" onClick={() => requestClose(onClose)} disabled={busy}>Cancel</button>
-            <button className="primary-btn" type="button" disabled={!valid || saving} onClick={submit}>{saving ? "Saving…" : editing ? "Save Changes" : "Add Event"}</button>
+            <button
+              className="ghost-btn"
+              type="button"
+              onClick={() => requestClose(onClose)}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              className="primary-btn"
+              type="button"
+              disabled={!valid || saving}
+              onClick={submit}
+            >
+              {saving ? "Saving…" : editing ? "Save Changes" : "Add Event"}
+            </button>
           </div>
         </div>
       </div>
@@ -951,4 +1131,3 @@ export function EventModal({
     </div>
   );
 }
-

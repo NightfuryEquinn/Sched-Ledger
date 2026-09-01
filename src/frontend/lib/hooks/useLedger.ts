@@ -31,8 +31,23 @@ import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { releaseOrphanedPlanRefs } from "@/frontend/lib/capitals";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
-import { classifyTx, normalizeRecurring, recurringScheduleKey, sortExpensesByDateDesc } from "@/frontend/lib/stats";
-import type { Budgets, CapitalPlan, Category, Expense, FinancialWallet, FuelFill, LedgerEvent, TodoList, Vehicle } from "@/frontend/lib/types";
+import {
+  classifyTx,
+  normalizeRecurring,
+  recurringScheduleKey,
+  sortExpensesByDateDesc,
+} from "@/frontend/lib/stats";
+import type {
+  Budgets,
+  CapitalPlan,
+  Category,
+  Expense,
+  FinancialWallet,
+  FuelFill,
+  LedgerEvent,
+  TodoList,
+  Vehicle,
+} from "@/frontend/lib/types";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { DEFAULT_CATEGORIES, validateTaxonomy } from "@/schemas/category";
 import type { TourPreference } from "@/schemas/profile";
@@ -73,7 +88,7 @@ function cloneDefaultCategories(): Category[] {
 /** Shift a YYYY-MM key by a signed month delta. */
 function shiftMonthKey(key: string, delta: number): string {
   const [y, m] = key.split("-").map(Number);
-  const d = new Date(y!, (m! - 1) + delta, 1);
+  const d = new Date(y!, m! - 1 + delta, 1);
 
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -110,8 +125,7 @@ async function backfillReminderDetails(
 ): Promise<void> {
   const stale = pairs
     .filter(
-      ({ wire, event }) =>
-        wire.enc === 1 && wire.payload && !wire.notifyDetails && event.notify,
+      ({ wire, event }) => wire.enc === 1 && wire.payload && !wire.notifyDetails && event.notify,
     )
     .slice(0, REMINDER_BACKFILL_PER_LOAD);
 
@@ -283,7 +297,7 @@ export function useLedger(walletAddress: string) {
    * orphaned mid-load would flash wrong balances and, worse, let an unrelated
    * edit save the cleared assignment back.
    */
-  const livePlans = capitalPlansQuery.isSuccess ? capitalPlansQuery.data ?? [] : null;
+  const livePlans = capitalPlansQuery.isSuccess ? (capitalPlansQuery.data ?? []) : null;
 
   const expensesQuery = useQuery({
     queryKey: keys.expenses(wallet),
@@ -312,7 +326,11 @@ export function useLedger(walletAddress: string) {
 
       return collected;
     },
-    enabled: cryptoReady && !!profileQuery.data && wallets.length > 0 && categoriesQuery.data !== undefined,
+    enabled:
+      cryptoReady &&
+      !!profileQuery.data &&
+      wallets.length > 0 &&
+      categoriesQuery.data !== undefined,
   });
 
   const decodedExpenses = (expensesQuery.data ?? []).map((e) => ({
@@ -356,7 +374,11 @@ export function useLedger(walletAddress: string) {
 
       return collected;
     },
-    enabled: cryptoReady && !!profileQuery.data && wallets.length > 0 && categoriesQuery.data !== undefined,
+    enabled:
+      cryptoReady &&
+      !!profileQuery.data &&
+      wallets.length > 0 &&
+      categoriesQuery.data !== undefined,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -586,7 +608,9 @@ export function useLedger(walletAddress: string) {
   });
 
   const saveWalletMutation = useMutation({
-    mutationFn: async (data: Partial<FinancialWallet> & { id?: string; name?: string; currency?: string }) => {
+    mutationFn: async (
+      data: Partial<FinancialWallet> & { id?: string; name?: string; currency?: string },
+    ) => {
       const cryptoKey = requireKey(wallet);
       if (data.id) {
         const existing = (walletsQuery.data ?? []).find((w) => w.id === data.id);
@@ -633,7 +657,13 @@ export function useLedger(walletAddress: string) {
     onSuccess: (saved, variables) => {
       queryClient.setQueryData<FinancialWallet[]>(keys.wallets(wallet), (prev = []) => {
         if (variables.id) {
-          return prev.map((w) => (w.id === saved.id ? saved : w.isDefault && saved.isDefault ? { ...w, isDefault: false } : w));
+          return prev.map((w) =>
+            w.id === saved.id
+              ? saved
+              : w.isDefault && saved.isDefault
+                ? { ...w, isDefault: false }
+                : w,
+          );
         }
         return [...prev, saved];
       });
@@ -873,16 +903,15 @@ export function useLedger(walletAddress: string) {
   const saveTodoListMutation = useMutation({
     mutationFn: async (data: Partial<TodoList> & { id?: string; name?: string; icon?: string }) => {
       const cryptoKey = requireKey(wallet);
-      const existing = (queryClient.getQueryData<TodoList[]>(keys.todoLists(wallet)) ?? []);
+      const existing = queryClient.getQueryData<TodoList[]>(keys.todoLists(wallet)) ?? [];
       const name = data.name ?? "";
       const icon = data.icon ?? "📋";
-      const tasks = data.tasks ?? (data.id ? existing.find((l) => l.id === data.id)?.tasks ?? [] : []);
+      const tasks =
+        data.tasks ?? (data.id ? (existing.find((l) => l.id === data.id)?.tasks ?? []) : []);
 
       if (name) {
         const clash = existing.find(
-          (l) =>
-            l.id !== data.id &&
-            l.name.toLowerCase() === name.trim().toLowerCase(),
+          (l) => l.id !== data.id && l.name.toLowerCase() === name.trim().toLowerCase(),
         );
         if (clash) throw new Error("A list with this name already exists");
       }

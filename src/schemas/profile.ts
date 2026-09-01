@@ -45,8 +45,7 @@ export function defaultProfile(
 ): Omit<LedgerProfile, "createdAt" | "updatedAt"> {
   const now = new Date();
   const month =
-    currentMonth ??
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    currentMonth ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   return {
     accountId: accountIdSchema.parse(accountId),

@@ -195,10 +195,12 @@ async function purgeAccount(
 
 /** Format a counts map as a compact summary string. */
 function formatCounts(counts: DeleteCounts): string {
-  return Object.entries(counts)
-    .filter(([, n]) => n > 0)
-    .map(([name, n]) => `${name}=${n}`)
-    .join(" ") || "(no docs)";
+  return (
+    Object.entries(counts)
+      .filter(([, n]) => n > 0)
+      .map(([name, n]) => `${name}=${n}`)
+      .join(" ") || "(no docs)"
+  );
 }
 
 /** Run the stale-user prune (or dry-run). */
@@ -235,10 +237,7 @@ async function main(): Promise<void> {
     await client.connect();
     const db = client.db(dbName);
     const users = db.collection(COLLECTIONS.users);
-    const cursor = users.find(
-      {},
-      { projection: { address: 1, createdAt: 1, lastSeenAt: 1 } },
-    );
+    const cursor = users.find({}, { projection: { address: 1, createdAt: 1, lastSeenAt: 1 } });
 
     const stale: Array<{
       accountId: string;

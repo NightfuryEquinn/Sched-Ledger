@@ -7,8 +7,21 @@ import {
   recurringScheduleKey,
 } from "@/lib/recurring";
 import type { CategoryIndex } from "./categories";
-import { catOfSub, isArchivedCategory, isIncomeCategory, isSavingsSub, isSpendingCategory } from "./categories";
-import { CURRENT_MONTH_KEY, SUB_BY_ID, TODAY_ISO, monthLabel, monthsWindow, roundMoney } from "./data";
+import {
+  catOfSub,
+  isArchivedCategory,
+  isIncomeCategory,
+  isSavingsSub,
+  isSpendingCategory,
+} from "./categories";
+import {
+  CURRENT_MONTH_KEY,
+  SUB_BY_ID,
+  TODAY_ISO,
+  monthLabel,
+  monthsWindow,
+  roundMoney,
+} from "./data";
 import type { Budgets, Expense, FinancialWallet, LedgerEvent } from "./types";
 import { holdsByCategory, totalActiveHolds } from "./envelope-holds";
 import { displayGlyph } from "@/lib/glyphs";
@@ -18,7 +31,7 @@ export {
   recurringDueDay,
   recurringLabel,
   recurringMonthlyEquivalent,
-  recurringScheduleKey
+  recurringScheduleKey,
 };
 
 export type ChartPeriod = "daily" | "monthly" | "quarterly" | "yearly";
@@ -80,7 +93,10 @@ export function spendingChartSeries(
     const bars: ChartBar[] = [];
     for (let d = 1; d <= days; d++) {
       const key = `${anchorMonth}-${pad2(d)}`;
-      const totals = flowTotals(expenses.filter((e) => e.date === key), index);
+      const totals = flowTotals(
+        expenses.filter((e) => e.date === key),
+        index,
+      );
       bars.push({ key, label: String(d), ...totals });
     }
     return bars;
@@ -118,7 +134,10 @@ export function spendingChartSeries(
   for (let i = 5; i >= 0; i--) {
     const year = anchorYear - i;
     const key = String(year);
-    const totals = flowTotals(expenses.filter((e) => e.date.startsWith(`${year}-`)), index);
+    const totals = flowTotals(
+      expenses.filter((e) => e.date.startsWith(`${year}-`)),
+      index,
+    );
     bars.push({ key, label: key, ...totals });
   }
   return bars;
@@ -252,7 +271,11 @@ export function chartActiveKey(period: ChartPeriod, anchorMonth: string) {
   return anchorMonth.split("-")[0];
 }
 
-export function chartBudgetForPeriod(period: ChartPeriod, monthlyBudget: number, anchorMonth: string) {
+export function chartBudgetForPeriod(
+  period: ChartPeriod,
+  monthlyBudget: number,
+  anchorMonth: string,
+) {
   if (!monthlyBudget) return 0;
   if (period === "monthly") return monthlyBudget;
   if (period === "daily") {
@@ -327,8 +350,7 @@ export function recurringSchedulesForMonth(expenses: Expense[], monthKey: string
     .filter((e) => recurringOccursInMonth(e, monthKey))
     .sort(
       (a, b) =>
-        recurringDueDay(a, monthKey) - recurringDueDay(b, monthKey) ||
-        a.note.localeCompare(b.note),
+        recurringDueDay(a, monthKey) - recurringDueDay(b, monthKey) || a.note.localeCompare(b.note),
     );
 }
 
@@ -478,9 +500,7 @@ export function monthStats(
   const monthlyPool =
     wallet.fundingMode === "monthly" ? wallet.income + earned + withdrawn : earned + withdrawn;
   const remaining =
-    wallet.fundingMode === "monthly"
-      ? wallet.income + earned + withdrawn - spent - saved
-      : balance;
+    wallet.fundingMode === "monthly" ? wallet.income + earned + withdrawn - spent - saved : balance;
 
   return {
     list: sortExpensesByDateDesc(list),

@@ -6,8 +6,7 @@
 
 const consentKey = (addr: string) => `ledger:consent:${(addr || "").toLowerCase()}`;
 
-const choiceMadeKey = (addr: string) =>
-  `ledger:sharing-choice-made:${(addr || "").toLowerCase()}`;
+const choiceMadeKey = (addr: string) => `ledger:sharing-choice-made:${(addr || "").toLowerCase()}`;
 
 /** Read cached opt-in flag for an address. */
 export function getConsent(addr: string): boolean {

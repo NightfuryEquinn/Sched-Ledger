@@ -44,17 +44,35 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
   }
 
   return createPortal(
-    <div ref={scrimRef} className="modal-scrim center" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) requestClose(onClose); }}>
+    <div
+      ref={scrimRef}
+      className="modal-scrim center"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !busy) requestClose(onClose);
+      }}
+    >
       <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>Recovery Phrase</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close" disabled={busy}><Icon name="close" size={20} /></button>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onClose)}
+            aria-label="Close"
+            disabled={busy}
+          >
+            <Icon name="close" size={20} />
+          </button>
         </div>
         <div className="modal-body">
-          <p className="rec-note2">Anyone with these words controls your ledger. Never share them or enter them on another site.</p>
+          <p className="rec-note2">
+            Anyone with these words controls your ledger. Never share them or enter them on another
+            site.
+          </p>
           {needsPass && !mnemonic ? (
             <>
-              <label className="fld-label">Device passphrase
+              <label className="fld-label">
+                Device passphrase
                 <input
                   className="text-in"
                   type="password"
@@ -64,7 +82,12 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
                 />
               </label>
               {error ? <p className="auth-error">{error}</p> : null}
-              <button className="primary-btn full" type="button" disabled={busy || !passphrase} onClick={() => void revealFromVault()}>
+              <button
+                className="primary-btn full"
+                type="button"
+                disabled={busy || !passphrase}
+                onClick={() => void revealFromVault()}
+              >
                 {busy ? "Unlocking…" : "Reveal Phrase"}
               </button>
             </>
@@ -72,12 +95,17 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
             <>
               <div className={`phrase-grid${shown ? "" : " blurred"}`}>
                 {words.map((w, i) => (
-                  <span key={i} className="word"><b>{i + 1}</b>{w}</span>
+                  <span key={i} className="word">
+                    <b>{i + 1}</b>
+                    {w}
+                  </span>
                 ))}
               </div>
               <div className="reveal-actions">
                 {!shown ? (
-                  <button className="ghost-btn full" type="button" onClick={() => setShown(true)}>Tap to Reveal</button>
+                  <button className="ghost-btn full" type="button" onClick={() => setShown(true)}>
+                    Tap to Reveal
+                  </button>
                 ) : (
                   <button
                     className="mini-btn"
@@ -88,7 +116,8 @@ export function RecoveryReveal({ identity, onClose }: RecoveryRevealProps) {
                       setTimeout(() => setCopied(false), 1200);
                     }}
                   >
-                    <Icon name={copied ? "check" : "copy"} size={14} /> {copied ? "Copied" : "Copy Phrase"}
+                    <Icon name={copied ? "check" : "copy"} size={14} />{" "}
+                    {copied ? "Copied" : "Copy Phrase"}
                   </button>
                 )}
               </div>

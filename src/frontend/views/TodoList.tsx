@@ -18,14 +18,13 @@ const ICONS = TODO_ICON_OPTIONS;
 
 type TodoListViewProps = {
   todoLists: TodoList[];
-  onSave: (data: Partial<TodoList> & { id?: string; name?: string; icon?: string }) => Promise<TodoList>;
+  onSave: (
+    data: Partial<TodoList> & { id?: string; name?: string; icon?: string },
+  ) => Promise<TodoList>;
   onDelete: (id: string) => Promise<unknown>;
 };
 
-type EditorMode =
-  | { type: "add-list" }
-  | { type: "edit-list"; listId: string }
-  | null;
+type EditorMode = { type: "add-list" } | { type: "edit-list"; listId: string } | null;
 
 function taskId(title: string, existing: TodoTask[]) {
   const base = slugId("task", title);
@@ -48,7 +47,10 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
   const taskSaveRef = useRef(false);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { requestClose } = useModalMotion(scrimRef, panelRef, { variant: "center", active: !!editor });
+  const { requestClose } = useModalMotion(scrimRef, panelRef, {
+    variant: "center",
+    active: !!editor,
+  });
   const closeEditor = () => requestClose(() => setEditor(null));
 
   useEffect(() => {
@@ -59,10 +61,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
     }
   }, [todoLists, activeId]);
 
-  const active = useMemo(
-    () => lists.find((l) => l.id === activeId) ?? null,
-    [lists, activeId],
-  );
+  const active = useMemo(() => lists.find((l) => l.id === activeId) ?? null, [lists, activeId]);
 
   const stats = useMemo(() => {
     const totalTasks = lists.reduce((n, l) => n + l.tasks.length, 0);
@@ -70,7 +69,9 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
     return { lists: lists.length, totalTasks, doneTasks };
   }, [lists]);
 
-  const persistList = async (data: Partial<TodoList> & { id?: string; name?: string; icon?: string }) => {
+  const persistList = async (
+    data: Partial<TodoList> & { id?: string; name?: string; icon?: string },
+  ) => {
     setBusy(true);
     setError("");
     try {
@@ -245,11 +246,7 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                   </div>
                 </div>
                 <div className="todo-panel-actions">
-                  <button
-                    type="button"
-                    onClick={() => openEditList(active)}
-                    aria-label="Edit List"
-                  >
+                  <button type="button" onClick={() => openEditList(active)} aria-label="Edit List">
                     <Icon name="edit" size={16} />
                   </button>
                   <button
@@ -270,27 +267,29 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
                   [...active.tasks]
                     .sort((a, b) => Number(a.done) - Number(b.done))
                     .map((task) => (
-                    <div key={task.id} className={"todo-task" + (task.done ? " done" : "")}>
-                      <button
-                        type="button"
-                        className={"todo-check" + (task.done ? " checked" : "")}
-                        disabled={busy}
-                        onClick={() => toggleTask(active.id, task.id)}
-                        aria-label={task.done ? "Mark incomplete" : "Mark complete"}
-                      >
-                        {task.done ? <Icon name="check" size={14} /> : null}
-                      </button>
-                      <span className="todo-task-title">{task.title}</span>
-                      <button
-                        type="button"
-                        className="ghost-btn sm danger"
-                        disabled={busy}
-                        onClick={() => setConfirmDelete({ type: "task", listId: active.id, taskId: task.id })}
-                      >
-                        {busy ? "Removing…" : "Remove"}
-                      </button>
-                    </div>
-                  ))
+                      <div key={task.id} className={"todo-task" + (task.done ? " done" : "")}>
+                        <button
+                          type="button"
+                          className={"todo-check" + (task.done ? " checked" : "")}
+                          disabled={busy}
+                          onClick={() => toggleTask(active.id, task.id)}
+                          aria-label={task.done ? "Mark incomplete" : "Mark complete"}
+                        >
+                          {task.done ? <Icon name="check" size={14} /> : null}
+                        </button>
+                        <span className="todo-task-title">{task.title}</span>
+                        <button
+                          type="button"
+                          className="ghost-btn sm danger"
+                          disabled={busy}
+                          onClick={() =>
+                            setConfirmDelete({ type: "task", listId: active.id, taskId: task.id })
+                          }
+                        >
+                          {busy ? "Removing…" : "Remove"}
+                        </button>
+                      </div>
+                    ))
                 ) : (
                   <EmptyState title="No Tasks Yet" sub="Add your first task below." />
                 )}
@@ -333,76 +332,83 @@ export function TodoListView({ todoLists, onSave, onDelete }: TodoListViewProps)
         </section>
       )}
 
-      {editor ? createPortal(
-        <div
-          ref={scrimRef}
-          className="modal-scrim center"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !busy) closeEditor();
-          }}
-        >
-          <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
-            <div className="modal-head">
-              <h3>{editorTitle}</h3>
-              <button
-                className="icon-btn"
-                type="button"
-                onClick={closeEditor}
-                aria-label="Close"
-                disabled={busy}
-              >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-            <div className="modal-body modal-scroll">
-              <div className="dm-sec">
-                <label className="fld-label" htmlFor="todo-list-name">
-                  List name
-                </label>
-                <input
-                  id="todo-list-name"
-                  className="text-in wallet-field"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoFocus
-                  placeholder="e.g. Groceries, Work, Weekend"
-                />
-
-                <label className="fld-label">Icon</label>
-                <div className="cat-glyph-row">
-                  {ICONS.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      className={"cat-glyph-btn" + (icon === g ? " active" : "")}
-                      onClick={() => setIcon(g)}
-                    >
-                      {g}
-                    </button>
-                  ))}
-                </div>
-
-                {error ? <p className="auth-error">{error}</p> : null}
-
-                <div className="wallet-form-actions">
-                  <button className="ghost-btn full" type="button" onClick={closeEditor} disabled={busy}>
-                    Cancel
-                  </button>
+      {editor
+        ? createPortal(
+            <div
+              ref={scrimRef}
+              className="modal-scrim center"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget && !busy) closeEditor();
+              }}
+            >
+              <div ref={panelRef} className="modal sm" role="dialog" aria-modal="true">
+                <div className="modal-head">
+                  <h3>{editorTitle}</h3>
                   <button
-                    className="primary-btn full"
+                    className="icon-btn"
                     type="button"
-                    disabled={busy || !name.trim()}
-                    onClick={() => void submitEditor()}
+                    onClick={closeEditor}
+                    aria-label="Close"
+                    disabled={busy}
                   >
-                    {busy ? "Saving…" : "Save"}
+                    <Icon name="close" size={18} />
                   </button>
+                </div>
+                <div className="modal-body modal-scroll">
+                  <div className="dm-sec">
+                    <label className="fld-label" htmlFor="todo-list-name">
+                      List name
+                    </label>
+                    <input
+                      id="todo-list-name"
+                      className="text-in wallet-field"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      autoFocus
+                      placeholder="e.g. Groceries, Work, Weekend"
+                    />
+
+                    <label className="fld-label">Icon</label>
+                    <div className="cat-glyph-row">
+                      {ICONS.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          className={"cat-glyph-btn" + (icon === g ? " active" : "")}
+                          onClick={() => setIcon(g)}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+
+                    {error ? <p className="auth-error">{error}</p> : null}
+
+                    <div className="wallet-form-actions">
+                      <button
+                        className="ghost-btn full"
+                        type="button"
+                        onClick={closeEditor}
+                        disabled={busy}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="primary-btn full"
+                        type="button"
+                        disabled={busy || !name.trim()}
+                        onClick={() => void submitEditor()}
+                      >
+                        {busy ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>,
-        document.body,
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
 
       {confirmDelete ? (
         <ConfirmDialog

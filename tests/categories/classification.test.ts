@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { resolveImportSub } from "@/frontend/auth/lib/category-import";
 import { buildExpenseCsv } from "@/frontend/auth/lib/export";
 import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
-import { assessSpendingHabit, computeHabitMetrics, habitPeriodExpenses } from "@/frontend/lib/spendingHabits";
+import {
+  assessSpendingHabit,
+  computeHabitMetrics,
+  habitPeriodExpenses,
+} from "@/frontend/lib/spendingHabits";
 import { classifyTx, isSavings, isSpend } from "@/frontend/lib/stats";
 import type { Category, Expense } from "@/frontend/lib/types";
 import { validateTaxonomy } from "@/schemas/category";
@@ -162,14 +166,16 @@ describe("habit engine honors custom categories", () => {
     tx("2026-07-07", 30, "sub_paint"),
     tx("2026-07-09", 10, "food_groceries"),
   ];
-  const savings = [
-    tx("2026-07-02", 500, "sub_rainy_day"),
-    tx("2026-07-08", 500, "sub_rainy_day"),
-  ];
+  const savings = [tx("2026-07-02", 500, "sub_rainy_day"), tx("2026-07-08", 500, "sub_rainy_day")];
   const income = [tx("2026-07-04", 4000, "sub_consulting", "income")];
 
   test("excludes custom savings and income, includes custom expense", () => {
-    const list = habitPeriodExpenses([...spending, ...savings, ...income], "month", "2026-07", INDEX);
+    const list = habitPeriodExpenses(
+      [...spending, ...savings, ...income],
+      "month",
+      "2026-07",
+      INDEX,
+    );
 
     expect(list).toHaveLength(spending.length);
     expect(list.map((e) => e.sub)).not.toContain("sub_rainy_day");

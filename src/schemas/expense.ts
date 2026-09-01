@@ -1,12 +1,7 @@
 import { RECURRING_INTERVALS } from "@/lib/recurring";
 import { z } from "zod";
 import { encryptedPayloadSchema, e2eeVersionSchema, seriesKeySchema } from "./encryption";
-import {
-  accountIdSchema,
-  isoDateSchema,
-  objectIdSchema,
-  subcategoryIdSchema,
-} from "./common";
+import { accountIdSchema, isoDateSchema, objectIdSchema, subcategoryIdSchema } from "./common";
 
 const txnKindSchema = z.enum(["expense", "income"]);
 
@@ -21,7 +16,9 @@ const recurringFieldSchema = z.preprocess(
   z.union([recurringIntervalSchema, z.literal(false)]),
 );
 
-const recurringFieldInputSchema = z.union([recurringIntervalSchema, z.literal(false)]).default(false);
+const recurringFieldInputSchema = z
+  .union([recurringIntervalSchema, z.literal(false)])
+  .default(false);
 
 const expenseMetaSchema = z.object({
   walletId: objectIdSchema,

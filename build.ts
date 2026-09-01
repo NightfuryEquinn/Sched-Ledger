@@ -34,8 +34,12 @@ for (const output of frontend.outputs) {
  * entry-point, leaving the app unmounted (blank page) in production. Patch the
  * script tag to the actual entry-point chunk after the fact.
  */
-const jsEntries = frontend.outputs.filter((o) => o.kind === "entry-point" && o.path.endsWith(".js"));
-const htmlEntries = frontend.outputs.filter((o) => o.kind === "entry-point" && o.path.endsWith(".html"));
+const jsEntries = frontend.outputs.filter(
+  (o) => o.kind === "entry-point" && o.path.endsWith(".js"),
+);
+const htmlEntries = frontend.outputs.filter(
+  (o) => o.kind === "entry-point" && o.path.endsWith(".html"),
+);
 if (jsEntries.length !== 1 || htmlEntries.length !== 1) {
   console.error(
     `Expected exactly one JS entry-point and one HTML entry-point, got ${jsEntries.length} JS / ${htmlEntries.length} HTML`,

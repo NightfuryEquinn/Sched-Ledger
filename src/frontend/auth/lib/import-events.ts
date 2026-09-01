@@ -105,7 +105,10 @@ function resolveEventCategory(
   return { catId: "personal" };
 }
 
-export function parseEventsCsv(text: string, existingIds: Iterable<string> = []): ParseEventsCsvResult {
+export function parseEventsCsv(
+  text: string,
+  existingIds: Iterable<string> = [],
+): ParseEventsCsvResult {
   const rows: EventImportRow[] = [];
   const errors: ImportRowError[] = [];
   const notices: ImportRowNotice[] = [];
@@ -115,7 +118,12 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
 
   const parsed = parseCsv(stripBom(text));
   if (!parsed.length) {
-    return { rows, errors: [{ row: 0, message: "The file is empty." }], notices, stats: { skipped: 0 } };
+    return {
+      rows,
+      errors: [{ row: 0, message: "The file is empty." }],
+      notices,
+      stats: { skipped: 0 },
+    };
   }
 
   const headerMap = Object.fromEntries(parsed[0]!.map((h, i) => [h.trim().toLowerCase(), i]));
@@ -137,7 +145,12 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
   const commentsIdx = colIndex(headerMap, "commentsjson", "comments json", "comments");
 
   if (titleIdx === undefined || dateIdx === undefined) {
-    return { rows, errors: [{ row: 0, message: "Missing required columns: Title and Date." }], notices, stats: { skipped: 0 } };
+    return {
+      rows,
+      errors: [{ row: 0, message: "Missing required columns: Title and Date." }],
+      notices,
+      stats: { skipped: 0 },
+    };
   }
 
   parsed.slice(1).forEach((cells, i) => {
@@ -172,7 +185,10 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
 
     const date = get(dateIdx);
     if (!isValidIsoDate(date)) {
-      errors.push({ row: rowNum, message: `Invalid date "${date || "(empty)"}" — use YYYY-MM-DD.` });
+      errors.push({
+        row: rowNum,
+        message: `Invalid date "${date || "(empty)"}" — use YYYY-MM-DD.`,
+      });
       return;
     }
 
@@ -192,7 +208,10 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
     let time: string | null = null;
     if (!allDay) {
       if (!timeRaw || !TIME_RE.test(timeRaw)) {
-        errors.push({ row: rowNum, message: `Invalid time "${timeRaw || "(empty)"}" — use HH:MM.` });
+        errors.push({
+          row: rowNum,
+          message: `Invalid time "${timeRaw || "(empty)"}" — use HH:MM.`,
+        });
         return;
       }
       time = timeRaw;
@@ -263,8 +282,14 @@ export function parseEventsCsv(text: string, existingIds: Iterable<string> = [])
     }
 
     const email = get(emailIdx);
-    const comments = commentsIdx === undefined ? [] : parseComments(get(commentsIdx), rowNum, errors);
-    if (commentsIdx !== undefined && get(commentsIdx) && comments.length === 0 && errors.some((e) => e.row === rowNum)) {
+    const comments =
+      commentsIdx === undefined ? [] : parseComments(get(commentsIdx), rowNum, errors);
+    if (
+      commentsIdx !== undefined &&
+      get(commentsIdx) &&
+      comments.length === 0 &&
+      errors.some((e) => e.row === rowNum)
+    ) {
       return;
     }
 

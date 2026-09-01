@@ -24,13 +24,21 @@ const COLLECTIONS: CollectionDoc[] = [
     name: "users",
     purpose: "Wallet identity and notification preferences",
     fields: [
-      { key: "address", value: '"0xabc…"', note: "SIWE login address only (unique); prefer a ledger-only key" },
+      {
+        key: "address",
+        value: '"0xabc…"',
+        note: "SIWE login address only (unique); prefer a ledger-only key",
+      },
       { key: "codename", value: '"Maple Owl"' },
       { key: "notifyEmail?", value: '"you@mail.com"' },
       { key: "timezone?", value: '"Asia/Kuala_Lumpur"' },
       { key: "emailRemindersEnabled?", value: "true" },
       { key: "budgetAlertsEnabled?", value: "true" },
-      { key: "lastSeenAt?", value: "ISO date", note: `Login / session activity; stale accounts purged after ${ACCOUNT_STALE_DAYS} days` },
+      {
+        key: "lastSeenAt?",
+        value: "ISO date",
+        note: `Login / session activity; stale accounts purged after ${ACCOUNT_STALE_DAYS} days`,
+      },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -66,7 +74,11 @@ const COLLECTIONS: CollectionDoc[] = [
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
-      { key: "payload", value: "base64 AES-GCM", note: "categories[] tree, incl. piggy target/deadline" },
+      {
+        key: "payload",
+        value: "base64 AES-GCM",
+        note: "categories[] tree, incl. piggy target/deadline",
+      },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -84,7 +96,11 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "payload", value: "base64 AES-GCM", note: "sub, amount, note" },
       { key: "seriesKey?", value: "sha256 hex", note: "recurring series id" },
       { key: "eventId?", value: "ObjectId", note: "optional link to a schedule event (plaintext)" },
-      { key: "capitalPlanId?", value: "ObjectId", note: "optional link to a Capitals plan when savings is assigned (plaintext)" },
+      {
+        key: "capitalPlanId?",
+        value: "ObjectId",
+        note: "optional link to a Capitals plan when savings is assigned (plaintext)",
+      },
       { key: "skipped?", value: "false", note: "soft-delete for recurring cron" },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
@@ -96,15 +112,31 @@ const COLLECTIONS: CollectionDoc[] = [
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
-      { key: "payload", value: "base64 AES-GCM", note: "title, comments, customLabel/Glyph, budget hold fields" },
+      {
+        key: "payload",
+        value: "base64 AES-GCM",
+        note: "title, comments, customLabel/Glyph, budget hold fields",
+      },
       { key: "catId", value: '"bill" | "custom" | …' },
       { key: "date", value: '"2026-07-20"' },
       { key: "allDay / time / repeat", value: "schedule metadata" },
       { key: "exceptDates? / until?", value: "recurrence exceptions / end date" },
       { key: "notify / lead", value: "reminder settings (plaintext for cron)" },
-      { key: "email?", value: '"you@mail.com"', note: "legacy per-event field; delivery uses users.notifyEmail" },
-      { key: "notifyDetails?", value: "title, hold, comments", note: "readable copy for email/push while notify is on — deleted when notify is off" },
-      { key: "expenseId?", value: "ObjectId", note: "optional link when a bill payment was logged" },
+      {
+        key: "email?",
+        value: '"you@mail.com"',
+        note: "legacy per-event field; delivery uses users.notifyEmail",
+      },
+      {
+        key: "notifyDetails?",
+        value: "title, hold, comments",
+        note: "readable copy for email/push while notify is on — deleted when notify is off",
+      },
+      {
+        key: "expenseId?",
+        value: "ObjectId",
+        note: "optional link when a bill payment was logged",
+      },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -121,12 +153,17 @@ const COLLECTIONS: CollectionDoc[] = [
   },
   {
     name: "capital_plans",
-    purpose: "Future-expense planners (marriage, trips, loans, custom) with total budget, monthly save, and a pot of savings assigned via linked transactions; paying line items draws down that pot",
+    purpose:
+      "Future-expense planners (marriage, trips, loans, custom) with total budget, monthly save, and a pot of savings assigned via linked transactions; paying line items draws down that pot",
     encrypted: true,
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "enc", value: "1", note: "E2EE version" },
-      { key: "payload", value: "base64 AES-GCM", note: "name, templateId, glyph, targetDate, initialBudget, items[]" },
+      {
+        key: "payload",
+        value: "base64 AES-GCM",
+        note: "name, templateId, glyph, targetDate, initialBudget, items[]",
+      },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -138,7 +175,11 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "type", value: '"car" | "ev" | "bike" | "van"' },
       { key: "enc", value: "1", note: "E2EE version" },
-      { key: "payload", value: "base64 AES-GCM", note: "name, model, plate, glyph, odometerStart, tankCapacity, notes" },
+      {
+        key: "payload",
+        value: "base64 AES-GCM",
+        note: "name, model, plate, glyph, odometerStart, tankCapacity, notes",
+      },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -183,7 +224,11 @@ const COLLECTIONS: CollectionDoc[] = [
     purpose: "Authenticated browser sessions",
     fields: [
       { key: "accountId", value: '"64b6…"', note: "opaque users._id" },
-      { key: "address?", value: '"0xabc…"', note: "legacy sessions keyed by address only until backfill" },
+      {
+        key: "address?",
+        value: '"0xabc…"',
+        note: "legacy sessions keyed by address only until backfill",
+      },
       { key: "tokenHash", value: "hashed cookie token (rotated on sliding renewal)" },
       { key: "userAgent / ip", value: "client metadata" },
       { key: "createdAt / lastSeenAt / expiresAt", value: "Dates" },
@@ -196,7 +241,11 @@ const COLLECTIONS: CollectionDoc[] = [
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "endpoint", value: "https://…", note: "unique; FCM, Mozilla, or Apple push host" },
-      { key: "keys.p256dh / keys.auth", value: "base64", note: "required verbatim to encrypt each push payload" },
+      {
+        key: "keys.p256dh / keys.auth",
+        value: "base64",
+        note: "required verbatim to encrypt each push payload",
+      },
       { key: "createdAt / updatedAt", value: "ISO dates" },
     ],
   },
@@ -207,7 +256,11 @@ const COLLECTIONS: CollectionDoc[] = [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "eventId", value: "ObjectId" },
       { key: "occurrenceIso", value: "ISO datetime" },
-      { key: "lead", value: '"1d" | "at" | "span"', note: "one row per reminder kind — the chosen lead, the always-on at-event send, and multi-day ongoing sends are logged separately" },
+      {
+        key: "lead",
+        value: '"1d" | "at" | "span"',
+        note: "one row per reminder kind — the chosen lead, the always-on at-event send, and multi-day ongoing sends are logged separately",
+      },
       { key: "email", value: '"you@mail.com"', note: "account notify address at send time" },
       { key: "channels?", value: '["email","push"]', note: "absent on pre-push rows (email-only)" },
       { key: "sentAt", value: "Date", note: "TTL index (~400 days)" },
@@ -215,13 +268,18 @@ const COLLECTIONS: CollectionDoc[] = [
   },
   {
     name: "budget_alert_logs",
-    purpose: "Dedupes budget-near-limit email and push delivery (client evaluates; server delivers)",
+    purpose:
+      "Dedupes budget-near-limit email and push delivery (client evaluates; server delivers)",
     fields: [
       { key: "accountId", value: '"64b6…"', note: "users._id hex (opaque)" },
       { key: "walletId / categoryId", value: "ids" },
       { key: "month", value: '"2026-07"' },
       { key: "level", value: '"warning" | "exceeded"' },
-      { key: "email / channels? / sentAt", value: "delivery record", note: "TTL index (~400 days) on sentAt" },
+      {
+        key: "email / channels? / sentAt",
+        value: "delivery record",
+        note: "TTL index (~400 days) on sentAt",
+      },
     ],
   },
   {
@@ -533,15 +591,21 @@ export function Transparency() {
           <div>
             <h2>How the Whole System Works</h2>
             <p className="panel-sub">
-              Sched Ledger is private by design: your browser derives a ledger key from your wallet signature,
-              encrypts secrets with AES-256-GCM, and syncs ciphertext to MongoDB Atlas. Vercel hosts the app and API
-              (plus Analytics / Speed Insights) but does not run cron. cron-job.org is the only scheduler — it polls
+              Sched Ledger is private by design: your browser derives a ledger key from your wallet
+              signature, encrypts secrets with AES-256-GCM, and syncs ciphertext to MongoDB Atlas.
+              Vercel hosts the app and API (plus Analytics / Speed Insights) but does not run cron.
+              cron-job.org is the only scheduler — it polls
               <code> GET /api/cron/reminders </code>
-              about every fifteen minutes for email reminders, push notifications, and recurring expense rows. Optional email uses Resend;
-              push delivery uses FCM, Apple Push, or Mozilla&apos;s service depending on the browser. UI typefaces (Young Serif, Schibsted Grotesk, Azeret Mono) load from Google Fonts — font files only, no
-              ledger data. On desktop you navigate from the sidebar; on phone and tablet portrait a five-tab bar (Overview, Schedule, Transactions, To-Do, More) opens a sheet for the remaining views. A device passphrase wraps your in-app recovery key on this browser; encrypted backups
-              download to your machine only. The installable PWA may cache ciphertext locally for offline reads —
-              saves still need the network. Older rows may still carry legacy plaintext columns from before E2EE payloads.
+              about every fifteen minutes for email reminders, push notifications, and recurring
+              expense rows. Optional email uses Resend; push delivery uses FCM, Apple Push, or
+              Mozilla&apos;s service depending on the browser. UI typefaces (Young Serif, Schibsted
+              Grotesk, Azeret Mono) load from Google Fonts — font files only, no ledger data. On
+              desktop you navigate from the sidebar; on phone and tablet portrait a five-tab bar
+              (Overview, Schedule, Transactions, To-Do, More) opens a sheet for the remaining views.
+              A device passphrase wraps your in-app recovery key on this browser; encrypted backups
+              download to your machine only. The installable PWA may cache ciphertext locally for
+              offline reads — saves still need the network. Older rows may still carry legacy
+              plaintext columns from before E2EE payloads.
             </p>
           </div>
         </div>
@@ -551,7 +615,10 @@ export function Transparency() {
         <div className="panel-head panel-head--stack">
           <div>
             <h2>Hosting &amp; Jobs</h2>
-            <p className="panel-sub">Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules; Google Fonts serves typefaces only</p>
+            <p className="panel-sub">
+              Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules; Google Fonts
+              serves typefaces only
+            </p>
           </div>
         </div>
       </section>
@@ -561,29 +628,33 @@ export function Transparency() {
           <div>
             <h2>What the Server Can Infer</h2>
             <p className="panel-sub">
-              Even with E2EE, plaintext metadata remains for queries and accurate schedule reminders (day-level dates
-              and lead times are intentional — not bucketed). Owned documents are keyed by an opaque{" "}
-              <code>accountId</code> (<code>users._id</code>); the SIWE wallet address lives only on{" "}
-              <code>users</code> for login. The server can still see that address, session cookies (HttpOnly, rotated
-              on sliding renewal), wallet currencies/funding modes, expense dates/kinds/recurrence flags, schedule
-              timing, your account notify email and reminder lead times, and that a budget-alert or reminder delivery
-              occurred — but not transaction amounts, wallet names, category trees, notes, event titles, or to-do text.
-              Budget alerts are a deliberate exception: the client sends cleartext{" "}
-              <code>spent</code>, <code>budget</code>, <code>categoryName</code>, and optional <code>walletName</code>{" "}
-              so the email or push can name the category and amounts. Schedule reminders with notify on also store{" "}
-              <code>notifyDetails</code> — the title, budget hold, and comments the notification carries — only while
-              notify is enabled; switching it off deletes that copy. Linking a bill payment stores plaintext{" "}
-              <code>eventId</code> / <code>expenseId</code> references only; assigning savings to a Capitals plan stores{" "}
-              <code>capitalPlanId</code> on the expense (link id only, not amounts). A fuel fill's vehicle type stays
-              plaintext for the vocabulary switch (car/EV/bike/van), and logging it to the ledger stores a plaintext{" "}
+              Even with E2EE, plaintext metadata remains for queries and accurate schedule reminders
+              (day-level dates and lead times are intentional — not bucketed). Owned documents are
+              keyed by an opaque <code>accountId</code> (<code>users._id</code>); the SIWE wallet
+              address lives only on <code>users</code> for login. The server can still see that
+              address, session cookies (HttpOnly, rotated on sliding renewal), wallet
+              currencies/funding modes, expense dates/kinds/recurrence flags, schedule timing, your
+              account notify email and reminder lead times, and that a budget-alert or reminder
+              delivery occurred — but not transaction amounts, wallet names, category trees, notes,
+              event titles, or to-do text. Budget alerts are a deliberate exception: the client
+              sends cleartext <code>spent</code>, <code>budget</code>, <code>categoryName</code>,
+              and optional <code>walletName</code> so the email or push can name the category and
+              amounts. Schedule reminders with notify on also store <code>notifyDetails</code> — the
+              title, budget hold, and comments the notification carries — only while notify is
+              enabled; switching it off deletes that copy. Linking a bill payment stores plaintext{" "}
+              <code>eventId</code> / <code>expenseId</code> references only; assigning savings to a
+              Capitals plan stores <code>capitalPlanId</code> on the expense (link id only, not
+              amounts). A fuel fill's vehicle type stays plaintext for the vocabulary switch
+              (car/EV/bike/van), and logging it to the ledger stores a plaintext{" "}
               <code>expenseId</code> on the fill — again a link id only, never amounts.
             </p>
             <p className="panel-sub" style={{ marginTop: "0.75rem" }}>
-              If the same auth key is ever used on-chain, chain analysis can correlate it with this account. Prefer a{" "}
-              <strong>ledger-only</strong> identity created in-app (not a funded exchange or hot wallet). Optional
-              notification email plus timing metadata still form an identity/behavior graph without decrypting
-              ciphertext. E2EE does not remove data-protection obligations for plaintext metadata under regimes like
-              GDPR/CCPA — not legal advice; get a lawyer&apos;s read if you ship commercially.
+              If the same auth key is ever used on-chain, chain analysis can correlate it with this
+              account. Prefer a <strong>ledger-only</strong> identity created in-app (not a funded
+              exchange or hot wallet). Optional notification email plus timing metadata still form
+              an identity/behavior graph without decrypting ciphertext. E2EE does not remove
+              data-protection obligations for plaintext metadata under regimes like GDPR/CCPA — not
+              legal advice; get a lawyer&apos;s read if you ship commercially.
             </p>
           </div>
         </div>
@@ -593,7 +664,9 @@ export function Transparency() {
         <div className="panel-head panel-head--stack">
           <div>
             <h2>Data Relationships</h2>
-            <p className="panel-sub">Opaque accountId anchors every user-owned collection; SIWE address stays on users</p>
+            <p className="panel-sub">
+              Opaque accountId anchors every user-owned collection; SIWE address stays on users
+            </p>
           </div>
         </div>
       </section>
@@ -603,8 +676,8 @@ export function Transparency() {
           <div>
             <h2>Encrypted Write Path</h2>
             <p className="panel-sub">
-              Categories, events, todos, expenses, capital plans, vehicles/fills, and wallet names/budgets are AES-256-GCM
-              encrypted client-side before save
+              Categories, events, todos, expenses, capital plans, vehicles/fills, and wallet
+              names/budgets are AES-256-GCM encrypted client-side before save
             </p>
           </div>
         </div>
@@ -628,7 +701,9 @@ export function Transparency() {
         <div className="panel-head panel-head--stack">
           <div>
             <h2>Diagrams</h2>
-            <p className="panel-sub">Visual maps of hosting, collection links, and the encrypted write path</p>
+            <p className="panel-sub">
+              Visual maps of hosting, collection links, and the encrypted write path
+            </p>
           </div>
         </div>
         <div className="transparency-diagram-stack">

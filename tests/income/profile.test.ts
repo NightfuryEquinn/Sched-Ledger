@@ -56,7 +56,12 @@ const INDEX = buildCategoryIndex(CATEGORIES);
 /** Anchor month for every fixture — windows run backwards from here. */
 const ANCHOR = "2026-07";
 
-function inc(date: string, amount: number, sub = "salary", id = `${date}-${sub}-${amount}`): Expense {
+function inc(
+  date: string,
+  amount: number,
+  sub = "salary",
+  id = `${date}-${sub}-${amount}`,
+): Expense {
   return { id, walletId: "w1", kind: "income", date, sub, amount, note: "", recurring: false };
 }
 
@@ -65,7 +70,16 @@ function incR(date: string, amount: number, sub = "salary"): Expense {
 }
 
 function spend(date: string, amount: number, id = `s-${date}-${amount}`): Expense {
-  return { id, walletId: "w1", kind: "expense", date, sub: "food_groceries", amount, note: "", recurring: false };
+  return {
+    id,
+    walletId: "w1",
+    kind: "expense",
+    date,
+    sub: "food_groceries",
+    amount,
+    note: "",
+    recurring: false,
+  };
 }
 
 /** Monthly salary on the same day, across the trailing `n` months of the window. */
@@ -81,7 +95,12 @@ function monthlySalary(amount: (i: number) => number, n = 6, day = "25", sub = "
 
 describe("gate", () => {
   test("stays locked below the payment minimum", () => {
-    const result = assessIncomeProfile([inc("2026-06-25", 3000), inc("2026-07-25", 3000)], ANCHOR, "6mo", INDEX);
+    const result = assessIncomeProfile(
+      [inc("2026-06-25", 3000), inc("2026-07-25", 3000)],
+      ANCHOR,
+      "6mo",
+      INDEX,
+    );
 
     expect(result.status).toBe("insufficient");
     if (result.status === "insufficient") {
@@ -92,7 +111,11 @@ describe("gate", () => {
 
   test("stays locked when every payment lands in one month", () => {
     const result = assessIncomeProfile(
-      [inc("2026-07-01", 900, "wages", "a"), inc("2026-07-10", 900, "wages", "b"), inc("2026-07-20", 900, "wages", "c")],
+      [
+        inc("2026-07-01", 900, "wages", "a"),
+        inc("2026-07-10", 900, "wages", "b"),
+        inc("2026-07-20", 900, "wages", "c"),
+      ],
       ANCHOR,
       "6mo",
       INDEX,
@@ -131,7 +154,16 @@ describe("gate", () => {
 describe("withdrawals", () => {
   /** An income-kind transaction against a savings sub — money taken back out. */
   function withdraw(date: string, amount: number, id = `wd-${date}-${amount}`): Expense {
-    return { id, walletId: "w1", kind: "income", date, sub: "sav_general", amount, note: "", recurring: false };
+    return {
+      id,
+      walletId: "w1",
+      kind: "income",
+      date,
+      sub: "sav_general",
+      amount,
+      note: "",
+      recurring: false,
+    };
   }
 
   test("a withdrawal never counts toward the income gate", () => {
@@ -142,7 +174,12 @@ describe("withdrawals", () => {
 
   test("a withdrawal is excluded from total, sources, and the earned/spent split", () => {
     const salary = monthlySalary(() => 4200);
-    const withWithdrawal = computeIncomeMetrics([...salary, withdraw("2026-07-10", 900)], ANCHOR, "6mo", INDEX).metrics;
+    const withWithdrawal = computeIncomeMetrics(
+      [...salary, withdraw("2026-07-10", 900)],
+      ANCHOR,
+      "6mo",
+      INDEX,
+    ).metrics;
     const without = computeIncomeMetrics(salary, ANCHOR, "6mo", INDEX).metrics;
 
     expect(withWithdrawal.total).toBe(without.total);
@@ -153,7 +190,12 @@ describe("withdrawals", () => {
 
   test("meanSavingsRate is unaffected by a withdrawal (not double-counted as income or spend)", () => {
     const salary = monthlySalary(() => 4200);
-    const withWithdrawal = computeIncomeMetrics([...salary, withdraw("2026-07-10", 900)], ANCHOR, "6mo", INDEX).metrics;
+    const withWithdrawal = computeIncomeMetrics(
+      [...salary, withdraw("2026-07-10", 900)],
+      ANCHOR,
+      "6mo",
+      INDEX,
+    ).metrics;
     const without = computeIncomeMetrics(salary, ANCHOR, "6mo", INDEX).metrics;
 
     expect(withWithdrawal.meanSavingsRate).toBeCloseTo(without.meanSavingsRate, 6);
@@ -162,7 +204,12 @@ describe("withdrawals", () => {
 
 describe("archetypes", () => {
   test("identical monthly salary reads as salaried", () => {
-    const scores = computeIncomeMetrics(monthlySalary(() => 4200), ANCHOR, "6mo", INDEX).scores;
+    const scores = computeIncomeMetrics(
+      monthlySalary(() => 4200),
+      ANCHOR,
+      "6mo",
+      INDEX,
+    ).scores;
 
     expect(pickIncomeStyle(scores)).toBe("salaried");
   });
@@ -247,7 +294,12 @@ describe("source grain", () => {
   });
 
   test("concentration and top share follow the sources", () => {
-    const { metrics } = computeIncomeMetrics(monthlySalary(() => 4200), ANCHOR, "6mo", INDEX);
+    const { metrics } = computeIncomeMetrics(
+      monthlySalary(() => 4200),
+      ANCHOR,
+      "6mo",
+      INDEX,
+    );
 
     expect(metrics.topSourceShare).toBe(1);
     expect(metrics.hhi).toBe(1);
@@ -308,7 +360,8 @@ describe("coverage and floor", () => {
 
   test("savings rate reflects earned minus spent", () => {
     const { metrics } = computeIncomeMetrics(rows, ANCHOR, "6mo", INDEX);
-    const expected = (metrics.total - metrics.meanMonthlySpend * metrics.monthsInWindow) / metrics.total;
+    const expected =
+      (metrics.total - metrics.meanMonthlySpend * metrics.monthsInWindow) / metrics.total;
 
     expect(metrics.meanSavingsRate).toBeCloseTo(expected, 6);
   });
@@ -352,7 +405,12 @@ describe("trend", () => {
   });
 
   test("flat income reads as steady", () => {
-    const { metrics } = computeIncomeMetrics(monthlySalary(() => 4000), ANCHOR, "6mo", INDEX);
+    const { metrics } = computeIncomeMetrics(
+      monthlySalary(() => 4000),
+      ANCHOR,
+      "6mo",
+      INDEX,
+    );
 
     expect(describeIncomeTrend(metrics)).toContain("Steady");
   });
@@ -361,12 +419,21 @@ describe("trend", () => {
 describe("confidence and blend", () => {
   test("a thin window is low confidence, a full one is higher", () => {
     const thin = assessIncomeProfile(
-      [inc("2026-06-25", 900, "wages", "t1"), inc("2026-07-02", 800, "wages", "t2"), inc("2026-07-20", 850, "wages", "t3")],
+      [
+        inc("2026-06-25", 900, "wages", "t1"),
+        inc("2026-07-02", 800, "wages", "t2"),
+        inc("2026-07-20", 850, "wages", "t3"),
+      ],
       ANCHOR,
       "6mo",
       INDEX,
     );
-    const full = assessIncomeProfile(monthlySalary(() => 4200, 12), ANCHOR, "12mo", INDEX);
+    const full = assessIncomeProfile(
+      monthlySalary(() => 4200, 12),
+      ANCHOR,
+      "12mo",
+      INDEX,
+    );
 
     expect(thin.status).toBe("ready");
     expect(full.status).toBe("ready");
@@ -378,7 +445,12 @@ describe("confidence and blend", () => {
   });
 
   test("a dominant archetype has no secondary", () => {
-    const scores = computeIncomeMetrics(monthlySalary(() => 4200), ANCHOR, "6mo", INDEX).scores;
+    const scores = computeIncomeMetrics(
+      monthlySalary(() => 4200),
+      ANCHOR,
+      "6mo",
+      INDEX,
+    ).scores;
     const blend = incomeBlend(rankIncomeStyles(scores));
 
     if (blend.secondary) expect(blend.label).toContain(blend.secondary.trait);
@@ -405,14 +477,22 @@ describe("confidence and blend", () => {
 describe("narrative", () => {
   const ids = Object.keys(INCOME_STYLES) as IncomeStyleId[];
   const rich = computeIncomeMetrics(
-    [...monthlySalary(() => 4200), inc("2026-06-11", 900, "bonus", "b1"), spend("2026-07-02", 1500, "sp")],
+    [
+      ...monthlySalary(() => 4200),
+      inc("2026-06-11", 900, "bonus", "b1"),
+      spend("2026-07-02", 1500, "sp"),
+    ],
     ANCHOR,
     "6mo",
     INDEX,
   ).metrics;
   /* Bare minimum: no recurring, no repeated amount, a single source. */
   const thin = computeIncomeMetrics(
-    [inc("2026-06-03", 210, "wages", "n1"), inc("2026-07-08", 175, "wages", "n2"), inc("2026-07-27", 260, "wages", "n3")],
+    [
+      inc("2026-06-03", 210, "wages", "n1"),
+      inc("2026-07-08", 175, "wages", "n2"),
+      inc("2026-07-27", 260, "wages", "n3"),
+    ],
     ANCHOR,
     "6mo",
     INDEX,

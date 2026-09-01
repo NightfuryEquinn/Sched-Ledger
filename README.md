@@ -60,20 +60,20 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
 ## Tech stack
 
-| Layer | Stack |
-|-------|--------|
-| Runtime | [Bun](https://bun.sh) |
-| API | [Hono](https://hono.dev) + Zod validation |
-| Database | [MongoDB](https://www.mongodb.com) |
-| Frontend | React 19, TanStack Query, ethers v6 |
-| Styling | Custom theme CSS (`ledger.css`); Young Serif / Schibsted Grotesk / Azeret Mono via [Google Fonts](https://fonts.google.com) |
-| Loading | [ldrs](https://uiball.com/ldrs) trefoil spinner |
-| Motion | [anime.js](https://animejs.com) v4 |
-| Tours | [Shepherd.js](https://shepherdjs.dev) |
-| Diagrams | [Mermaid](https://mermaid.js.org) (Transparency view) |
-| Deploy | [Vercel](https://vercel.com) **hosting + Analytics / Speed Insights only** (no Vercel Cron); scheduled jobs via [cron-job.org](https://cron-job.org) |
-| PWA | `public/manifest.webmanifest` + `public/sw.js` (copied into `dist/` on build) |
-| Tooling | TypeScript (`tsc --noEmit`) + [knip](https://knip.dev) (dead code detection) |
+| Layer    | Stack                                                                                                                                                |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime  | [Bun](https://bun.sh)                                                                                                                                |
+| API      | [Hono](https://hono.dev) + Zod validation                                                                                                            |
+| Database | [MongoDB](https://www.mongodb.com)                                                                                                                   |
+| Frontend | React 19, TanStack Query, ethers v6                                                                                                                  |
+| Styling  | Custom theme CSS (`ledger.css`); Young Serif / Schibsted Grotesk / Azeret Mono via [Google Fonts](https://fonts.google.com)                          |
+| Loading  | [ldrs](https://uiball.com/ldrs) trefoil spinner                                                                                                      |
+| Motion   | [anime.js](https://animejs.com) v4                                                                                                                   |
+| Tours    | [Shepherd.js](https://shepherdjs.dev)                                                                                                                |
+| Diagrams | [Mermaid](https://mermaid.js.org) (Transparency view)                                                                                                |
+| Deploy   | [Vercel](https://vercel.com) **hosting + Analytics / Speed Insights only** (no Vercel Cron); scheduled jobs via [cron-job.org](https://cron-job.org) |
+| PWA      | `public/manifest.webmanifest` + `public/sw.js` (copied into `dist/` on build)                                                                        |
+| Tooling  | TypeScript (`tsc --noEmit`) + [knip](https://knip.dev) (dead code detection)                                                                         |
 
 ## Project structure
 
@@ -137,19 +137,19 @@ bun install
 
 Create a `.env` file in the project root (see `.env.example`):
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `MONGODB_URI` | Yes | MongoDB connection string |
-| `MONGODB_DB` | No | Database name (default: `ledger`) |
-| `APP_ORIGIN` | Production | Public origin embedded in sign-in messages (required when `NODE_ENV=production` / on Vercel; otherwise falls back to the request origin) |
-| `APP_TIMEZONE` | No | Server default IANA timezone for cron/reminders (fallback: `Asia/Kuala_Lumpur`) |
-| `CRON_SECRET` | For cron | Bearer token for `GET /api/cron/reminders` |
-| `RESEND_API_KEY` | For email | Resend API key for schedule reminders and budget alerts |
-| `EMAIL_FROM` | No | Sender address (default: `Sched Ledger <onboarding@resend.dev>`) |
-| `VAPID_PUBLIC_KEY` | For push | Web Push application server key (generate with `npx web-push generate-vapid-keys`) |
-| `VAPID_PRIVATE_KEY` | For push | Web Push private key — pairs with `VAPID_PUBLIC_KEY` |
-| `VAPID_SUBJECT` | For push | Contact URL for the push services, e.g. `mailto:you@example.com` |
-| `EXCHANGE_RATE_API_KEY` | For FX | [ExchangeRate-API](https://www.exchangerate-api.com) key for Insights currency conversion |
+| Variable                | Required   | Description                                                                                                                              |
+| ----------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `MONGODB_URI`           | Yes        | MongoDB connection string                                                                                                                |
+| `MONGODB_DB`            | No         | Database name (default: `ledger`)                                                                                                        |
+| `APP_ORIGIN`            | Production | Public origin embedded in sign-in messages (required when `NODE_ENV=production` / on Vercel; otherwise falls back to the request origin) |
+| `APP_TIMEZONE`          | No         | Server default IANA timezone for cron/reminders (fallback: `Asia/Kuala_Lumpur`)                                                          |
+| `CRON_SECRET`           | For cron   | Bearer token for `GET /api/cron/reminders`                                                                                               |
+| `RESEND_API_KEY`        | For email  | Resend API key for schedule reminders and budget alerts                                                                                  |
+| `EMAIL_FROM`            | No         | Sender address (default: `Sched Ledger <onboarding@resend.dev>`)                                                                         |
+| `VAPID_PUBLIC_KEY`      | For push   | Web Push application server key (generate with `npx web-push generate-vapid-keys`)                                                       |
+| `VAPID_PRIVATE_KEY`     | For push   | Web Push private key — pairs with `VAPID_PUBLIC_KEY`                                                                                     |
+| `VAPID_SUBJECT`         | For push   | Contact URL for the push services, e.g. `mailto:you@example.com`                                                                         |
+| `EXCHANGE_RATE_API_KEY` | For FX     | [ExchangeRate-API](https://www.exchangerate-api.com) key for Insights currency conversion                                                |
 
 ### MongoDB
 
@@ -176,42 +176,42 @@ Schemas are defined in `src/schemas/` and wired in `src/db/collections.ts`. Inde
 
 ### Collections
 
-| MongoDB collection | Code key | Purpose |
-|------------------|----------|---------|
-| `users` | `users` | Account profile (codename, notify email, timezone, reminder/alert prefs) |
-| `ledger_profiles` | `ledgerProfiles` | Per-user UI state (`currentMonth`, plus `tourPreference` / `toursSeen` for guided-tour onboarding); its `createdAt` is exposed to the client as account age |
-| `financial_wallets` | `financialWallets` | Wallets (currency, funding mode; E2EE financials) |
-| `category_taxonomies` | `categoryTaxonomies` | One document per user — E2EE category tree |
-| `expenses` | `expenses` | Transactions (E2EE amount/sub/note; plaintext metadata) |
-| `events` | `events` | Schedule events (E2EE title/comments/holds; plaintext schedule + email for reminders, plus `notifyDetails` while notify is on) |
-| `todo_lists` | `todoLists` | Named to-do lists (E2EE name/icon/tasks) |
-| `capital_plans` | `capitalPlans` | Future-expense planners (E2EE name/template/budget/items) |
-| `vehicles` | `vehicles` | Tracked vehicles — car/EV/bike/van (E2EE name/model/plate/odometer/tank) |
-| `vehicle_fills` | `vehicleFills` | Fuel fills or charges per vehicle (E2EE price/quantity/odometer/station) |
-| `consent` | `consent` | Data-sharing opt-in flag |
-| `auth_nonces` | `authNonces` | Sign-in challenge nonces (TTL on `expiresAt`) |
-| `sessions` | `sessions` | HttpOnly session tokens (hashed; TTL on `expiresAt`) |
-| `reminder_logs` | `reminderLogs` | Dedupes sent schedule reminders, per occurrence and per `channels` (email / push; absent on pre-push rows, which were email-only); TTL on `sentAt` (~400 days) |
-| `budget_alert_logs` | `budgetAlertLogs` | Dedupes budget-near-limit email/push delivery; TTL on `sentAt` (~400 days) |
-| `push_subscriptions` | `pushSubscriptions` | Web Push endpoints, one row per browser (unique on `endpoint`) — the row *is* the opt-in |
-| `rate_limits` | `rateLimits` | Shared API rate-limit buckets (`_id` = prefix + client key; TTL on `resetAt`; multi-instance) |
+| MongoDB collection    | Code key             | Purpose                                                                                                                                                        |
+| --------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`               | `users`              | Account profile (codename, notify email, timezone, reminder/alert prefs)                                                                                       |
+| `ledger_profiles`     | `ledgerProfiles`     | Per-user UI state (`currentMonth`, plus `tourPreference` / `toursSeen` for guided-tour onboarding); its `createdAt` is exposed to the client as account age    |
+| `financial_wallets`   | `financialWallets`   | Wallets (currency, funding mode; E2EE financials)                                                                                                              |
+| `category_taxonomies` | `categoryTaxonomies` | One document per user — E2EE category tree                                                                                                                     |
+| `expenses`            | `expenses`           | Transactions (E2EE amount/sub/note; plaintext metadata)                                                                                                        |
+| `events`              | `events`             | Schedule events (E2EE title/comments/holds; plaintext schedule + email for reminders, plus `notifyDetails` while notify is on)                                 |
+| `todo_lists`          | `todoLists`          | Named to-do lists (E2EE name/icon/tasks)                                                                                                                       |
+| `capital_plans`       | `capitalPlans`       | Future-expense planners (E2EE name/template/budget/items)                                                                                                      |
+| `vehicles`            | `vehicles`           | Tracked vehicles — car/EV/bike/van (E2EE name/model/plate/odometer/tank)                                                                                       |
+| `vehicle_fills`       | `vehicleFills`       | Fuel fills or charges per vehicle (E2EE price/quantity/odometer/station)                                                                                       |
+| `consent`             | `consent`            | Data-sharing opt-in flag                                                                                                                                       |
+| `auth_nonces`         | `authNonces`         | Sign-in challenge nonces (TTL on `expiresAt`)                                                                                                                  |
+| `sessions`            | `sessions`           | HttpOnly session tokens (hashed; TTL on `expiresAt`)                                                                                                           |
+| `reminder_logs`       | `reminderLogs`       | Dedupes sent schedule reminders, per occurrence and per `channels` (email / push; absent on pre-push rows, which were email-only); TTL on `sentAt` (~400 days) |
+| `budget_alert_logs`   | `budgetAlertLogs`    | Dedupes budget-near-limit email/push delivery; TTL on `sentAt` (~400 days)                                                                                     |
+| `push_subscriptions`  | `pushSubscriptions`  | Web Push endpoints, one row per browser (unique on `endpoint`) — the row _is_ the opt-in                                                                       |
+| `rate_limits`         | `rateLimits`         | Shared API rate-limit buckets (`_id` = prefix + client key; TTL on `resetAt`; multi-instance)                                                                  |
 
 ### Encryption vs plaintext
 
-| Collection | Encrypted (client-side) | Plaintext (needed for queries / cron) |
-|------------|-------------------------|----------------------------------------|
-| `expenses` | `payload` (amount, subcategory, note) via `enc` | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId`, optional `capitalPlanId` |
-| `financial_wallets` | `payload` (name, income, starting balance, budgets) via `enc` | `accountId`, `currency`, `fundingMode`, `isDefault` |
-| `category_taxonomies` | `payload` (full `categories[]` tree, incl. optional piggy `target`/`deadline` per category and sub) via `enc` | `accountId` |
-| `events` | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc` | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on — legacy per-event `email` may remain on old rows but delivery uses `users.notifyEmail` |
-| `todo_lists` | `payload` (name, icon, tasks) via `enc` | `accountId` |
-| `capital_plans` | `payload` (name, templateId, glyph, targetDate, initialBudget, items) via `enc` | `accountId` |
-| `vehicles` | `payload` (name, model, plate, glyph, odometerStart, tankCapacity, notes) via `enc` | `accountId`, `type` |
-| `vehicle_fills` | `payload` (price, quantity, odometer, station) via `enc` | `accountId`, `vehicleId`, `date`, `partial`, optional `expenseId` |
-| `users` | — | `address` (SIWE login), notify prefs |
-| `push_subscriptions` | — | `accountId`, `endpoint`, and the browser's `p256dh` / `auth` keys — required verbatim to encrypt each push payload |
-| `sessions` | — | `accountId`, hashed token (rotated on sliding renewal) |
-| `rate_limits` | — | `_id` (limit key), `count`, `resetAt` |
+| Collection            | Encrypted (client-side)                                                                                       | Plaintext (needed for queries / cron)                                                                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `expenses`            | `payload` (amount, subcategory, note) via `enc`                                                               | `accountId`, `date`, `kind`, `recurring`, `walletId`, `seriesKey`, `skipped`, optional `eventId`, optional `capitalPlanId`                                                                                                                                               |
+| `financial_wallets`   | `payload` (name, income, starting balance, budgets) via `enc`                                                 | `accountId`, `currency`, `fundingMode`, `isDefault`                                                                                                                                                                                                                      |
+| `category_taxonomies` | `payload` (full `categories[]` tree, incl. optional piggy `target`/`deadline` per category and sub) via `enc` | `accountId`                                                                                                                                                                                                                                                              |
+| `events`              | `payload` (title, comments, customLabel/Glyph, budget hold fields) via `enc`                                  | `accountId`, `catId`, schedule fields (`exceptDates`, `until`, …), `notify`, `lead`, optional `expenseId`, and `notifyDetails` (title, hold, comments) only while `notify` is on — legacy per-event `email` may remain on old rows but delivery uses `users.notifyEmail` |
+| `todo_lists`          | `payload` (name, icon, tasks) via `enc`                                                                       | `accountId`                                                                                                                                                                                                                                                              |
+| `capital_plans`       | `payload` (name, templateId, glyph, targetDate, initialBudget, items) via `enc`                               | `accountId`                                                                                                                                                                                                                                                              |
+| `vehicles`            | `payload` (name, model, plate, glyph, odometerStart, tankCapacity, notes) via `enc`                           | `accountId`, `type`                                                                                                                                                                                                                                                      |
+| `vehicle_fills`       | `payload` (price, quantity, odometer, station) via `enc`                                                      | `accountId`, `vehicleId`, `date`, `partial`, optional `expenseId`                                                                                                                                                                                                        |
+| `users`               | —                                                                                                             | `address` (SIWE login), notify prefs                                                                                                                                                                                                                                     |
+| `push_subscriptions`  | —                                                                                                             | `accountId`, `endpoint`, and the browser's `p256dh` / `auth` keys — required verbatim to encrypt each push payload                                                                                                                                                       |
+| `sessions`            | —                                                                                                             | `accountId`, hashed token (rotated on sliding renewal)                                                                                                                                                                                                                   |
+| `rate_limits`         | —                                                                                                             | `_id` (limit key), `count`, `resetAt`                                                                                                                                                                                                                                    |
 
 Owned collections use opaque `accountId` (`users._id` hex).
 
@@ -276,35 +276,35 @@ On each visit you may be prompted to **unlock** your ledger (device passphrase a
 
 ## API overview
 
-| Route | Description |
-|-------|-------------|
-| `POST /api/auth/challenge` | Start sign-in |
-| `POST /api/auth/verify` | Complete sign-in |
-| `GET /api/auth/me` | Current session |
-| `GET /api/auth/sessions` | List active sessions |
-| `DELETE /api/auth/sessions/:id` | Revoke a session |
-| `DELETE /api/auth/sessions` | Revoke all other sessions |
-| `POST /api/auth/logout` | End current session |
-| `POST /api/auth/clear` | Revoke all sessions and clear cookie |
-| `GET/PATCH /api/users/me` | Codename, notify email, timezone, reminder/alert prefs |
-| `POST /api/users` | Create or upsert user profile on first sign-in |
-| `GET/PATCH /api/profile` | Per-user UI state — `currentMonth`, `tourPreference`, `toursSeen`; returns `id`, those fields, and `createdAt` (account age, used to gate release notes) |
-| `CRUD /api/wallets` | Financial wallets (metadata + E2EE `enc`/`payload` via PATCH) |
-| `PUT /api/wallets/:id/budgets` | Update encrypted wallet financials (`enc`/`payload`) |
-| `GET/PUT /api/categories` | Category taxonomy |
-| `CRUD /api/expenses` | Transactions (scoped by wallet; cursor list via `limit`/`before`; optional series delete scopes) |
-| `CRUD /api/events` | Schedule events (comments + budget holds live in the E2EE payload; cursor list via `limit`/`before`) |
-| `CRUD /api/todo-lists` | TO-DO lists and tasks |
-| `CRUD /api/capital-plans` | Capitals planners and their line items |
-| `CRUD /api/vehicles` | Tracked vehicles (car/EV/bike/van) |
-| `CRUD /api/vehicles/fills` | Fuel fills or charges (cursor list via `limit`/`before`, filterable by `vehicleId`) |
-| `GET/PATCH /api/consent` | Data-sharing consent |
-| `POST /api/budget-alerts` | Deliver client-evaluated budget alerts (email; deduped) |
-| `GET /api/fx/latest/:base` | Cached FX rates (requires `EXCHANGE_RATE_API_KEY`) |
-| `GET /api/push/public-key` | VAPID application server key for browser subscription |
-| `POST/DELETE /api/push/subscribe` | Register or remove this device's Web Push endpoint |
-| `GET /api/cron/reminders` | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminders (email + Web Push) and materializes recurring expense rows |
-| `POST /api/cron/notify-release` | Auth: `Authorization: Bearer $CRON_SECRET`. Body `{ "version": "3.0.0" }`. Broadcasts a Web Push "app updated" notification to every subscribed device — called by CI after a successful deploy, not on a schedule |
+| Route                             | Description                                                                                                                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /api/auth/challenge`        | Start sign-in                                                                                                                                                                                                      |
+| `POST /api/auth/verify`           | Complete sign-in                                                                                                                                                                                                   |
+| `GET /api/auth/me`                | Current session                                                                                                                                                                                                    |
+| `GET /api/auth/sessions`          | List active sessions                                                                                                                                                                                               |
+| `DELETE /api/auth/sessions/:id`   | Revoke a session                                                                                                                                                                                                   |
+| `DELETE /api/auth/sessions`       | Revoke all other sessions                                                                                                                                                                                          |
+| `POST /api/auth/logout`           | End current session                                                                                                                                                                                                |
+| `POST /api/auth/clear`            | Revoke all sessions and clear cookie                                                                                                                                                                               |
+| `GET/PATCH /api/users/me`         | Codename, notify email, timezone, reminder/alert prefs                                                                                                                                                             |
+| `POST /api/users`                 | Create or upsert user profile on first sign-in                                                                                                                                                                     |
+| `GET/PATCH /api/profile`          | Per-user UI state — `currentMonth`, `tourPreference`, `toursSeen`; returns `id`, those fields, and `createdAt` (account age, used to gate release notes)                                                           |
+| `CRUD /api/wallets`               | Financial wallets (metadata + E2EE `enc`/`payload` via PATCH)                                                                                                                                                      |
+| `PUT /api/wallets/:id/budgets`    | Update encrypted wallet financials (`enc`/`payload`)                                                                                                                                                               |
+| `GET/PUT /api/categories`         | Category taxonomy                                                                                                                                                                                                  |
+| `CRUD /api/expenses`              | Transactions (scoped by wallet; cursor list via `limit`/`before`; optional series delete scopes)                                                                                                                   |
+| `CRUD /api/events`                | Schedule events (comments + budget holds live in the E2EE payload; cursor list via `limit`/`before`)                                                                                                               |
+| `CRUD /api/todo-lists`            | TO-DO lists and tasks                                                                                                                                                                                              |
+| `CRUD /api/capital-plans`         | Capitals planners and their line items                                                                                                                                                                             |
+| `CRUD /api/vehicles`              | Tracked vehicles (car/EV/bike/van)                                                                                                                                                                                 |
+| `CRUD /api/vehicles/fills`        | Fuel fills or charges (cursor list via `limit`/`before`, filterable by `vehicleId`)                                                                                                                                |
+| `GET/PATCH /api/consent`          | Data-sharing consent                                                                                                                                                                                               |
+| `POST /api/budget-alerts`         | Deliver client-evaluated budget alerts (email; deduped)                                                                                                                                                            |
+| `GET /api/fx/latest/:base`        | Cached FX rates (requires `EXCHANGE_RATE_API_KEY`)                                                                                                                                                                 |
+| `GET /api/push/public-key`        | VAPID application server key for browser subscription                                                                                                                                                              |
+| `POST/DELETE /api/push/subscribe` | Register or remove this device's Web Push endpoint                                                                                                                                                                 |
+| `GET /api/cron/reminders`         | Auth: `Authorization: Bearer $CRON_SECRET`. Sends due reminders (email + Web Push) and materializes recurring expense rows                                                                                         |
+| `POST /api/cron/notify-release`   | Auth: `Authorization: Bearer $CRON_SECRET`. Body `{ "version": "3.0.0" }`. Broadcasts a Web Push "app updated" notification to every subscribed device — called by CI after a successful deploy, not on a schedule |
 
 All mutating routes require a valid session cookie. Auth endpoints have stricter rate limits.
 
@@ -325,18 +325,18 @@ The API is bundled into `api/index.js` during `bun run build` so Vercel can reso
 
 Set these in **Vercel → Project → Settings → Environment Variables** for Production and Preview:
 
-| Variable | Description |
-|----------|-------------|
-| `MONGODB_URI` | Atlas `mongodb+srv://…` connection string |
-| `MONGODB_DB` | Database name (default: `ledger`) |
-| `APP_ORIGIN` | **Required** public app URL, e.g. `https://your-project.vercel.app` (embedded in sign-in messages) |
-| `APP_TIMEZONE` | Optional — server default IANA timezone for cron/reminders (fallback: `Asia/Kuala_Lumpur`) |
-| `NODE_ENV` | `production` (Vercel usually sets this; enables `Secure` session cookies) |
-| `CRON_SECRET` | Secret for the cron handler (used by cron-job.org) |
-| `RESEND_API_KEY` | Optional — enable schedule reminder emails and budget-alert emails |
-| `EMAIL_FROM` | Optional — verified sender in Resend |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Optional — enable Web Push reminders alongside email |
-| `EXCHANGE_RATE_API_KEY` | Optional — enable FX conversion in Insights |
+| Variable                                                   | Description                                                                                        |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `MONGODB_URI`                                              | Atlas `mongodb+srv://…` connection string                                                          |
+| `MONGODB_DB`                                               | Database name (default: `ledger`)                                                                  |
+| `APP_ORIGIN`                                               | **Required** public app URL, e.g. `https://your-project.vercel.app` (embedded in sign-in messages) |
+| `APP_TIMEZONE`                                             | Optional — server default IANA timezone for cron/reminders (fallback: `Asia/Kuala_Lumpur`)         |
+| `NODE_ENV`                                                 | `production` (Vercel usually sets this; enables `Secure` session cookies)                          |
+| `CRON_SECRET`                                              | Secret for the cron handler (used by cron-job.org)                                                 |
+| `RESEND_API_KEY`                                           | Optional — enable schedule reminder emails and budget-alert emails                                 |
+| `EMAIL_FROM`                                               | Optional — verified sender in Resend                                                               |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Optional — enable Web Push reminders alongside email                                               |
+| `EXCHANGE_RATE_API_KEY`                                    | Optional — enable FX conversion in Insights                                                        |
 
 **Atlas network access:** allow `0.0.0.0/0` so Vercel's dynamic egress IPs can reach your cluster.
 

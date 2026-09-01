@@ -36,6 +36,8 @@ export const walletClient = {
       return await new Wallet(privateKey).signMessage(message);
     }
 
-    throw new Error("No wallet signer available — connect an extension or unlock with your recovery phrase.");
+    throw new Error(
+      "No wallet signer available — connect an extension or unlock with your recovery phrase.",
+    );
   },
 };

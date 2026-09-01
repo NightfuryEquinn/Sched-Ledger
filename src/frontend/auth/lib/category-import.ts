@@ -89,7 +89,10 @@ function findSubInCategory(cat: Category, subName: string, subId: string) {
   return cat.subs.find((s) => s.name.toLowerCase() === lower);
 }
 
-function findExpenseSubByName(categories: Category[], subName: string): { cat: Category; subId: string } | null {
+function findExpenseSubByName(
+  categories: Category[],
+  subName: string,
+): { cat: Category; subId: string } | null {
   const lower = subName.trim().toLowerCase();
   if (!lower) return null;
   for (const cat of expenseCategories(categories)) {
@@ -257,8 +260,6 @@ export function resolveImportSub(
     return { error: `Subcategory ID "${newSub.id}" already exists.` };
   }
 
-  next = next.map((c) =>
-    c.id === resolvedCat.id ? { ...c, subs: [...c.subs, newSub] } : c,
-  );
+  next = next.map((c) => (c.id === resolvedCat.id ? { ...c, subs: [...c.subs, newSub] } : c));
   return { categories: next, subId: newSub.id, newCategory, newSubcategory: true };
 }

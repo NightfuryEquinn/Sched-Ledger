@@ -84,7 +84,9 @@ describe("dayFlowSeries", () => {
     expect(day.spend[0]).toMatchObject({ name: "Transport", amount: 40, count: 1, glyph: "🚗" });
     expect(day.spend[1]).toMatchObject({ name: "Food", amount: 37.5, count: 3, glyph: "🍽️" });
     // Salary and Side Gig share one Income category, so they read as a single row.
-    expect(day.earn.map((e) => [e.id, e.name, e.amount, e.count])).toEqual([["income", "Income", 975, 2]]);
+    expect(day.earn.map((e) => [e.id, e.name, e.amount, e.count])).toEqual([
+      ["income", "Income", 975, 2],
+    ]);
   });
 
   test("keeps savings out of spend, matching the trend line", () => {
@@ -103,7 +105,13 @@ describe("dayFlowSeries", () => {
     const series = dayFlowSeries([tx("2026-08-04", 10, "food-dining")], "2026-08", INDEX, 5);
 
     expect(series).toHaveLength(5);
-    expect(series[0]).toMatchObject({ day: "2026-08-01", spent: 0, earned: 0, spend: [], earn: [] });
+    expect(series[0]).toMatchObject({
+      day: "2026-08-01",
+      spent: 0,
+      earned: 0,
+      spend: [],
+      earn: [],
+    });
     expect(series[3]!.spent).toBe(10);
   });
 

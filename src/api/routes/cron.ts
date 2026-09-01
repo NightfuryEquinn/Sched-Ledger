@@ -50,7 +50,8 @@ const notifyReleaseSchema = z.object({
  */
 cronRoutes.post("/notify-release", async (c) => {
   assertCronAuth(c.req.header("Authorization"));
-  if (!pushConfigured()) return c.json({ ok: true, sent: 0, errors: ["VAPID keys not configured"] });
+  if (!pushConfigured())
+    return c.json({ ok: true, sent: 0, errors: ["VAPID keys not configured"] });
 
   const { version } = notifyReleaseSchema.parse(await c.req.json());
   const result = await broadcastPush({

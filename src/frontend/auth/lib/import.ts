@@ -140,7 +140,10 @@ export function parseExpenseCsv(
 
     const date = get(dateIdx);
     if (!isValidIsoDate(date)) {
-      errors.push({ row: rowNum, message: `Invalid date "${date || "(empty)"}" — use YYYY-MM-DD.` });
+      errors.push({
+        row: rowNum,
+        message: `Invalid date "${date || "(empty)"}" — use YYYY-MM-DD.`,
+      });
       return;
     }
 

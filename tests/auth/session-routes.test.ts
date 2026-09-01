@@ -254,7 +254,13 @@ describe("auth session routes", () => {
     const ancient = new Date(Date.now() - SESSION_MAX_LIFETIME_MS - 60_000);
     await sessions.updateOne(
       { _id: session!._id },
-      { $set: { createdAt: ancient, lastSeenAt: ancient, expiresAt: new Date(Date.now() + 86_400_000) } },
+      {
+        $set: {
+          createdAt: ancient,
+          lastSeenAt: ancient,
+          expiresAt: new Date(Date.now() + 86_400_000),
+        },
+      },
     );
 
     const res = await app.request("/api/auth/me", {

@@ -42,12 +42,17 @@ pushRoutes.post("/subscribe", sessionAuth, zValidator("json", pushSubscribeSchem
 });
 
 /* Self-only: an endpoint can only be removed by the account that owns it. */
-pushRoutes.delete("/subscribe", sessionAuth, zValidator("json", pushUnsubscribeSchema), async (c) => {
-  const accountId = c.get("accountId");
-  const { endpoint } = c.req.valid("json");
-  const { pushSubscriptions } = getCollections(getDb());
+pushRoutes.delete(
+  "/subscribe",
+  sessionAuth,
+  zValidator("json", pushUnsubscribeSchema),
+  async (c) => {
+    const accountId = c.get("accountId");
+    const { endpoint } = c.req.valid("json");
+    const { pushSubscriptions } = getCollections(getDb());
 
-  const { deletedCount } = await pushSubscriptions.deleteOne({ endpoint, accountId });
+    const { deletedCount } = await pushSubscriptions.deleteOne({ endpoint, accountId });
 
-  return c.json({ ok: true, removed: deletedCount });
-});
+    return c.json({ ok: true, removed: deletedCount });
+  },
+);

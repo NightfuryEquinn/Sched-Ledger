@@ -20,7 +20,9 @@ installEmailMock({
 const app = createApiApp();
 
 /** Sign in and return cookie plus account id. */
-async function signInWithEmail(notifyEmail: string): Promise<{ cookie: string; accountId: string }> {
+async function signInWithEmail(
+  notifyEmail: string,
+): Promise<{ cookie: string; accountId: string }> {
   const wallet = Wallet.createRandom();
 
   const challengeRes = await app.request("/api/auth/challenge", {

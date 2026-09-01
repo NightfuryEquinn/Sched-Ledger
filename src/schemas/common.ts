@@ -4,9 +4,7 @@ import { categoryIdSchema } from "./category";
 export { walletAddressSchema } from "./address";
 export { accountIdSchema, objectIdSchema } from "./ids";
 
-export const monthKeySchema = z
-  .string()
-  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM");
+export const monthKeySchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Month must be YYYY-MM");
 
 export const isoDateSchema = z
   .string()

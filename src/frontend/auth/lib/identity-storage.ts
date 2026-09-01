@@ -72,10 +72,7 @@ export const identityStorage = {
     for (const idn of list) {
       if (idn.vault) clearPendingLegacy(idn.address);
     }
-    localStorage.setItem(
-      "ledger:identities",
-      JSON.stringify(list.map(sanitizeRecord)),
-    );
+    localStorage.setItem("ledger:identities", JSON.stringify(list.map(sanitizeRecord)));
   },
   /** Persist an identity without plaintext secrets. */
   upsert(idn: IdentityRecord) {
@@ -89,9 +86,9 @@ export const identityStorage = {
     identityStorage.save(list);
   },
   find(addr: string) {
-    return identityStorage.list().find(
-      (i) => i.address.toLowerCase() === (addr || "").toLowerCase(),
-    );
+    return identityStorage
+      .list()
+      .find((i) => i.address.toLowerCase() === (addr || "").toLowerCase());
   },
   session() {
     return localStorage.getItem("ledger:session");

@@ -129,8 +129,7 @@ export async function enrollBiometric(
   })) as PublicKeyCredential | null;
 
   const prfResults = assertion?.getClientExtensionResults().prf?.results as
-    | { first?: ArrayBuffer }
-    | undefined;
+    { first?: ArrayBuffer } | undefined;
   if (!prfResults?.first) return false;
 
   const key = await deriveWrapKey(prfResults.first);
@@ -162,15 +161,16 @@ export async function unlockWithBiometric(address: string): Promise<string> {
   const assertion = (await navigator.credentials.get({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      allowCredentials: [{ id: base64ToBytes(record.credentialId).buffer as ArrayBuffer, type: "public-key" }],
+      allowCredentials: [
+        { id: base64ToBytes(record.credentialId).buffer as ArrayBuffer, type: "public-key" },
+      ],
       userVerification: "required",
       extensions: { prf: { eval: { first: prfSalt } } },
     },
   })) as PublicKeyCredential | null;
 
   const prfResults = assertion?.getClientExtensionResults().prf?.results as
-    | { first?: ArrayBuffer }
-    | undefined;
+    { first?: ArrayBuffer } | undefined;
   if (!prfResults?.first) throw new Error("Face ID could not unlock this device.");
 
   const key = await deriveWrapKey(prfResults.first);

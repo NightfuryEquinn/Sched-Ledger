@@ -100,7 +100,9 @@ export async function sendPushToAccount(
  * Deliver a payload to every registered device, across all accounts.
  * Used for release-broadcast notifications, not per-account reminders.
  */
-export async function broadcastPush(payload: PushPayload): Promise<{ sent: number; errors: string[] }> {
+export async function broadcastPush(
+  payload: PushPayload,
+): Promise<{ sent: number; errors: string[] }> {
   if (!ensureVapid()) return { sent: 0, errors: ["VAPID keys not configured"] };
 
   const { pushSubscriptions } = getCollections(getDb());

@@ -32,12 +32,7 @@ import type { Expense } from "./types";
 export type IncomeWindow = "6mo" | "12mo";
 
 export type IncomeStyleId =
-  | "salaried"
-  | "variable"
-  | "projectBased"
-  | "portfolio"
-  | "windfall"
-  | "emerging";
+  "salaried" | "variable" | "projectBased" | "portfolio" | "windfall" | "emerging";
 
 type IncomeStyleMeta = {
   id: IncomeStyleId;
@@ -54,28 +49,23 @@ export const INCOME_STYLES: Record<IncomeStyleId, IncomeStyleMeta> = {
     title: "The Salaried Anchor",
     trait: "Anchored",
     temperament: "Predictable / Anchored",
-    pattern:
-      "One dominant source paying a steady amount on a tight schedule, month after month.",
-    behavior:
-      "Income you can budget against to the day. The risk is concentration, not timing.",
+    pattern: "One dominant source paying a steady amount on a tight schedule, month after month.",
+    behavior: "Income you can budget against to the day. The risk is concentration, not timing.",
   },
   variable: {
     id: "variable",
     title: "The Variable Earner",
     trait: "Variable",
     temperament: "Steady cadence / Shifting size",
-    pattern:
-      "Payments arrive on a regular rhythm, but the amounts swing from one to the next.",
-    behavior:
-      "Commission, hourly or tips. Timing is dependable; the size of each cheque is not.",
+    pattern: "Payments arrive on a regular rhythm, but the amounts swing from one to the next.",
+    behavior: "Commission, hourly or tips. Timing is dependable; the size of each cheque is not.",
   },
   projectBased: {
     id: "projectBased",
     title: "The Project Earner",
     trait: "Project",
     temperament: "Lumpy / Deal-driven",
-    pattern:
-      "Irregular gaps and irregular amounts, with stretches where nothing lands at all.",
+    pattern: "Irregular gaps and irregular amounts, with stretches where nothing lands at all.",
     behavior:
       "Freelance or contract work. Income follows delivery and invoicing, not the calendar.",
   },
@@ -86,16 +76,14 @@ export const INCOME_STYLES: Record<IncomeStyleId, IncomeStyleMeta> = {
     temperament: "Diversified / Layered",
     pattern:
       "Several meaningful sources contributing in parallel, with no single one carrying the month.",
-    behavior:
-      "Losing any one stream is survivable. The trade-off is more moving parts to track.",
+    behavior: "Losing any one stream is survivable. The trade-off is more moving parts to track.",
   },
   windfall: {
     id: "windfall",
     title: "The Windfall Earner",
     trait: "Windfall",
     temperament: "Spike-driven / Uneven",
-    pattern:
-      "A single outsized payment dominates the window, dwarfing everything around it.",
+    pattern: "A single outsized payment dominates the window, dwarfing everything around it.",
     behavior:
       "A bonus, settlement or one-off sale. The headline total says more about that one event than about a repeatable pattern.",
   },
@@ -106,8 +94,7 @@ export const INCOME_STYLES: Record<IncomeStyleId, IncomeStyleMeta> = {
     temperament: "Early / Forming",
     pattern:
       "Income is present but still sparse — too few payments across too few months to show a settled shape.",
-    behavior:
-      "A new job, a side project finding its feet, or a ledger that is still filling up.",
+    behavior: "A new job, a side project finding its feet, or a ledger that is still filling up.",
   },
 };
 
@@ -515,9 +502,7 @@ function scoreIncomeStyles(m: IncomeMetrics): Record<IncomeStyleId, number> {
   );
 
   const portfolio = clamp01(
-    Math.min(1, (m.sourceCount - 1) / 3) * 0.45 +
-      (1 - m.hhi) * 0.35 +
-      monthPresence * 0.2,
+    Math.min(1, (m.sourceCount - 1) / 3) * 0.45 + (1 - m.hhi) * 0.35 + monthPresence * 0.2,
   );
 
   const windfall = clamp01(
@@ -534,9 +519,7 @@ function scoreIncomeStyles(m: IncomeMetrics): Record<IncomeStyleId, number> {
 }
 
 /** Score entries sorted strongest first, with a stable tie-break. */
-export function rankIncomeStyles(
-  scores: Record<IncomeStyleId, number>,
-): [IncomeStyleId, number][] {
+export function rankIncomeStyles(scores: Record<IncomeStyleId, number>): [IncomeStyleId, number][] {
   const entries = Object.entries(scores) as [IncomeStyleId, number][];
 
   return entries.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
@@ -558,10 +541,7 @@ function pickFromRanked(ranked: [IncomeStyleId, number][]): IncomeStyleId {
  * How much the verdict can be trusted: sample size (months and payments)
  * blended with how far the leader sits ahead of the runner-up.
  */
-function incomeConfidence(
-  ranked: [IncomeStyleId, number][],
-  m: IncomeMetrics,
-): IncomeConfidence {
+function incomeConfidence(ranked: [IncomeStyleId, number][], m: IncomeMetrics): IncomeConfidence {
   const topScore = ranked[0]?.[1] ?? 0;
   const runnerUp = ranked[1]?.[1] ?? 0;
   const margin = topScore - runnerUp;
@@ -656,8 +636,7 @@ export function buildIncomeNarrative(
         [
           m.topSourceShare >= 0.6 &&
             `${pct(m.topSourceShare)} of your income comes from one source.`,
-          m.recurringShare >= 0.5 &&
-            `${pct(m.recurringShare)} of it is already marked recurring.`,
+          m.recurringShare >= 0.5 && `${pct(m.recurringShare)} of it is already marked recurring.`,
           m.monthlyMin > 0 && `Your lowest month still brought in ${money(m.monthlyMin)}.`,
         ],
         meta.behavior,
@@ -690,8 +669,7 @@ export function buildIncomeNarrative(
     return {
       pattern: join(
         [
-          m.longestGap > 0 &&
-            `Your longest quiet stretch ran ${plural(m.longestGap, "day")}.`,
+          m.longestGap > 0 && `Your longest quiet stretch ran ${plural(m.longestGap, "day")}.`,
           m.monthsZero > 0 &&
             `${m.monthsZero} of ${m.monthsInWindow} months brought in nothing at all.`,
           `Payments ranged from ${money(m.minAmt)} to ${money(m.maxAmt)}.`,
@@ -701,8 +679,7 @@ export function buildIncomeNarrative(
       behavior: join(
         [
           top && `${top.name} accounts for ${pct(top.share)} of what came in.`,
-          m.monthlyMean > 0 &&
-            `Averaged over the window that is ${money(m.monthlyMean)} a month.`,
+          m.monthlyMean > 0 && `Averaged over the window that is ${money(m.monthlyMean)} a month.`,
         ],
         meta.behavior,
       ),
@@ -710,7 +687,10 @@ export function buildIncomeNarrative(
   }
 
   if (id === "portfolio") {
-    const named = m.sources.slice(0, 3).map((s) => s.name).join(", ");
+    const named = m.sources
+      .slice(0, 3)
+      .map((s) => s.name)
+      .join(", ");
 
     return {
       pattern: join(
@@ -748,8 +728,7 @@ export function buildIncomeNarrative(
       behavior: join(
         [
           `Strip that one payment out and the picture changes completely.`,
-          m.monthlyMedian > 0 &&
-            `A more representative month is ${money(m.monthlyMedian)}.`,
+          m.monthlyMedian > 0 && `A more representative month is ${money(m.monthlyMedian)}.`,
         ],
         meta.behavior,
       ),
@@ -834,7 +813,12 @@ export function describeIncomeTrend(m: IncomeMetrics): string {
 }
 
 /** Distinct months carrying income, from a pre-filtered list. */
-function monthsWithIncomeIn(expenses: Expense[], monthKey: string, window: IncomeWindow, index?: CategoryIndex) {
+function monthsWithIncomeIn(
+  expenses: Expense[],
+  monthKey: string,
+  window: IncomeWindow,
+  index?: CategoryIndex,
+) {
   const months = new Set(monthsWindow(monthKey, windowSize(window)).map((m) => m.key));
   const seen = new Set<string>();
   let txCount = 0;
@@ -893,9 +877,11 @@ export function assessIncomeProfile(
 }
 
 /** True when the wallet declares a monthly income on top of logged transactions. */
-export function declaresMonthlyIncome(wallet?: {
-  fundingMode?: string;
-  income?: number;
-} | null) {
+export function declaresMonthlyIncome(
+  wallet?: {
+    fundingMode?: string;
+    income?: number;
+  } | null,
+) {
   return Boolean(wallet && wallet.fundingMode === "monthly" && (wallet.income ?? 0) > 0);
 }

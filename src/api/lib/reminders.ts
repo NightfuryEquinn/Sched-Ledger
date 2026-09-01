@@ -458,7 +458,8 @@ export async function sendImmediateReminderIfDue(
 
   for (const target of reminderTargets(doc, now, prefs.timezone)) {
     /* Occurrence already finished. */
-    if (isOccurrencePast(occurrenceEndMs(doc, target.occurrenceIso, prefs.timezone), nowMs)) continue;
+    if (isOccurrencePast(occurrenceEndMs(doc, target.occurrenceIso, prefs.timezone), nowMs))
+      continue;
     if (!isReminderDueNow(target.remindAtMs, nowMs)) continue;
 
     const outcome = await sendReminderOnce(doc, target, email, prefs.timezone, channels);

@@ -113,4 +113,3 @@ export async function resolveMongoUri(uri: string): Promise<string> {
 
   return findWritableShard(auth, records, dbName, parsed.search);
 }
-

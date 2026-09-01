@@ -44,7 +44,10 @@ export type ExpenseWire = {
   createdAt?: string;
 };
 
-export type WalletWire = Omit<FinancialWallet, "name" | "income" | "startingBalance" | "budgets"> & {
+export type WalletWire = Omit<
+  FinancialWallet,
+  "name" | "income" | "startingBalance" | "budgets"
+> & {
   name?: string;
   income?: number;
   startingBalance?: number;
@@ -54,7 +57,9 @@ export type WalletWire = Omit<FinancialWallet, "name" | "income" | "startingBala
 };
 
 /** Pass through server metadata that decode merges onto every expense shape. */
-function expenseWireMeta(wire: ExpenseWire): Pick<Expense, "eventId" | "capitalPlanId" | "createdAt"> {
+function expenseWireMeta(
+  wire: ExpenseWire,
+): Pick<Expense, "eventId" | "capitalPlanId" | "createdAt"> {
   return {
     ...(wire.eventId ? { eventId: wire.eventId } : {}),
     ...(wire.capitalPlanId ? { capitalPlanId: wire.capitalPlanId } : {}),
@@ -93,7 +98,18 @@ export async function decodeExpense(wire: ExpenseWire, key: CryptoKey): Promise<
 }
 
 export async function encodeExpenseCreate(
-  expense: Pick<Expense, "walletId" | "kind" | "date" | "sub" | "amount" | "note" | "recurring" | "eventId" | "capitalPlanId">,
+  expense: Pick<
+    Expense,
+    | "walletId"
+    | "kind"
+    | "date"
+    | "sub"
+    | "amount"
+    | "note"
+    | "recurring"
+    | "eventId"
+    | "capitalPlanId"
+  >,
   key: CryptoKey,
 ) {
   const payload = await encryptJson(key, {
@@ -160,7 +176,10 @@ export async function encodeExpenseUpdate(
 /** Decrypt wallet secrets (name + financials), with legacy plaintext fallback. */
 export async function decodeWallet(wire: WalletWire, key: CryptoKey): Promise<FinancialWallet> {
   if (wire.enc === 1 && wire.payload) {
-    const secrets = await decryptJson<Partial<WalletSecrets> & { income?: number }>(key, wire.payload);
+    const secrets = await decryptJson<Partial<WalletSecrets> & { income?: number }>(
+      key,
+      wire.payload,
+    );
 
     return {
       id: wire.id,
@@ -548,7 +567,10 @@ export type CapitalPlanWire = {
 };
 
 /** Decrypt a capital plan wire. Capitals is E2EE-only — no legacy plaintext branch. */
-export async function decodeCapitalPlan(wire: CapitalPlanWire, key: CryptoKey): Promise<CapitalPlan> {
+export async function decodeCapitalPlan(
+  wire: CapitalPlanWire,
+  key: CryptoKey,
+): Promise<CapitalPlan> {
   if (wire.enc !== 1 || !wire.payload) {
     throw new Error("Capital plan is encrypted but no key is available");
   }
@@ -636,10 +658,7 @@ function vehicleSecrets(data: Omit<Vehicle, "id" | "createdAt">): VehicleSecrets
 }
 
 /** Encrypt vehicle secrets for create. */
-export async function encodeVehicleCreate(
-  data: Omit<Vehicle, "id" | "createdAt">,
-  key: CryptoKey,
-) {
+export async function encodeVehicleCreate(data: Omit<Vehicle, "id" | "createdAt">, key: CryptoKey) {
   return {
     type: data.type,
     enc: 1 as const,
@@ -648,10 +667,7 @@ export async function encodeVehicleCreate(
 }
 
 /** Encrypt vehicle secrets for update. */
-export async function encodeVehicleUpdate(
-  data: Omit<Vehicle, "id" | "createdAt">,
-  key: CryptoKey,
-) {
+export async function encodeVehicleUpdate(data: Omit<Vehicle, "id" | "createdAt">, key: CryptoKey) {
   return {
     type: data.type,
     enc: 1 as const,

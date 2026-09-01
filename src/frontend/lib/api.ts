@@ -76,7 +76,9 @@ const CACHEABLE_GET_PREFIXES = [
 /** Whether a GET path may fall back to the local ciphertext cache. */
 function isCacheableGet(path: string, method: string): boolean {
   if (method !== "GET") return false;
-  return CACHEABLE_GET_PREFIXES.some((p) => path === p || path.startsWith(`${p}?`) || path.startsWith(`${p}/`));
+  return CACHEABLE_GET_PREFIXES.some(
+    (p) => path === p || path.startsWith(`${p}?`) || path.startsWith(`${p}/`),
+  );
 }
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
@@ -108,7 +110,11 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     }
     return json;
   } catch (err) {
-    if (address && isCacheableGet(path, method) && (err instanceof TypeError || !navigator.onLine)) {
+    if (
+      address &&
+      isCacheableGet(path, method) &&
+      (err instanceof TypeError || !navigator.onLine)
+    ) {
       const cached = await getCipherCache<T>(address, path);
       if (cached != null) return cached;
     }
@@ -211,10 +217,19 @@ export const api = {
     list() {
       return request<{ wallets: WalletWire[] }>("/wallets");
     },
-    create(body: { currency: string; fundingMode?: string; enc: 1; payload: string } | Record<string, unknown>) {
+    create(
+      body:
+        | { currency: string; fundingMode?: string; enc: 1; payload: string }
+        | Record<string, unknown>,
+    ) {
       return request<{ wallet: WalletWire }>("/wallets", { method: "POST", body });
     },
-    update(id: string, body: Partial<Pick<FinancialWallet, "currency" | "fundingMode" | "isDefault">> | Record<string, unknown>) {
+    update(
+      id: string,
+      body:
+        | Partial<Pick<FinancialWallet, "currency" | "fundingMode" | "isDefault">>
+        | Record<string, unknown>,
+    ) {
       return request<{ wallet: WalletWire }>(`/wallets/${id}`, { method: "PATCH", body });
     },
     updateBudgets(id: string, body: { enc: 1; payload: string }) {
@@ -293,7 +308,14 @@ export const api = {
   },
 
   events: {
-    list(query?: { month?: string; from?: string; to?: string; limit?: number; before?: string; beforeId?: string }) {
+    list(query?: {
+      month?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      before?: string;
+      beforeId?: string;
+    }) {
       const params = new URLSearchParams();
       if (query?.month) params.set("month", query.month);
       if (query?.from) params.set("from", query.from);
@@ -350,7 +372,10 @@ export const api = {
       return request<{ capitalPlan: CapitalPlanWire }>("/capital-plans", { method: "POST", body });
     },
     update(id: string, body: { enc: 1; payload: string }) {
-      return request<{ capitalPlan: CapitalPlanWire }>(`/capital-plans/${id}`, { method: "PATCH", body });
+      return request<{ capitalPlan: CapitalPlanWire }>(`/capital-plans/${id}`, {
+        method: "PATCH",
+        body,
+      });
     },
     remove(id: string) {
       return request<{ ok: boolean }>(`/capital-plans/${id}`, { method: "DELETE" });
@@ -371,7 +396,9 @@ export const api = {
       return request<{ ok: boolean }>(`/vehicles/${id}`, { method: "DELETE" });
     },
     fills: {
-      list(params: { vehicleId?: string; limit?: number; before?: string; beforeId?: string } = {}) {
+      list(
+        params: { vehicleId?: string; limit?: number; before?: string; beforeId?: string } = {},
+      ) {
         const qs = new URLSearchParams();
         if (params.vehicleId) qs.set("vehicleId", params.vehicleId);
         if (params.limit) qs.set("limit", String(params.limit));
@@ -383,18 +410,33 @@ export const api = {
           hasMore: boolean;
           nextBefore: string | null;
           nextBeforeId: string | null;
-        }>(
-          `/vehicles/fills${suffix}`,
-        );
+        }>(`/vehicles/fills${suffix}`);
       },
-      create(body: { vehicleId: string; date: string; partial: boolean; expenseId?: string; enc: 1; payload: string }) {
+      create(body: {
+        vehicleId: string;
+        date: string;
+        partial: boolean;
+        expenseId?: string;
+        enc: 1;
+        payload: string;
+      }) {
         return request<{ fill: VehicleFillWire }>("/vehicles/fills", { method: "POST", body });
       },
       update(
         id: string,
-        body: { vehicleId?: string; date?: string; partial?: boolean; expenseId?: string | null; enc: 1; payload: string },
+        body: {
+          vehicleId?: string;
+          date?: string;
+          partial?: boolean;
+          expenseId?: string | null;
+          enc: 1;
+          payload: string;
+        },
       ) {
-        return request<{ fill: VehicleFillWire }>(`/vehicles/fills/${id}`, { method: "PATCH", body });
+        return request<{ fill: VehicleFillWire }>(`/vehicles/fills/${id}`, {
+          method: "PATCH",
+          body,
+        });
       },
       remove(id: string) {
         return request<{ ok: boolean }>(`/vehicles/fills/${id}`, { method: "DELETE" });

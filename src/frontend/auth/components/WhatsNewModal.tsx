@@ -15,7 +15,9 @@ function ReleaseSection({ notes }: { notes: ReleaseNotes }) {
   return (
     <section className="wn-release" aria-labelledby={`whatsnew-v${version}`}>
       <div className="wn-release-head">
-        <span className="wn-pill num" id={`whatsnew-v${version}`}>v{version}</span>
+        <span className="wn-pill num" id={`whatsnew-v${version}`}>
+          v{version}
+        </span>
         <p className="wn-date">Released {date}</p>
       </div>
 
@@ -24,7 +26,9 @@ function ReleaseSection({ notes }: { notes: ReleaseNotes }) {
       <div className="wn-list">
         {highlights.map((item) => (
           <div className="wn-item" key={item.title}>
-            <span className="wn-item-icon" aria-hidden><Icon name={item.icon} size={18} /></span>
+            <span className="wn-item-icon" aria-hidden>
+              <Icon name={item.icon} size={18} />
+            </span>
             <div className="wn-item-text">
               <span className="wn-item-title">{item.title}</span>
               <p className="legal-p">{item.body}</p>
@@ -50,10 +54,23 @@ export function WhatsNewModal({ onClose }: WhatsNewModalProps) {
         if (e.target === e.currentTarget) requestClose(onClose);
       }}
     >
-      <div ref={panelRef} className="modal sm wn-modal" role="dialog" aria-modal="true" aria-labelledby="whatsnew-title">
+      <div
+        ref={panelRef}
+        className="modal sm wn-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="whatsnew-title"
+      >
         <div className="modal-head">
           <h3 id="whatsnew-title">What&apos;s New</h3>
-          <button className="icon-btn" type="button" onClick={() => requestClose(onClose)} aria-label="Close"><Icon name="close" size={18} /></button>
+          <button
+            className="icon-btn"
+            type="button"
+            onClick={() => requestClose(onClose)}
+            aria-label="Close"
+          >
+            <Icon name="close" size={18} />
+          </button>
         </div>
         <div className="modal-body modal-scroll">
           {RELEASE_NOTES.map((notes) => (
@@ -61,7 +78,9 @@ export function WhatsNewModal({ onClose }: WhatsNewModalProps) {
           ))}
         </div>
         <div className="modal-foot">
-          <button className="primary-btn full" type="button" onClick={() => requestClose(onClose)}>Got It</button>
+          <button className="primary-btn full" type="button" onClick={() => requestClose(onClose)}>
+            Got It
+          </button>
         </div>
       </div>
     </div>,

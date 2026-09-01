@@ -37,7 +37,10 @@ export function Piggies({
   onAddDeposit,
   onWithdraw,
 }: PiggiesProps) {
-  const piggies = useMemo(() => buildPiggies(savingsTxns, categoryIndex), [savingsTxns, categoryIndex]);
+  const piggies = useMemo(
+    () => buildPiggies(savingsTxns, categoryIndex),
+    [savingsTxns, categoryIndex],
+  );
   const insights = useMemo(
     () => computeSavingsInsights(savingsTxns, allExpenses, piggies, categoryIndex, month),
     [savingsTxns, allExpenses, piggies, categoryIndex, month],
@@ -109,10 +112,16 @@ export function Piggies({
           const donutData = piggy.target
             ? [
                 { id: "filled", value: Math.max(piggy.balance, 0), color: piggy.color },
-                { id: "remain", value: Math.max(piggy.target - piggy.balance, 0), color: "var(--hair)" },
+                {
+                  id: "remain",
+                  value: Math.max(piggy.target - piggy.balance, 0),
+                  color: "var(--hair)",
+                },
               ]
             : [{ id: "filled", value: 1, color: piggy.color }];
-          const spark = [...monthlyNetForCat(savingsTxns, piggy.catId, categoryIndex, sparkMonths).values()];
+          const spark = [
+            ...monthlyNetForCat(savingsTxns, piggy.catId, categoryIndex, sparkMonths).values(),
+          ];
           const primarySub = piggy.piglets[0];
 
           return (
@@ -129,7 +138,13 @@ export function Piggies({
 
               <div className="piggy-card-body">
                 <div className="piggy-ring">
-                  <Donut data={donutData} size={92} thickness={12} onHover={() => {}} activeId={null} />
+                  <Donut
+                    data={donutData}
+                    size={92}
+                    thickness={12}
+                    onHover={() => {}}
+                    activeId={null}
+                  />
                   <div className="piggy-ring-label">
                     {progressPct !== null ? `${Math.round(progressPct * 100)}%` : "—"}
                   </div>

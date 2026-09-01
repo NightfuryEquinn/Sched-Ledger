@@ -1,846 +1,1596 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Sched Ledger — Your money and schedule, encrypted end-to-end</title>
-<meta name="description" content="Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and currencies, plan events with email and push reminders, and sign in with a Web3 wallet — no email or password required.">
-<link rel="canonical" href="https://nightfuryequinn.github.io/Sched-Ledger/">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="author" content="NightfuryEquinn">
-<meta name="theme-color" content="#0b0d12">
-<meta name="google-site-verification" content="4aKGLqSDZRkT9CG58mWhhfvgwvcJvmdiADJzvAIzBD4" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sched Ledger — Your money and schedule, encrypted end-to-end</title>
+    <meta
+      name="description"
+      content="Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and currencies, plan events with email and push reminders, and sign in with a Web3 wallet — no email or password required."
+    />
+    <link rel="canonical" href="https://nightfuryequinn.github.io/Sched-Ledger/" />
+    <meta
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+    />
+    <meta name="author" content="NightfuryEquinn" />
+    <meta name="theme-color" content="#0b0d12" />
+    <meta name="google-site-verification" content="4aKGLqSDZRkT9CG58mWhhfvgwvcJvmdiADJzvAIzBD4" />
 
-<!-- Open Graph / Facebook / LinkedIn / WhatsApp / Discord -->
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Sched Ledger">
-<meta property="og:locale" content="en_US">
-<meta property="og:url" content="https://nightfuryequinn.github.io/Sched-Ledger/">
-<meta property="og:title" content="Sched Ledger — Your money and schedule, encrypted end-to-end">
-<meta property="og:description" content="A private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.">
-<meta property="og:image" content="https://nightfuryequinn.github.io/Sched-Ledger/og-image.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Sched Ledger — your money and schedule, encrypted end-to-end.">
-<meta property="og:see_also" content="https://sched-ledger.vercel.app">
+    <!-- Open Graph / Facebook / LinkedIn / WhatsApp / Discord -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Sched Ledger" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://nightfuryequinn.github.io/Sched-Ledger/" />
+    <meta
+      property="og:title"
+      content="Sched Ledger — Your money and schedule, encrypted end-to-end"
+    />
+    <meta
+      property="og:description"
+      content="A private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext."
+    />
+    <meta
+      property="og:image"
+      content="https://nightfuryequinn.github.io/Sched-Ledger/og-image.png"
+    />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Sched Ledger — your money and schedule, encrypted end-to-end."
+    />
+    <meta property="og:see_also" content="https://sched-ledger.vercel.app" />
 
-<!-- Twitter / X -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Sched Ledger — Your money and schedule, encrypted end-to-end">
-<meta name="twitter:description" content="A private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.">
-<meta name="twitter:image" content="https://nightfuryequinn.github.io/Sched-Ledger/og-image.png">
-<meta name="twitter:image:alt" content="Sched Ledger — your money and schedule, encrypted end-to-end.">
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Sched Ledger — Your money and schedule, encrypted end-to-end"
+    />
+    <meta
+      name="twitter:description"
+      content="A private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext."
+    />
+    <meta
+      name="twitter:image"
+      content="https://nightfuryequinn.github.io/Sched-Ledger/og-image.png"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="Sched Ledger — your money and schedule, encrypted end-to-end."
+    />
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="icon" href="logo.png" type="image/png" />
-<link rel="apple-touch-icon" href="logo.png" />
-<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,400..700;1,400..700&family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=Young+Serif&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0b0d12;
-    --bg-alt:#12151d;
-    --card:#161a24;
-    --border:#242938;
-    --text:#e8eaf0;
-    --text-dim:#9aa1b4;
-    --accent:#6ee7b7;
-    --accent2:#7c9aff;
-    --accent3:#f0b866;
-    --radius:14px;
-    --font-display:"Young Serif",Georgia,serif;
-    --font-body:"Schibsted Grotesk",system-ui,sans-serif;
-    --font-mono:"Azeret Mono",ui-monospace,monospace;
-    --tracking:0.015em;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  html{scroll-behavior:smooth;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:var(--font-body);
-    line-height:1.6;
-    letter-spacing:var(--tracking);
-    overflow-x:hidden;
-  }
-  a{color:inherit;text-decoration:none;}
-  .wrap{max-width:1120px;margin:0 auto;padding:0 24px;}
-
-  /* Background glow */
-  .glow{
-    position:fixed;top:-200px;left:50%;transform:translateX(-50%);
-    width:900px;height:900px;
-    background:radial-gradient(circle, rgba(110,231,183,0.10), rgba(124,154,255,0.08) 40%, transparent 70%);
-    pointer-events:none;z-index:0;
-  }
-
-  header{
-    position:sticky;top:0;z-index:50;
-    backdrop-filter:blur(12px);
-    background:rgba(11,13,18,0.72);
-    border-bottom:1px solid var(--border);
-  }
-  nav{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:16px 24px;max-width:1120px;margin:0 auto;
-  }
-  .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:400;font-size:1.15rem;}
-  .brand img{width:30px;height:30px;border-radius:8px;}
-  .nav-links{display:flex;gap:28px;font-size:0.92rem;color:var(--text-dim);}
-  .nav-links a:hover{color:var(--text);}
-  .nav-cta{
-    display:inline-block;padding:9px 18px;border-radius:999px;
-    background:var(--text);color:var(--bg);font-weight:600;font-size:0.88rem;
-    transition:opacity .15s;
-  }
-  .nav-cta:hover{opacity:0.85;}
-
-  section{position:relative;z-index:1;}
-
-  .hero{padding:96px 24px 80px;text-align:center;position:relative;overflow:hidden;}
-  #hero-canvas{
-    position:absolute;inset:0;width:100%;height:100%;z-index:0;
-    pointer-events:none;
-    -webkit-mask-image:linear-gradient(to bottom, black 55%, transparent 96%);
-    mask-image:linear-gradient(to bottom, black 55%, transparent 96%);
-  }
-  .hero .wrap{position:relative;z-index:2;}
-  .badge{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:6px 14px;border:1px solid var(--border);border-radius:999px;
-    font-size:0.8rem;color:var(--text-dim);background:var(--bg-alt);
-    margin-bottom:28px;
-  }
-  .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
-  .badge .ver{
-    padding:2px 8px;border-radius:999px;
-    background:linear-gradient(135deg, rgba(110,231,183,0.18), rgba(124,154,255,0.18));
-    border:1px solid var(--border);color:var(--text);font-weight:700;font-size:0.74rem;
-  }
-  .hero h1{
-    font-family:var(--font-display);
-    font-size:clamp(2.2rem, 5vw, 3.6rem);
-    font-weight:400;letter-spacing:-0.01em;
-    max-width:820px;margin:0 auto 22px;
-  }
-  .hero h1 .grad{
-    background:linear-gradient(90deg, var(--accent), var(--accent2));
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-  }
-  .hero p{
-    font-size:1.15rem;color:var(--text-dim);
-    max-width:600px;margin:0 auto 36px;
-  }
-  .hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:56px;}
-  .btn-primary{
-    padding:13px 26px;border-radius:10px;background:var(--text);color:var(--bg);
-    font-weight:700;font-size:0.95rem;transition:transform .15s, opacity .15s;
-  }
-  .btn-primary:hover{transform:translateY(-2px);}
-  .btn-secondary{
-    padding:13px 26px;border-radius:10px;border:1px solid var(--border);
-    font-weight:600;font-size:0.95rem;color:var(--text);background:var(--card);
-    transition:border-color .15s;
-  }
-  .btn-secondary:hover{border-color:var(--accent2);}
-
-  .stack-strip{
-    display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
-    color:var(--text-dim);font-size:0.82rem;
-  }
-  .stack-strip span{
-    padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-alt);
-  }
-
-  .section-head{text-align:center;max-width:640px;margin:0 auto 48px;}
-  .eyebrow{
-    text-transform:uppercase;letter-spacing:0.12em;font-size:0.78rem;
-    color:var(--accent);font-weight:700;margin-bottom:12px;
-  }
-  .section-head h2{
-    font-family:var(--font-display);
-    font-size:clamp(1.6rem,3vw,2.2rem);font-weight:400;letter-spacing:0;margin-bottom:12px;
-  }
-  .section-head p{color:var(--text-dim);font-size:1rem;}
-
-  .features{padding:80px 24px;}
-  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
-  .card{
-    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:26px;transition:border-color .2s, transform .2s;
-  }
-  .card:hover{border-color:var(--accent2);transform:translateY(-3px);}
-  .card .icon{
-    width:44px;height:44px;border-radius:10px;
-    display:flex;align-items:center;justify-content:center;
-    font-size:1.3rem;margin-bottom:16px;
-    background:linear-gradient(135deg, rgba(110,231,183,0.15), rgba(124,154,255,0.15));
-    border:1px solid var(--border);
-  }
-  .card h3{font-size:1.05rem;font-weight:700;margin-bottom:8px;}
-  .card p{color:var(--text-dim);font-size:0.92rem;}
-
-  .split{padding:80px 24px;background:var(--bg-alt);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
-  .split + .split{border-top:none;}
-  .split-inner{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
-  .split h2{
-    font-family:var(--font-display);
-    font-size:clamp(1.5rem,3vw,2rem);font-weight:400;margin-bottom:16px;letter-spacing:0;
-  }
-  .split p{color:var(--text-dim);margin-bottom:20px;}
-  .checklist{list-style:none;}
-  .checklist li{
-    display:flex;gap:10px;padding:9px 0;font-size:0.94rem;color:var(--text);
-    border-bottom:1px solid var(--border);
-  }
-  .checklist li:last-child{border-bottom:none;}
-  .checklist li::before{content:"✓";color:var(--accent);font-weight:800;flex-shrink:0;}
-  .mock{
-    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.35);
-  }
-  .mock-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px dashed var(--border);font-size:0.88rem;}
-  .mock-row:last-child{border-bottom:none;}
-  .mock-row .amt{font-family:var(--font-mono);font-weight:500;}
-  .amt.pos{color:var(--accent);}
-  .amt.neg{color:#f38ba8;}
-  .mock-head{display:flex;justify-content:space-between;margin-bottom:14px;}
-  .mock-head .tag{font-size:0.75rem;color:var(--text-dim);}
-  .mock-head .total{font-family:var(--font-mono);font-size:1.4rem;font-weight:500;}
-
-  .privacy{padding:80px 24px;}
-  .privacy-inner{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
-  .privacy h2{font-family:var(--font-display);font-weight:400;}
-  .lock-visual{
-    background:radial-gradient(circle at 30% 20%, rgba(110,231,183,0.12), transparent 60%),var(--card);
-    border:1px solid var(--border);border-radius:var(--radius);
-    padding:40px;font-family:var(--font-mono);font-size:0.82rem;color:var(--accent);
-    line-height:1.8;overflow-x:auto;
-  }
-  .lock-visual .muted{color:var(--text-dim);}
-  .lock-visual .pink{color:#f38ba8;}
-  .lock-visual .blue{color:var(--accent2);}
-
-  .stats{padding:60px 24px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg-alt);}
-  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center;}
-  .stat h3{font-family:var(--font-mono);font-size:2rem;font-weight:500;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;}
-  .stat p{color:var(--text-dim);font-size:0.85rem;margin-top:6px;}
-
-  .faq-list{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-items:start;}
-  .faq-item{
-    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:20px 22px;transition:border-color .2s;
-  }
-  .faq-item[open]{border-color:var(--accent2);}
-  .faq-item summary{
-    cursor:pointer;font-weight:700;font-size:0.98rem;list-style:none;
-    display:flex;gap:14px;align-items:flex-start;justify-content:space-between;
-  }
-  .faq-item summary::-webkit-details-marker{display:none;}
-  .faq-item summary::after{
-    content:"+";color:var(--accent);font-family:var(--font-mono);
-    font-size:1.15rem;line-height:1.3;flex-shrink:0;
-  }
-  .faq-item[open] summary::after{content:"\2212";}
-  .faq-item p{color:var(--text-dim);font-size:0.92rem;margin-top:12px;}
-
-  .cta-final{padding:96px 24px;text-align:center;}
-  .cta-final h2{
-    font-family:var(--font-display);
-    font-size:clamp(1.8rem,4vw,2.6rem);font-weight:400;margin-bottom:16px;letter-spacing:0;
-  }
-  .cta-final p{color:var(--text-dim);max-width:520px;margin:0 auto 32px;}
-
-  footer{padding:40px 24px;border-top:1px solid var(--border);}
-  .footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
-  .footer-inner .brand{font-size:0.95rem;}
-  .footer-links{display:flex;gap:22px;color:var(--text-dim);font-size:0.85rem;flex-wrap:wrap;}
-  .footer-links a:hover{color:var(--text);}
-  .foot-note{color:var(--text-dim);font-size:0.78rem;margin-top:20px;text-align:center;}
-
-  @media (max-width:860px){
-    .grid3{grid-template-columns:1fr;}
-    .split-inner, .privacy-inner{grid-template-columns:1fr;}
-    .stats-grid{grid-template-columns:repeat(2,1fr);}
-    .faq-list{grid-template-columns:1fr;}
-    .nav-links{display:none;}
-    .hero{padding:72px 20px 56px;}
-    .features, .split, .privacy{padding:56px 20px;}
-    .section-head{margin-bottom:36px;}
-  }
-
-  @media (max-width:600px){
-    .wrap{padding:0 18px;}
-    nav{padding:14px 18px;}
-    .brand{font-size:0.95rem;}
-    .brand img{width:26px;height:26px;}
-    .hero{padding:56px 16px 44px;}
-    .hero h1{font-size:clamp(1.8rem, 8vw, 2.4rem);margin-bottom:16px;}
-    .hero p{font-size:1rem;margin-bottom:28px;}
-    .badge{font-size:0.72rem;padding:5px 12px;margin-bottom:20px;text-align:left;}
-    .hero-ctas{flex-direction:column;margin-bottom:40px;}
-    .hero-ctas a{width:100%;text-align:center;}
-    .stack-strip{gap:8px;}
-    .stack-strip span{font-size:0.74rem;padding:5px 10px;}
-    .features, .split, .privacy{padding:48px 16px;}
-    .section-head h2{font-size:1.5rem;}
-    .card{padding:20px;}
-    .faq-item{padding:18px;}
-    .faq-item summary{font-size:0.92rem;}
-    .split h2, .privacy h2{font-size:1.4rem;}
-    .mock{padding:18px;}
-    .mock-row{font-size:0.84rem;padding:10px 0;}
-    .lock-visual{padding:22px 18px;font-size:0.74rem;overflow-x:auto;white-space:pre;}
-    .stats{padding:40px 16px;}
-    .stats-grid{grid-template-columns:repeat(2,1fr);gap:20px;}
-    .stat h3{font-size:1.6rem;}
-    .cta-final{padding:64px 16px;}
-    .cta-final h2{font-size:1.7rem;}
-    .cta-final .hero-ctas{margin-bottom:0;}
-    footer{padding:32px 16px;}
-    .footer-inner{flex-direction:column;align-items:flex-start;gap:14px;}
-    .footer-links{gap:16px;font-size:0.8rem;}
-  }
-
-  @media (max-width:400px){
-    .stats-grid{grid-template-columns:1fr;}
-  }
-</style>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Person",
-      "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author",
-      "name": "NightfuryEquinn",
-      "url": "https://github.com/NightfuryEquinn"
-    },
-    {
-      "@type": "WebSite",
-      "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#website",
-      "url": "https://nightfuryequinn.github.io/Sched-Ledger/",
-      "name": "Sched Ledger",
-      "description": "Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.",
-      "inLanguage": "en",
-      "publisher": {
-        "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" href="logo.png" type="image/png" />
+    <link rel="apple-touch-icon" href="logo.png" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Azeret+Mono:ital,wght@0,400..700;1,400..700&family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=Young+Serif&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --bg-alt: #12151d;
+        --card: #161a24;
+        --border: #242938;
+        --text: #e8eaf0;
+        --text-dim: #9aa1b4;
+        --accent: #6ee7b7;
+        --accent2: #7c9aff;
+        --accent3: #f0b866;
+        --radius: 14px;
+        --font-display: "Young Serif", Georgia, serif;
+        --font-body: "Schibsted Grotesk", system-ui, sans-serif;
+        --font-mono: "Azeret Mono", ui-monospace, monospace;
+        --tracking: 0.015em;
       }
-    },
-    {
-      "@type": "SoftwareApplication",
-      "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#app",
-      "name": "Sched Ledger",
-      "url": "https://nightfuryequinn.github.io/Sched-Ledger/",
-      "installUrl": "https://sched-ledger.vercel.app",
-      "sameAs": [
-        "https://sched-ledger.vercel.app",
-        "https://github.com/NightfuryEquinn/Sched-Ledger"
-      ],
-      "applicationCategory": "FinanceApplication",
-      "applicationSubCategory": "Personal budgeting and expense tracking",
-      "operatingSystem": "Web browser, Android, iOS",
-      "browserRequirements": "Requires a modern browser with WebCrypto support",
-      "softwareVersion": "4.2.4",
-      "description": "Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.",
-      "image": "https://nightfuryequinn.github.io/Sched-Ledger/og-image.png",
-      "screenshot": "https://nightfuryequinn.github.io/Sched-Ledger/og-image.png",
-      "inLanguage": "en",
-      "isAccessibleForFree": true,
-      "author": {
-        "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
-      },
-      "publisher": {
-        "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD",
-        "availability": "https://schema.org/InStock",
-        "url": "https://sched-ledger.vercel.app"
-      },
-      "featureList": [
-        "End-to-end encrypted ledger — AES-256-GCM in the browser, ciphertext on the server",
-        "Web3 wallet sign-in with no email address or password",
-        "Multiple wallets across 29 currencies",
-        "Built-in budget calculator and custom categories",
-        "Recurring transactions and recurring scheduled events",
-        "Calendar and agenda views with budget holds for upcoming bills",
-        "Email and Web Push reminders with per-event lead times",
-        "Piggies savings goals and Capitals plans for large one-off expenses",
-        "Spending, saving, transaction, and fuel insights",
-        "Vehicles with fuel and charging cost tracking",
-        "Budget alerts and multiple named to-do lists",
-        "Encrypted backup, CSV export and import",
-        "Installable PWA with offline reads"
-      ]
-    },
-    {
-      "@type": "FAQPage",
-      "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#faq",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "Is Sched Ledger really end-to-end encrypted?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes. Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are encrypted with AES-256-GCM in your browser before anything reaches the database, so the server only ever stores ciphertext it cannot read. Two deliberate exceptions stay in plaintext: day-level dates, which are needed to fire reminders on time, and — only on events where you switch reminders on — a readable copy of what that email or push notification will say."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Do I need an email address or a password?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "No. You sign in with an in-browser Web3 wallet, created or restored from a 12- or 24-word recovery phrase, using a cryptographic challenge instead of credentials. There is no signup form, no password to reuse, and no email address on file unless you switch on email reminders yourself."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Do I need to buy crypto or pay gas fees?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "No. The wallet is used purely as an identity key to sign in and derive your encryption key — Sched Ledger never sends a transaction, never touches a blockchain, and never asks you to fund anything. You can use a ledger-only key so your sign-in address is not correlated with any on-chain activity."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How is this different from other budgeting apps?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Most expense trackers keep your data in plaintext on their servers and ask for an email address, a password, and often a bank connection. Sched Ledger asks for none of that: no signup form, no bank linking, and no readable server-side copy of your spending. What you trade for it is recovery — the key is yours alone."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Is Sched Ledger free?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes — every feature is free on the official hosted app. The source is public for transparency under a proprietary license, which means it is not free to self-host, rebrand, or offer as a competing service; those uses need a written commercial agreement."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What happens if I lose my recovery phrase?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "There is no recovery. Because your ledger is encrypted with a key only you hold, nobody — the operator included — can restore access or read your data. Keep the phrase somewhere safe, set a device passphrase so the key is wrapped on each browser, and download an encrypted backup from Account → Exports & imports."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Can I install Sched Ledger on my phone?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes. It is an installable PWA — add it to your home screen on Android or iOS and it runs like a native app, with Web Push reminders delivered even when it is closed. An IndexedDB ciphertext cache keeps your ledger readable offline; writing new entries still needs a connection."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Which currencies are supported, and how does conversion work?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "You can create wallets in any of 29 currencies and run several side by side, each with its own budgets and categories. Insights converts across them using live rates so cross-wallet totals stay comparable, while individual entries always keep the currency you recorded them in."
-          }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        line-height: 1.6;
+        letter-spacing: var(--tracking);
+        overflow-x: hidden;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .wrap {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Background glow */
+      .glow {
+        position: fixed;
+        top: -200px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 900px;
+        height: 900px;
+        background: radial-gradient(
+          circle,
+          rgba(110, 231, 183, 0.1),
+          rgba(124, 154, 255, 0.08) 40%,
+          transparent 70%
+        );
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(12px);
+        background: rgba(11, 13, 18, 0.72);
+        border-bottom: 1px solid var(--border);
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        max-width: 1120px;
+        margin: 0 auto;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 1.15rem;
+      }
+      .brand img {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+      }
+      .nav-links {
+        display: flex;
+        gap: 28px;
+        font-size: 0.92rem;
+        color: var(--text-dim);
+      }
+      .nav-links a:hover {
+        color: var(--text);
+      }
+      .nav-cta {
+        display: inline-block;
+        padding: 9px 18px;
+        border-radius: 999px;
+        background: var(--text);
+        color: var(--bg);
+        font-weight: 600;
+        font-size: 0.88rem;
+        transition: opacity 0.15s;
+      }
+      .nav-cta:hover {
+        opacity: 0.85;
+      }
+
+      section {
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero {
+        padding: 96px 24px 80px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      #hero-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+        -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 96%);
+        mask-image: linear-gradient(to bottom, black 55%, transparent 96%);
+      }
+      .hero .wrap {
+        position: relative;
+        z-index: 2;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        background: var(--bg-alt);
+        margin-bottom: 28px;
+      }
+      .badge .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .badge .ver {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.18), rgba(124, 154, 255, 0.18));
+        border: 1px solid var(--border);
+        color: var(--text);
+        font-weight: 700;
+        font-size: 0.74rem;
+      }
+      .hero h1 {
+        font-family: var(--font-display);
+        font-size: clamp(2.2rem, 5vw, 3.6rem);
+        font-weight: 400;
+        letter-spacing: -0.01em;
+        max-width: 820px;
+        margin: 0 auto 22px;
+      }
+      .hero h1 .grad {
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero p {
+        font-size: 1.15rem;
+        color: var(--text-dim);
+        max-width: 600px;
+        margin: 0 auto 36px;
+      }
+      .hero-ctas {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 56px;
+      }
+      .btn-primary {
+        padding: 13px 26px;
+        border-radius: 10px;
+        background: var(--text);
+        color: var(--bg);
+        font-weight: 700;
+        font-size: 0.95rem;
+        transition:
+          transform 0.15s,
+          opacity 0.15s;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+      }
+      .btn-secondary {
+        padding: 13px 26px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--text);
+        background: var(--card);
+        transition: border-color 0.15s;
+      }
+      .btn-secondary:hover {
+        border-color: var(--accent2);
+      }
+
+      .stack-strip {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+        color: var(--text-dim);
+        font-size: 0.82rem;
+      }
+      .stack-strip span {
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-alt);
+      }
+
+      .section-head {
+        text-align: center;
+        max-width: 640px;
+        margin: 0 auto 48px;
+      }
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.78rem;
+        color: var(--accent);
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .section-head h2 {
+        font-family: var(--font-display);
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+        font-weight: 400;
+        letter-spacing: 0;
+        margin-bottom: 12px;
+      }
+      .section-head p {
+        color: var(--text-dim);
+        font-size: 1rem;
+      }
+
+      .features {
+        padding: 80px 24px;
+      }
+      .grid3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 26px;
+        transition:
+          border-color 0.2s,
+          transform 0.2s;
+      }
+      .card:hover {
+        border-color: var(--accent2);
+        transform: translateY(-3px);
+      }
+      .card .icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(124, 154, 255, 0.15));
+        border: 1px solid var(--border);
+      }
+      .card h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .card p {
+        color: var(--text-dim);
+        font-size: 0.92rem;
+      }
+
+      .split {
+        padding: 80px 24px;
+        background: var(--bg-alt);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+      .split + .split {
+        border-top: none;
+      }
+      .split-inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 56px;
+        align-items: center;
+      }
+      .split h2 {
+        font-family: var(--font-display);
+        font-size: clamp(1.5rem, 3vw, 2rem);
+        font-weight: 400;
+        margin-bottom: 16px;
+        letter-spacing: 0;
+      }
+      .split p {
+        color: var(--text-dim);
+        margin-bottom: 20px;
+      }
+      .checklist {
+        list-style: none;
+      }
+      .checklist li {
+        display: flex;
+        gap: 10px;
+        padding: 9px 0;
+        font-size: 0.94rem;
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+      }
+      .checklist li:last-child {
+        border-bottom: none;
+      }
+      .checklist li::before {
+        content: "✓";
+        color: var(--accent);
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+      .mock {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 22px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      }
+      .mock-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px dashed var(--border);
+        font-size: 0.88rem;
+      }
+      .mock-row:last-child {
+        border-bottom: none;
+      }
+      .mock-row .amt {
+        font-family: var(--font-mono);
+        font-weight: 500;
+      }
+      .amt.pos {
+        color: var(--accent);
+      }
+      .amt.neg {
+        color: #f38ba8;
+      }
+      .mock-head {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .mock-head .tag {
+        font-size: 0.75rem;
+        color: var(--text-dim);
+      }
+      .mock-head .total {
+        font-family: var(--font-mono);
+        font-size: 1.4rem;
+        font-weight: 500;
+      }
+
+      .privacy {
+        padding: 80px 24px;
+      }
+      .privacy-inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 56px;
+        align-items: center;
+      }
+      .privacy h2 {
+        font-family: var(--font-display);
+        font-weight: 400;
+      }
+      .lock-visual {
+        background:
+          radial-gradient(circle at 30% 20%, rgba(110, 231, 183, 0.12), transparent 60%),
+          var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 40px;
+        font-family: var(--font-mono);
+        font-size: 0.82rem;
+        color: var(--accent);
+        line-height: 1.8;
+        overflow-x: auto;
+      }
+      .lock-visual .muted {
+        color: var(--text-dim);
+      }
+      .lock-visual .pink {
+        color: #f38ba8;
+      }
+      .lock-visual .blue {
+        color: var(--accent2);
+      }
+
+      .stats {
+        padding: 60px 24px;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-alt);
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+        text-align: center;
+      }
+      .stat h3 {
+        font-family: var(--font-mono);
+        font-size: 2rem;
+        font-weight: 500;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .stat p {
+        color: var(--text-dim);
+        font-size: 0.85rem;
+        margin-top: 6px;
+      }
+
+      .faq-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      .faq-item {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px 22px;
+        transition: border-color 0.2s;
+      }
+      .faq-item[open] {
+        border-color: var(--accent2);
+      }
+      .faq-item summary {
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.98rem;
+        list-style: none;
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+      .faq-item summary::-webkit-details-marker {
+        display: none;
+      }
+      .faq-item summary::after {
+        content: "+";
+        color: var(--accent);
+        font-family: var(--font-mono);
+        font-size: 1.15rem;
+        line-height: 1.3;
+        flex-shrink: 0;
+      }
+      .faq-item[open] summary::after {
+        content: "\2212";
+      }
+      .faq-item p {
+        color: var(--text-dim);
+        font-size: 0.92rem;
+        margin-top: 12px;
+      }
+
+      .cta-final {
+        padding: 96px 24px;
+        text-align: center;
+      }
+      .cta-final h2 {
+        font-family: var(--font-display);
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        font-weight: 400;
+        margin-bottom: 16px;
+        letter-spacing: 0;
+      }
+      .cta-final p {
+        color: var(--text-dim);
+        max-width: 520px;
+        margin: 0 auto 32px;
+      }
+
+      footer {
+        padding: 40px 24px;
+        border-top: 1px solid var(--border);
+      }
+      .footer-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .footer-inner .brand {
+        font-size: 0.95rem;
+      }
+      .footer-links {
+        display: flex;
+        gap: 22px;
+        color: var(--text-dim);
+        font-size: 0.85rem;
+        flex-wrap: wrap;
+      }
+      .footer-links a:hover {
+        color: var(--text);
+      }
+      .foot-note {
+        color: var(--text-dim);
+        font-size: 0.78rem;
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      @media (max-width: 860px) {
+        .grid3 {
+          grid-template-columns: 1fr;
         }
-      ]
-    }
-  ]
-}
-</script>
-</head>
-<body>
+        .split-inner,
+        .privacy-inner {
+          grid-template-columns: 1fr;
+        }
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .faq-list {
+          grid-template-columns: 1fr;
+        }
+        .nav-links {
+          display: none;
+        }
+        .hero {
+          padding: 72px 20px 56px;
+        }
+        .features,
+        .split,
+        .privacy {
+          padding: 56px 20px;
+        }
+        .section-head {
+          margin-bottom: 36px;
+        }
+      }
 
-<div class="glow"></div>
+      @media (max-width: 600px) {
+        .wrap {
+          padding: 0 18px;
+        }
+        nav {
+          padding: 14px 18px;
+        }
+        .brand {
+          font-size: 0.95rem;
+        }
+        .brand img {
+          width: 26px;
+          height: 26px;
+        }
+        .hero {
+          padding: 56px 16px 44px;
+        }
+        .hero h1 {
+          font-size: clamp(1.8rem, 8vw, 2.4rem);
+          margin-bottom: 16px;
+        }
+        .hero p {
+          font-size: 1rem;
+          margin-bottom: 28px;
+        }
+        .badge {
+          font-size: 0.72rem;
+          padding: 5px 12px;
+          margin-bottom: 20px;
+          text-align: left;
+        }
+        .hero-ctas {
+          flex-direction: column;
+          margin-bottom: 40px;
+        }
+        .hero-ctas a {
+          width: 100%;
+          text-align: center;
+        }
+        .stack-strip {
+          gap: 8px;
+        }
+        .stack-strip span {
+          font-size: 0.74rem;
+          padding: 5px 10px;
+        }
+        .features,
+        .split,
+        .privacy {
+          padding: 48px 16px;
+        }
+        .section-head h2 {
+          font-size: 1.5rem;
+        }
+        .card {
+          padding: 20px;
+        }
+        .faq-item {
+          padding: 18px;
+        }
+        .faq-item summary {
+          font-size: 0.92rem;
+        }
+        .split h2,
+        .privacy h2 {
+          font-size: 1.4rem;
+        }
+        .mock {
+          padding: 18px;
+        }
+        .mock-row {
+          font-size: 0.84rem;
+          padding: 10px 0;
+        }
+        .lock-visual {
+          padding: 22px 18px;
+          font-size: 0.74rem;
+          overflow-x: auto;
+          white-space: pre;
+        }
+        .stats {
+          padding: 40px 16px;
+        }
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+        }
+        .stat h3 {
+          font-size: 1.6rem;
+        }
+        .cta-final {
+          padding: 64px 16px;
+        }
+        .cta-final h2 {
+          font-size: 1.7rem;
+        }
+        .cta-final .hero-ctas {
+          margin-bottom: 0;
+        }
+        footer {
+          padding: 32px 16px;
+        }
+        .footer-inner {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 14px;
+        }
+        .footer-links {
+          gap: 16px;
+          font-size: 0.8rem;
+        }
+      }
 
-<header>
-  <nav aria-label="Primary">
-    <div class="brand"><img src="logo.png" alt="Sched Ledger logo" width="30" height="30" decoding="async">Sched Ledger</div>
-    <div class="nav-links">
-      <a href="#features">Ledger</a>
-      <a href="#schedule">Schedule</a>
-      <a href="#goals">Goals</a>
-      <a href="#privacy">Privacy</a>
-      <a href="#faq">FAQ</a>
-      <a href="#stack">Stack</a>
-    </div>
-    <a class="nav-cta" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Open app</a>
-  </nav>
-</header>
+      @media (max-width: 400px) {
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Person",
+            "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author",
+            "name": "NightfuryEquinn",
+            "url": "https://github.com/NightfuryEquinn"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#website",
+            "url": "https://nightfuryequinn.github.io/Sched-Ledger/",
+            "name": "Sched Ledger",
+            "description": "Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.",
+            "inLanguage": "en",
+            "publisher": {
+              "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
+            }
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#app",
+            "name": "Sched Ledger",
+            "url": "https://nightfuryequinn.github.io/Sched-Ledger/",
+            "installUrl": "https://sched-ledger.vercel.app",
+            "sameAs": [
+              "https://sched-ledger.vercel.app",
+              "https://github.com/NightfuryEquinn/Sched-Ledger"
+            ],
+            "applicationCategory": "FinanceApplication",
+            "applicationSubCategory": "Personal budgeting and expense tracking",
+            "operatingSystem": "Web browser, Android, iOS",
+            "browserRequirements": "Requires a modern browser with WebCrypto support",
+            "softwareVersion": "4.2.4",
+            "description": "Sched Ledger is a private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.",
+            "image": "https://nightfuryequinn.github.io/Sched-Ledger/og-image.png",
+            "screenshot": "https://nightfuryequinn.github.io/Sched-Ledger/og-image.png",
+            "inLanguage": "en",
+            "isAccessibleForFree": true,
+            "author": {
+              "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
+            },
+            "publisher": {
+              "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#author"
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "availability": "https://schema.org/InStock",
+              "url": "https://sched-ledger.vercel.app"
+            },
+            "featureList": [
+              "End-to-end encrypted ledger — AES-256-GCM in the browser, ciphertext on the server",
+              "Web3 wallet sign-in with no email address or password",
+              "Multiple wallets across 29 currencies",
+              "Built-in budget calculator and custom categories",
+              "Recurring transactions and recurring scheduled events",
+              "Calendar and agenda views with budget holds for upcoming bills",
+              "Email and Web Push reminders with per-event lead times",
+              "Piggies savings goals and Capitals plans for large one-off expenses",
+              "Spending, saving, transaction, and fuel insights",
+              "Vehicles with fuel and charging cost tracking",
+              "Budget alerts and multiple named to-do lists",
+              "Encrypted backup, CSV export and import",
+              "Installable PWA with offline reads"
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://nightfuryequinn.github.io/Sched-Ledger/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is Sched Ledger really end-to-end encrypted?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are encrypted with AES-256-GCM in your browser before anything reaches the database, so the server only ever stores ciphertext it cannot read. Two deliberate exceptions stay in plaintext: day-level dates, which are needed to fire reminders on time, and — only on events where you switch reminders on — a readable copy of what that email or push notification will say."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do I need an email address or a password?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. You sign in with an in-browser Web3 wallet, created or restored from a 12- or 24-word recovery phrase, using a cryptographic challenge instead of credentials. There is no signup form, no password to reuse, and no email address on file unless you switch on email reminders yourself."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do I need to buy crypto or pay gas fees?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. The wallet is used purely as an identity key to sign in and derive your encryption key — Sched Ledger never sends a transaction, never touches a blockchain, and never asks you to fund anything. You can use a ledger-only key so your sign-in address is not correlated with any on-chain activity."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How is this different from other budgeting apps?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Most expense trackers keep your data in plaintext on their servers and ask for an email address, a password, and often a bank connection. Sched Ledger asks for none of that: no signup form, no bank linking, and no readable server-side copy of your spending. What you trade for it is recovery — the key is yours alone."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is Sched Ledger free?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes — every feature is free on the official hosted app. The source is public for transparency under a proprietary license, which means it is not free to self-host, rebrand, or offer as a competing service; those uses need a written commercial agreement."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What happens if I lose my recovery phrase?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "There is no recovery. Because your ledger is encrypted with a key only you hold, nobody — the operator included — can restore access or read your data. Keep the phrase somewhere safe, set a device passphrase so the key is wrapped on each browser, and download an encrypted backup from Account → Exports & imports."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I install Sched Ledger on my phone?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. It is an installable PWA — add it to your home screen on Android or iOS and it runs like a native app, with Web Push reminders delivered even when it is closed. An IndexedDB ciphertext cache keeps your ledger readable offline; writing new entries still needs a connection."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Which currencies are supported, and how does conversion work?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "You can create wallets in any of 29 currencies and run several side by side, each with its own budgets and categories. Insights converts across them using live rates so cross-wallet totals stay comparable, while individual entries always keep the currency you recorded them in."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div class="glow"></div>
 
-<main>
-
-<section class="hero">
-  <canvas id="hero-canvas" aria-hidden="true"></canvas>
-  <div class="wrap">
-    <div class="badge"><span class="ver">v4.2.4</span> <span class="dot"></span> End-to-end encrypted · Web3 sign-in · No email or password</div>
-    <h1>Your money and schedule,<br><span class="grad">encrypted end-to-end.</span></h1>
-    <p>Sched Ledger is a private expense ledger, calendar, and to-do app. Track spending across wallets and currencies, plan bills and events with email and push reminders, and sign in with a Web3 wallet — the server only ever sees ciphertext.</p>
-    <div class="hero-ctas">
-      <a class="btn-primary" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Get started free</a>
-      <a class="btn-secondary" href="#privacy">See how privacy works</a>
-    </div>
-    <div class="stack-strip">
-      <span>Bun</span><span>Hono</span><span>MongoDB</span><span>React 19</span><span>AES-256-GCM</span><span>PWA</span>
-    </div>
-  </div>
-</section>
-
-<section class="features" id="features">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Ledger</div>
-      <h2>Every wallet, every currency, one clear picture</h2>
-      <p>Overview, transactions, budgets, insights, and recurring expenses — all in one encrypted ledger.</p>
-    </div>
-    <div class="grid3">
-      <div class="card">
-        <div class="icon">💰</div>
-        <h3>Multiple wallets, 29 currencies</h3>
-        <p>Create wallets with monthly-income or starting-balance funding modes, and track spending across every currency you actually use.</p>
-      </div>
-      <div class="card">
-        <div class="icon">🧮</div>
-        <h3>Built-in budget calculator</h3>
-        <p>Deduct tax lines from income, allocate net by category %, and apply straight to wallet budgets — with Malaysia-oriented presets (EPF, SOCSO, EIS, PCB, SST) that never leave your browser.</p>
-      </div>
-      <div class="card">
-        <div class="icon">🔁</div>
-        <h3>Recurring transactions</h3>
-        <p>Monthly, quarterly, or yearly expenses auto-post on due dates, with flexible delete scopes for one occurrence, this-and-future, or the whole series.</p>
-      </div>
-      <div class="card">
-        <div class="icon">🏷️</div>
-        <h3>Custom categories</h3>
-        <p>Build your own income and expense taxonomy with glyphs and colors — organized the way you actually think about spending.</p>
-      </div>
-      <div class="card">
-        <div class="icon">📊</div>
-        <h3>Insights that go deep</h3>
-        <p>A ranked "What Stands Out" feed forecasts month-end spend, flags over-budget categories early, and catches unusual charges and price creep — plus FX conversion, month-over-month charts, and spending-habit analysis.</p>
-      </div>
-      <div class="card">
-        <div class="icon">🚗</div>
-        <h3>Vehicles &amp; Fuel Insights</h3>
-        <p>Track fuel or charging costs per car, EV, bike, or van. EVs automatically read as kWh and charge instead of litres and fill-ups, with a Fuel Insights engine for consumption trend, price timing, and running cost.</p>
-      </div>
-      <div class="card">
-        <div class="icon">🔔</div>
-        <h3>Budget alerts</h3>
-        <p>Get emailed when a category nears or exceeds its monthly budget — evaluated client-side, so the server only delivers, never sees.</p>
-      </div>
-      <div class="card">
-        <div class="icon">📱</div>
-        <h3>Push notifications</h3>
-        <p>Opt in per device for Web Push reminders that arrive even when the app is closed, carrying the same event name, time, and budget hold as the email.</p>
-      </div>
-      <div class="card">
-        <div class="icon">📥</div>
-        <h3>Export and import</h3>
-        <p>CSV round-trips for transactions, schedule events, and to-do lists, plus a full encrypted backup only your ledger key can open.</p>
-      </div>
-      <div class="card">
-        <div class="icon">📲</div>
-        <h3>Installable PWA</h3>
-        <p>Add Sched Ledger to your home screen and keep reading your ledger offline from an encrypted local cache.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="split" id="schedule">
-  <div class="wrap split-inner">
-    <div>
-      <div class="eyebrow">Schedule & tasks</div>
-      <h2>Bills and budgets, finally in sync</h2>
-      <p>Sched Ledger connects your calendar directly to your ledger, so nothing falls through the cracks between "I should pay this" and "I paid this."</p>
-      <ul class="checklist">
-        <li>Calendar and agenda views for bills, appointments, and reminders with daily/weekly/biweekly/monthly/yearly recurrence</li>
-        <li>Events can span multiple days, and Upcoming shows only the next occurrence of a repeating series</li>
-        <li>Budget holds reserve money for a scheduled bill until you log the payment or release it</li>
-        <li>Log payment links an event to an expense in one click, and releases its budget hold automatically</li>
-        <li>Optional email reminders with per-event lead times, in your timezone — the email carries the event name, budget hold, and comments</li>
-        <li>Web Push reminders on any device you opt in, delivered even when the app is closed</li>
-        <li>Multiple named to-do lists with inline task management</li>
-      </ul>
-    </div>
-    <div class="mock">
-      <div class="mock-head">
-        <div>
-          <div class="tag">This month · Held</div>
-          <div class="total">RM 1,240.00</div>
+    <header>
+      <nav aria-label="Primary">
+        <div class="brand">
+          <img
+            src="logo.png"
+            alt="Sched Ledger logo"
+            width="30"
+            height="30"
+            decoding="async"
+          />Sched Ledger
         </div>
-        <div class="tag">3 active holds</div>
-      </div>
-      <div class="mock-row"><span>🏠 Rent — due in 4 days</span><span class="amt neg">RM 900.00</span></div>
-      <div class="mock-row"><span>📱 Phone plan — due in 9 days</span><span class="amt neg">RM 60.00</span></div>
-      <div class="mock-row"><span>🚗 Car insurance — due in 21 days</span><span class="amt neg">RM 280.00</span></div>
-      <div class="mock-row"><span>💵 Salary — posted</span><span class="amt pos">+ RM 4,500.00</span></div>
-    </div>
-  </div>
-</section>
-
-<section class="split" id="goals">
-  <div class="wrap split-inner">
-    <div>
-      <div class="eyebrow">Savings & goals</div>
-      <h2>Piggies for saving, Capitals for planning</h2>
-      <p>Two purpose-built tools for money you're setting aside — piggy banks for open-ended savings goals, and Capitals plans for big one-off expenses with a real budget and a deadline.</p>
-      <ul class="checklist">
-        <li>Piggies hold unassigned savings — every savings category becomes a goal with a balance, an optional target date, and a progress ring; subcategories show as piglets inside it</li>
-        <li>When adding a savings deposit, optionally assign it to a Capitals plan — it shows as Saved on that plan instead of in Piggies</li>
-        <li>Saving Insights surface streaks, best months, savings rate, and pace-vs-deadline projections</li>
-        <li>Capitals count as saving too — assigned deposits feed your rate, net, and streak, and every plan shows what is set aside, what is left, and whether it is funded, on pace, or behind</li>
-        <li>Withdraw from a piggy without it being mistaken for income anywhere in the app</li>
-        <li>Capitals plans big one-off expenses — marriages, trips, loans — from a template or a blank plan</li>
-        <li>Check off Capitals line items as paid and log the payment straight into your ledger</li>
-        <li>A total budget per plan drives a monthly-save target: (unpaid budget − pot remaining) ÷ months left</li>
-      </ul>
-    </div>
-    <div class="mock">
-      <div class="mock-head">
-        <div>
-          <div class="tag">Goals · Active</div>
-          <div class="total">RM 11,720.00</div>
+        <div class="nav-links">
+          <a href="#features">Ledger</a>
+          <a href="#schedule">Schedule</a>
+          <a href="#goals">Goals</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#faq">FAQ</a>
+          <a href="#stack">Stack</a>
         </div>
-        <div class="tag">4 in progress</div>
+        <a class="nav-cta" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener"
+          >Open app</a
+        >
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <canvas id="hero-canvas" aria-hidden="true"></canvas>
+        <div class="wrap">
+          <div class="badge">
+            <span class="ver">v4.2.4</span> <span class="dot"></span> End-to-end encrypted · Web3
+            sign-in · No email or password
+          </div>
+          <h1>Your money and schedule,<br /><span class="grad">encrypted end-to-end.</span></h1>
+          <p>
+            Sched Ledger is a private expense ledger, calendar, and to-do app. Track spending across
+            wallets and currencies, plan bills and events with email and push reminders, and sign in
+            with a Web3 wallet — the server only ever sees ciphertext.
+          </p>
+          <div class="hero-ctas">
+            <a
+              class="btn-primary"
+              href="https://sched-ledger.vercel.app"
+              target="_blank"
+              rel="noopener"
+              >Get started free</a
+            >
+            <a class="btn-secondary" href="#privacy">See how privacy works</a>
+          </div>
+          <div class="stack-strip">
+            <span>Bun</span><span>Hono</span><span>MongoDB</span><span>React 19</span
+            ><span>AES-256-GCM</span><span>PWA</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="features" id="features">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="eyebrow">Ledger</div>
+            <h2>Every wallet, every currency, one clear picture</h2>
+            <p>
+              Overview, transactions, budgets, insights, and recurring expenses — all in one
+              encrypted ledger.
+            </p>
+          </div>
+          <div class="grid3">
+            <div class="card">
+              <div class="icon">💰</div>
+              <h3>Multiple wallets, 29 currencies</h3>
+              <p>
+                Create wallets with monthly-income or starting-balance funding modes, and track
+                spending across every currency you actually use.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">🧮</div>
+              <h3>Built-in budget calculator</h3>
+              <p>
+                Deduct tax lines from income, allocate net by category %, and apply straight to
+                wallet budgets — with Malaysia-oriented presets (EPF, SOCSO, EIS, PCB, SST) that
+                never leave your browser.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">🔁</div>
+              <h3>Recurring transactions</h3>
+              <p>
+                Monthly, quarterly, or yearly expenses auto-post on due dates, with flexible delete
+                scopes for one occurrence, this-and-future, or the whole series.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">🏷️</div>
+              <h3>Custom categories</h3>
+              <p>
+                Build your own income and expense taxonomy with glyphs and colors — organized the
+                way you actually think about spending.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">📊</div>
+              <h3>Insights that go deep</h3>
+              <p>
+                A ranked "What Stands Out" feed forecasts month-end spend, flags over-budget
+                categories early, and catches unusual charges and price creep — plus FX conversion,
+                month-over-month charts, and spending-habit analysis.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">🚗</div>
+              <h3>Vehicles &amp; Fuel Insights</h3>
+              <p>
+                Track fuel or charging costs per car, EV, bike, or van. EVs automatically read as
+                kWh and charge instead of litres and fill-ups, with a Fuel Insights engine for
+                consumption trend, price timing, and running cost.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">🔔</div>
+              <h3>Budget alerts</h3>
+              <p>
+                Get emailed when a category nears or exceeds its monthly budget — evaluated
+                client-side, so the server only delivers, never sees.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">📱</div>
+              <h3>Push notifications</h3>
+              <p>
+                Opt in per device for Web Push reminders that arrive even when the app is closed,
+                carrying the same event name, time, and budget hold as the email.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">📥</div>
+              <h3>Export and import</h3>
+              <p>
+                CSV round-trips for transactions, schedule events, and to-do lists, plus a full
+                encrypted backup only your ledger key can open.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">📲</div>
+              <h3>Installable PWA</h3>
+              <p>
+                Add Sched Ledger to your home screen and keep reading your ledger offline from an
+                encrypted local cache.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="split" id="schedule">
+        <div class="wrap split-inner">
+          <div>
+            <div class="eyebrow">Schedule & tasks</div>
+            <h2>Bills and budgets, finally in sync</h2>
+            <p>
+              Sched Ledger connects your calendar directly to your ledger, so nothing falls through
+              the cracks between "I should pay this" and "I paid this."
+            </p>
+            <ul class="checklist">
+              <li>
+                Calendar and agenda views for bills, appointments, and reminders with
+                daily/weekly/biweekly/monthly/yearly recurrence
+              </li>
+              <li>
+                Events can span multiple days, and Upcoming shows only the next occurrence of a
+                repeating series
+              </li>
+              <li>
+                Budget holds reserve money for a scheduled bill until you log the payment or release
+                it
+              </li>
+              <li>
+                Log payment links an event to an expense in one click, and releases its budget hold
+                automatically
+              </li>
+              <li>
+                Optional email reminders with per-event lead times, in your timezone — the email
+                carries the event name, budget hold, and comments
+              </li>
+              <li>
+                Web Push reminders on any device you opt in, delivered even when the app is closed
+              </li>
+              <li>Multiple named to-do lists with inline task management</li>
+            </ul>
+          </div>
+          <div class="mock">
+            <div class="mock-head">
+              <div>
+                <div class="tag">This month · Held</div>
+                <div class="total">RM 1,240.00</div>
+              </div>
+              <div class="tag">3 active holds</div>
+            </div>
+            <div class="mock-row">
+              <span>🏠 Rent — due in 4 days</span><span class="amt neg">RM 900.00</span>
+            </div>
+            <div class="mock-row">
+              <span>📱 Phone plan — due in 9 days</span><span class="amt neg">RM 60.00</span>
+            </div>
+            <div class="mock-row">
+              <span>🚗 Car insurance — due in 21 days</span><span class="amt neg">RM 280.00</span>
+            </div>
+            <div class="mock-row">
+              <span>💵 Salary — posted</span><span class="amt pos">+ RM 4,500.00</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="split" id="goals">
+        <div class="wrap split-inner">
+          <div>
+            <div class="eyebrow">Savings & goals</div>
+            <h2>Piggies for saving, Capitals for planning</h2>
+            <p>
+              Two purpose-built tools for money you're setting aside — piggy banks for open-ended
+              savings goals, and Capitals plans for big one-off expenses with a real budget and a
+              deadline.
+            </p>
+            <ul class="checklist">
+              <li>
+                Piggies hold unassigned savings — every savings category becomes a goal with a
+                balance, an optional target date, and a progress ring; subcategories show as piglets
+                inside it
+              </li>
+              <li>
+                When adding a savings deposit, optionally assign it to a Capitals plan — it shows as
+                Saved on that plan instead of in Piggies
+              </li>
+              <li>
+                Saving Insights surface streaks, best months, savings rate, and pace-vs-deadline
+                projections
+              </li>
+              <li>
+                Capitals count as saving too — assigned deposits feed your rate, net, and streak,
+                and every plan shows what is set aside, what is left, and whether it is funded, on
+                pace, or behind
+              </li>
+              <li>
+                Withdraw from a piggy without it being mistaken for income anywhere in the app
+              </li>
+              <li>
+                Capitals plans big one-off expenses — marriages, trips, loans — from a template or a
+                blank plan
+              </li>
+              <li>
+                Check off Capitals line items as paid and log the payment straight into your ledger
+              </li>
+              <li>
+                A total budget per plan drives a monthly-save target: (unpaid budget − pot
+                remaining) ÷ months left
+              </li>
+            </ul>
+          </div>
+          <div class="mock">
+            <div class="mock-head">
+              <div>
+                <div class="tag">Goals · Active</div>
+                <div class="total">RM 11,720.00</div>
+              </div>
+              <div class="tag">4 in progress</div>
+            </div>
+            <div class="mock-row">
+              <span>🐷 Emergency Fund — 62% saved</span><span class="amt pos">RM 3,720.00</span>
+            </div>
+            <div class="mock-row">
+              <span>🏖️ Bali Trip — save RM 480/mo</span><span class="amt pos">RM 8,000.00</span>
+            </div>
+            <div class="mock-row">
+              <span>💍 Wedding Fund — RM 2,400 unspent</span
+              ><span class="amt pos">RM 10,000.00</span>
+            </div>
+            <div class="mock-row">
+              <span>🚗 Car Loan Payoff — planned</span><span class="amt pos">RM 12,000.00</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="privacy" id="privacy">
+        <div class="wrap privacy-inner">
+          <div class="lock-visual">
+            <span class="muted">// what MongoDB actually stores</span><br />
+            {<br />
+            &nbsp;&nbsp;"_id": <span class="blue">ObjectId(...)</span>,<br />
+            &nbsp;&nbsp;"accountId": <span class="blue">"7f2a...e91"</span>,<br />
+            &nbsp;&nbsp;"ciphertext": <span class="pink">"U2FsdGVkX1..."</span>,<br />
+            &nbsp;&nbsp;"iv": <span class="pink">"8x92Ka=="</span>,<br />
+            &nbsp;&nbsp;<span class="muted">// amount, title, notes, category —</span><br />
+            &nbsp;&nbsp;<span class="muted">// none of it readable server-side</span><br />
+            }
+          </div>
+          <div>
+            <div class="eyebrow">Privacy & identity</div>
+            <h2>The server sees ciphertext. That's it.</h2>
+            <p>
+              Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos
+              are AES-256-GCM encrypted in your browser before anything reaches the database. Only
+              day-level dates needed for accurate reminders stay in plaintext — plus, on events
+              where you switch reminders on, a readable copy of what that email or push notification
+              says. Everything else is unreadable server-side.
+            </p>
+            <ul class="checklist">
+              <li>
+                Sign in with a Web3 wallet — create or restore with a 12- or 24-word recovery
+                phrase, no email or password
+              </li>
+              <li>
+                Device passphrase vault wraps your keys locally with PBKDF2 + AES-GCM instead of
+                plaintext storage
+              </li>
+              <li>
+                Encrypted backup you can download and restore, encrypted with your own ledger key —
+                never stored server-side
+              </li>
+              <li>
+                Revoke devices, clear local data, and manage third-party data-sharing consent
+                anytime
+              </li>
+              <li>
+                In-app Transparency view maps exactly what the server can and can't infer, with
+                diagrams
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats">
+        <div class="wrap stats-grid">
+          <div class="stat">
+            <h3>29</h3>
+            <p>supported currencies</p>
+          </div>
+          <div class="stat">
+            <h3>AES-256</h3>
+            <p>client-side encryption</p>
+          </div>
+          <div class="stat">
+            <h3>0</h3>
+            <p>emails or passwords required</p>
+          </div>
+          <div class="stat">
+            <h3>PWA</h3>
+            <p>installable, works offline for reads</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="features" id="faq">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="eyebrow">FAQ</div>
+            <h2>Questions worth asking before you trust an app with your money</h2>
+            <p>
+              What Sched Ledger encrypts, what it still needs in plaintext, and what you give up in
+              exchange.
+            </p>
+          </div>
+          <div class="faq-list">
+            <details class="faq-item">
+              <summary>Is Sched Ledger really end-to-end encrypted?</summary>
+              <p>
+                Yes. Amounts, wallet names, categories, notes, schedule titles, budget holds, and
+                to-dos are encrypted with AES-256-GCM in your browser before anything reaches the
+                database, so the server only ever stores ciphertext it cannot read. Two deliberate
+                exceptions stay in plaintext: day-level dates, which are needed to fire reminders on
+                time, and — only on events where you switch reminders on — a readable copy of what
+                that email or push notification will say.
+              </p>
+            </details>
+            <details class="faq-item">
+              <summary>Do I need an email address or a password?</summary>
+              <p>
+                No. You sign in with an in-browser Web3 wallet, created or restored from a 12- or
+                24-word recovery phrase, using a cryptographic challenge instead of credentials.
+                There is no signup form, no password to reuse, and no email address on file unless
+                you switch on email reminders yourself.
+              </p>
+            </details>
+            <details class="faq-item">
+              <summary>Do I need to buy crypto or pay gas fees?</summary>
+              <p>
+                No. The wallet is used purely as an identity key to sign in and derive your
+                encryption key — Sched Ledger never sends a transaction, never touches a blockchain,
+                and never asks you to fund anything. You can use a ledger-only key so your sign-in
+                address is not correlated with any on-chain activity.
+              </p>
+            </details>
+            <details class="faq-item">
+              <summary>How is this different from other budgeting apps?</summary>
+              <p>
+                Most expense trackers keep your data in plaintext on their servers and ask for an
+                email address, a password, and often a bank connection. Sched Ledger asks for none
+                of that: no signup form, no bank linking, and no readable server-side copy of your
+                spending. What you trade for it is recovery — the key is yours alone.
+              </p>
+            </details>
+            <details class="faq-item">
+              <summary>Is Sched Ledger free?</summary>
+              <p>
+                Yes — every feature is free on the official hosted app. The source is public for
+                transparency under a proprietary license, which means it is not free to self-host,
+                rebrand, or offer as a competing service; those uses need a written commercial
+                agreement.
+              </p>
+            </details>
+            <details class="faq-item">
+              <summary>What happens if I lose my recovery phrase?</summary>
+              <p>
+                There is no recovery. Because your ledger is encrypted with a key only you hold,
+                nobody — the operator included — can restore access or read your data. Keep the
+                phrase somewhere safe, set a device passphrase so the key is wrapped on each
+                browser, and download an encrypted backup from Account → Exports &amp; imports.
+              </p>
+            </details>
+            <details class="faq-item">
+              <summary>Can I install Sched Ledger on my phone?</summary>
+              <p>
+                Yes. It is an installable PWA — add it to your home screen on Android or iOS and it
+                runs like a native app, with Web Push reminders delivered even when it is closed. An
+                IndexedDB ciphertext cache keeps your ledger readable offline; writing new entries
+                still needs a connection.
+              </p>
+            </details>
+            <details class="faq-item">
+              <summary>Which currencies are supported, and how does conversion work?</summary>
+              <p>
+                You can create wallets in any of 29 currencies and run several side by side, each
+                with its own budgets and categories. Insights converts across them using live rates
+                so cross-wallet totals stay comparable, while individual entries always keep the
+                currency you recorded them in.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="features" id="stack">
+        <div class="wrap">
+          <div class="section-head">
+            <div class="eyebrow">Under the hood</div>
+            <h2>A modern, no-nonsense stack</h2>
+            <p>
+              Built for speed and correctness — no bloat, no unnecessary third-party data access.
+            </p>
+          </div>
+          <div class="grid3">
+            <div class="card">
+              <div class="icon">⚡</div>
+              <h3>Bun + Hono</h3>
+              <p>Fast runtime and API layer, with Zod validation on every route.</p>
+            </div>
+            <div class="card">
+              <div class="icon">🍃</div>
+              <h3>MongoDB</h3>
+              <p>
+                Stores ciphertext and minimal plaintext metadata only — opaque account IDs, not
+                wallet addresses.
+              </p>
+            </div>
+            <div class="card">
+              <div class="icon">⚛️</div>
+              <h3>React 19 + TanStack Query</h3>
+              <p>
+                Snappy UI backed by ethers v6 for wallet-based identity. Type set: Young Serif,
+                Schibsted Grotesk, Azeret Mono.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-final">
+        <div class="wrap">
+          <h2>Take your ledger back from the cloud.</h2>
+          <p>
+            Free full features on the official host. Source is public for transparency under a
+            proprietary license — not free to self-host or rebrand. For a commercial deal (monthly
+            fee, collaboration, or copyright buyout), email
+            <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.
+          </p>
+          <div class="hero-ctas">
+            <a
+              class="btn-primary"
+              href="https://sched-ledger.vercel.app"
+              target="_blank"
+              rel="noopener"
+              >Launch Sched Ledger</a
+            >
+            <a
+              class="btn-secondary"
+              href="https://github.com/NightfuryEquinn/Sched-Ledger"
+              target="_blank"
+              rel="noopener"
+              >View source on GitHub</a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="footer-inner">
+          <div class="brand">
+            <img
+              src="logo.png"
+              alt="Sched Ledger logo"
+              width="26"
+              height="26"
+              loading="lazy"
+              decoding="async"
+              style="width: 26px; height: 26px; border-radius: 7px"
+            />Sched Ledger
+          </div>
+          <div class="footer-links">
+            <a href="https://github.com/NightfuryEquinn/Sched-Ledger" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="#features">Ledger</a>
+            <a href="#schedule">Schedule</a>
+            <a href="#goals">Goals</a>
+            <a href="#privacy">Privacy</a>
+            <a href="#faq">FAQ</a>
+          </div>
+        </div>
+        <p class="foot-note">
+          Sched Ledger v4.2.4 — private expense ledger, schedule, and to-do app. E2EE by default.
+          Source public for transparency under the
+          <a
+            href="https://github.com/NightfuryEquinn/Sched-Ledger/blob/develop/LICENSE"
+            target="_blank"
+            rel="noopener"
+            style="text-decoration: underline"
+            >Sched Ledger Proprietary License</a
+          >. Licensing: <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.
+        </p>
       </div>
-      <div class="mock-row"><span>🐷 Emergency Fund — 62% saved</span><span class="amt pos">RM 3,720.00</span></div>
-      <div class="mock-row"><span>🏖️ Bali Trip — save RM 480/mo</span><span class="amt pos">RM 8,000.00</span></div>
-      <div class="mock-row"><span>💍 Wedding Fund — RM 2,400 unspent</span><span class="amt pos">RM 10,000.00</span></div>
-      <div class="mock-row"><span>🚗 Car Loan Payoff — planned</span><span class="amt pos">RM 12,000.00</span></div>
-    </div>
-  </div>
-</section>
+    </footer>
 
-<section class="privacy" id="privacy">
-  <div class="wrap privacy-inner">
-    <div class="lock-visual">
-<span class="muted">// what MongoDB actually stores</span><br>
-{<br>
-&nbsp;&nbsp;"_id": <span class="blue">ObjectId(...)</span>,<br>
-&nbsp;&nbsp;"accountId": <span class="blue">"7f2a...e91"</span>,<br>
-&nbsp;&nbsp;"ciphertext": <span class="pink">"U2FsdGVkX1..."</span>,<br>
-&nbsp;&nbsp;"iv": <span class="pink">"8x92Ka=="</span>,<br>
-&nbsp;&nbsp;<span class="muted">// amount, title, notes, category —</span><br>
-&nbsp;&nbsp;<span class="muted">// none of it readable server-side</span><br>
-}
-    </div>
-    <div>
-      <div class="eyebrow">Privacy & identity</div>
-      <h2>The server sees ciphertext. That's it.</h2>
-      <p>Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are AES-256-GCM encrypted in your browser before anything reaches the database. Only day-level dates needed for accurate reminders stay in plaintext — plus, on events where you switch reminders on, a readable copy of what that email or push notification says. Everything else is unreadable server-side.</p>
-      <ul class="checklist">
-        <li>Sign in with a Web3 wallet — create or restore with a 12- or 24-word recovery phrase, no email or password</li>
-        <li>Device passphrase vault wraps your keys locally with PBKDF2 + AES-GCM instead of plaintext storage</li>
-        <li>Encrypted backup you can download and restore, encrypted with your own ledger key — never stored server-side</li>
-        <li>Revoke devices, clear local data, and manage third-party data-sharing consent anytime</li>
-        <li>In-app Transparency view maps exactly what the server can and can't infer, with diagrams</li>
-      </ul>
-    </div>
-  </div>
-</section>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      /* Deferred scripts run in order before DOMContentLoaded, so THREE is ready here. */
+      document.addEventListener("DOMContentLoaded", function () {
+        if (typeof THREE === "undefined") return;
+        var reduceMotion =
+          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-<section class="stats">
-  <div class="wrap stats-grid">
-    <div class="stat"><h3>29</h3><p>supported currencies</p></div>
-    <div class="stat"><h3>AES-256</h3><p>client-side encryption</p></div>
-    <div class="stat"><h3>0</h3><p>emails or passwords required</p></div>
-    <div class="stat"><h3>PWA</h3><p>installable, works offline for reads</p></div>
-  </div>
-</section>
+        /* ---------------- Hero: encrypted network constellation ---------------- */
+        (function heroScene() {
+          var canvas = document.getElementById("hero-canvas");
+          var heroSection = document.querySelector(".hero");
+          if (!canvas || !heroSection) return;
 
-<section class="features" id="faq">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">FAQ</div>
-      <h2>Questions worth asking before you trust an app with your money</h2>
-      <p>What Sched Ledger encrypts, what it still needs in plaintext, and what you give up in exchange.</p>
-    </div>
-    <div class="faq-list">
-      <details class="faq-item">
-        <summary>Is Sched Ledger really end-to-end encrypted?</summary>
-        <p>Yes. Amounts, wallet names, categories, notes, schedule titles, budget holds, and to-dos are encrypted with AES-256-GCM in your browser before anything reaches the database, so the server only ever stores ciphertext it cannot read. Two deliberate exceptions stay in plaintext: day-level dates, which are needed to fire reminders on time, and — only on events where you switch reminders on — a readable copy of what that email or push notification will say.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Do I need an email address or a password?</summary>
-        <p>No. You sign in with an in-browser Web3 wallet, created or restored from a 12- or 24-word recovery phrase, using a cryptographic challenge instead of credentials. There is no signup form, no password to reuse, and no email address on file unless you switch on email reminders yourself.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Do I need to buy crypto or pay gas fees?</summary>
-        <p>No. The wallet is used purely as an identity key to sign in and derive your encryption key — Sched Ledger never sends a transaction, never touches a blockchain, and never asks you to fund anything. You can use a ledger-only key so your sign-in address is not correlated with any on-chain activity.</p>
-      </details>
-      <details class="faq-item">
-        <summary>How is this different from other budgeting apps?</summary>
-        <p>Most expense trackers keep your data in plaintext on their servers and ask for an email address, a password, and often a bank connection. Sched Ledger asks for none of that: no signup form, no bank linking, and no readable server-side copy of your spending. What you trade for it is recovery — the key is yours alone.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Is Sched Ledger free?</summary>
-        <p>Yes — every feature is free on the official hosted app. The source is public for transparency under a proprietary license, which means it is not free to self-host, rebrand, or offer as a competing service; those uses need a written commercial agreement.</p>
-      </details>
-      <details class="faq-item">
-        <summary>What happens if I lose my recovery phrase?</summary>
-        <p>There is no recovery. Because your ledger is encrypted with a key only you hold, nobody — the operator included — can restore access or read your data. Keep the phrase somewhere safe, set a device passphrase so the key is wrapped on each browser, and download an encrypted backup from Account → Exports &amp; imports.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Can I install Sched Ledger on my phone?</summary>
-        <p>Yes. It is an installable PWA — add it to your home screen on Android or iOS and it runs like a native app, with Web Push reminders delivered even when it is closed. An IndexedDB ciphertext cache keeps your ledger readable offline; writing new entries still needs a connection.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Which currencies are supported, and how does conversion work?</summary>
-        <p>You can create wallets in any of 29 currencies and run several side by side, each with its own budgets and categories. Insights converts across them using live rates so cross-wallet totals stay comparable, while individual entries always keep the currency you recorded them in.</p>
-      </details>
-    </div>
-  </div>
-</section>
+          var w = heroSection.clientWidth,
+            h = heroSection.clientHeight;
+          var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          renderer.setSize(w, h);
 
-<section class="features" id="stack">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Under the hood</div>
-      <h2>A modern, no-nonsense stack</h2>
-      <p>Built for speed and correctness — no bloat, no unnecessary third-party data access.</p>
-    </div>
-    <div class="grid3">
-      <div class="card"><div class="icon">⚡</div><h3>Bun + Hono</h3><p>Fast runtime and API layer, with Zod validation on every route.</p></div>
-      <div class="card"><div class="icon">🍃</div><h3>MongoDB</h3><p>Stores ciphertext and minimal plaintext metadata only — opaque account IDs, not wallet addresses.</p></div>
-      <div class="card"><div class="icon">⚛️</div><h3>React 19 + TanStack Query</h3><p>Snappy UI backed by ethers v6 for wallet-based identity. Type set: Young Serif, Schibsted Grotesk, Azeret Mono.</p></div>
-    </div>
-  </div>
-</section>
+          var scene = new THREE.Scene();
+          var camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 1000);
+          camera.position.z = 60;
 
-<section class="cta-final">
-  <div class="wrap">
-    <h2>Take your ledger back from the cloud.</h2>
-    <p>Free full features on the official host. Source is public for transparency under a proprietary license — not free to self-host or rebrand. For a commercial deal (monthly fee, collaboration, or copyright buyout), email <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.</p>
-    <div class="hero-ctas">
-      <a class="btn-primary" href="https://sched-ledger.vercel.app" target="_blank" rel="noopener">Launch Sched Ledger</a>
-      <a class="btn-secondary" href="https://github.com/NightfuryEquinn/Sched-Ledger" target="_blank" rel="noopener">View source on GitHub</a>
-    </div>
-  </div>
-</section>
-
-</main>
-
-<footer>
-  <div class="wrap">
-    <div class="footer-inner">
-      <div class="brand"><img src="logo.png" alt="Sched Ledger logo" width="26" height="26" loading="lazy" decoding="async" style="width:26px;height:26px;border-radius:7px;">Sched Ledger</div>
-      <div class="footer-links">
-        <a href="https://github.com/NightfuryEquinn/Sched-Ledger" target="_blank" rel="noopener">GitHub</a>
-        <a href="#features">Ledger</a>
-        <a href="#schedule">Schedule</a>
-        <a href="#goals">Goals</a>
-        <a href="#privacy">Privacy</a>
-        <a href="#faq">FAQ</a>
-      </div>
-    </div>
-    <p class="foot-note">Sched Ledger v4.2.4 — private expense ledger, schedule, and to-do app. E2EE by default. Source public for transparency under the <a href="https://github.com/NightfuryEquinn/Sched-Ledger/blob/develop/LICENSE" target="_blank" rel="noopener" style="text-decoration:underline;">Sched Ledger Proprietary License</a>. Licensing: <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.</p>
-  </div>
-</footer>
-
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-/* Deferred scripts run in order before DOMContentLoaded, so THREE is ready here. */
-document.addEventListener('DOMContentLoaded', function(){
-  if (typeof THREE === 'undefined') return;
-  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ---------------- Hero: encrypted network constellation ---------------- */
-  (function heroScene(){
-    var canvas = document.getElementById('hero-canvas');
-    var heroSection = document.querySelector('.hero');
-    if (!canvas || !heroSection) return;
-
-    var w = heroSection.clientWidth, h = heroSection.clientHeight;
-    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(w, h);
-
-    var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 1000);
-    camera.position.z = 60;
-
-    var count = window.innerWidth < 700 ? 80 : 170;
-    var positions = new Float32Array(count * 3);
-    var velocities = [];
-    for (var i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 150;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 85;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
-      velocities.push({ x: (Math.random() - 0.5) * 0.045, y: (Math.random() - 0.5) * 0.045, z: (Math.random() - 0.5) * 0.045 });
-    }
-    var geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    var mat = new THREE.PointsMaterial({ color: 0x6ee7b7, size: 1.7, transparent: true, opacity: 0.85 });
-    var points = new THREE.Points(geo, mat);
-    scene.add(points);
-
-    var lineGeo = new THREE.BufferGeometry();
-    var lineMat = new THREE.LineBasicMaterial({ color: 0x7c9aff, transparent: true, opacity: 0.18 });
-    var lineSegments = new THREE.LineSegments(lineGeo, lineMat);
-    scene.add(lineSegments);
-
-    function rebuildLines() {
-      var pos = geo.attributes.position.array;
-      var maxDist = 20, maxDistSq = maxDist * maxDist;
-      var out = [];
-      for (var i = 0; i < count; i++) {
-        for (var j = i + 1; j < count; j++) {
-          var dx = pos[i * 3] - pos[j * 3], dy = pos[i * 3 + 1] - pos[j * 3 + 1], dz = pos[i * 3 + 2] - pos[j * 3 + 2];
-          var d2 = dx * dx + dy * dy + dz * dz;
-          if (d2 < maxDistSq) {
-            out.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2], pos[j * 3], pos[j * 3 + 1], pos[j * 3 + 2]);
+          var count = window.innerWidth < 700 ? 80 : 170;
+          var positions = new Float32Array(count * 3);
+          var velocities = [];
+          for (var i = 0; i < count; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 150;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 85;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+            velocities.push({
+              x: (Math.random() - 0.5) * 0.045,
+              y: (Math.random() - 0.5) * 0.045,
+              z: (Math.random() - 0.5) * 0.045,
+            });
           }
-        }
-      }
-      lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
-    }
-    rebuildLines();
+          var geo = new THREE.BufferGeometry();
+          geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+          var mat = new THREE.PointsMaterial({
+            color: 0x6ee7b7,
+            size: 1.7,
+            transparent: true,
+            opacity: 0.85,
+          });
+          var points = new THREE.Points(geo, mat);
+          scene.add(points);
 
-    var mouseX = 0, mouseY = 0, rotX = 0, rotY = 0, frame = 0;
-    window.addEventListener('mousemove', function (e) {
-      mouseX = (e.clientX / window.innerWidth) - 0.5;
-      mouseY = (e.clientY / window.innerHeight) - 0.5;
-    });
+          var lineGeo = new THREE.BufferGeometry();
+          var lineMat = new THREE.LineBasicMaterial({
+            color: 0x7c9aff,
+            transparent: true,
+            opacity: 0.18,
+          });
+          var lineSegments = new THREE.LineSegments(lineGeo, lineMat);
+          scene.add(lineSegments);
 
-    function animate() {
-      requestAnimationFrame(animate);
-      if (!reduceMotion) {
-        var pos = geo.attributes.position.array;
-        for (var i = 0; i < count; i++) {
-          pos[i * 3] += velocities[i].x;
-          pos[i * 3 + 1] += velocities[i].y;
-          pos[i * 3 + 2] += velocities[i].z;
-          if (Math.abs(pos[i * 3]) > 75) velocities[i].x *= -1;
-          if (Math.abs(pos[i * 3 + 1]) > 42) velocities[i].y *= -1;
-          if (Math.abs(pos[i * 3 + 2]) > 30) velocities[i].z *= -1;
-        }
-        geo.attributes.position.needsUpdate = true;
-        frame++;
-        if (frame % 4 === 0) rebuildLines();
+          function rebuildLines() {
+            var pos = geo.attributes.position.array;
+            var maxDist = 20,
+              maxDistSq = maxDist * maxDist;
+            var out = [];
+            for (var i = 0; i < count; i++) {
+              for (var j = i + 1; j < count; j++) {
+                var dx = pos[i * 3] - pos[j * 3],
+                  dy = pos[i * 3 + 1] - pos[j * 3 + 1],
+                  dz = pos[i * 3 + 2] - pos[j * 3 + 2];
+                var d2 = dx * dx + dy * dy + dz * dz;
+                if (d2 < maxDistSq) {
+                  out.push(
+                    pos[i * 3],
+                    pos[i * 3 + 1],
+                    pos[i * 3 + 2],
+                    pos[j * 3],
+                    pos[j * 3 + 1],
+                    pos[j * 3 + 2],
+                  );
+                }
+              }
+            }
+            lineGeo.setAttribute("position", new THREE.Float32BufferAttribute(out, 3));
+          }
+          rebuildLines();
 
-        rotX += (mouseY * 0.3 - rotX) * 0.03;
-        rotY += (mouseX * 0.3 - rotY) * 0.03;
-        points.rotation.x = rotX;
-        points.rotation.y = rotY + frame * 0.0006;
-        lineSegments.rotation.x = rotX;
-        lineSegments.rotation.y = rotY + frame * 0.0006;
-      }
-      renderer.render(scene, camera);
-    }
-    animate();
+          var mouseX = 0,
+            mouseY = 0,
+            rotX = 0,
+            rotY = 0,
+            frame = 0;
+          window.addEventListener("mousemove", function (e) {
+            mouseX = e.clientX / window.innerWidth - 0.5;
+            mouseY = e.clientY / window.innerHeight - 0.5;
+          });
 
-    window.addEventListener('resize', function () {
-      w = heroSection.clientWidth; h = heroSection.clientHeight;
-      camera.aspect = w / h; camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    });
-  })();
-});
-</script>
+          function animate() {
+            requestAnimationFrame(animate);
+            if (!reduceMotion) {
+              var pos = geo.attributes.position.array;
+              for (var i = 0; i < count; i++) {
+                pos[i * 3] += velocities[i].x;
+                pos[i * 3 + 1] += velocities[i].y;
+                pos[i * 3 + 2] += velocities[i].z;
+                if (Math.abs(pos[i * 3]) > 75) velocities[i].x *= -1;
+                if (Math.abs(pos[i * 3 + 1]) > 42) velocities[i].y *= -1;
+                if (Math.abs(pos[i * 3 + 2]) > 30) velocities[i].z *= -1;
+              }
+              geo.attributes.position.needsUpdate = true;
+              frame++;
+              if (frame % 4 === 0) rebuildLines();
 
-</body>
+              rotX += (mouseY * 0.3 - rotX) * 0.03;
+              rotY += (mouseX * 0.3 - rotY) * 0.03;
+              points.rotation.x = rotX;
+              points.rotation.y = rotY + frame * 0.0006;
+              lineSegments.rotation.x = rotX;
+              lineSegments.rotation.y = rotY + frame * 0.0006;
+            }
+            renderer.render(scene, camera);
+          }
+          animate();
+
+          window.addEventListener("resize", function () {
+            w = heroSection.clientWidth;
+            h = heroSection.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+          });
+        })();
+      });
+    </script>
+  </body>
 </html>

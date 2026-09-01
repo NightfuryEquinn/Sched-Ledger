@@ -1,7 +1,7 @@
 import type { ExpenseDocument } from "@/db/collections";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { normalizeRecurring } from "@/lib/recurring";
-import type { ObjectId } from "mongodb";
+import type { Collection, ObjectId } from "mongodb";
 
 /** Build a Mongo filter that matches every member of an expense's recurring series. */
 export function expenseSeriesFilter(doc: ExpenseDocument, accountId: string) {
@@ -20,11 +20,7 @@ export function expenseSeriesFilter(doc: ExpenseDocument, accountId: string) {
     sub: doc.sub,
     note: doc.note ?? "",
     recurring:
-      freq === "monthly"
-        ? ({ $in: [true, "monthly"] } as const)
-        : freq === false
-          ? false
-          : freq,
+      freq === "monthly" ? ({ $in: [true, "monthly"] } as const) : freq === false ? false : freq,
   };
 }
 
@@ -40,11 +36,17 @@ type ExpenseSeriesRetireResult = {
   endedIds: string[];
 };
 
-type ExpenseCollection = {
-  updateOne: Function;
-  updateMany: Function;
-  deleteMany: Function;
-  find: Function;
+type ExpenseFindCursor = {
+  project: (projection: { _id: 1 }) => {
+    toArray: () => Promise<Array<{ _id: ObjectId }>>;
+  };
+};
+
+type ExpenseCollection = Pick<
+  Collection<ExpenseDocument>,
+  "updateOne" | "updateMany" | "deleteMany"
+> & {
+  find: (filter: Record<string, unknown>) => ExpenseFindCursor;
 };
 
 /**
@@ -93,7 +95,7 @@ export async function retireOldExpenseSeries(opts: {
     .find({ ...others, date: { $lt: pivotDate } })
     .project({ _id: 1 })
     .toArray();
-  const endedIds = past.map((row: { _id: ObjectId }) => row._id.toString());
+  const endedIds = past.map((row) => row._id.toString());
 
   if (endedIds.length) {
     await expenses.updateMany(
@@ -106,7 +108,7 @@ export async function retireOldExpenseSeries(opts: {
     .find({ ...others, date: { $gt: pivotDate } })
     .project({ _id: 1 })
     .toArray();
-  const deletedIds = future.map((row: { _id: ObjectId }) => row._id.toString());
+  const deletedIds = future.map((row) => row._id.toString());
 
   if (deletedIds.length) {
     await expenses.deleteMany({ ...others, date: { $gt: pivotDate } });
@@ -149,7 +151,7 @@ export async function applyExpenseDeleteScope(opts: {
       .find({ ...series, date: { $gte: fromDate } })
       .project({ _id: 1 })
       .toArray();
-    const deletedIds = toRemove.map((row: { _id: ObjectId }) => row._id.toString());
+    const deletedIds = toRemove.map((row) => row._id.toString());
 
     if (deletedIds.length) {
       await expenses.deleteMany({
@@ -167,7 +169,7 @@ export async function applyExpenseDeleteScope(opts: {
   }
 
   const toRemove = await expenses.find(series).project({ _id: 1 }).toArray();
-  const deletedIds = toRemove.map((row: { _id: ObjectId }) => row._id.toString());
+  const deletedIds = toRemove.map((row) => row._id.toString());
   if (deletedIds.length) {
     await expenses.deleteMany(series);
   }

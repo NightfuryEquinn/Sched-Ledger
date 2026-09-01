@@ -102,9 +102,13 @@ export function CsvImportPanel({
         <Icon name="file" size={22} />
         <p className="csv-dropzone-text">
           {fileName ? (
-            <>Selected: <strong>{fileName}</strong></>
+            <>
+              Selected: <strong>{fileName}</strong>
+            </>
           ) : (
-            <>Drop your CSV here or <span className="csv-dropzone-link">Choose a File</span></>
+            <>
+              Drop your CSV here or <span className="csv-dropzone-link">Choose a File</span>
+            </>
           )}
         </p>
       </div>
@@ -129,7 +133,8 @@ export function CsvImportPanel({
             <ul className="csv-import-notices">
               {preview.notices.slice(0, 5).map((notice) => (
                 <li key={`${notice.row}-${notice.message}`}>
-                  {notice.row > 0 ? `Row ${notice.row}: ` : ""}{notice.message}
+                  {notice.row > 0 ? `Row ${notice.row}: ` : ""}
+                  {notice.message}
                 </li>
               ))}
               {preview.notices.length > 5 ? <li>…and {preview.notices.length - 5} more</li> : null}
@@ -139,7 +144,8 @@ export function CsvImportPanel({
             <ul className="csv-import-errors">
               {preview.errors.slice(0, 5).map((err) => (
                 <li key={`${err.row}-${err.message}`}>
-                  {err.row > 0 ? `Row ${err.row}: ` : ""}{err.message}
+                  {err.row > 0 ? `Row ${err.row}: ` : ""}
+                  {err.message}
                 </li>
               ))}
               {preview.errors.length > 5 ? <li>…and {preview.errors.length - 5} more</li> : null}

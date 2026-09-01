@@ -26,7 +26,13 @@ export const timezoneSchema = z
 export function zonedLocalToUtcMs(dateIso: string, hhmm: string, timeZone: string): number {
   const [year, month, day] = dateIso.split("-").map(Number);
   const [hour, minute] = hhmm.split(":").map(Number);
-  if (year === undefined || month === undefined || day === undefined || hour === undefined || minute === undefined) {
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    hour === undefined ||
+    minute === undefined
+  ) {
     throw new Error(`Invalid date/time: ${dateIso} ${hhmm}`);
   }
 

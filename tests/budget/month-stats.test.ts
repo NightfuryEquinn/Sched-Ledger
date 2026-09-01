@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { buildCategoryIndex, isSavingsCategory, resolveCategoryType } from "@/frontend/lib/categories";
+import {
+  buildCategoryIndex,
+  isSavingsCategory,
+  resolveCategoryType,
+} from "@/frontend/lib/categories";
 import { monthStats, walletBalance } from "@/frontend/lib/stats";
 import type { Category, Expense } from "@/frontend/lib/types";
 
@@ -74,10 +78,7 @@ describe("category type normalization", () => {
       "savings",
     ]);
     expect(index.spendingCategories.map((c) => c.id)).toEqual(["food"]);
-    expect(index.incomeCategories.map((c) => c.id).sort()).toEqual([
-      "cat_side_hustle",
-      "income",
-    ]);
+    expect(index.incomeCategories.map((c) => c.id).sort()).toEqual(["cat_side_hustle", "income"]);
   });
 });
 
@@ -198,15 +199,9 @@ describe("withdrawals", () => {
       },
     ];
     const windowedBalance = monthStats(windowed, {}, wallet, "2026-07", index).balance;
-    const fullBalance = monthStats(
-      windowed,
-      {},
-      wallet,
-      "2026-07",
-      index,
-      undefined,
-      { balanceExpenses: fullHistory },
-    ).balance;
+    const fullBalance = monthStats(windowed, {}, wallet, "2026-07", index, undefined, {
+      balanceExpenses: fullHistory,
+    }).balance;
 
     expect(fullBalance).toBe(windowedBalance - 500);
   });

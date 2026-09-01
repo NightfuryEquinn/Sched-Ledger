@@ -31,7 +31,16 @@ export type CategoryIndex = {
 };
 
 /* Cool muted palette for user-created categories. */
-const PALETTE = ["#4a6fa5", "#4f8a7b", "#7a6fa5", "#5b7a8a", "#a06f95", "#6f8b6f", "#64748b", "#5b5f9e"];
+const PALETTE = [
+  "#4a6fa5",
+  "#4f8a7b",
+  "#7a6fa5",
+  "#5b7a8a",
+  "#a06f95",
+  "#6f8b6f",
+  "#64748b",
+  "#5b5f9e",
+];
 
 /**
  * Resolve canonical category type.
@@ -151,9 +160,7 @@ export function spendingCategoriesFor(
   index: CategoryIndex,
   hasValue: (catId: string) => boolean,
 ): Category[] {
-  const retained = index.archivedCategories.filter(
-    (c) => isSpendingCategory(c) && hasValue(c.id),
-  );
+  const retained = index.archivedCategories.filter((c) => isSpendingCategory(c) && hasValue(c.id));
   if (!retained.length) return index.spendingCategories;
 
   return [...index.spendingCategories, ...retained];
@@ -174,7 +181,9 @@ export function slugId(prefix: string, name: string) {
 export function nextCategoryColor(categories: Category[]) {
   const used = new Set(categories.map((c) => c.color));
 
-  return PALETTE.find((c) => !used.has(c)) ?? PALETTE[categories.length % PALETTE.length] ?? PALETTE[0]!;
+  return (
+    PALETTE.find((c) => !used.has(c)) ?? PALETTE[categories.length % PALETTE.length] ?? PALETTE[0]!
+  );
 }
 
 /** Parent category id for a subcategory, or empty when unknown/orphaned. */

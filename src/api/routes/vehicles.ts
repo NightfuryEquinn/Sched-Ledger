@@ -164,7 +164,7 @@ vehiclesRoutes.patch("/fills/:id", zValidator("json", updateVehicleFillSchema), 
   if (body.date) set.date = body.date;
   if (body.partial !== undefined) set.partial = body.partial;
 
-  const unset: Record<string, "" > = {};
+  const unset: Record<string, ""> = {};
   if (body.expenseId === null) unset.expenseId = "";
   else if (body.expenseId) set.expenseId = new ObjectId(body.expenseId);
 

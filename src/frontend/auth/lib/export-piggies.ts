@@ -3,11 +3,7 @@ import type { CategoryIndex } from "@/frontend/lib/categories";
 import { buildPiggies } from "@/frontend/lib/piggies";
 import type { Expense } from "@/frontend/lib/types";
 
-function buildPiggiesCsv(
-  savingsTxns: Expense[],
-  categoryIndex: CategoryIndex,
-  currency = "MYR",
-) {
+function buildPiggiesCsv(savingsTxns: Expense[], categoryIndex: CategoryIndex, currency = "MYR") {
   const piggies = buildPiggies(savingsTxns, categoryIndex);
   const header = [
     "CategoryId",

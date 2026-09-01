@@ -12,7 +12,8 @@ type HighlightIcon =
   | "budget"
   | "piggy"
   | "capital"
-  | "car";
+  | "car"
+  | "list";
 
 export type ReleaseHighlight = {
   icon: HighlightIcon;
@@ -90,8 +91,7 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
       {
         icon: "download",
         title: "Backups include Capitals and Vehicles",
-        body:
-          "Encrypted backups now carry your Capitals plans, vehicles, and fill history alongside wallets, categories, transactions, schedule, and todos.",
+        body: "Encrypted backups now carry your Capitals plans, vehicles, and fill history alongside wallets, categories, transactions, schedule, and todos.",
       },
       {
         icon: "info",
@@ -234,7 +234,7 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
   {
     version: "4.0.0",
     date: "August 2026",
-    lead: "Meet Vehicles and Fuel Insights, plus a ranked \"What Stands Out\" feed that forecasts and flags anomalies in Transaction Insights.",
+    lead: 'Meet Vehicles and Fuel Insights, plus a ranked "What Stands Out" feed that forecasts and flags anomalies in Transaction Insights.',
     highlights: [
       {
         icon: "car",

@@ -13,7 +13,11 @@ import {
   TransactionRow,
   glyphTint,
 } from "@/frontend/components/ui";
-import { isSavingsCategory, isSpendingCategory, spendingCategoriesFor } from "@/frontend/lib/categories";
+import {
+  isSavingsCategory,
+  isSpendingCategory,
+  spendingCategoriesFor,
+} from "@/frontend/lib/categories";
 import { computeTxInsights } from "@/frontend/lib/insights/txInsights";
 import { buildPiggies } from "@/frontend/lib/piggies";
 import { computeSavingsInsights } from "@/frontend/lib/savingsInsights";
@@ -63,7 +67,11 @@ import {
   chartSelectionMonth,
   classifyTx,
   dayFlowSeries,
-  isIncome, isOutgoing, isSavings, monthExpenses, monthStats,
+  isIncome,
+  isOutgoing,
+  isSavings,
+  monthExpenses,
+  monthStats,
   recurringDueDay,
   recurringLabel,
   recurringMonthlyEquivalent,
@@ -75,7 +83,16 @@ import {
   type WalletFunding,
 } from "@/frontend/lib/stats";
 import { getAccent } from "@/frontend/lib/theme";
-import type { Budgets, CapitalPlan, CategoryIndex, Expense, FinancialWallet, LedgerEvent, TodoList, ViewId } from "@/frontend/lib/types";
+import type {
+  Budgets,
+  CapitalPlan,
+  CategoryIndex,
+  Expense,
+  FinancialWallet,
+  LedgerEvent,
+  TodoList,
+  ViewId,
+} from "@/frontend/lib/types";
 import { displayGlyph } from "@/lib/glyphs";
 import type { DeleteScope } from "@/lib/delete-scope";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -197,10 +214,7 @@ export function Overview({
   const donutSize = isMobile ? 168 : 188;
   const donutThickness = isMobile ? 24 : 26;
   const recentTodos = useMemo(() => oldestTodoLists(todoLists, 3), [todoLists]);
-  const todayEvents = useMemo(
-    () => remainingTodayEvents(events, loadedAt, 3),
-    [events, loadedAt],
-  );
+  const todayEvents = useMemo(() => remainingTodayEvents(events, loadedAt, 3), [events, loadedAt]);
 
   const donutData = useMemo(
     () =>
@@ -273,44 +287,60 @@ export function Overview({
     <div ref={viewRef} className="view">
       <div ref={gridRef} className="summary-grid" data-tour="tour-overview-summary">
         <SummaryCard label={poolLabel} value={fmtMoney(poolValue, { currency })} sub={poolSub} />
-        <SummaryCard label="Spent" tone="spent" value={fmtMoney(st.spent, { currency })}
-          sub={`${Math.round(spentPct * 100)}% of budget`} />
-        <SummaryCard label="Saved" tone="saved" value={fmtMoney(st.saved, { currency })}
-          sub={st.monthlyPool ? `${Math.round((st.saved / st.monthlyPool) * 100)}% of pool` : ""} />
-        <SummaryCard label={isStarting ? "Available" : "Remaining"} tone={st.remaining < 0 ? "danger" : "ok"}
-          value={fmtMoney(st.remaining, { currency })} sub={isStarting ? "current wallet balance" : "after spend & savings"} />
+        <SummaryCard
+          label="Spent"
+          tone="spent"
+          value={fmtMoney(st.spent, { currency })}
+          sub={`${Math.round(spentPct * 100)}% of budget`}
+        />
+        <SummaryCard
+          label="Saved"
+          tone="saved"
+          value={fmtMoney(st.saved, { currency })}
+          sub={st.monthlyPool ? `${Math.round((st.saved / st.monthlyPool) * 100)}% of pool` : ""}
+        />
+        <SummaryCard
+          label={isStarting ? "Available" : "Remaining"}
+          tone={st.remaining < 0 ? "danger" : "ok"}
+          value={fmtMoney(st.remaining, { currency })}
+          sub={isStarting ? "current wallet balance" : "after spend & savings"}
+        />
       </div>
 
       <div className="ov-grid">
         <section className="panel" data-tour="tour-overview-oldest-todo">
           <div className="panel-head panel-head--row">
             <h2>Recent To-Do</h2>
-            <button className="link-btn" onClick={() => setView("todos")}>View More</button>
+            <button className="link-btn" onClick={() => setView("todos")}>
+              View More
+            </button>
           </div>
           <div className="recent-list">
-            {recentTodos.length ? recentTodos.map((list) => {
-              const done = list.tasks.filter((t) => t.done).length;
-              const total = list.tasks.length;
+            {recentTodos.length ? (
+              recentTodos.map((list) => {
+                const done = list.tasks.filter((t) => t.done).length;
+                const total = list.tasks.length;
 
-              return (
-                <button
-                  key={list.id}
-                  type="button"
-                  className="recent-row"
-                  onClick={() => setView("todos")}
-                >
-                  <span className="rr-glyph" style={{ background: "var(--surface-3)" }}>
-                    {list.icon}
-                  </span>
-                  <span className="rr-main">
-                    <span className="rr-note">{list.name}</span>
-                    <span className="rr-sub">
-                      {total ? `${done}/${total} done` : "No Tasks Yet"}
+                return (
+                  <button
+                    key={list.id}
+                    type="button"
+                    className="recent-row"
+                    onClick={() => setView("todos")}
+                  >
+                    <span className="rr-glyph" style={{ background: "var(--surface-3)" }}>
+                      {list.icon}
                     </span>
-                  </span>
-                </button>
-              );
-            }) : (
+                    <span className="rr-main">
+                      <span className="rr-note">{list.name}</span>
+                      <span className="rr-sub">
+                        {total ? `${done}/${total} done` : "No Tasks Yet"}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
               <EmptyState title="No Lists Yet" sub="Create a to-do list to get started." />
             )}
           </div>
@@ -319,36 +349,48 @@ export function Overview({
         <section className="panel" data-tour="tour-overview-today-schedule">
           <div className="panel-head panel-head--row">
             <h2>Recent Schedule</h2>
-            <button className="link-btn" onClick={() => setView("schedule")}>View More</button>
+            <button className="link-btn" onClick={() => setView("schedule")}>
+              View More
+            </button>
           </div>
           <div className="recent-list">
-            {todayEvents.length ? todayEvents.map((day) => {
-              const ev = day.ev;
-              /* eventCatMeta always resolves to a real entry (EVENT_CAT_BY_ID.custom is
-               * always present) — noUncheckedIndexedAccess just can't see that, so fall
-               * back to the same "custom" meta it would already have picked. */
-              const cat = eventCatMeta(ev) ?? { id: "custom", name: "Custom", color: "#8a7355", glyph: "✨" };
+            {todayEvents.length ? (
+              todayEvents.map((day) => {
+                const ev = day.ev;
+                /* eventCatMeta always resolves to a real entry (EVENT_CAT_BY_ID.custom is
+                 * always present) — noUncheckedIndexedAccess just can't see that, so fall
+                 * back to the same "custom" meta it would already have picked. */
+                const cat = eventCatMeta(ev) ?? {
+                  id: "custom",
+                  name: "Custom",
+                  color: "#8a7355",
+                  glyph: "✨",
+                };
 
-              return (
-                <button
-                  key={ev.id}
-                  type="button"
-                  className="recent-row"
-                  onClick={() => (onEditEvent ? onEditEvent(ev) : setView("schedule"))}
-                >
-                  <span className="rr-glyph" style={glyphTint(cat.color)}>
-                    {displayGlyph(cat.glyph, cat.id)}
-                  </span>
-                  <span className="rr-main">
-                    <span className="rr-note">{ev.title}</span>
-                    <span className="rr-sub">
-                      {cat.name} · {eventTimeLabel(ev, day)}
+                return (
+                  <button
+                    key={ev.id}
+                    type="button"
+                    className="recent-row"
+                    onClick={() => (onEditEvent ? onEditEvent(ev) : setView("schedule"))}
+                  >
+                    <span className="rr-glyph" style={glyphTint(cat.color)}>
+                      {displayGlyph(cat.glyph, cat.id)}
                     </span>
-                  </span>
-                </button>
-              );
-            }) : (
-              <EmptyState title="Nothing Left Today" sub="No upcoming events for the rest of today." />
+                    <span className="rr-main">
+                      <span className="rr-note">{ev.title}</span>
+                      <span className="rr-sub">
+                        {cat.name} · {eventTimeLabel(ev, day)}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <EmptyState
+                title="Nothing Left Today"
+                sub="No upcoming events for the rest of today."
+              />
             )}
           </div>
         </section>
@@ -359,16 +401,21 @@ export function Overview({
           <div>
             <h2>Spending & Earning this Month</h2>
             <p className="panel-sub">
-              Cumulative · hover a day for its categories · dashed line is total budget {fmtMoneyShort(st.totalBudget, currency)}
+              Cumulative · hover a day for its categories · dashed line is total budget{" "}
+              {fmtMoneyShort(st.totalBudget, currency)}
             </p>
           </div>
           <div className="trend-totals">
             <div className="trend-total">
-              <span className="trend-key"><i className="trend-dot" style={{ background: accent }} /> Spending</span>
+              <span className="trend-key">
+                <i className="trend-dot" style={{ background: accent }} /> Spending
+              </span>
               <span className="trend-now">{fmtMoney(st.spent, { currency })}</span>
             </div>
             <div className="trend-total">
-              <span className="trend-key"><i className="trend-dot trend-dot--earn" /> Earning</span>
+              <span className="trend-key">
+                <i className="trend-dot trend-dot--earn" /> Earning
+              </span>
               <span className="trend-now trend-now--earn">{fmtMoney(st.earned, { currency })}</span>
             </div>
           </div>
@@ -386,13 +433,25 @@ export function Overview({
 
       <div className="ov-grid ov-grid--charts">
         <section className="panel donut-panel" data-tour="tour-overview-donut">
-          <div className="panel-head"><h2>By Category</h2></div>
+          <div className="panel-head">
+            <h2>By Category</h2>
+          </div>
           <div className="donut-wrap">
             <div className="donut-stage">
-              <Donut data={donutData} size={donutSize} thickness={donutThickness} onHover={setHoverCat} activeId={activeCat} />
+              <Donut
+                data={donutData}
+                size={donutSize}
+                thickness={donutThickness}
+                onHover={setHoverCat}
+                activeId={activeCat}
+              />
               <div className="donut-center">
-                <div className="dc-label">{activeCat ? (categoryIndex.catById[activeCat]?.name ?? "Total") : "Total"}</div>
-                <div className="dc-value">{fmtMoney(activeCat ? (st.byCat[activeCat] || 0) : totalAll, { currency })}</div>
+                <div className="dc-label">
+                  {activeCat ? (categoryIndex.catById[activeCat]?.name ?? "Total") : "Total"}
+                </div>
+                <div className="dc-value">
+                  {fmtMoney(activeCat ? st.byCat[activeCat] || 0 : totalAll, { currency })}
+                </div>
               </div>
             </div>
             {donutData.length ? (
@@ -406,10 +465,16 @@ export function Overview({
                     .sort((a, b) => b.value - a.value);
 
                   return (
-                    <li key={d.id} className={"legend-block" + (activeCat && activeCat !== d.id ? " dim" : "")}>
-                      <div className="legend-row"
-                        onMouseEnter={() => setHoverCat(d.id)} onMouseLeave={() => setHoverCat(null)}
-                        onTouchStart={() => setHoverCat(d.id)}>
+                    <li
+                      key={d.id}
+                      className={"legend-block" + (activeCat && activeCat !== d.id ? " dim" : "")}
+                    >
+                      <div
+                        className="legend-row"
+                        onMouseEnter={() => setHoverCat(d.id)}
+                        onMouseLeave={() => setHoverCat(null)}
+                        onTouchStart={() => setHoverCat(d.id)}
+                      >
                         <button
                           type="button"
                           className="legend-expand"
@@ -431,8 +496,12 @@ export function Overview({
                             {subRows.map((s) => (
                               <li key={s.id}>
                                 <span className="lg-name">{s.name}</span>
-                                <span className="lg-amt lg-sub-amt">{fmtMoney(s.value, { currency })}</span>
-                                <span className="lg-pct">{Math.round((s.value / totalAll) * 100)}%</span>
+                                <span className="lg-amt lg-sub-amt">
+                                  {fmtMoney(s.value, { currency })}
+                                </span>
+                                <span className="lg-pct">
+                                  {Math.round((s.value / totalAll) * 100)}%
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -443,7 +512,10 @@ export function Overview({
                 })}
               </ul>
             ) : (
-              <EmptyState title="No Spending Yet" sub="Categories fill in as you log transactions." />
+              <EmptyState
+                title="No Spending Yet"
+                sub="Categories fill in as you log transactions."
+              />
             )}
           </div>
         </section>
@@ -451,26 +523,37 @@ export function Overview({
         <section className="panel" data-tour="tour-overview-recent">
           <div className="panel-head panel-head--row">
             <h2>Recent Transaction</h2>
-            <button className="link-btn" onClick={() => setView("transactions")}>View More</button>
+            <button className="link-btn" onClick={() => setView("transactions")}>
+              View More
+            </button>
           </div>
           <div className="recent-list">
-            {recent.length ? recent.map((e) => {
-              const cat = categoryIndex.catById[catOf(e.sub, categoryIndex)];
-              if (!cat) return null;
+            {recent.length ? (
+              recent.map((e) => {
+                const cat = categoryIndex.catById[catOf(e.sub, categoryIndex)];
+                if (!cat) return null;
 
-              return (
-                <button key={e.id} className="recent-row" onClick={() => onEdit(e)}>
-                  <span className="rr-glyph" style={glyphTint(cat.color)}>{displayGlyph(cat.glyph, cat.id)}</span>
-                  <span className="rr-main">
-                    <span className="rr-note">{e.note}</span>
-                    <span className="rr-sub">{categoryIndex.subById[e.sub]?.name ?? e.sub} · {dayLabel(e.date)}</span>
-                  </span>
-                  <span className={"rr-amt" + (isIncome(e) ? " income" : " expense")}>
-                    {isIncome(e) ? "+" : "−"}{fmtMoney(e.amount, { currency })}
-                  </span>
-                </button>
-              );
-            }) : <EmptyState title="No Transactions Yet" sub="Add your first one for this month." />}
+                return (
+                  <button key={e.id} className="recent-row" onClick={() => onEdit(e)}>
+                    <span className="rr-glyph" style={glyphTint(cat.color)}>
+                      {displayGlyph(cat.glyph, cat.id)}
+                    </span>
+                    <span className="rr-main">
+                      <span className="rr-note">{e.note}</span>
+                      <span className="rr-sub">
+                        {categoryIndex.subById[e.sub]?.name ?? e.sub} · {dayLabel(e.date)}
+                      </span>
+                    </span>
+                    <span className={"rr-amt" + (isIncome(e) ? " income" : " expense")}>
+                      {isIncome(e) ? "+" : "−"}
+                      {fmtMoney(e.amount, { currency })}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <EmptyState title="No Transactions Yet" sub="Add your first one for this month." />
+            )}
           </div>
         </section>
       </div>
@@ -478,24 +561,42 @@ export function Overview({
       <section className="panel" data-tour="tour-overview-piggies">
         <div className="panel-head panel-head--row">
           <h2>Piggies</h2>
-          <button className="link-btn" onClick={() => setView("piggies")}>View More</button>
+          <button className="link-btn" onClick={() => setView("piggies")}>
+            View More
+          </button>
         </div>
         <div className="recent-list">
-          {topPiggies.length ? topPiggies.map((p) => (
-            <button key={p.catId} type="button" className="recent-row" onClick={() => setView("piggies")}>
-              <span className="rr-glyph" style={glyphTint(p.color)}>{displayGlyph(p.glyph, p.catId)}</span>
-              <span className="rr-main">
-                <span className="rr-note">{p.name}</span>
-                <span className="rr-sub">
-                  {fmtMoney(p.balance, { currency })}
-                  {p.target ? ` of ${fmtMoney(p.target, { currency })}` : ""}
+          {topPiggies.length ? (
+            topPiggies.map((p) => (
+              <button
+                key={p.catId}
+                type="button"
+                className="recent-row"
+                onClick={() => setView("piggies")}
+              >
+                <span className="rr-glyph" style={glyphTint(p.color)}>
+                  {displayGlyph(p.glyph, p.catId)}
                 </span>
-              </span>
-              {p.progress !== null ? (
-                <span className="rr-amt">{Math.round(Math.min(1, Math.max(0, p.progress)) * 100)}%</span>
-              ) : null}
-            </button>
-          )) : <EmptyState title="No Piggies Yet" sub="Add a savings category to start tracking one." />}
+                <span className="rr-main">
+                  <span className="rr-note">{p.name}</span>
+                  <span className="rr-sub">
+                    {fmtMoney(p.balance, { currency })}
+                    {p.target ? ` of ${fmtMoney(p.target, { currency })}` : ""}
+                  </span>
+                </span>
+                {p.progress !== null ? (
+                  <span className="rr-amt">
+                    {Math.round(Math.min(1, Math.max(0, p.progress)) * 100)}%
+                  </span>
+                ) : null}
+              </button>
+            ))
+          ) : (
+            <EmptyState
+              title="No Piggies Yet"
+              sub="Add a savings category to start tracking one."
+            />
+          )}
         </div>
       </section>
     </div>
@@ -512,13 +613,21 @@ type TransactionsProps = {
 };
 
 // ── Transactions ────────────────────────────────────────────────────
-export function Transactions({ expenses, month, currency, categoryIndex, onEdit, onDelete }: TransactionsProps) {
+export function Transactions({
+  expenses,
+  month,
+  currency,
+  categoryIndex,
+  onEdit,
+  onDelete,
+}: TransactionsProps) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [subFilter, setSubFilter] = useState<string | null>(null);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
 
-  const filterCat = filter !== "all" && filter !== "income" ? categoryIndex.catById[filter] : undefined;
+  const filterCat =
+    filter !== "all" && filter !== "income" ? categoryIndex.catById[filter] : undefined;
 
   const { catFilteredRows, list, netTotal, dates, groups } = useMemo(() => {
     let rows = monthExpenses(expenses, month);
@@ -526,14 +635,19 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
     else if (filter !== "all") rows = rows.filter((e) => catOf(e.sub, categoryIndex) === filter);
     if (q.trim()) {
       const s = q.toLowerCase();
-      rows = rows.filter((e) =>
-        e.note.toLowerCase().includes(s) ||
-        (categoryIndex.subById[e.sub]?.name ?? "").toLowerCase().includes(s) ||
-        (categoryIndex.catById[catOf(e.sub, categoryIndex)]?.name ?? "").toLowerCase().includes(s),
+      rows = rows.filter(
+        (e) =>
+          e.note.toLowerCase().includes(s) ||
+          (categoryIndex.subById[e.sub]?.name ?? "").toLowerCase().includes(s) ||
+          (categoryIndex.catById[catOf(e.sub, categoryIndex)]?.name ?? "")
+            .toLowerCase()
+            .includes(s),
       );
     }
     const catRows = rows;
-    const subRows = sortExpensesByDateDesc(subFilter ? rows.filter((e) => e.sub === subFilter) : rows);
+    const subRows = sortExpensesByDateDesc(
+      subFilter ? rows.filter((e) => e.sub === subFilter) : rows,
+    );
     const net = subRows.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
     const byDate: Record<string, typeof subRows> = {};
     subRows.forEach((e) => {
@@ -541,7 +655,13 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
     });
     const sortedDates = Object.keys(byDate).sort((a, b) => (a < b ? 1 : -1));
 
-    return { catFilteredRows: catRows, list: subRows, netTotal: net, dates: sortedDates, groups: byDate };
+    return {
+      catFilteredRows: catRows,
+      list: subRows,
+      netTotal: net,
+      dates: sortedDates,
+      groups: byDate,
+    };
   }, [expenses, month, filter, subFilter, q, categoryIndex]);
 
   const sortedCats = useMemo(
@@ -564,10 +684,10 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
     const catTotal = Object.values(totals).reduce((s, t) => s + t.amount, 0);
 
     return filterCat.subs
-      .map((s: any) => ({ ...s, ...(totals[s.id] || { count: 0, amount: 0 }) }))
-      .filter((s: any) => s.count > 0)
-      .sort((a: any, b: any) => b.amount - a.amount)
-      .map((s: any) => ({ ...s, pct: catTotal ? Math.round((s.amount / catTotal) * 100) : 0 }));
+      .map((s) => ({ ...s, ...(totals[s.id] || { count: 0, amount: 0 }) }))
+      .filter((s) => s.count > 0)
+      .sort((a, b) => b.amount - a.amount)
+      .map((s) => ({ ...s, pct: catTotal ? Math.round((s.amount / catTotal) * 100) : 0 }));
   }, [catFilteredRows, filterCat]);
 
   const selectFilter = (key: string) => {
@@ -584,17 +704,33 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
       <div className="txn-toolbar" data-tour="tour-txn-toolbar">
         <div className="search">
           <Icon name="search" size={17} />
-          <input placeholder="Search notes & categories" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input
+            placeholder="Search notes & categories"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </div>
-        <div className="txn-count">{list.length} entries · {netTotal >= 0 ? "+" : "−"}{fmtMoney(Math.abs(netTotal), { currency })} net</div>
+        <div className="txn-count">
+          {list.length} entries · {netTotal >= 0 ? "+" : "−"}
+          {fmtMoney(Math.abs(netTotal), { currency })} net
+        </div>
       </div>
       <div className="filter-chips" data-tour="tour-txn-filters">
-        <button className={"fchip" + (filter === "all" ? " active" : "")} onClick={() => selectFilter("all")}>All</button>
+        <button
+          className={"fchip" + (filter === "all" ? " active" : "")}
+          onClick={() => selectFilter("all")}
+        >
+          All
+        </button>
         {sortedCats.map((c) => {
           const key = c.type === "income" ? "income" : c.id;
 
           return (
-            <button key={c.id} className={"fchip" + (filter === key ? " active" : "")} onClick={() => selectFilter(key)}>
+            <button
+              key={c.id}
+              className={"fchip" + (filter === key ? " active" : "")}
+              onClick={() => selectFilter(key)}
+            >
               <CatGlyph glyph={c.glyph} id={c.id} /> <span className="btn-label">{c.name}</span>
             </button>
           );
@@ -603,9 +739,18 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
 
       {filterCat ? (
         <div className="filter-chips filter-chips--sub" data-tour="tour-txn-sub-filters">
-          <button className={"fchip" + (subFilter === null ? " active" : "")} onClick={() => setSubFilter(null)}>All Subs</button>
-          {filterCat.subs.map((s: any) => (
-            <button key={s.id} className={"fchip" + (subFilter === s.id ? " active" : "")} onClick={() => setSubFilter(s.id)}>
+          <button
+            className={"fchip" + (subFilter === null ? " active" : "")}
+            onClick={() => setSubFilter(null)}
+          >
+            All Subs
+          </button>
+          {filterCat.subs.map((s) => (
+            <button
+              key={s.id}
+              className={"fchip" + (subFilter === s.id ? " active" : "")}
+              onClick={() => setSubFilter(s.id)}
+            >
               <span className="btn-label">{s.name}</span>
             </button>
           ))}
@@ -625,11 +770,17 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
           </button>
           <div className={"txn-breakdown-reveal" + (breakdownOpen ? "" : " is-collapsed")}>
             <ul className="txn-breakdown-list">
-              {subBreakdown.map((s: any) => (
+              {subBreakdown.map((s) => (
                 <li key={s.id}>
-                  <button type="button" className="txn-breakdown-row" onClick={() => setSubFilter(s.id)}>
+                  <button
+                    type="button"
+                    className="txn-breakdown-row"
+                    onClick={() => setSubFilter(s.id)}
+                  >
                     <span className="lg-name">{s.name}</span>
-                    <span className="tb-count">{s.count} {s.count === 1 ? "txn" : "txns"}</span>
+                    <span className="tb-count">
+                      {s.count} {s.count === 1 ? "txn" : "txns"}
+                    </span>
                     <span className="lg-sub-amt">{fmtMoney(s.amount, { currency })}</span>
                     <span className="lg-pct">{s.pct}%</span>
                   </button>
@@ -640,35 +791,51 @@ export function Transactions({ expenses, month, currency, categoryIndex, onEdit,
         </section>
       ) : null}
 
-      <section key={filter + ":" + subFilter + ":" + q} ref={filterPanelRef} className="panel txn-panel txn-panel--filter" data-tour="tour-txn-list">
-        {dates.length ? dates.map((d) => {
-          // `dates` is Object.keys(groups), so this is always populated — the
-          // fallback only appeases noUncheckedIndexedAccess.
-          const dayRows = groups[d] ?? [];
+      <section
+        key={filter + ":" + subFilter + ":" + q}
+        ref={filterPanelRef}
+        className="panel txn-panel txn-panel--filter"
+        data-tour="tour-txn-list"
+      >
+        {dates.length ? (
+          dates.map((d) => {
+            // `dates` is Object.keys(groups), so this is always populated — the
+            // fallback only appeases noUncheckedIndexedAccess.
+            const dayRows = groups[d] ?? [];
 
-          return (
-            <div key={d} className="txn-group">
-              <div className="txn-group-head">
-                <span>{dayLabel(d)} · {weekdayLabel(d)}</span>
-                <span>{(() => {
-                  const dayNet = dayRows.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
-                  return (dayNet >= 0 ? "+" : "−") + fmtMoney(Math.abs(dayNet), { currency });
-                })()}</span>
+            return (
+              <div key={d} className="txn-group">
+                <div className="txn-group-head">
+                  <span>
+                    {dayLabel(d)} · {weekdayLabel(d)}
+                  </span>
+                  <span>
+                    {(() => {
+                      const dayNet = dayRows.reduce(
+                        (s, e) => s + (isIncome(e) ? e.amount : -e.amount),
+                        0,
+                      );
+                      return (dayNet >= 0 ? "+" : "−") + fmtMoney(Math.abs(dayNet), { currency });
+                    })()}
+                  </span>
+                </div>
+                {dayRows.map((e) => (
+                  <TransactionRow
+                    key={e.id}
+                    exp={e}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    currency={currency}
+                    walletName={undefined}
+                    categoryIndex={categoryIndex}
+                  />
+                ))}
               </div>
-              {dayRows.map((e) => (
-                <TransactionRow
-                  key={e.id}
-                  exp={e}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  currency={currency}
-                  walletName={undefined}
-                  categoryIndex={categoryIndex}
-                />
-              ))}
-            </div>
-          );
-        }) : <EmptyState title="Nothing Matches" sub="Try a different search or filter." />}
+            );
+          })
+        ) : (
+          <EmptyState title="Nothing Matches" sub="Try a different search or filter." />
+        )}
       </section>
     </div>
   );
@@ -688,7 +855,18 @@ type BudgetsProps = {
 };
 
 // ── Budgets ─────────────────────────────────────────────────────────
-export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, wallet, month, currency, categoryIndex, events = [], setView }: BudgetsProps) {
+export function Budgets({
+  expenses,
+  budgets,
+  setBudgets,
+  budgetsSaving = false,
+  wallet,
+  month,
+  currency,
+  categoryIndex,
+  events = [],
+  setView,
+}: BudgetsProps) {
   const st = useMemo(
     () => monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, month, categoryIndex, events),
     [expenses, budgets, wallet, month, categoryIndex, events],
@@ -703,7 +881,10 @@ export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, 
   const totalAvailable = totalBudget - totalSpent - (st.saved - st.withdrawn) - totalHeld;
 
   /** Open the inline budget editor for a category. */
-  const startEdit = (id: string) => { setEditId(id); setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : ""); };
+  const startEdit = (id: string) => {
+    setEditId(id);
+    setDraft(isBudgetSet(budgets[id]) ? String(budgets[id]) : "");
+  };
   /** Commit the drafted budget amount for the category being edited. */
   const commit = () => {
     const id = editId;
@@ -721,20 +902,42 @@ export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, 
   return (
     <div ref={viewRef} className="view">
       <div ref={gridRef} className="summary-grid sg-5" data-tour="tour-budgets-summary">
-        <SummaryCard label="Total Budget" value={fmtMoney(totalBudget, { currency })} sub="across all categories" />
-        <SummaryCard label="Spent so Far" tone="spent" value={fmtMoney(totalSpent, { currency })} sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`} />
+        <SummaryCard
+          label="Total Budget"
+          value={fmtMoney(totalBudget, { currency })}
+          sub="across all categories"
+        />
+        <SummaryCard
+          label="Spent so Far"
+          tone="spent"
+          value={fmtMoney(totalSpent, { currency })}
+          sub={`${Math.round((totalSpent / (totalBudget || 1)) * 100)}% used`}
+        />
         <SummaryCard
           label="Saved"
           tone="saved"
           value={fmtMoney(st.saved, { currency })}
           sub={st.monthlyPool ? `${Math.round((st.saved / st.monthlyPool) * 100)}% of pool` : ""}
         />
-        <SummaryCard label="Held" tone="saved" value={fmtMoney(totalHeld, { currency })} sub="all scheduled reserves this month" />
-        <SummaryCard label="Available" tone={totalAvailable < 0 ? "danger" : "ok"} value={fmtMoney(totalAvailable, { currency })} sub={monthLabel(month, true)} />
+        <SummaryCard
+          label="Held"
+          tone="saved"
+          value={fmtMoney(totalHeld, { currency })}
+          sub="all scheduled reserves this month"
+        />
+        <SummaryCard
+          label="Available"
+          tone={totalAvailable < 0 ? "danger" : "ok"}
+          value={fmtMoney(totalAvailable, { currency })}
+          sub={monthLabel(month, true)}
+        />
       </div>
 
       <section className="panel">
-        <div className="panel-head"><h2>Budget by Category</h2><p className="panel-sub">Tap an amount to allocate</p></div>
+        <div className="panel-head">
+          <h2>Budget by Category</h2>
+          <p className="panel-sub">Tap an amount to allocate</p>
+        </div>
         <div className="budget-edit-list" data-tour="tour-budgets-list">
           {categoryIndex.expenseCategories.map((c) => {
             const spent = st.byCat[c.id] || 0;
@@ -757,7 +960,11 @@ export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, 
                       </span>
                     ) : null}
                     {isSavingsCategory(c) && setView ? (
-                      <button type="button" className="link-btn be-piggy-link" onClick={() => setView("piggies")}>
+                      <button
+                        type="button"
+                        className="link-btn be-piggy-link"
+                        onClick={() => setView("piggies")}
+                      >
                         View Piggy
                       </button>
                     ) : null}
@@ -765,7 +972,9 @@ export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, 
                   {editId === c.id ? (
                     <>
                       {draftIsExpression ? (
-                        <FadeIn className="amount-live-total">= {fmtMoney(draftEvaluated, { currency })}</FadeIn>
+                        <FadeIn className="amount-live-total">
+                          = {fmtMoney(draftEvaluated, { currency })}
+                        </FadeIn>
                       ) : null}
                       <div className="be-edit">
                         <span className="be-cur">{getCurrency(currency).symbol}</span>
@@ -785,20 +994,43 @@ export function Budgets({ expenses, budgets, setBudgets, budgetsSaving = false, 
                       </div>
                     </>
                   ) : (
-                    <button className={"be-amt" + (over ? " over" : "")} onClick={() => startEdit(c.id)}>
-                      {fmtMoney(spent, { currency })} <span className="br-of">/ {fmtBudgetLimit(budget, { currency })}</span>
+                    <button
+                      className={"be-amt" + (over ? " over" : "")}
+                      onClick={() => startEdit(c.id)}
+                    >
+                      {fmtMoney(spent, { currency })}{" "}
+                      <span className="br-of">/ {fmtBudgetLimit(budget, { currency })}</span>
                     </button>
                   )}
                 </div>
                 <div className="br-track tall">
-                  <div className="br-fill" style={{ width: Math.min(spentPct, 1) * 100 + "%", background: over ? "var(--danger)" : c.color }} />
+                  <div
+                    className="br-fill"
+                    style={{
+                      width: Math.min(spentPct, 1) * 100 + "%",
+                      background: over ? "var(--danger)" : c.color,
+                    }}
+                  />
                 </div>
                 <div className="be-meta">
-                  {!budgetSet ? <span>Unset</span>
-                    : over ? <span className="br-over-txt">Over budget by {fmtMoney(committed - budget, { currency })}</span>
-                        : held > 0
-                          ? <span>{fmtMoney(available, { currency })} available · {fmtMoney(spent, { currency })} {isSavingsCategory(c) ? "saved" : "spent"} · {fmtMoney(held, { currency })} held</span>
-                          : <span>{fmtMoney(budget - spent, { currency })} remaining · {Math.round(spentPct * 100)}% used</span>}
+                  {!budgetSet ? (
+                    <span>Unset</span>
+                  ) : over ? (
+                    <span className="br-over-txt">
+                      Over budget by {fmtMoney(committed - budget, { currency })}
+                    </span>
+                  ) : held > 0 ? (
+                    <span>
+                      {fmtMoney(available, { currency })} available ·{" "}
+                      {fmtMoney(spent, { currency })} {isSavingsCategory(c) ? "saved" : "spent"} ·{" "}
+                      {fmtMoney(held, { currency })} held
+                    </span>
+                  ) : (
+                    <span>
+                      {fmtMoney(budget - spent, { currency })} remaining ·{" "}
+                      {Math.round(spentPct * 100)}% used
+                    </span>
+                  )}
                   <span className="be-subs">{c.subs.map((s) => s.name).join(" · ")}</span>
                 </div>
               </div>
@@ -822,7 +1054,16 @@ type InsightsProps = {
 };
 
 // ── Insights ────────────────────────────────────────────────────────
-export function Insights({ expenses, budgets, wallet, month, currency, categoryIndex, capitalPlans, setMonth }: InsightsProps) {
+export function Insights({
+  expenses,
+  budgets,
+  wallet,
+  month,
+  currency,
+  categoryIndex,
+  capitalPlans,
+  setMonth,
+}: InsightsProps) {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("monthly");
   const [habitPeriod, setHabitPeriod] = useState<HabitPeriod>("month");
   const [incomeWindow, setIncomeWindow] = useState<IncomeWindow>("6mo");
@@ -853,7 +1094,9 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         setFxError(err instanceof Error ? err.message : "Could not load rates");
         setViewCurrency(currency);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [currency]);
 
   const canConvert =
@@ -875,7 +1118,8 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const chartMonths = useMemo(() => monthsWindow(month), [month]);
 
   const txInsights = useMemo(
-    () => computeTxInsights(expenses, budgets, month, categoryIndex, Number(totalBudget), { money }),
+    () =>
+      computeTxInsights(expenses, budgets, month, categoryIndex, Number(totalBudget), { money }),
     // `money` is a fresh closure every render — depend on its real inputs instead, so an
     // unrelated re-render doesn't rebuild the whole ranked feed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -921,7 +1165,8 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       byIncomeSub: Record<string, number>;
     };
     const byMonth = new Map<string, Bucket>();
-    for (const key of monthKeys) byMonth.set(key, { spent: 0, earned: 0, byCat: {}, byIncomeSub: {} });
+    for (const key of monthKeys)
+      byMonth.set(key, { spent: 0, earned: 0, byCat: {}, byIncomeSub: {} });
 
     for (const e of expenses) {
       const key = e.date.slice(0, 7);
@@ -952,7 +1197,15 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     }));
   }, [chartPeriod, expenses, month, categoryIndex, currency, displayCurrency, fxRates]);
   const chartBudget = useMemo(
-    () => roundMoney(fxConvert(chartBudgetForPeriod(chartPeriod, totalBudget, month), currency, displayCurrency, fxRates)),
+    () =>
+      roundMoney(
+        fxConvert(
+          chartBudgetForPeriod(chartPeriod, totalBudget, month),
+          currency,
+          displayCurrency,
+          fxRates,
+        ),
+      ),
     [chartPeriod, totalBudget, month, currency, displayCurrency, fxRates],
   );
   const activeChartKey = chartActiveKey(chartPeriod, month);
@@ -972,7 +1225,10 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const idx = MONTHS.findIndex((m) => m.key === month);
   const prevKey = idx > 0 ? (MONTHS[idx - 1]?.key ?? null) : null;
   const prev = useMemo(
-    () => (prevKey ? monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, prevKey, categoryIndex) : null),
+    () =>
+      prevKey
+        ? monthStats(expenses, budgets, wallet ?? EMPTY_WALLET, prevKey, categoryIndex)
+        : null,
     [expenses, budgets, wallet, prevKey, categoryIndex],
   );
 
@@ -1001,24 +1257,20 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
           return { c, now, was, delta, series };
         })
         .sort((a, b) => b.now - a.now),
-    [
-      categoryIndex,
-      cur.byCat,
-      prev,
-      chartMonths,
-      monthlyAgg,
-      currency,
-      displayCurrency,
-      fxRates,
-    ],
+    [categoryIndex, cur.byCat, prev, chartMonths, monthlyAgg, currency, displayCurrency, fxRates],
   );
 
   // top subcategories this month
   const subTotals: Record<string, number> = {};
-  cur.list.filter((e) => isOutgoing(e) && !isSavings(e, categoryIndex)).forEach((e) => {
-    subTotals[e.sub] = (subTotals[e.sub] || 0) + e.amount;
-  });
-  const topSubs = Object.entries(subTotals).map(([sub, v]) => ({ sub, v })).sort((a, b) => b.v - a.v).slice(0, 6);
+  cur.list
+    .filter((e) => isOutgoing(e) && !isSavings(e, categoryIndex))
+    .forEach((e) => {
+      subTotals[e.sub] = (subTotals[e.sub] || 0) + e.amount;
+    });
+  const topSubs = Object.entries(subTotals)
+    .map(([sub, v]) => ({ sub, v }))
+    .sort((a, b) => b.v - a.v)
+    .slice(0, 6);
   const maxSub = topSubs.length ? (topSubs[0]?.v ?? 1) : 1;
 
   const avgSpent = roundMoney(perMonth.reduce((s, m) => s + m.spent, 0) / perMonth.length);
@@ -1052,7 +1304,12 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         const before = was[sub] || 0;
         const series = chartMonths.map((mo) =>
           roundMoney(
-            fxConvert(monthlyAgg.get(mo.key)?.byIncomeSub[sub] || 0, currency, displayCurrency, fxRates),
+            fxConvert(
+              monthlyAgg.get(mo.key)?.byIncomeSub[sub] || 0,
+              currency,
+              displayCurrency,
+              fxRates,
+            ),
           ),
         );
 
@@ -1087,7 +1344,8 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
   const maxIncomeSub = topIncomeSubs.length ? (topIncomeSubs[0]?.v ?? 1) : 1;
 
   const avgEarned = roundMoney(
-    chartMonths.reduce((s, mo) => s + (monthlyAgg.get(mo.key)?.earned || 0), 0) / chartMonths.length,
+    chartMonths.reduce((s, mo) => s + (monthlyAgg.get(mo.key)?.earned || 0), 0) /
+      chartMonths.length,
   );
   const earnedDelta = prev ? cur.earned - prev.earned : 0;
   const netKept = cur.earned - cur.spent;
@@ -1173,7 +1431,9 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
     <div ref={viewRef} className="view">
       <div className="insights-fx" data-tour="tour-insights-fx">
         <div className="insights-fx-main">
-          <label className="fld-label" htmlFor="insights-currency">View in</label>
+          <label className="fld-label" htmlFor="insights-currency">
+            View in
+          </label>
           <CurrencyPicker
             id="insights-currency"
             className="insights-fx-select"
@@ -1188,7 +1448,9 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       <section className="panel" data-tour="tour-insights-standout">
         <div className="panel-head">
           <h2>What Stands Out</h2>
-          <p className="panel-sub">Forecasts, budget risk, and anomalies, generated from {monthLabel(month, true)}.</p>
+          <p className="panel-sub">
+            Forecasts, budget risk, and anomalies, generated from {monthLabel(month, true)}.
+          </p>
         </div>
         <InsightFeed insights={txInsights} emptyLabel="Nothing stands out this month." />
       </section>
@@ -1212,14 +1474,16 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
         {habit.status === "insufficient" ? (
           <div className="profile-locked">
-            <div className="profile-locked-mark" aria-hidden="true">◌</div>
+            <div className="profile-locked-mark" aria-hidden="true">
+              ◌
+            </div>
             <div className="profile-locked-copy">
               <p className="profile-locked-title">Style unlocks after 5 days of transactions</p>
               <p className="profile-locked-sub">
                 {habit.daysHave === 0
                   ? `No outgoing spend days yet in ${habit.periodLabel}.`
-                  : `${habit.daysHave} of ${habit.daysNeeded} active days in ${habit.periodLabel}.`}
-                {" "}{habit.daysNeeded - habit.daysHave} more spending days to unlock.
+                  : `${habit.daysHave} of ${habit.daysNeeded} active days in ${habit.periodLabel}.`}{" "}
+                {habit.daysNeeded - habit.daysHave} more spending days to unlock.
               </p>
             </div>
             <div
@@ -1249,11 +1513,15 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                 <h3 className="profile-title">
                   {habit.style.title}
                   {habit.blend.secondary && (
-                    <span className="profile-blend"> with a {habit.blend.secondary.trait} streak</span>
+                    <span className="profile-blend">
+                      {" "}
+                      with a {habit.blend.secondary.trait} streak
+                    </span>
                   )}
                 </h3>
                 <p className="profile-meta">
-                  {habit.activeDays} active days · {habit.txCount} transactions · {money(habit.metrics.total)} in {habit.periodLabel}
+                  {habit.activeDays} active days · {habit.txCount} transactions ·{" "}
+                  {money(habit.metrics.total)} in {habit.periodLabel}
                 </p>
               </div>
               {habitStory && (
@@ -1293,9 +1561,13 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
               <div className="profile-signal">
                 <p className="psig-label">Busiest day</p>
                 <p className="psig-value">
-                  {habit.metrics.topDowSampleDate ? weekdayLabel(habit.metrics.topDowSampleDate) : "—"}
+                  {habit.metrics.topDowSampleDate
+                    ? weekdayLabel(habit.metrics.topDowSampleDate)
+                    : "—"}
                 </p>
-                <p className="psig-hint">{Math.round(habit.metrics.topDowShare * 100)}% of transactions</p>
+                <p className="psig-hint">
+                  {Math.round(habit.metrics.topDowShare * 100)}% of transactions
+                </p>
               </div>
               <div className="profile-signal">
                 <p className="psig-label">Biggest cluster</p>
@@ -1305,7 +1577,10 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                     : "—"}
                 </p>
                 <p className="psig-hint">
-                  {habit.metrics.biggestCluster ? Math.round(habit.metrics.biggestCluster.share * 100) : 0}% of spend
+                  {habit.metrics.biggestCluster
+                    ? Math.round(habit.metrics.biggestCluster.share * 100)
+                    : 0}
+                  % of spend
                 </p>
               </div>
               <div className="profile-signal">
@@ -1352,7 +1627,11 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                     >
                       <div
                         className={"ptrl-bar" + (isReady ? "" : " is-empty")}
-                        style={{ height: isReady ? `${Math.max(6, (pt.spend / habitTrailMaxSpend) * 100)}%` : "4px" }}
+                        style={{
+                          height: isReady
+                            ? `${Math.max(6, (pt.spend / habitTrailMaxSpend) * 100)}%`
+                            : "4px",
+                        }}
                       />
                       <p className="ptrl-label">{monthLabel(pt.monthKey, false).split(" ")[0]}</p>
                       <p className="ptrl-style">{isReady ? pt.trait : "—"}</p>
@@ -1366,10 +1645,26 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
       </section>
 
       <div ref={gridRef} className="summary-grid sg-3">
-        <SummaryCard label="This Month" tone="spent" value={money(cur.spent)} sub={monthLabel(month, false)} />
-        <SummaryCard label="Vs Last Month" tone={prev && cur.spent > prev.spent ? "danger" : "saved"}
-          value={prev ? (cur.spent >= prev.spent ? "+" : "−") + money(Math.abs(cur.spent - prev.spent)) : "—"}
-          sub={prev ? `${Math.round(Math.abs(cur.spent - prev.spent) / (prev.spent || 1) * 100)}% ${cur.spent >= prev.spent ? "higher" : "lower"}` : "no prior data"} />
+        <SummaryCard
+          label="This Month"
+          tone="spent"
+          value={money(cur.spent)}
+          sub={monthLabel(month, false)}
+        />
+        <SummaryCard
+          label="Vs Last Month"
+          tone={prev && cur.spent > prev.spent ? "danger" : "saved"}
+          value={
+            prev
+              ? (cur.spent >= prev.spent ? "+" : "−") + money(Math.abs(cur.spent - prev.spent))
+              : "—"
+          }
+          sub={
+            prev
+              ? `${Math.round((Math.abs(cur.spent - prev.spent) / (prev.spent || 1)) * 100)}% ${cur.spent >= prev.spent ? "higher" : "lower"}`
+              : "no prior data"
+          }
+        />
         <SummaryCard label="6-Month Average" value={money(avgSpent)} sub="monthly spend" />
       </div>
 
@@ -1402,15 +1697,25 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
       <div className="ov-grid" data-tour="tour-insights-trends">
         <section className="panel">
-          <div className="panel-head"><h2>Category Trends</h2><p className="panel-sub">vs previous month</p></div>
+          <div className="panel-head">
+            <h2>Category Trends</h2>
+            <p className="panel-sub">vs previous month</p>
+          </div>
           <div className="cat-trend-list">
             {catRows.map(({ c, now, delta, series }) => (
               <div key={c.id} className="ctrow">
-                <div className="ct-name"><CatGlyph glyph={c.glyph} id={c.id} /> {c.name}</div>
+                <div className="ct-name">
+                  <CatGlyph glyph={c.glyph} id={c.id} /> {c.name}
+                </div>
                 <MiniSpark values={series} color={c.color} />
                 <div className="ct-amt">{money(now)}</div>
-                <div className={"ct-delta " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")}>
-                  {delta > 0.001 ? "▲" : delta < -0.001 ? "▼" : "—"} {Math.abs(Math.round(delta * 100))}%
+                <div
+                  className={
+                    "ct-delta " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")
+                  }
+                >
+                  {delta > 0.001 ? "▲" : delta < -0.001 ? "▼" : "—"}{" "}
+                  {Math.abs(Math.round(delta * 100))}%
                 </div>
               </div>
             ))}
@@ -1418,7 +1723,10 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         </section>
 
         <section className="panel">
-          <div className="panel-head"><h2>Top Subcategories</h2><p className="panel-sub">{monthLabel(month, true)}</p></div>
+          <div className="panel-head">
+            <h2>Top Subcategories</h2>
+            <p className="panel-sub">{monthLabel(month, true)}</p>
+          </div>
           <div className="topsub-list">
             {topSubs.map(({ sub, v }) => {
               const s = categoryIndex.subById[sub];
@@ -1426,8 +1734,18 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
               if (!s || !c) return null;
               return (
                 <div key={sub} className="ts-row">
-                  <div className="ts-head"><span>{s.name} <span className="ts-cat">· {c.name}</span></span><span className="ts-amt">{money(v)}</span></div>
-                  <div className="ts-track"><div className="ts-fill" style={{ width: (v / maxSub) * 100 + "%", background: c.color }} /></div>
+                  <div className="ts-head">
+                    <span>
+                      {s.name} <span className="ts-cat">· {c.name}</span>
+                    </span>
+                    <span className="ts-amt">{money(v)}</span>
+                  </div>
+                  <div className="ts-track">
+                    <div
+                      className="ts-fill"
+                      style={{ width: (v / maxSub) * 100 + "%", background: c.color }}
+                    />
+                  </div>
                 </div>
               );
             })}
@@ -1463,10 +1781,13 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
           {incomeProfile.status === "insufficient" ? (
             <div className="profile-locked">
-              <div className="profile-locked-mark" aria-hidden="true">◌</div>
+              <div className="profile-locked-mark" aria-hidden="true">
+                ◌
+              </div>
               <div className="profile-locked-copy">
                 <p className="profile-locked-title">
-                  Profile unlocks after {INCOME_MIN_EVENTS} payments across {INCOME_MIN_MONTHS} months
+                  Profile unlocks after {INCOME_MIN_EVENTS} payments across {INCOME_MIN_MONTHS}{" "}
+                  months
                 </p>
                 <p className="profile-locked-sub">
                   {incomeProfile.txHave === 0
@@ -1504,14 +1825,15 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                     {incomeProfile.style.title}
                     {incomeProfile.blend.secondary && (
                       <span className="profile-blend">
-                        {" "}with a {incomeProfile.blend.secondary.trait} streak
+                        {" "}
+                        with a {incomeProfile.blend.secondary.trait} streak
                       </span>
                     )}
                   </h3>
                   <p className="profile-meta">
-                    {incomeProfile.metrics.monthsWithIncome} of {incomeProfile.metrics.monthsInWindow} months ·{" "}
-                    {incomeProfile.metrics.txCount} payments · {money(incomeProfile.metrics.total)} in{" "}
-                    {incomeProfile.windowLabel}
+                    {incomeProfile.metrics.monthsWithIncome} of{" "}
+                    {incomeProfile.metrics.monthsInWindow} months · {incomeProfile.metrics.txCount}{" "}
+                    payments · {money(incomeProfile.metrics.total)} in {incomeProfile.windowLabel}
                   </p>
                 </div>
                 {incomeStory && (
@@ -1547,27 +1869,36 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                   <p className="psig-label">Cadence</p>
                   <p className="psig-value">{incomeProfile.metrics.medianGap}d</p>
                   <p className="psig-hint">
-                    {incomeProfile.metrics.topDom ? `payday ~day ${incomeProfile.metrics.topDom}` : "no clear payday"}
+                    {incomeProfile.metrics.topDom
+                      ? `payday ~day ${incomeProfile.metrics.topDom}`
+                      : "no clear payday"}
                   </p>
                 </div>
                 <div className="profile-signal">
                   <p className="psig-label">Source mix</p>
                   <p className="psig-value">
-                    {incomeProfile.metrics.sourceCount} source{incomeProfile.metrics.sourceCount === 1 ? "" : "s"}
+                    {incomeProfile.metrics.sourceCount} source
+                    {incomeProfile.metrics.sourceCount === 1 ? "" : "s"}
                   </p>
-                  <p className="psig-hint">top {Math.round(incomeProfile.metrics.topSourceShare * 100)}%</p>
+                  <p className="psig-hint">
+                    top {Math.round(incomeProfile.metrics.topSourceShare * 100)}%
+                  </p>
                 </div>
                 <div className="profile-signal">
                   <p className="psig-label">Reliable floor</p>
                   <p className="psig-value">{money(incomeProfile.metrics.monthlyMin)}</p>
-                  <p className="psig-hint">lowest of {incomeProfile.metrics.monthsInWindow} months</p>
+                  <p className="psig-hint">
+                    lowest of {incomeProfile.metrics.monthsInWindow} months
+                  </p>
                 </div>
                 <div className="profile-signal">
                   <p className="psig-label">Covers spend</p>
                   <p className="psig-value">
                     {incomeProfile.metrics.monthsCovered}/{incomeProfile.metrics.monthsInWindow}
                   </p>
-                  <p className="psig-hint">keeps {Math.round(incomeProfile.metrics.meanSavingsRate * 100)}%</p>
+                  <p className="psig-hint">
+                    keeps {Math.round(incomeProfile.metrics.meanSavingsRate * 100)}%
+                  </p>
                 </div>
               </div>
 
@@ -1576,7 +1907,9 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
                   {incomeProfile.metrics.sources.slice(0, 3).map((src) => (
                     <div key={src.id} className="pdrv-row">
                       <CatGlyph glyph={src.glyph} id={src.id} />
-                      <div className="pdrv-name">{src.name} · {src.parentName}</div>
+                      <div className="pdrv-name">
+                        {src.name} · {src.parentName}
+                      </div>
                       <div className="pdrv-bar">
                         <div
                           className="pdrv-fill"
@@ -1627,14 +1960,19 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         </section>
 
         <div className="summary-grid sg-4">
-          <SummaryCard label="Income This Month" tone="saved" value={money(cur.earned)} sub={monthLabel(month, false)} />
+          <SummaryCard
+            label="Income This Month"
+            tone="saved"
+            value={money(cur.earned)}
+            sub={monthLabel(month, false)}
+          />
           <SummaryCard
             label="Vs Last Month"
             tone={!prev || earnedDelta === 0 ? undefined : earnedDelta > 0 ? "saved" : "danger"}
             value={prev ? (earnedDelta >= 0 ? "+" : "−") + money(Math.abs(earnedDelta)) : "—"}
             sub={
               prev
-                ? `${Math.round(Math.abs(earnedDelta) / (prev.earned || 1) * 100)}% ${earnedDelta >= 0 ? "higher" : "lower"}`
+                ? `${Math.round((Math.abs(earnedDelta) / (prev.earned || 1)) * 100)}% ${earnedDelta >= 0 ? "higher" : "lower"}`
                 : "no prior data"
             }
           />
@@ -1649,43 +1987,72 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
 
         <div className="ov-grid">
           <section className="panel">
-            <div className="panel-head"><h2>Income Trends</h2><p className="panel-sub">by source · vs previous month</p></div>
+            <div className="panel-head">
+              <h2>Income Trends</h2>
+              <p className="panel-sub">by source · vs previous month</p>
+            </div>
             <div className="cat-trend-list">
-              {incomeRows.length ? incomeRows.map(({ sub, name, cat, now, delta, series }) => (
-                <div key={sub} className="ctrow">
-                  <div className="ct-name"><CatGlyph glyph={cat!.glyph} id={cat!.id} /> {name}</div>
-                  <MiniSpark values={series} color={cat!.color} />
-                  <div className="ct-amt">{money(now)}</div>
-                  <div className={"ct-delta ct-delta--income " + (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")}>
-                    {delta > 0.001 ? "▲" : delta < -0.001 ? "▼" : "—"} {Math.abs(Math.round(delta * 100))}%
+              {incomeRows.length ? (
+                incomeRows.map(({ sub, name, cat, now, delta, series }) => (
+                  <div key={sub} className="ctrow">
+                    <div className="ct-name">
+                      <CatGlyph glyph={cat!.glyph} id={cat!.id} /> {name}
+                    </div>
+                    <MiniSpark values={series} color={cat!.color} />
+                    <div className="ct-amt">{money(now)}</div>
+                    <div
+                      className={
+                        "ct-delta ct-delta--income " +
+                        (delta > 0.001 ? "up" : delta < -0.001 ? "down" : "flat")
+                      }
+                    >
+                      {delta > 0.001 ? "▲" : delta < -0.001 ? "▼" : "—"}{" "}
+                      {Math.abs(Math.round(delta * 100))}%
+                    </div>
                   </div>
-                </div>
-              )) : (
-                <EmptyState title="No Income Yet" sub="Log an income transaction to see trends here." />
+                ))
+              ) : (
+                <EmptyState
+                  title="No Income Yet"
+                  sub="Log an income transaction to see trends here."
+                />
               )}
             </div>
           </section>
 
           <section className="panel">
-            <div className="panel-head"><h2>Top Income Sources</h2><p className="panel-sub">{monthLabel(month, true)}</p></div>
+            <div className="panel-head">
+              <h2>Top Income Sources</h2>
+              <p className="panel-sub">{monthLabel(month, true)}</p>
+            </div>
             <div className="topsub-list">
-              {topIncomeSubs.length ? topIncomeSubs.map(({ sub, v }) => {
-                const s = categoryIndex.subById[sub];
-                const c = s ? categoryIndex.catById[s.catId] : null;
-                if (!s || !c) return null;
-                return (
-                  <div key={sub} className="ts-row">
-                    <div className="ts-head">
-                      <span>{s.name} <span className="ts-cat">· {c.name}</span></span>
-                      <span className="ts-amt">{money(v)}</span>
+              {topIncomeSubs.length ? (
+                topIncomeSubs.map(({ sub, v }) => {
+                  const s = categoryIndex.subById[sub];
+                  const c = s ? categoryIndex.catById[s.catId] : null;
+                  if (!s || !c) return null;
+                  return (
+                    <div key={sub} className="ts-row">
+                      <div className="ts-head">
+                        <span>
+                          {s.name} <span className="ts-cat">· {c.name}</span>
+                        </span>
+                        <span className="ts-amt">{money(v)}</span>
+                      </div>
+                      <div className="ts-track">
+                        <div
+                          className="ts-fill"
+                          style={{ width: (v / maxIncomeSub) * 100 + "%", background: c.color }}
+                        />
+                      </div>
                     </div>
-                    <div className="ts-track">
-                      <div className="ts-fill" style={{ width: (v / maxIncomeSub) * 100 + "%", background: c.color }} />
-                    </div>
-                  </div>
-                );
-              }) : (
-                <EmptyState title="Nothing Earned" sub={`No income recorded in ${monthLabel(month, true)}.`} />
+                  );
+                })
+              ) : (
+                <EmptyState
+                  title="Nothing Earned"
+                  sub={`No income recorded in ${monthLabel(month, true)}.`}
+                />
               )}
             </div>
           </section>
@@ -1726,7 +2093,9 @@ export function Insights({ expenses, budgets, wallet, month, currency, categoryI
         {savingsInsights.headlines.length ? (
           <ul className="piggy-headlines" style={{ marginTop: "var(--sp-4)" }}>
             {savingsInsights.headlines.map((h) => (
-              <li key={h.id} className={`piggy-headline piggy-headline--${h.tone}`}>{h.text}</li>
+              <li key={h.id} className={`piggy-headline piggy-headline--${h.tone}`}>
+                {h.text}
+              </li>
             ))}
           </ul>
         ) : (
@@ -1752,7 +2121,9 @@ type RecurringProps = {
 export function Recurring({ expenses, month, currency, categoryIndex, onEdit }: RecurringProps) {
   const list = recurringSchedulesForMonth(expenses, month);
   const total = roundMoney(list.reduce((s, e) => s + e.amount, 0));
-  const monthlyEq = roundMoney(list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0));
+  const monthlyEq = roundMoney(
+    list.reduce((s, e) => s + recurringMonthlyEquivalent(e.amount, e.recurring), 0),
+  );
   const viewRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   useEnter(viewRef);
@@ -1761,36 +2132,58 @@ export function Recurring({ expenses, month, currency, categoryIndex, onEdit }: 
   return (
     <div ref={viewRef} className="view">
       <div ref={gridRef} className="summary-grid sg-2" data-tour="tour-recurring-summary">
-        <SummaryCard label="Recurring this Month" value={fmtMoney(total, { currency })} sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`} />
-        <SummaryCard label="Monthly Equivalent" tone="spent" value={fmtMoney(monthlyEq, { currency })} sub="normalized across intervals" />
+        <SummaryCard
+          label="Recurring this Month"
+          value={fmtMoney(total, { currency })}
+          sub={`${list.length} scheduled ${list.length === 1 ? "charge" : "charges"}`}
+        />
+        <SummaryCard
+          label="Monthly Equivalent"
+          tone="spent"
+          value={fmtMoney(monthlyEq, { currency })}
+          sub="normalized across intervals"
+        />
       </div>
       <section className="panel">
-        <div className="panel-head"><h2>Fixed & Recurring</h2><p className="panel-sub">Auto-posted on due dates from your last amount</p></div>
+        <div className="panel-head">
+          <h2>Fixed & Recurring</h2>
+          <p className="panel-sub">Auto-posted on due dates from your last amount</p>
+        </div>
         <div className="rec-list" data-tour="tour-recurring-list">
-          {list.length ? list.map((e) => {
-            const s = categoryIndex.subById[e.sub];
-            const c = s ? categoryIndex.catById[s.catId] : null;
-            if (!s || !c) return null;
-            const dueDay = recurringDueDay(e, month);
-            const scheduleKey = recurringScheduleKey(e);
-            return (
-              <button key={scheduleKey} className="rec-row" onClick={() => onEdit(e)}>
-                <span className="rec-glyph" style={glyphTint(c.color)}>{displayGlyph(c.glyph, c.id)}</span>
-                <span className="rec-main">
-                  <span className="rec-note">{e.note}</span>
-                  <span className="rec-sub">{c.name} · {s.name} · {recurringLabel(e.recurring)}</span>
-                </span>
-                <span className="rec-day">
-                  <span className="rec-day-n">{dueDay}</span>
-                  <span className="rec-day-l">{monthLabel(month, false)}</span>
-                </span>
-                <span className="rec-amt">{fmtMoney(e.amount, { currency })}</span>
-              </button>
-            );
-          }) : <EmptyState title="No Recurring Items" sub="Mark an expense as recurring when adding it." />}
+          {list.length ? (
+            list.map((e) => {
+              const s = categoryIndex.subById[e.sub];
+              const c = s ? categoryIndex.catById[s.catId] : null;
+              if (!s || !c) return null;
+              const dueDay = recurringDueDay(e, month);
+              const scheduleKey = recurringScheduleKey(e);
+              return (
+                <button key={scheduleKey} className="rec-row" onClick={() => onEdit(e)}>
+                  <span className="rec-glyph" style={glyphTint(c.color)}>
+                    {displayGlyph(c.glyph, c.id)}
+                  </span>
+                  <span className="rec-main">
+                    <span className="rec-note">{e.note}</span>
+                    <span className="rec-sub">
+                      {c.name} · {s.name} · {recurringLabel(e.recurring)}
+                    </span>
+                  </span>
+                  <span className="rec-day">
+                    <span className="rec-day-n">{dueDay}</span>
+                    <span className="rec-day-l">{monthLabel(month, false)}</span>
+                  </span>
+                  <span className="rec-amt">{fmtMoney(e.amount, { currency })}</span>
+                </button>
+              );
+            })
+          ) : (
+            <EmptyState
+              title="No Recurring Items"
+              sub="Mark an expense as recurring when adding it."
+            />
+          )}
         </div>
       </section>
     </div>
   );
 }
-

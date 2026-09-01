@@ -85,10 +85,7 @@ export const sessionAuth = createMiddleware<{ Variables: SessionVariables }>(asy
       setSessionCookie(c, newToken);
       /* Persist activity on the user — session rows TTL away and cannot drive purge alone. */
       const { users } = getCollections(getDb());
-      void users.updateOne(
-        { _id: new ObjectId(accountId) },
-        { $set: { lastSeenAt: now } },
-      );
+      void users.updateOne({ _id: new ObjectId(accountId) }, { $set: { lastSeenAt: now } });
     }
   }
 

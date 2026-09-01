@@ -2,11 +2,7 @@ import { api } from "@/frontend/lib/api";
 import { fmtMoney, monthLabel } from "@/frontend/lib/data";
 import type { CategoryIndex } from "@/frontend/lib/categories";
 import type { Budgets, Expense, FinancialWallet, LedgerEvent } from "@/frontend/lib/types";
-import {
-  budgetAlertDedupeKey,
-  evaluateBudgetAlerts,
-  type BudgetAlert,
-} from "@/lib/budget-alerts";
+import { budgetAlertDedupeKey, evaluateBudgetAlerts, type BudgetAlert } from "@/lib/budget-alerts";
 import { monthStats } from "@/frontend/lib/stats";
 
 const LOCAL_SENT_KEY = "ledger:budget-alerts-sent";
@@ -48,10 +44,7 @@ function notificationBody(alert: BudgetAlert, currency: string): string {
 }
 
 /** Show an in-tab Notification for a budget alert when permission is granted. */
-async function showBudgetAlertNotification(
-  alert: BudgetAlert,
-  currency: string,
-): Promise<boolean> {
+async function showBudgetAlertNotification(alert: BudgetAlert, currency: string): Promise<boolean> {
   if (typeof Notification === "undefined") return false;
   if (Notification.permission !== "granted") return false;
 

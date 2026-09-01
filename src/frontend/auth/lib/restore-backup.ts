@@ -81,9 +81,7 @@ export async function restoreBackupToLedger(
 
   for (const bw of plain.wallets ?? []) {
     const match = current.wallets.find(
-      (w) =>
-        w.name.toLowerCase() === bw.name.toLowerCase() &&
-        w.currency === bw.currency,
+      (w) => w.name.toLowerCase() === bw.name.toLowerCase() && w.currency === bw.currency,
     );
     if (match) {
       walletIdMap.set(bw.id, match.id);
@@ -99,8 +97,7 @@ export async function restoreBackupToLedger(
     }
   }
 
-  const defaultWalletId =
-    current.wallets.find((w) => w.isDefault)?.id ?? current.wallets[0]?.id;
+  const defaultWalletId = current.wallets.find((w) => w.isDefault)?.id ?? current.wallets[0]?.id;
 
   const existingExpenseIds = new Set(current.expenses.map((e) => e.id));
   for (const row of plain.expenses ?? []) {
