@@ -165,7 +165,7 @@ export const api = {
   },
 
   users: {
-    upsert(body: { address: string; codename: string; notifyEmail?: string }) {
+    upsert(body: { address: string; codename: string }) {
       return request<{ user: ApiUser }>("/users", {
         method: "POST",
         body,

@@ -21,7 +21,6 @@ const userSchema = z.object({
 export const createUserSchema = z.object({
   address: walletAddressSchema,
   codename: z.string().min(1).max(64),
-  notifyEmail: z.string().email().optional().or(z.literal("")),
 });
 
 export const updateUserSchema = z
