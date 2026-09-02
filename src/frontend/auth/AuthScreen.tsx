@@ -67,7 +67,7 @@ async function finishAuth(
   if (Array.isArray(signature)) signature = signature[0]!;
   await api.auth.verify({ address: idn.address, message, signature });
   const codename = codenameFor(idn.address);
-  await api.users.upsert({ address: idn.address, codename, notifyEmail: "" });
+  await api.users.upsert({ address: idn.address, codename });
 
   if (sharingOptIn !== undefined) {
     await api.consent.update(sharingOptIn);

@@ -34,7 +34,6 @@ usersRoutes.post("/", sessionAuth, zValidator("json", createUserSchema), async (
     {
       $set: {
         codename: body.codename,
-        notifyEmail: body.notifyEmail || "",
         updatedAt: new Date(),
       },
     },
