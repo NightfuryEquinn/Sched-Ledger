@@ -141,6 +141,19 @@ describe("buildCategoryIndex archiving", () => {
     expect(archived.allCategories).toHaveLength(CATEGORIES.length);
     expect(archived.allCategories.map((c) => c.id)).toContain("cat_emergency");
   });
+
+  test("archived subs stay resolvable but are dropped from live partitions", () => {
+    const withArchivedSub = buildCategoryIndex(
+      CATEGORIES.map((c) =>
+        c.id === "cat_hobbies" ? { ...c, subs: c.subs.map((s) => ({ ...s, archived: true })) } : c,
+      ),
+    );
+
+    expect(withArchivedSub.subById.sub_paint).toBeDefined();
+    expect(withArchivedSub.catById.cat_hobbies).toBeDefined();
+    expect(withArchivedSub.categories.find((c) => c.id === "cat_hobbies")).toBeUndefined();
+    expect(classifyTx(tx("2026-07-01", 10, "sub_paint"), withArchivedSub)).toBe("spend");
+  });
 });
 
 describe("validateTaxonomy with archived categories", () => {
@@ -154,6 +167,19 @@ describe("validateTaxonomy with archived categories", () => {
 
   test("a live category of each type passes", () => {
     expect(validateTaxonomy(CATEGORIES)).toBeNull();
+  });
+
+  test("archived subs keep unique ids and still satisfy min-1", () => {
+    const withArchivedSub = CATEGORIES.map((c) =>
+      c.id === "cat_side_hustle"
+        ? {
+            ...c,
+            subs: c.subs.map((s) => (s.id === "sub_royalties" ? { ...s, archived: true } : s)),
+          }
+        : c,
+    );
+
+    expect(validateTaxonomy(withArchivedSub)).toBeNull();
   });
 });
 
@@ -318,6 +344,25 @@ describe("CSV category type round-trip", () => {
     const live = result.categories.filter((c) => c.name === "Hobbies" && !c.archived);
     expect(live).toHaveLength(1);
     expect(live[0]!.id).not.toBe("cat_hobbies");
+  });
+
+  test("name matching never attaches rows to an archived subcategory", () => {
+    const withArchivedSub = CATEGORIES.map((c) =>
+      c.id === "cat_hobbies" ? { ...c, subs: c.subs.map((s) => ({ ...s, archived: true })) } : c,
+    );
+    const result = resolveImportSub(withArchivedSub, {
+      kind: "expense",
+      catName: "Hobbies",
+      catId: "",
+      catType: "expense",
+      subName: "Painting",
+      subId: "",
+    });
+
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.subId).not.toBe("sub_paint");
+    expect(result.newSubcategory).toBe(true);
   });
 });
 

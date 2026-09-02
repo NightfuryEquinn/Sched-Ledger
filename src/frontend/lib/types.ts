@@ -107,7 +107,14 @@ export type Category = {
   /** Piggy goal. Meaningful only when type is "savings". */
   target?: number;
   deadline?: string;
-  subs: { id: string; name: string; target?: number; deadline?: string }[];
+  subs: {
+    id: string;
+    name: string;
+    /** Retired subcategory: hidden from pickers, still resolvable for history. */
+    archived?: boolean;
+    target?: number;
+    deadline?: string;
+  }[];
 };
 
 export type CategoryIndex = import("./categories").CategoryIndex;

@@ -86,7 +86,7 @@ function findSubInCategory(cat: Category, subName: string, subId: string) {
   }
   const lower = subName.trim().toLowerCase();
   if (!lower) return undefined;
-  return cat.subs.find((s) => s.name.toLowerCase() === lower);
+  return cat.subs.find((s) => !s.archived && s.name.toLowerCase() === lower);
 }
 
 function findExpenseSubByName(
@@ -96,7 +96,7 @@ function findExpenseSubByName(
   const lower = subName.trim().toLowerCase();
   if (!lower) return null;
   for (const cat of expenseCategories(categories)) {
-    const sub = cat.subs.find((s) => s.name.toLowerCase() === lower);
+    const sub = cat.subs.find((s) => !s.archived && s.name.toLowerCase() === lower);
     if (sub) return { cat, subId: sub.id };
   }
   return null;

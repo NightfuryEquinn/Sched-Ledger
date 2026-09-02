@@ -14,7 +14,15 @@ export type CategoryIndex = {
   catById: Record<string, Category>;
   subById: Record<
     string,
-    { id: string; name: string; catId: string; color: string; target?: number; deadline?: string }
+    {
+      id: string;
+      name: string;
+      catId: string;
+      color: string;
+      archived?: boolean;
+      target?: number;
+      deadline?: string;
+    }
   >;
   /** Non-income categories (spending + savings envelopes). */
   expenseCategories: Category[];
@@ -120,16 +128,22 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
     }),
   );
 
-  const active = sorted.filter((c) => !c.archived);
+  // Live partitions drop archived parents and archived subs so pickers never
+  // offer a retired destination. Lookup maps above keep the full tree so
+  // historical rows still resolve.
+  const pickerCats = sorted
+    .filter((c) => !c.archived)
+    .map((c) => ({ ...c, subs: liveSubs(c) }))
+    .filter((c) => c.subs.length > 0);
   const archivedCategories = sorted.filter((c) => Boolean(c.archived));
-  const incomeCategories = active.filter((c) => isIncomeCategory(c));
-  const savingsCategories = active.filter((c) => isSavingsCategory(c));
-  const spendingCategories = active.filter((c) => isSpendingCategory(c));
-  const expenseCategories = active.filter((c) => !isIncomeCategory(c));
+  const incomeCategories = pickerCats.filter((c) => isIncomeCategory(c));
+  const savingsCategories = pickerCats.filter((c) => isSavingsCategory(c));
+  const spendingCategories = pickerCats.filter((c) => isSpendingCategory(c));
+  const expenseCategories = pickerCats.filter((c) => !isIncomeCategory(c));
   const incomeCategory = incomeCategories[0] ?? emptyIncome;
 
   return {
-    categories: active,
+    categories: pickerCats,
     allCategories: sorted,
     catById,
     subById,
@@ -145,6 +159,32 @@ export function buildCategoryIndex(categories: Category[]): CategoryIndex {
 /** True when a category is retired — resolvable for history, hidden from pickers. */
 export function isArchivedCategory(cat?: Pick<Category, "archived"> | null): boolean {
   return Boolean(cat?.archived);
+}
+
+/** True when a subcategory is retired — resolvable for history, hidden from pickers. */
+export function isArchivedSub(sub?: { archived?: boolean } | null): boolean {
+  return Boolean(sub?.archived);
+}
+
+/** Live (non-archived) subcategories of a category. */
+export function liveSubs<T extends { archived?: boolean }>(cat: { subs: T[] }): T[] {
+  return cat.subs.filter((s) => !isArchivedSub(s));
+}
+
+/**
+ * Subs a picker should offer: live ones, plus `selectedId` when that sub is
+ * archived so an existing row can still display the category it is on.
+ */
+export function pickerSubs<T extends { id: string; archived?: boolean }>(
+  cat: { subs: T[] } | undefined,
+  selectedId?: string,
+): T[] {
+  if (!cat) return [];
+  const live = liveSubs(cat);
+  if (!selectedId || live.some((s) => s.id === selectedId)) return live;
+  const selected = cat.subs.find((s) => s.id === selectedId);
+
+  return selected ? [selected, ...live] : live;
 }
 
 /**

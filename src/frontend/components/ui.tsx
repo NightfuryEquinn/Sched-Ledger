@@ -3,7 +3,7 @@ import { DatePicker } from "@/frontend/components/DateTimePicker";
 import { FadeIn } from "@/frontend/components/FadeIn";
 import { useFadeIn, useModalMotion } from "@/frontend/lib/animate";
 import { evaluateExpression, isPlainNumber } from "@/frontend/lib/arithmetic";
-import { isSavingsCategory } from "@/frontend/lib/categories";
+import { isSavingsCategory, pickerSubs } from "@/frontend/lib/categories";
 import {
   CURRENT_MONTH_KEY,
   MAX_MONTH_KEY,
@@ -1128,7 +1128,7 @@ function AddExpenseModal({
   const locked = !!lockedSub;
   const initKind = initial?.kind ?? "expense";
   const { expenseCategories, incomeCategories, subById, catById } = categoryIndex;
-  const firstSub = (catId: string) => catById[catId]?.subs[0]?.id ?? catId;
+  const firstSub = (id: string) => pickerSubs(catById[id])[0]?.id ?? id;
   const defaultExpenseCat = expenseCategories[0]?.id ?? "";
   const initSub = initial?.sub ? subById[initial.sub] : undefined;
   const initCat = initSub ? initSub.catId : defaultExpenseCat;
@@ -1344,7 +1344,7 @@ function AddExpenseModal({
               <div className="event-div" />
               <label className="fld-label">Subcategory</label>
               <div className="sub-row">
-                {catById[catId]?.subs.map((s) => (
+                {pickerSubs(catById[catId], sub).map((s) => (
                   <button
                     key={s.id}
                     type="button"

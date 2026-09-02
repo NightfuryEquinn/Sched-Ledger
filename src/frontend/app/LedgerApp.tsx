@@ -744,6 +744,8 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
                 categoryIndex={ledger.categoryIndex}
                 onSave={ledger.saveCategories}
                 usedSubIds={ledger.usedSubIds}
+                expenses={ledger.usedSubIds === null ? null : ledger.allExpenses}
+                onTransfer={ledger.transferHistory}
               />
             )}
             {view === "recurring" && <Recurring {...viewProps} onEdit={setModal} />}

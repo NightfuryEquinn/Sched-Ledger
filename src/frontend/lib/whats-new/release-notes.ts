@@ -13,7 +13,8 @@ type HighlightIcon =
   | "piggy"
   | "capital"
   | "car"
-  | "list";
+  | "list"
+  | "tags";
 
 export type ReleaseHighlight = {
   icon: HighlightIcon;
@@ -34,6 +35,34 @@ export type ReleaseNotes = {
  * re-announces the popup to every device that has not seen that version.
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
+  {
+    version: "4.3.4",
+    date: "September 2026",
+    lead: "Built-in and custom categories now retire the same way, subcategories can be archived on their own, and archived items can be transferred onto another category without freezing the app.",
+    highlights: [
+      {
+        icon: "tags",
+        title: "Same retire rules for every category",
+        body:
+          "Expense, savings, and income categories — built-in or custom — delete when nothing is linked to them and archive when they have history. " +
+          "Subcategories follow the same rule, so you no longer have to archive a whole parent to retire one in-use sub.",
+      },
+      {
+        icon: "sparkle",
+        title: "Transfer archived history",
+        body:
+          "Move transactions from an archived category or subcategory onto any live destination, including a different type. " +
+          "A progress modal shows the paced remap so a large ledger cannot stall or crash the PWA.",
+      },
+      {
+        icon: "info",
+        title: "History stays classified",
+        body:
+          "Archived categories and subcategories stay resolvable so past rows keep their type until you transfer them. " +
+          "You still cannot retire the last live income or expense category.",
+      },
+    ],
+  },
   {
     version: "4.2.4",
     date: "September 2026",

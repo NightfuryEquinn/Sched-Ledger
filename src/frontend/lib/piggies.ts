@@ -11,6 +11,8 @@ export type Piglet = {
   balance: number;
   target?: number;
   deadline?: string;
+  /** Retired piglet: hidden from new deposits once its balance is zero. */
+  archived: boolean;
   /** Balance / target, or `null` when there is no target — never 0. */
   progress: number | null;
   lastContribution?: string;
@@ -74,6 +76,7 @@ export function buildPiggies(txns: Expense[], index: CategoryIndex, walletId?: s
         balance: 0,
         target: sub.target,
         deadline: sub.deadline,
+        archived: Boolean(sub.archived),
         progress: null,
       })),
     });
@@ -124,5 +127,11 @@ export function buildPiggies(txns: Expense[], index: CategoryIndex, walletId?: s
 
   // An archived envelope with nothing left in it has nothing to show; one
   // that still carries a balance stays visible so the money isn't lost from view.
-  return piggies.filter((p) => !p.archived || p.balance !== 0);
+  // The same rule applies per piglet so a retired sub does not clutter a live pig.
+  return piggies
+    .map((p) => ({
+      ...p,
+      piglets: p.piglets.filter((piglet) => !piglet.archived || piglet.balance !== 0),
+    }))
+    .filter((p) => !p.archived || p.balance !== 0);
 }

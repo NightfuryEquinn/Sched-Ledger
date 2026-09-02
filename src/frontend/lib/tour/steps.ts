@@ -341,7 +341,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     lastStep(
       "categories-tree",
       "Category Tree",
-      "Expand categories to manage subcategories, colors, and icons. Savings categories use the custom date picker for optional deadline goals.",
+      "Expand categories to manage subcategories, colors, and icons. Built-in and custom categories delete when unused and archive when they have history; transfer archived ones onto another category. Savings categories use the custom date picker for optional deadline goals.",
       '[data-tour="tour-categories-tree"]',
     ),
   ],
