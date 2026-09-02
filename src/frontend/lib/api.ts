@@ -15,11 +15,13 @@ import type { TourPreference } from "@/schemas/profile";
 
 class ApiError extends Error {
   status: number;
+  retryAfterMs?: number;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, retryAfterMs?: number) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -100,7 +102,13 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 
     if (!res.ok) {
       const payload = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new ApiError(res.status, payload.error ?? res.statusText);
+      const retryHeader = res.headers.get("Retry-After");
+      const retryAfterMs = retryHeader ? Number(retryHeader) * 1000 : undefined;
+      throw new ApiError(
+        res.status,
+        payload.error ?? res.statusText,
+        Number.isFinite(retryAfterMs) && retryAfterMs! > 0 ? retryAfterMs : undefined,
+      );
     }
 
     if (res.status === 204) return undefined as T;

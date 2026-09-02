@@ -28,6 +28,11 @@ const categoryTypeSchema = z.enum(["expense", "income", "savings"]);
 const subcategorySchema = z.object({
   id: subcategoryIdSchema,
   name: z.string().trim().min(1).max(60),
+  /**
+   * Retired subcategory kept for historical classification. Hidden from
+   * pickers; still resolvable so past transactions keep their type.
+   */
+  archived: z.boolean().default(false),
   /** Piggy goal for this subcategory. Meaningful only under a savings category. */
   target: z.number().nonnegative().optional(),
   deadline: savingsDeadlineSchema.optional(),
@@ -44,7 +49,8 @@ const categorySchema = z.object({
    * Retired category kept for historical classification. Hidden from pickers
    * and budget editors, but still resolvable so past transactions keep their
    * type — deleting a savings category outright would silently reclassify its
-   * whole history as spending.
+   * whole history as spending. Built-in and custom categories follow the same
+   * rule: unused categories are deleted, in-use ones are archived.
    */
   archived: z.boolean().default(false),
   /** Piggy goal for this category. Meaningful only when type is "savings". */
@@ -71,6 +77,11 @@ export const updateCategoriesSchema = z.object({
 type Category = z.infer<typeof categorySchema>;
 export type CategoryTaxonomy = z.infer<typeof categoryTaxonomySchema>;
 
+/** Default live subcategory for the new-account taxonomy. */
+function defaultSub(id: string, name: string) {
+  return { id, name, archived: false };
+}
+
 /* Default taxonomy for new accounts — cool muted palette. */
 export const DEFAULT_CATEGORIES: Category[] = [
   {
@@ -82,9 +93,9 @@ export const DEFAULT_CATEGORIES: Category[] = [
     builtin: true,
     archived: false,
     subs: [
-      { id: "groceries", name: "Groceries" },
-      { id: "meal", name: "Meal" },
-      { id: "snacks", name: "Snacks" },
+      defaultSub("groceries", "Groceries"),
+      defaultSub("meal", "Meal"),
+      defaultSub("snacks", "Snacks"),
     ],
   },
   {
@@ -95,10 +106,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     type: "expense",
     builtin: true,
     archived: false,
-    subs: [
-      { id: "petrol", name: "Petrol" },
-      { id: "transportation", name: "Transportation" },
-    ],
+    subs: [defaultSub("petrol", "Petrol"), defaultSub("transportation", "Transportation")],
   },
   {
     id: "utilities",
@@ -109,9 +117,9 @@ export const DEFAULT_CATEGORIES: Category[] = [
     builtin: true,
     archived: false,
     subs: [
-      { id: "electricity", name: "Electricity" },
-      { id: "water", name: "Water" },
-      { id: "internet", name: "Internet" },
+      defaultSub("electricity", "Electricity"),
+      defaultSub("water", "Water"),
+      defaultSub("internet", "Internet"),
     ],
   },
   {
@@ -122,7 +130,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     type: "expense",
     builtin: true,
     archived: false,
-    subs: [{ id: "gym", name: "Sport" }],
+    subs: [defaultSub("gym", "Sport")],
   },
   {
     id: "fun",
@@ -133,9 +141,9 @@ export const DEFAULT_CATEGORIES: Category[] = [
     builtin: true,
     archived: false,
     subs: [
-      { id: "streaming", name: "Streaming" },
-      { id: "outings", name: "Outings" },
-      { id: "games", name: "Games" },
+      defaultSub("streaming", "Streaming"),
+      defaultSub("outings", "Outings"),
+      defaultSub("games", "Games"),
     ],
   },
   {
@@ -146,7 +154,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
     type: "savings",
     builtin: true,
     archived: false,
-    subs: [{ id: "saving", name: "Saving" }],
+    subs: [defaultSub("saving", "Saving")],
   },
   {
     id: "income",
@@ -157,11 +165,11 @@ export const DEFAULT_CATEGORIES: Category[] = [
     builtin: true,
     archived: false,
     subs: [
-      { id: "salary", name: "Salary" },
-      { id: "wages", name: "Wages" },
-      { id: "bonus", name: "Bonus" },
-      { id: "funds", name: "Funds" },
-      { id: "other_income", name: "Other" },
+      defaultSub("salary", "Salary"),
+      defaultSub("wages", "Wages"),
+      defaultSub("bonus", "Bonus"),
+      defaultSub("funds", "Funds"),
+      defaultSub("other_income", "Other"),
     ],
   },
 ];

@@ -29,7 +29,13 @@ import {
 } from "@/frontend/lib/crypto/codec";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
 import { releaseOrphanedPlanRefs } from "@/frontend/lib/capitals";
-import { buildCategoryIndex, isIncomeCategory } from "@/frontend/lib/categories";
+import { mergeCategoryBudget } from "@/frontend/lib/category-retire";
+import {
+  applyTransferFields,
+  expensesMatchingSubs,
+  runPacedTransfer,
+} from "@/frontend/lib/category-transfer";
+import { buildCategoryIndex, isIncomeCategory, type CategoryType } from "@/frontend/lib/categories";
 import { CURRENT_MONTH_KEY, clampMonthKey } from "@/frontend/lib/data";
 import {
   classifyTx,
@@ -422,9 +428,8 @@ export function useLedger(walletAddress: string) {
    * reclassifying that history as spending and dropping its balance out of
    * Piggies entirely.
    *
-   * Null while the unbounded query is still in flight: the caller treats that
-   * as "everything is in use", because permitting a delete on a partial answer
-   * is exactly the failure this guards against.
+   * Null while the unbounded query is still in flight: retire helpers refuse
+   * rather than hard-deleting (or archiving) on a partial answer.
    */
   const usedSubIds = useMemo(() => {
     if (!allExpensesQuery.isSuccess) return null;
@@ -1101,6 +1106,125 @@ export function useLedger(walletAddress: string) {
     capitalPlansQuery.error ??
     vehiclesQuery.error;
 
+  /**
+   * Remap expenses from source subs onto dest, paced so a large ledger cannot
+   * stall the PWA. Cache is written once at the end. Budget merge and hold
+   * remaps run after a whole-category source finishes.
+   */
+  const transferHistory = useCallback(
+    async (args: {
+      sourceSubIds: string[];
+      destSubId: string;
+      destType: CategoryType;
+      destCatId: string;
+      sourceCatId?: string;
+      onProgress: (done: number, total: number) => void;
+    }) => {
+      const cryptoKey = requireKey(wallet);
+      const matching = expensesMatchingSubs(
+        allExpensesQuery.data ?? [],
+        new Set(args.sourceSubIds),
+      );
+      const clearCapital = args.destType !== "savings";
+
+      const result = await runPacedTransfer(
+        matching,
+        async (expense) => {
+          const next = applyTransferFields(expense, args.destSubId, args.destType);
+          const body = await encodeExpenseUpdate(
+            {
+              sub: next.sub,
+              amount: next.amount,
+              note: next.note ?? "",
+              kind: next.kind,
+              walletId: next.walletId,
+              ...(clearCapital ? { capitalPlanId: "" } : {}),
+              ...(next.recurring ? { recurring: next.recurring } : {}),
+            },
+            cryptoKey,
+          );
+          await api.expenses.update(expense.id, body);
+        },
+        { onProgress: args.onProgress },
+      );
+
+      if (result.completed.length) {
+        const doneIds = new Set(result.completed.map((e) => e.id));
+        const apply = (prev: Expense[] = []) =>
+          prev.map((e) =>
+            doneIds.has(e.id) ? applyTransferFields(e, args.destSubId, args.destType) : e,
+          );
+        queryClient.setQueryData<Expense[]>(keys.expenses(wallet), apply);
+        queryClient.setQueryData<Expense[]>(keys.allExpenses(wallet), apply);
+      }
+
+      if (result.remaining.length) {
+        return {
+          remainingIds: result.remaining.map((e) => e.id),
+          error: result.error instanceof Error ? result.error.message : "Transfer failed",
+        };
+      }
+
+      if (args.sourceCatId) {
+        const destTakesBudget = args.destType !== "income";
+        for (const w of walletsQuery.data ?? []) {
+          const nextBudgets = mergeCategoryBudget(
+            w.budgets,
+            args.sourceCatId,
+            args.destCatId,
+            destTakesBudget,
+          );
+          const sameKeys =
+            Object.keys(nextBudgets).length === Object.keys(w.budgets).length &&
+            Object.keys(nextBudgets).every((k) => nextBudgets[k] === w.budgets[k]);
+          if (sameKeys) continue;
+          await saveWalletMutation.mutateAsync({ id: w.id, budgets: nextBudgets });
+        }
+
+        const destHoldId = args.destType === "expense" ? args.destCatId : undefined;
+        const monthEvents =
+          queryClient.getQueryData<LedgerEvent[]>(keys.events(wallet, month)) ?? [];
+        const toRemap = monthEvents.filter((ev) => ev.budgetHoldCategoryId === args.sourceCatId);
+        if (toRemap.length) {
+          const holdResult = await runPacedTransfer(toRemap, async (event) => {
+            const updated: LedgerEvent = destHoldId
+              ? { ...event, budgetHoldCategoryId: destHoldId }
+              : { ...event, budgetHoldEnabled: false };
+            const reminderCtx: ReminderContext = {
+              currency: activeWallet?.currency,
+              holdCategoryName: destHoldId ? categoryIndex.catById[destHoldId]?.name : undefined,
+            };
+            const body = await encodeEventUpdate(updated, cryptoKey, reminderCtx);
+            await api.events.update(event.id, body);
+          });
+          if (!holdResult.remaining.length) {
+            const remapped = new Set(toRemap.map((e) => e.id));
+            queryClient.setQueryData<LedgerEvent[]>(keys.events(wallet, month), (prev = []) =>
+              prev.map((ev) => {
+                if (!remapped.has(ev.id)) return ev;
+                return destHoldId
+                  ? { ...ev, budgetHoldCategoryId: destHoldId }
+                  : { ...ev, budgetHoldEnabled: false };
+              }),
+            );
+          }
+        }
+      }
+
+      return { remainingIds: [] as string[] };
+    },
+    [
+      wallet,
+      allExpensesQuery.data,
+      queryClient,
+      walletsQuery.data,
+      saveWalletMutation,
+      month,
+      activeWallet?.currency,
+      categoryIndex.catById,
+    ],
+  );
+
   return {
     profile: profileQuery.data,
     wallets,
@@ -1133,6 +1257,7 @@ export function useLedger(walletAddress: string) {
     isMonthPending: setMonthMutation.isPending,
     setBudgets: (budgets: Budgets) => setBudgetsMutation.mutate(budgets),
     saveCategories: saveCategoriesMutation.mutateAsync,
+    transferHistory,
     saveWallet: saveWalletMutation.mutateAsync,
     deleteWallet: deleteWalletMutation.mutateAsync,
     saveExpense: saveExpenseMutation.mutateAsync,

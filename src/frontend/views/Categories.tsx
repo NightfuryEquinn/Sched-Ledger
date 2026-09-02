@@ -3,14 +3,31 @@ import { ConfirmDialog, EmptyState, Icon, Segmented, glyphTint } from "@/fronten
 import { CategoryColorPicker } from "@/frontend/components/CategoryColorPicker";
 import { DatePicker } from "@/frontend/components/DateTimePicker";
 import {
+  liveSubs,
   nextCategoryColor,
   resolveCategoryType,
   slugId,
   type CategoryType,
 } from "@/frontend/lib/categories";
-import type { Category, CategoryIndex } from "@/frontend/lib/types";
+import {
+  archivedSubsOfLiveParents,
+  removeTransferredSource,
+  restoreCategory,
+  restoreSub,
+  retireCategory,
+  retireSub,
+  typeLabel,
+} from "@/frontend/lib/category-retire";
+import {
+  catSubLabel,
+  crossTypeWarning,
+  destTypeOf,
+  expensesMatchingSubs,
+  subIdsOfCategory,
+} from "@/frontend/lib/category-transfer";
+import type { Category, CategoryIndex, Expense } from "@/frontend/lib/types";
 import { CATEGORY_GLYPH_OPTIONS, DEFAULT_GLYPH, displayGlyph } from "@/lib/glyphs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /*
@@ -18,20 +35,43 @@ import { createPortal } from "react-dom";
  * ───────────────
  * Category / subcategory taxonomy editor: expandable tree with a
  * single modal editor covering add-category, add-subcategory,
- * edit-category and rename-subcategory modes. Savings deadlines use the
- * custom DatePicker (same as Capitals and Transactions).
+ * edit-category and rename-subcategory modes. Built-in and custom
+ * entries share delete-if-unused / archive-if-in-use. Archived items
+ * can be restored or transferred onto another live subcategory.
  */
+
+type TransferSource =
+  { type: "cat"; catId: string } | { type: "sub"; catId: string; subId: string };
+
+type TransferProgress = {
+  sourceLabel: string;
+  destLabel: string;
+  done: number;
+  total: number;
+  error: string;
+  inFlight: boolean;
+};
 
 type CategoriesViewProps = {
   categoryIndex: CategoryIndex;
   onSave: (categories: Category[]) => Promise<unknown>;
   /**
    * Subcategory ids that have transaction history — drives archive vs delete.
-   * `null` means the history is not loaded yet, which is treated as "in use":
-   * deleting on a partial answer is what hard-deletes a category whose
-   * transactions simply had not arrived.
+   * `null` means the history is not loaded yet: retire helpers refuse rather
+   * than hard-deleting on a partial answer.
    */
   usedSubIds: Set<string> | null;
+  /** Full-history expenses, or null while the unbounded query is in flight. */
+  expenses: Expense[] | null;
+  /** Paced remap of matching expenses onto a live destination subcategory. */
+  onTransfer: (args: {
+    sourceSubIds: string[];
+    destSubId: string;
+    destType: CategoryType;
+    destCatId: string;
+    sourceCatId?: string;
+    onProgress: (done: number, total: number) => void;
+  }) => Promise<{ remainingIds: string[]; error?: string }>;
 };
 
 type EditorMode =
@@ -43,15 +83,13 @@ type EditorMode =
 
 const GLYPHS = CATEGORY_GLYPH_OPTIONS;
 
-/** Human label for a category type badge. */
-function typeLabel(type: CategoryType) {
-  if (type === "income") return "Income";
-  if (type === "savings") return "Savings";
-
-  return "Expense";
-}
-
-export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesViewProps) {
+export function Categories({
+  categoryIndex,
+  onSave,
+  usedSubIds,
+  expenses,
+  onTransfer,
+}: CategoriesViewProps) {
   // Hold the FULL taxonomy: `persist` writes this list wholesale, so dropping
   // archived entries here would delete them on the next save.
   const [categories, setCategories] = useState(categoryIndex.allCategories);
@@ -68,11 +106,33 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   const [confirmDelete, setConfirmDelete] = useState<
     { type: "cat"; id: string } | { type: "sub"; catId: string; subId: string } | null
   >(null);
+  const [transferSource, setTransferSource] = useState<TransferSource | null>(null);
+  const [destCatId, setDestCatId] = useState("");
+  const [destSubId, setDestSubId] = useState("");
+  const [progress, setProgress] = useState<TransferProgress | null>(null);
+  const progressRef = useRef<TransferProgress | null>(null);
+  const categoriesRef = useRef(categories);
+  const transferRetrySource = useRef<TransferSource | null>(null);
+  const transferRetryDest = useRef<{ cat: Category; subId: string } | null>(null);
+  const viewRef = useRef<HTMLDivElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const transferScrimRef = useRef<HTMLDivElement>(null);
+  const transferPanelRef = useRef<HTMLDivElement>(null);
+  const progressScrimRef = useRef<HTMLDivElement>(null);
+  const progressPanelRef = useRef<HTMLDivElement>(null);
   const { requestClose } = useModalMotion(scrimRef, panelRef, {
     variant: "center",
     active: !!editor,
+  });
+  const { requestClose: requestCloseTransfer } = useModalMotion(
+    transferScrimRef,
+    transferPanelRef,
+    { variant: "center", active: !!transferSource && !progress },
+  );
+  useModalMotion(progressScrimRef, progressPanelRef, {
+    variant: "center",
+    active: !!progress,
   });
   const closeEditor = () => requestClose(() => setEditor(null));
 
@@ -80,8 +140,21 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
     setCategories(categoryIndex.allCategories);
   }, [categoryIndex.allCategories]);
 
+  useEffect(() => {
+    categoriesRef.current = categories;
+  }, [categories]);
+
   const activeCategories = categories.filter((c) => !c.archived);
   const archivedCategories = categories.filter((c) => Boolean(c.archived));
+  const archivedLiveSubs = archivedSubsOfLiveParents(categories);
+  const destCategories = useMemo(
+    () =>
+      categories
+        .filter((c) => !c.archived)
+        .map((c) => ({ ...c, subs: liveSubs(c) }))
+        .filter((c) => c.subs.length > 0),
+    [categories],
+  );
 
   /** Whether a category matches the active type filter. */
   const catMatches = (cat: Category) => {
@@ -95,13 +168,8 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   const catInUse = (cat: Category) =>
     usedSubIds === null || cat.subs.some((s) => usedSubIds.has(s.id));
 
-  /** Last remaining live category of its type cannot be retired. */
-  const isLastOfType = (cat: Category) => {
-    const type = resolveCategoryType(cat);
-    if (type === "savings") return false;
-
-    return activeCategories.filter((c) => resolveCategoryType(c) === type).length <= 1;
-  };
+  /** True when this subcategory has transaction history. */
+  const subInUse = (subId: string) => usedSubIds === null || usedSubIds.has(subId);
 
   /** Persist taxonomy changes through the parent save handler. */
   const persist = async (next: Category[]) => {
@@ -169,66 +237,153 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
   const parsedDeadline = () => (deadline.trim() ? deadline.trim() : undefined);
 
   /**
-   * Retire a non-builtin category. One with transaction history is archived,
-   * not deleted: the taxonomy is the only record of whether a subcategory was
-   * spending or a savings envelope, so removing it outright would silently
-   * reclassify every past transaction as spending. Unused categories are
-   * deleted outright so the taxonomy does not grow without bound.
+   * Retire a category. Unused ones are deleted; those with history are archived.
+   * Built-in and custom follow the same rule.
    */
   const removeCategory = async (catId: string) => {
-    const cat = categories.find((c) => c.id === catId);
-    if (!cat || cat.builtin) return;
-    if (isLastOfType(cat)) {
-      setError(`Keep at least one ${typeLabel(resolveCategoryType(cat)).toLowerCase()} category.`);
-
+    const result = retireCategory(categories, catId, usedSubIds);
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
-
-    if (!catInUse(cat)) {
-      await persist(categories.filter((c) => c.id !== catId));
-
-      return;
-    }
-
-    await persist(categories.map((c) => (c.id === catId ? { ...c, archived: true } : c)));
+    await persist(result.categories);
   };
 
   /** Bring an archived category back into the pickers. */
-  const restoreCategory = async (catId: string) => {
-    await persist(categories.map((c) => (c.id === catId ? { ...c, archived: false } : c)));
+  const restoreCat = async (catId: string) => {
+    await persist(restoreCategory(categories, catId));
   };
 
   /**
-   * Remove a subcategory when more than one remains. A sub with history is kept
-   * — same reasoning as `removeCategory`, since classification resolves through
-   * the sub before it reaches the category.
+   * Retire a subcategory. Unused → delete; in use → archive. The last remaining
+   * sub retires its parent instead.
    */
   const removeSub = async (catId: string, subId: string) => {
-    if (usedSubIds === null) {
-      setError("Still loading your transaction history — try again in a moment.");
-
+    const result = retireSub(categories, catId, subId, usedSubIds);
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
-    if (usedSubIds.has(subId)) {
-      setError("That subcategory has transactions — archive its category instead.");
+    await persist(result.categories);
+  };
 
+  /** Source subcategory ids for a transfer. */
+  const sourceIdsFor = (source: TransferSource) => {
+    if (source.type === "cat") {
+      const cat = categories.find((c) => c.id === source.catId);
+      return cat ? subIdsOfCategory(cat) : [];
+    }
+    return [source.subId];
+  };
+
+  /** Display label for a transfer source. */
+  const sourceLabelFor = (source: TransferSource) => {
+    const cat = categories.find((c) => c.id === source.catId);
+    if (!cat) return "";
+    return source.type === "cat" ? cat.name : catSubLabel(cat, source.subId);
+  };
+
+  /** Open the destination picker for an archived item. */
+  const openTransfer = (source: TransferSource) => {
+    const first = destCategories[0];
+    const firstSub = first?.subs[0];
+    setTransferSource(source);
+    setDestCatId(first?.id ?? "");
+    setDestSubId(firstSub?.id ?? "");
+    setError("");
+  };
+
+  /** Run (or retry) a transfer onto the chosen destination. */
+  const runTransfer = async (source: TransferSource, destCat: Category, destSub: string) => {
+    const sourceIds = sourceIdsFor(source);
+    const blocked = new Set(source.type === "sub" ? [source.subId] : sourceIds);
+    if (blocked.has(destSub)) {
+      setError("Pick a different subcategory than the one you are transferring.");
       return;
     }
 
-    const next = categories.map((c) => {
-      if (c.id !== catId) return c;
-      if (c.subs.length <= 1) return c;
+    const matching = expensesMatchingSubs(expenses ?? [], new Set(sourceIds));
+    const sourceLabel = sourceLabelFor(source);
+    const destLabel = catSubLabel(destCat, destSub);
+    const nextProgress: TransferProgress = {
+      sourceLabel,
+      destLabel,
+      done: 0,
+      total: matching.length,
+      error: "",
+      inFlight: true,
+    };
+    progressRef.current = nextProgress;
+    setProgress(nextProgress);
+    setTransferSource(null);
 
-      return { ...c, subs: c.subs.filter((s) => s.id !== subId) };
-    });
-    await persist(next);
+    const applyProgress = (done: number, total: number) => {
+      const cur = progressRef.current;
+      if (!cur) return;
+      const updated = { ...cur, done, total };
+      progressRef.current = updated;
+      setProgress(updated);
+    };
+
+    try {
+      if (matching.length) {
+        const result = await onTransfer({
+          sourceSubIds: sourceIds,
+          destSubId: destSub,
+          destType: destTypeOf(destCat),
+          destCatId: destCat.id,
+          sourceCatId: source.type === "cat" ? source.catId : undefined,
+          onProgress: applyProgress,
+        });
+        if (result.remainingIds.length) {
+          const failed: TransferProgress = {
+            ...progressRef.current!,
+            inFlight: false,
+            error: result.error || "Transfer stopped before every transaction was moved.",
+          };
+          progressRef.current = failed;
+          setProgress(failed);
+          return;
+        }
+      }
+
+      await persist(
+        removeTransferredSource(
+          categoriesRef.current,
+          source.type === "cat"
+            ? { type: "cat", id: source.catId }
+            : { type: "sub", catId: source.catId, subId: source.subId },
+        ),
+      );
+      progressRef.current = null;
+      setProgress(null);
+    } catch (err) {
+      const failed: TransferProgress = {
+        ...(progressRef.current ?? nextProgress),
+        inFlight: false,
+        error: err instanceof Error ? err.message : "Transfer failed",
+      };
+      progressRef.current = failed;
+      setProgress(failed);
+    }
+  };
+
+  /** Retry remaining work after a failed transfer. */
+  const retryTransfer = async () => {
+    if (!progress || transferRetrySource.current == null || transferRetryDest.current == null) {
+      return;
+    }
+    await runTransfer(
+      transferRetrySource.current,
+      transferRetryDest.current.cat,
+      transferRetryDest.current.subId,
+    );
   };
 
   /** Commit the active editor mode. */
   const submitEditor = async () => {
     if (!name.trim()) {
       setError("Name is required");
-
       return;
     }
     if (!editor) return;
@@ -248,7 +403,6 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
       };
       await persist([...categories, cat]);
       setExpanded((e) => ({ ...e, [id]: true }));
-
       return;
     }
 
@@ -264,7 +418,6 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
         c.id === editor.catId ? { ...c, subs: [...c.subs, sub] } : c,
       );
       await persist(next);
-
       return;
     }
 
@@ -282,7 +435,6 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
         };
       });
       await persist(next);
-
       return;
     }
 
@@ -335,8 +487,29 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
             ? "Rename Subcategory"
             : "";
 
-  const viewRef = useRef<HTMLDivElement>(null);
+  const transferDestCat = destCategories.find((c) => c.id === destCatId) ?? destCategories[0];
+  const transferDestSubs = transferDestCat?.subs ?? [];
+  const transferCount = transferSource
+    ? expensesMatchingSubs(expenses ?? [], new Set(sourceIdsFor(transferSource))).length
+    : 0;
+  const transferSourceCat = transferSource
+    ? categories.find((c) => c.id === transferSource.catId)
+    : undefined;
+  const transferTypeWarning =
+    transferSource && transferSourceCat && transferDestCat
+      ? crossTypeWarning(
+          transferCount,
+          sourceLabelFor(transferSource),
+          catSubLabel(transferDestCat, destSubId),
+          resolveCategoryType(transferSourceCat),
+          destTypeOf(transferDestCat),
+        )
+      : null;
+
   useEnter(viewRef);
+
+  const liveSubTotal = activeCategories.reduce((n, c) => n + liveSubs(c).length, 0);
+  const archivedCount = archivedCategories.length + archivedLiveSubs.length;
 
   return (
     <div ref={viewRef} className="view">
@@ -381,12 +554,15 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
           <div>
             <h2>Your Taxonomy</h2>
             <p className="panel-sub">
-              {activeCategories.length} categories ·{" "}
-              {activeCategories.reduce((n, c) => n + c.subs.length, 0)} subcategories
-              {archivedCategories.length ? ` · ${archivedCategories.length} archived` : ""}
+              {activeCategories.length} categories · {liveSubTotal} subcategories
+              {archivedCount ? ` · ${archivedCount} archived` : ""}
             </p>
           </div>
         </div>
+
+        {error && !editor && !transferSource && !progress ? (
+          <p className="auth-error">{error}</p>
+        ) : null}
 
         <div className="cat-tree" data-tour="tour-categories-tree">
           {activeCategories.length ? (
@@ -394,6 +570,8 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
               const catType = resolveCategoryType(cat);
               const open = expanded[cat.id] ?? true;
               const filteredOut = !catMatches(cat);
+              const live = liveSubs(cat);
+              const inUse = catInUse(cat);
 
               return (
                 <div
@@ -425,7 +603,7 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                         <span className="wallet-badge">{typeLabel(catType)}</span>
                       </div>
                       <div className="cat-block-meta">
-                        {cat.subs.length} subcategories
+                        {live.length} subcategories
                         {catType === "savings" && cat.target ? ` · goal ${cat.target}` : ""}
                         {catType === "savings" && cat.deadline ? ` by ${cat.deadline}` : ""}
                       </div>
@@ -449,78 +627,90 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
                       >
                         <Icon name="plus" size={16} />
                       </button>
-                      {!cat.builtin ? (
-                        <button
-                          type="button"
-                          className="danger"
-                          disabled={busy}
-                          onClick={() =>
-                            catInUse(cat)
-                              ? removeCategory(cat.id)
-                              : setConfirmDelete({ type: "cat", id: cat.id })
-                          }
-                          aria-label={
-                            busy
-                              ? catInUse(cat)
-                                ? "Archiving"
-                                : "Deleting"
-                              : catInUse(cat)
-                                ? "Archive"
-                                : "Delete"
-                          }
-                          title={
-                            busy
-                              ? catInUse(cat)
-                                ? "Archiving…"
-                                : "Deleting…"
-                              : catInUse(cat)
-                                ? "Archive — keeps past transactions classified correctly"
-                                : "Delete"
-                          }
-                          tabIndex={filteredOut ? -1 : undefined}
-                        >
-                          <Icon name={catInUse(cat) ? "archive" : "trash"} size={16} />
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="danger"
+                        disabled={busy}
+                        onClick={() =>
+                          inUse
+                            ? removeCategory(cat.id)
+                            : setConfirmDelete({ type: "cat", id: cat.id })
+                        }
+                        aria-label={
+                          busy ? (inUse ? "Archiving" : "Deleting") : inUse ? "Archive" : "Delete"
+                        }
+                        title={
+                          busy
+                            ? inUse
+                              ? "Archiving…"
+                              : "Deleting…"
+                            : inUse
+                              ? "Archive — keeps past transactions classified correctly"
+                              : "Delete"
+                        }
+                        tabIndex={filteredOut ? -1 : undefined}
+                      >
+                        <Icon name={inUse ? "archive" : "trash"} size={16} />
+                      </button>
                     </div>
                   </div>
 
                   <div className="cat-sub-reveal">
                     <ul className="cat-sub-list">
-                      {cat.subs.map((sub) => (
-                        <li key={sub.id} className="cat-sub-row">
-                          <div className="cat-sub-main">
-                            <span className="cat-sub-name">{sub.name}</span>
-                            <span className="cat-sub-id num">{sub.id}</span>
-                          </div>
-                          <div className="cat-sub-actions">
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => openEditSub(cat.id, sub)}
-                              aria-label="Rename"
-                              tabIndex={filteredOut || !open ? -1 : undefined}
-                            >
-                              <Icon name="edit" size={16} />
-                            </button>
-                            {cat.subs.length > 1 ? (
+                      {live.map((sub) => {
+                        const used = subInUse(sub.id);
+
+                        return (
+                          <li key={sub.id} className="cat-sub-row">
+                            <div className="cat-sub-main">
+                              <span className="cat-sub-name">{sub.name}</span>
+                              <span className="cat-sub-id num">{sub.id}</span>
+                            </div>
+                            <div className="cat-sub-actions">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => openEditSub(cat.id, sub)}
+                                aria-label="Rename"
+                                tabIndex={filteredOut || !open ? -1 : undefined}
+                              >
+                                <Icon name="edit" size={16} />
+                              </button>
                               <button
                                 type="button"
                                 className="danger"
                                 disabled={busy}
                                 onClick={() =>
-                                  setConfirmDelete({ type: "sub", catId: cat.id, subId: sub.id })
+                                  used
+                                    ? removeSub(cat.id, sub.id)
+                                    : setConfirmDelete({
+                                        type: "sub",
+                                        catId: cat.id,
+                                        subId: sub.id,
+                                      })
                                 }
-                                aria-label={busy ? "Removing" : "Remove"}
-                                title={busy ? "Removing…" : "Remove"}
+                                aria-label={
+                                  busy
+                                    ? used
+                                      ? "Archiving"
+                                      : "Removing"
+                                    : used
+                                      ? "Archive"
+                                      : "Remove"
+                                }
+                                title={
+                                  used
+                                    ? "Archive — keeps past transactions classified correctly"
+                                    : "Delete"
+                                }
                                 tabIndex={filteredOut || !open ? -1 : undefined}
                               >
-                                <Icon name="trash" size={16} />
+                                <Icon name={used ? "archive" : "trash"} size={16} />
                               </button>
-                            ) : null}
-                          </div>
-                        </li>
-                      ))}
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 </div>
@@ -538,38 +728,102 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
         </div>
       </section>
 
-      {archivedCategories.length ? (
+      {archivedCategories.length || archivedLiveSubs.length ? (
         <section className="panel">
           <div className="panel-head">
             <div>
               <h2>Archived</h2>
               <p className="panel-sub">
-                Retired categories, kept so past transactions keep their type. Hidden from pickers
-                and budgets.
+                Retired categories and subcategories, kept so past transactions keep their type.
+                Restore them, or transfer their history onto another category and remove them.
               </p>
             </div>
           </div>
 
           <div className="cat-archived-list">
             {archivedCategories.map((cat) => (
-              <div key={cat.id} className="cat-archived-row">
+              <div key={cat.id} className="cat-archived-group">
+                <div className="cat-archived-row">
+                  <span className="cat-block-glyph" style={glyphTint(cat.color)}>
+                    {displayGlyph(cat.glyph, cat.id)}
+                  </span>
+                  <div className="cat-archived-copy">
+                    <div className="cat-block-name">{cat.name}</div>
+                    <div className="cat-block-tags">
+                      {cat.builtin ? <span className="wallet-badge">Built-in</span> : null}
+                      <span className="wallet-badge">{typeLabel(resolveCategoryType(cat))}</span>
+                    </div>
+                  </div>
+                  <div className="cat-archived-actions">
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      disabled={busy || !!progress}
+                      onClick={() => restoreCat(cat.id)}
+                    >
+                      {busy ? "Restoring…" : "Restore"}
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      disabled={busy || expenses === null || !!progress}
+                      onClick={() => openTransfer({ type: "cat", catId: cat.id })}
+                    >
+                      Transfer
+                    </button>
+                  </div>
+                </div>
+                {cat.subs.length > 1 ? (
+                  <ul className="cat-archived-subs">
+                    {cat.subs.map((sub) => (
+                      <li key={sub.id} className="cat-archived-sub">
+                        <span>{sub.name}</span>
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          disabled={busy || expenses === null || !!progress}
+                          onClick={() =>
+                            openTransfer({ type: "sub", catId: cat.id, subId: sub.id })
+                          }
+                        >
+                          Transfer
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ))}
+            {archivedLiveSubs.map(({ cat, sub }) => (
+              <div key={sub.id} className="cat-archived-row">
                 <span className="cat-block-glyph" style={glyphTint(cat.color)}>
                   {displayGlyph(cat.glyph, cat.id)}
                 </span>
                 <div className="cat-archived-copy">
-                  <div className="cat-block-name">{cat.name}</div>
+                  <div className="cat-block-name">{catSubLabel(cat, sub.id)}</div>
                   <div className="cat-block-tags">
+                    <span className="wallet-badge">Subcategory</span>
                     <span className="wallet-badge">{typeLabel(resolveCategoryType(cat))}</span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  disabled={busy}
-                  onClick={() => restoreCategory(cat.id)}
-                >
-                  {busy ? "Restoring…" : "Restore"}
-                </button>
+                <div className="cat-archived-actions">
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy || !!progress}
+                    onClick={() => persist(restoreSub(categories, cat.id, sub.id))}
+                  >
+                    Restore
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy || expenses === null || !!progress}
+                    onClick={() => openTransfer({ type: "sub", catId: cat.id, subId: sub.id })}
+                  >
+                    Transfer
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -692,6 +946,168 @@ export function Categories({ categoryIndex, onSave, usedSubIds }: CategoriesView
             document.body,
           )
         : null}
+
+      {transferSource && transferDestCat
+        ? createPortal(
+            <div
+              ref={transferScrimRef}
+              className="modal-scrim center"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget && !busy) {
+                  requestCloseTransfer(() => setTransferSource(null));
+                }
+              }}
+            >
+              <div ref={transferPanelRef} className="modal sm" role="dialog" aria-modal="true">
+                <div className="modal-head">
+                  <h3>Transfer</h3>
+                  <button
+                    className="icon-btn"
+                    type="button"
+                    onClick={() => requestCloseTransfer(() => setTransferSource(null))}
+                    aria-label="Close"
+                  >
+                    <Icon name="close" size={18} />
+                  </button>
+                </div>
+                <div className="modal-body modal-scroll">
+                  <div className="dm-sec">
+                    <p className="panel-sub">
+                      Move {sourceLabelFor(transferSource)} onto another category. This will update{" "}
+                      {transferCount} {transferCount === 1 ? "transaction" : "transactions"}.
+                    </p>
+                    <label className="fld-label">Category</label>
+                    <div className="cat-grid">
+                      {destCategories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className={"cat-chip" + (c.id === destCatId ? " active" : "")}
+                          style={
+                            c.id === destCatId
+                              ? { borderColor: c.color, background: c.color + "16" }
+                              : undefined
+                          }
+                          onClick={() => {
+                            setDestCatId(c.id);
+                            setDestSubId(c.subs[0]?.id ?? "");
+                          }}
+                        >
+                          <span className="cc-glyph" style={{ color: c.color }}>
+                            {displayGlyph(c.glyph, c.id)}
+                          </span>
+                          <span className="cc-label">{c.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <label className="fld-label">Subcategory</label>
+                    <div className="sub-row">
+                      {transferDestSubs.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className={"sub-chip" + (s.id === destSubId ? " active" : "")}
+                          onClick={() => setDestSubId(s.id)}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                    {transferTypeWarning ? (
+                      <p className="auth-error">{transferTypeWarning}</p>
+                    ) : null}
+                    {error ? <p className="auth-error">{error}</p> : null}
+                    <div className="wallet-form-actions">
+                      <button
+                        className="ghost-btn full"
+                        type="button"
+                        onClick={() => requestCloseTransfer(() => setTransferSource(null))}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="primary-btn full"
+                        type="button"
+                        disabled={!destSubId}
+                        onClick={() => {
+                          transferRetrySource.current = transferSource;
+                          transferRetryDest.current = {
+                            cat: transferDestCat,
+                            subId: destSubId,
+                          };
+                          void runTransfer(transferSource, transferDestCat, destSubId);
+                        }}
+                      >
+                        Transfer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {progress
+        ? createPortal(
+            <div ref={progressScrimRef} className="modal-scrim center">
+              <div
+                ref={progressPanelRef}
+                className="modal sm"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cat-transfer-title"
+              >
+                <div className="modal-head">
+                  <h3 id="cat-transfer-title">
+                    {progress.inFlight ? "Transferring…" : "Transfer paused"}
+                  </h3>
+                </div>
+                <div className="modal-body">
+                  <p className="panel-sub">
+                    {progress.sourceLabel} → {progress.destLabel}
+                  </p>
+                  <p className="panel-sub num">
+                    {progress.done} / {progress.total}
+                  </p>
+                  <div className="profile-progress" aria-hidden>
+                    <div
+                      className="profile-progress-fill"
+                      style={{
+                        width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 100}%`,
+                      }}
+                    />
+                  </div>
+                  {progress.error ? <p className="auth-error">{progress.error}</p> : null}
+                  {!progress.inFlight ? (
+                    <div className="wallet-form-actions">
+                      <button
+                        className="ghost-btn full"
+                        type="button"
+                        onClick={() => {
+                          progressRef.current = null;
+                          setProgress(null);
+                        }}
+                      >
+                        Close
+                      </button>
+                      <button
+                        className="primary-btn full"
+                        type="button"
+                        onClick={() => void retryTransfer()}
+                      >
+                        Retry remaining
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
       {confirmDelete ? (
         <ConfirmDialog
           title={confirmDelete.type === "cat" ? "Delete Category" : "Remove Subcategory"}

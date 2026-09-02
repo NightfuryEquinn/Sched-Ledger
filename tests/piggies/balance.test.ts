@@ -121,6 +121,40 @@ describe("buildPiggies balance", () => {
     expect(piggies.find((p) => p.catId === "cat_emergency")).toBeUndefined();
   });
 
+  test("an archived piglet with a zero balance is dropped", () => {
+    const cats = CATEGORIES.map((c) =>
+      c.id === "cat_travel"
+        ? {
+            ...c,
+            subs: c.subs.map((s) => (s.id === "sub_hotel" ? { ...s, archived: true } : s)),
+          }
+        : c,
+    );
+    const index = buildCategoryIndex(cats);
+    const piggies = buildPiggies([], index);
+    const travel = piggies.find((p) => p.catId === "cat_travel");
+
+    expect(travel?.piglets.map((p) => p.subId)).toEqual(["sub_flights"]);
+  });
+
+  test("an archived piglet with a nonzero balance is kept and tagged", () => {
+    const cats = CATEGORIES.map((c) =>
+      c.id === "cat_travel"
+        ? {
+            ...c,
+            subs: c.subs.map((s) => (s.id === "sub_hotel" ? { ...s, archived: true } : s)),
+          }
+        : c,
+    );
+    const index = buildCategoryIndex(cats);
+    const piggies = buildPiggies([tx("2026-06-01", 50, "sub_hotel")], index);
+    const travel = piggies.find((p) => p.catId === "cat_travel");
+    const hotel = travel?.piglets.find((p) => p.subId === "sub_hotel");
+
+    expect(hotel?.archived).toBe(true);
+    expect(hotel?.balance).toBe(50);
+  });
+
   test("piglet balances split independently within a shared piggy", () => {
     const txns = [
       tx("2026-06-01", 400, "sub_flights"),

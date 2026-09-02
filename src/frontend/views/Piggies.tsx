@@ -173,14 +173,17 @@ export function Piggies({
                 <div className="piggy-piglets">
                   {piggy.piglets.map((p) => (
                     <div key={p.subId} className="piglet-row">
-                      <span className="piglet-name">{p.name}</span>
+                      <span className="piglet-name">
+                        {p.name}
+                        {p.archived ? <span className="piggy-tag">Archived</span> : null}
+                      </span>
                       <span className="piglet-balance">{money(p.balance)}</span>
                     </div>
                   ))}
                 </div>
               ) : null}
 
-              {primarySub ? (
+              {primarySub && !primarySub.archived ? (
                 <div className="piggy-card-actions">
                   <button
                     type="button"
