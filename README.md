@@ -38,7 +38,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 - **Device passphrase vault** — recovery phrase quiz on create; in-app keys wrapped with a local passphrase (PBKDF2 + AES-GCM) instead of plaintext `localStorage`
 - **Face ID / Touch ID unlock** — optional per-device biometric unlock via WebAuthn PRF; the passphrase is encrypted with a key derived from the biometric assertion and never stored in the clear. Offered once after your first passphrase unlock, or toggle anytime under **Account → Preferences**
 - **Dark mode** — system-aware theme toggle, persisted locally
-- **Typography** — Young Serif (display), Schibsted Grotesk (UI), and Azeret Mono (amounts), shared with the marketing site; summary amounts stay 20–24px and reflow on narrow screens so long figures do not overflow
+- **Typography** — Young Serif (display), Schibsted Grotesk (UI), and Azeret Mono (amounts), self-hosted and shared with the marketing site; summary amounts stay 20–24px and reflow on narrow screens so long figures do not overflow
 - **Sessions & privacy** — HttpOnly session cookies with sliding token rotation, revoke devices, clear local data, and third-party data-sharing consent under **Account → Data & privacy**
 - **Encrypted backup** — download/restore an encrypted ledger pack (wallets, categories, transactions, schedule, todos, Capitals plans, and Vehicles) encrypted with your ledger key (client-only; not stored on the server) via **Account → Exports & imports**
 - **CSV export & import** — transactions (with categories), schedule events, and to-do lists (plaintext spreadsheet portability)
@@ -66,7 +66,7 @@ Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 | API      | [Hono](https://hono.dev) + Zod validation                                                                                                            |
 | Database | [MongoDB](https://www.mongodb.com)                                                                                                                   |
 | Frontend | React 19, TanStack Query, ethers v6                                                                                                                  |
-| Styling  | Custom theme CSS (`ledger.css`); Young Serif / Schibsted Grotesk / Azeret Mono via [Google Fonts](https://fonts.google.com)                          |
+| Styling  | Custom theme CSS (`ledger.css`); Young Serif / Schibsted Grotesk / Azeret Mono self-hosted (SIL OFL)                                                 |
 | Loading  | [ldrs](https://uiball.com/ldrs) trefoil spinner                                                                                                      |
 | Motion   | [anime.js](https://animejs.com) v4                                                                                                                   |
 | Tours    | [Shepherd.js](https://shepherdjs.dev)                                                                                                                |

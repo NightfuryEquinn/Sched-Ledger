@@ -1,5 +1,5 @@
 /* Sched Ledger service worker — app shell cache only (read path). */
-const SHELL_CACHE = "sched-ledger-shell-v2";
+const SHELL_CACHE = "sched-ledger-shell-v3";
 const SHELL_URLS = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -29,6 +29,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   /* Never intercept API — IndexedDB cipher cache handles offline reads in the page. */
   if (url.pathname.startsWith("/api")) return;
+  /* Leave third-party requests alone (analytics, etc.). */
+  if (url.origin !== self.location.origin) return;
 
   event.respondWith(
     fetch(req)
@@ -36,7 +38,10 @@ self.addEventListener("fetch", (event) => {
         const copy = res.clone();
         if (
           res.ok &&
-          (url.pathname === "/" || url.pathname.endsWith(".js") || url.pathname.endsWith(".css"))
+          (url.pathname === "/" ||
+            url.pathname.endsWith(".js") ||
+            url.pathname.endsWith(".css") ||
+            url.pathname.endsWith(".woff2"))
         ) {
           void caches.open(SHELL_CACHE).then((cache) => cache.put(req, copy));
         }

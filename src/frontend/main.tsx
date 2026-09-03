@@ -2,6 +2,7 @@ import { Root } from "@/frontend/app/Root";
 import logoUrl from "@/frontend/assets/logo.png";
 import { applyTheme, getStoredTheme, resolveDark } from "@/frontend/lib/theme";
 import { registerServiceWorker } from "@/frontend/lib/pwa/register";
+import "@/frontend/styles/fonts.css";
 import "@/frontend/styles/ledger.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";

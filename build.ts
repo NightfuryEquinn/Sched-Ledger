@@ -14,6 +14,8 @@ const frontend = await Bun.build({
   target: "browser",
   sourcemap: false,
   splitting: true,
+  /* Keep woff2 as hashed files instead of base64 data URIs (smaller CSS). */
+  loader: { ".woff2": "file" },
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
   },

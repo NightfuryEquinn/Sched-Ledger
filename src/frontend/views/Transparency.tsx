@@ -427,7 +427,6 @@ const E2EE_CHART_MOBILE = `flowchart TB
 /** Hosting and scheduler roles — free-tier stack. */
 const SYSTEM_CHART = `flowchart LR
   Browser["Browser<br/>unlock · encrypt · PWA cache"]
-  Fonts["Google Fonts<br/>Young Serif · Schibsted Grotesk · Azeret Mono"]
   Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
   Cron["cron-job.org<br/>HTTP poll every ~15 min"]
@@ -435,7 +434,6 @@ const SYSTEM_CHART = `flowchart LR
   PushSvc["FCM · APNs · Mozilla<br/>Web Push delivery"]
 
   Browser -->|"HTTPS session"| Vercel
-  Browser -.->|"typefaces only"| Fonts
   Vercel -->|"read/write docs"| Atlas
   Cron -->|"GET /api/cron/reminders"| Vercel
   Vercel -->|"send email"| Resend
@@ -444,7 +442,6 @@ const SYSTEM_CHART = `flowchart LR
 
 const SYSTEM_CHART_MOBILE = `flowchart TB
   Browser["Browser<br/>unlock · encrypt · PWA cache"]
-  Fonts["Google Fonts<br/>Young Serif · Schibsted Grotesk · Azeret Mono"]
   Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
   Cron["cron-job.org<br/>HTTP poll every ~15 min"]
@@ -452,7 +449,6 @@ const SYSTEM_CHART_MOBILE = `flowchart TB
   PushSvc["FCM · APNs · Mozilla<br/>Web Push delivery"]
 
   Browser --> Vercel --> Atlas
-  Browser -.-> Fonts
   Cron --> Vercel
   Vercel --> Resend
   Vercel --> PushSvc
@@ -599,13 +595,13 @@ export function Transparency() {
               about every fifteen minutes for email reminders, push notifications, and recurring
               expense rows. Optional email uses Resend; push delivery uses FCM, Apple Push, or
               Mozilla&apos;s service depending on the browser. UI typefaces (Young Serif, Schibsted
-              Grotesk, Azeret Mono) load from Google Fonts — font files only, no ledger data. On
-              desktop you navigate from the sidebar; on phone and tablet portrait a five-tab bar
-              (Overview, Schedule, Transactions, To-Do, More) opens a sheet for the remaining views.
-              A device passphrase wraps your in-app recovery key on this browser; encrypted backups
-              download to your machine only. The installable PWA may cache ciphertext locally for
-              offline reads — saves still need the network. Older rows may still carry legacy
-              plaintext columns from before E2EE payloads.
+              Grotesk, Azeret Mono) ship with the app as self-hosted SIL OFL files — no third-party
+              font CDN. On desktop you navigate from the sidebar; on phone and tablet portrait a
+              five-tab bar (Overview, Schedule, Transactions, To-Do, More) opens a sheet for the
+              remaining views. A device passphrase wraps your in-app recovery key on this browser;
+              encrypted backups download to your machine only. The installable PWA may cache
+              ciphertext locally for offline reads — saves still need the network. Older rows may
+              still carry legacy plaintext columns from before E2EE payloads.
             </p>
           </div>
         </div>
@@ -616,8 +612,8 @@ export function Transparency() {
           <div>
             <h2>Hosting &amp; Jobs</h2>
             <p className="panel-sub">
-              Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules; Google Fonts
-              serves typefaces only
+              Free-tier roles: Vercel hosts, Atlas stores, cron-job.org schedules; typefaces ship
+              with the app
             </p>
           </div>
         </div>

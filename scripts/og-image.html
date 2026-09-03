@@ -14,14 +14,33 @@
 
   (Any headless Chrome/Chromium works; the path above is the one bundled with Playwright.)
   The logo is read from ../website/logo.png, so run the command from the repository root.
-  Webfonts come from Google Fonts, so the render needs network access; without it the card
-  falls back to Georgia / system-ui and the type will not match the site.
+  Typefaces are self-hosted under ../website/fonts so the card matches the site offline.
 -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;600;700&family=Young+Serif&display=swap"
-      rel="stylesheet"
-    />
     <style>
+      @font-face {
+        font-family: "Young Serif";
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url("../website/fonts/young-serif-latin.woff2") format("woff2");
+      }
+
+      @font-face {
+        font-family: "Schibsted Grotesk";
+        font-style: normal;
+        font-weight: 400 900;
+        font-display: swap;
+        src: url("../website/fonts/schibsted-grotesk-latin.woff2") format("woff2");
+      }
+
+      @font-face {
+        font-family: "Azeret Mono";
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url("../website/fonts/azeret-mono-latin.woff2") format("woff2");
+      }
+
       * {
         box-sizing: border-box;
         margin: 0;
