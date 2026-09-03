@@ -196,8 +196,9 @@ export function LedgerApp({ account, onSignOut, signingOut = false }: LedgerAppP
     closeWhatsNew,
   } = useWhatsNew({
     ready: tourReady,
-    accountCreatedAt: ledger.profile?.createdAt,
-    blocked: welcomeOpen,
+    /* welcomeDue blocks from frame 0 before welcomeOpen latches; welcomeOpen
+       keeps the gate closed through the exit animation after the choice. */
+    blocked: welcomeOpen || welcomeDue,
   });
 
   /** Take the guided walkthrough; the shell tour starts once this lands. */

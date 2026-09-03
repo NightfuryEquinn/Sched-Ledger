@@ -28,6 +28,10 @@ import { shortAddr } from "./lib/format";
 import { identityStorage } from "./lib/identity-storage";
 import { sessionSecrets } from "./lib/session-secrets";
 import { unlockLedgerKey } from "@/frontend/lib/crypto/unlock";
+import {
+  emitNotifyEmailChanged,
+  writeCachedNotifyEmail,
+} from "@/frontend/lib/hooks/useAccountNotifyEmail";
 import { hasSharingChoiceMade, markSharingChoiceMade, setConsent } from "./lib/consent";
 import { walletClient } from "./lib/wallet";
 import { TermsModal } from "./components/LegalModals";
@@ -67,7 +71,11 @@ async function finishAuth(
   if (Array.isArray(signature)) signature = signature[0]!;
   await api.auth.verify({ address: idn.address, message, signature });
   const codename = codenameFor(idn.address);
-  await api.users.upsert({ address: idn.address, codename });
+  const { user } = await api.users.upsert({ address: idn.address, codename });
+  /* Rehydrate after PWA clear: localStorage was wiped, DB still has the email. */
+  const savedEmail = user.notifyEmail?.trim() || "";
+  writeCachedNotifyEmail(savedEmail);
+  if (savedEmail) emitNotifyEmailChanged();
 
   if (sharingOptIn !== undefined) {
     await api.consent.update(sharingOptIn);

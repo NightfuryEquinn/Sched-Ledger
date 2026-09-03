@@ -6,7 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getConsent, markSharingChoiceMade, setConsent } from "../lib/consent";
 import { clearAllLocalData } from "../lib/identity-storage";
-import { emitNotifyEmailChanged } from "@/frontend/lib/hooks/useAccountNotifyEmail";
+import {
+  emitNotifyEmailChanged,
+  readCachedNotifyEmail,
+  writeCachedNotifyEmail,
+} from "@/frontend/lib/hooks/useAccountNotifyEmail";
 
 /*
  * Data & privacy modal
@@ -37,10 +41,13 @@ export function DataPrivacyModal({ account, onClose, onSignedOut }: DataPrivacyM
   /* Budget alerts: email preference + notification address. */
   const [budgetAlertsOn, setBudgetAlertsOn] = useState(true);
   const [budgetAlertsBusy, setBudgetAlertsBusy] = useState(false);
-  const [notifyEmail, setNotifyEmail] = useState("");
-  const [notifyEmailDraft, setNotifyEmailDraft] = useState("");
+  /* Warm from localStorage so a re-auth after PWA clear shows the email
+     immediately while /users/me confirms from the database. */
+  const [notifyEmail, setNotifyEmail] = useState(() => readCachedNotifyEmail());
+  const [notifyEmailDraft, setNotifyEmailDraft] = useState(() => readCachedNotifyEmail());
   const [emailLoading, setEmailLoading] = useState(true);
   const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
   const [sessions, setSessions] = useState<ApiSession[]>([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
@@ -72,8 +79,15 @@ export function DataPrivacyModal({ account, onClose, onSignedOut }: DataPrivacyM
         const email = user.notifyEmail?.trim() || "";
         setNotifyEmail(email);
         setNotifyEmailDraft(email);
+        writeCachedNotifyEmail(email);
+        setEmailError("");
       })
-      .catch(() => {})
+      .catch(() => {
+        /* Keep the warm cache when the network fails after a PWA restore. */
+        if (!readCachedNotifyEmail()) {
+          setEmailError("Could not load email from the server. Try again online.");
+        }
+      })
       .finally(() => setEmailLoading(false));
   }, [account.address]);
 
@@ -121,23 +135,26 @@ export function DataPrivacyModal({ account, onClose, onSignedOut }: DataPrivacyM
     }
   };
 
+  /** Persist the notification email to the server and local warm cache. */
   const saveNotifyEmail = async () => {
     const next = notifyEmailDraft.trim();
     if (next === notifyEmail) return;
+    if (next && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) {
+      setEmailError("Enter a valid email address.");
+      return;
+    }
+    setEmailError("");
     setEmailBusy(true);
     try {
       const { user } = await api.users.updateMe({ notifyEmail: next });
       const saved = user.notifyEmail?.trim() || "";
       setNotifyEmail(saved);
       setNotifyEmailDraft(saved);
+      writeCachedNotifyEmail(saved);
       emitNotifyEmailChanged();
-      try {
-        if (saved) localStorage.setItem("ledger:notifyEmail", saved);
-      } catch {
-        /* ignore */
-      }
     } catch {
       setNotifyEmailDraft(notifyEmail);
+      setEmailError("Could not save email. Try again.");
     } finally {
       setEmailBusy(false);
     }
@@ -330,7 +347,21 @@ export function DataPrivacyModal({ account, onClose, onSignedOut }: DataPrivacyM
                   type="email"
                   placeholder="you@example.com"
                   value={emailLoading ? "Loading…" : notifyEmailDraft}
-                  onChange={(e) => setNotifyEmailDraft(e.target.value)}
+                  onChange={(e) => {
+                    setNotifyEmailDraft(e.target.value);
+                    if (emailError) setEmailError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void saveNotifyEmail();
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!emailLoading && !emailBusy && notifyEmailDraft.trim() !== notifyEmail) {
+                      void saveNotifyEmail();
+                    }
+                  }}
                   disabled={emailLoading || emailBusy}
                   readOnly={emailLoading}
                   style={{ flex: 1 }}
@@ -344,6 +375,11 @@ export function DataPrivacyModal({ account, onClose, onSignedOut }: DataPrivacyM
                   {emailBusy ? "Saving…" : "Save"}
                 </button>
               </div>
+              {emailError ? (
+                <p className="dm-note" style={{ color: "var(--danger, #c44)" }}>
+                  {emailError}
+                </p>
+              ) : null}
             </label>
           </div>
 

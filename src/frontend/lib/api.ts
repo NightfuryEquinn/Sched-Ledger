@@ -32,8 +32,7 @@ type ApiProfile = {
      follows the user across devices instead of dying with localStorage. */
   tourPreference: TourPreference;
   toursSeen: string[];
-  /* ISO timestamp; tells a brand-new account from a returning one when
-     deciding whether to announce release notes. */
+  /* ISO timestamp of profile creation. */
   createdAt: string;
 };
 
@@ -73,6 +72,7 @@ const CACHEABLE_GET_PREFIXES = [
   "/todo-lists",
   "/profile",
   "/vehicles",
+  "/users",
 ];
 
 /** Whether a GET path may fall back to the local ciphertext cache. */

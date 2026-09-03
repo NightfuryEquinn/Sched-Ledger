@@ -36,6 +36,30 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "4.3.5",
+    date: "September 2026",
+    lead: "Your notification email survives a PWA clear and re-sign-in, Data & privacy saves it more reliably, and What's New now reaches brand-new accounts after onboarding.",
+    highlights: [
+      {
+        icon: "bell",
+        title: "Notification email sticks after restore",
+        body:
+          "Re-signing in after clearing the PWA or switching devices rehydrates your saved notification address from the server and warms the field from local cache while it loads. " +
+          "Budget alerts and reminder emails keep using the same inbox.",
+      },
+      {
+        icon: "shield",
+        title: "Clearer email editing in Data & privacy",
+        body: "The notification address validates on save, persists on blur or Enter, and shows a clear error when the server is unreachable or the address is invalid.",
+      },
+      {
+        icon: "sparkle",
+        title: "What's New after onboarding",
+        body: "Release notes now open for new accounts once the welcome modal and any guided tour finish, instead of being skipped entirely on first visit.",
+      },
+    ],
+  },
+  {
     version: "4.3.4",
     date: "September 2026",
     lead: "Built-in and custom categories now retire the same way, subcategories can be archived on their own, and archived items can be transferred onto another category without freezing the app.",

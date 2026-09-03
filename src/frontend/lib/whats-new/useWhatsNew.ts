@@ -18,8 +18,6 @@ const QUIET_POLLS_REQUIRED = 3;
 type UseWhatsNewOptions = {
   /** True once the ledger has loaded and the shell is on screen. */
   ready: boolean;
-  /** ISO creation time of the ledger profile, once loaded. */
-  accountCreatedAt?: string;
   /**
    * Hold the popup while another first-run dialog owns the screen. The tour
    * gate below only sees Shepherd tours, so the onboarding modal — an ordinary
@@ -32,7 +30,7 @@ type UseWhatsNewOptions = {
  * Own the What's New popup: decide whether to open it automatically on this
  * device, and expose manual open/close for the account menu entry.
  */
-export function useWhatsNew({ ready, accountCreatedAt, blocked = false }: UseWhatsNewOptions) {
+export function useWhatsNew({ ready, blocked = false }: UseWhatsNewOptions) {
   const [open, setOpen] = useState(false);
   const [waitingForTour, setWaitingForTour] = useState(false);
   const decided = useRef(false);
@@ -46,27 +44,18 @@ export function useWhatsNew({ ready, accountCreatedAt, blocked = false }: UseWha
 
     const decision = shouldAutoShowWhatsNew({
       seen: hasSeenWhatsNew(APP_VERSION),
-      accountCreatedAt,
     });
 
     decided.current = true;
 
-    if (decision === "skip-new-account") {
-      /* The guided tour is this user's introduction. Bank the version now so
-         they are not shown these notes on their next visit either. */
-      markWhatsNewSeen(APP_VERSION);
-
-      return;
-    }
-
     if (decision === "show") {
       setWaitingForTour(true);
     }
-  }, [ready, accountCreatedAt]);
+  }, [ready]);
 
-  /* A returning user on a new device also gets the shell tour. Wait it out so
-     the two never overlap. Kept in its own effect, keyed only on the latch, so
-     a profile refetch cannot restart or cancel the wait. */
+  /* Wait out the welcome modal and any Shepherd tour so the two never overlap.
+     Kept in its own effect, keyed only on the latch, so a profile refetch
+     cannot restart or cancel the wait. */
   useEffect(() => {
     if (!waitingForTour) return;
 

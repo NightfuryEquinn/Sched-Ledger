@@ -251,7 +251,7 @@ The user-facing version lives in [`src/lib/version.ts`](src/lib/version.ts) as `
 
 Release notes are a newest-first list in [`src/frontend/lib/whats-new/release-notes.ts`](src/frontend/lib/whats-new/release-notes.ts). Prepend a new entry and bump `APP_VERSION` to re-announce: the modal opens on the next load of every device that has not seen that version, because seen-state is stored per version in `localStorage` under `ledger:whatsnew:v1`. The modal scrolls the full changelog; **Got It** stays fixed at the bottom.
 
-Two cases are deliberately quiet — a device that already saw the current version, and a brand-new account (profile `createdAt` under 10 minutes old), for which onboarding is the introduction instead. When the popup is due it waits for both the first-run tour prompt and any Shepherd tour to finish, so the three never overlap: welcome modal → tour (if chosen) → What's New.
+The only quiet case is a device that already saw the current version. New accounts get the notes too — after the welcome modal and any guided tour finish, so the three never overlap: welcome modal → tour (if chosen) → What's New.
 
 To preview it during development, delete `ledger:whatsnew:v1` in DevTools → Application → Local Storage and reload, or open **Account → What's New**.
 

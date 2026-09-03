@@ -125,4 +125,18 @@ describe("notify email persistence", () => {
     const { user } = await getMe(nextCookie);
     expect(user.notifyEmail).toBe(SAVED_EMAIL);
   });
+
+  test("GET /users/me sends Cache-Control: no-store", async () => {
+    const { cookie } = await signIn();
+    await setNotifyEmail(cookie, SAVED_EMAIL);
+
+    const res = await app.request("/api/users/me", { headers: { cookie } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toContain("no-store");
+
+    const { user } = (await res.json()) as {
+      user: { notifyEmail?: string };
+    };
+    expect(user.notifyEmail).toBe(SAVED_EMAIL);
+  });
 });

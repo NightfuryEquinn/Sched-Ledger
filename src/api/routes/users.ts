@@ -15,6 +15,8 @@ usersRoutes.get("/me", sessionAuth, async (c) => {
   const { users } = getCollections(getDb());
   const user = await users.findOne({ _id: new ObjectId(accountId) });
   if (!user) notFound("User not found");
+  /* Prevent PWA / mobile webviews from serving a stale empty notifyEmail. */
+  c.header("Cache-Control", "no-store, no-cache, must-revalidate");
   return c.json({ user: serializeDoc(user, { keepAddress: true }) });
 });
 
