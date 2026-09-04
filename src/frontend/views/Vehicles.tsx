@@ -739,7 +739,7 @@ export function Vehicles({
             )}
           </section>
 
-          <section className="panel" data-tour="tour-vehicles-insights">
+          <section className="panel vehicles-fuel-insights" data-tour="tour-vehicles-insights">
             <div className="panel-head">
               <h2>Fuel Insights</h2>
               <p className="panel-sub">

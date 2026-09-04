@@ -32,14 +32,16 @@ export const MY_TAX_PRESETS: TaxPreset[] = [
     lines: [{ title: "EPF (employee)", pct: 11 }],
   },
   {
-    id: "my-epf-socso-eis",
-    label: "MY · EPF + SOCSO + EIS",
-    description: "Common employee statutory deductions (approx.).",
-    lines: [
-      { title: "EPF (employee)", pct: 11 },
-      { title: "SOCSO (employee)", pct: 0.5 },
-      { title: "EIS (employee)", pct: 0.2 },
-    ],
+    id: "my-socso-employee",
+    label: "MY · SOCSO employee (0.5%)",
+    description: "Employee SOCSO contribution (approx.).",
+    lines: [{ title: "SOCSO (employee)", pct: 0.5 }],
+  },
+  {
+    id: "my-eis-employee",
+    label: "MY · EIS employee (0.2%)",
+    description: "Employee EIS contribution (approx.).",
+    lines: [{ title: "EIS (employee)", pct: 0.2 }],
   },
   {
     id: "my-pcb-ballpark",

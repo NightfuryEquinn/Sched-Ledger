@@ -24,12 +24,17 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
  * Client-side only: deduct custom tax lines from income, allocate the
  * net across expense categories by percentage, then optionally apply
  * the result to wallet budgets via a confirmation modal.
+ * Layout: Income + Tax Collection share a setup grid on wider screens;
+ * Allocate by Category uses a live progress bar and responsive cards.
+ * Typography: Young Serif / Schibsted Grotesk / Azeret Mono via fonts.css.
  */
 
 type TaxLine = {
   id: string;
   title: string;
   pct: string;
+  /** When set, this row was added by a tax preset toggle. */
+  presetId?: string;
 };
 
 type CalculatorProps = {
@@ -127,31 +132,70 @@ export function Calculator({
     [canApply, net, allocations],
   );
 
-  /** Update a tax line field by id. */
+  /** Which presets currently have rows in the tax list. */
+  const activeTaxPresetIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const row of taxLines) {
+      if (row.presetId) ids.add(row.presetId);
+    }
+
+    return ids;
+  }, [taxLines]);
+
+  /** Update a tax line field by id; detaches the row from any preset. */
   const patchTax = (id: string, patch: Partial<TaxLine>) => {
-    setTaxLines((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setTaxLines((rows) =>
+      rows.map((r) => (r.id === id ? { ...r, ...patch, presetId: undefined } : r)),
+    );
   };
 
-  /** Append a new empty tax line. */
+  /** Append a new empty tax line (custom; does not clear preset toggles). */
   const addTax = () => {
     setTaxLines((rows) => [...rows, emptyTaxLine(rows.length)]);
   };
 
-  /** Remove a tax line (keep at least one). */
+  /** Remove a tax line (keep at least one blank row when the list would empty). */
   const removeTax = (id: string) => {
-    setTaxLines((rows) => (rows.length <= 1 ? rows : rows.filter((r) => r.id !== id)));
+    setTaxLines((rows) => {
+      const next = rows.filter((r) => r.id !== id);
+
+      return next.length ? next : [emptyTaxLine(0)];
+    });
   };
 
-  /** Apply a Malaysia / generic tax preset pack into the tax lines. */
-  const applyTaxPreset = (preset: TaxPreset) => {
+  /**
+   * Toggle a tax preset on (append its lines) or off (remove its lines).
+   * Multiple presets can be active at once.
+   */
+  const toggleTaxPreset = (preset: TaxPreset) => {
     markDirty();
-    setTaxLines(
-      preset.lines.map((line) => ({
+
+    if (activeTaxPresetIds.has(preset.id)) {
+      setTaxLines((rows) => {
+        const next = rows.filter((r) => r.presetId !== preset.id);
+
+        return next.length ? next : [emptyTaxLine(0)];
+      });
+
+      return;
+    }
+
+    setTaxLines((rows) => {
+      const withoutPlaceholder =
+        rows.length === 1 && !rows[0]?.presetId && !rows[0]?.title.trim() && !rows[0]?.pct.trim()
+          ? []
+          : rows;
+
+      const added = preset.lines.map((line) => ({
         id: newTaxId(),
         title: line.title,
         pct: String(line.pct),
-      })),
-    );
+        presetId: preset.id,
+      }));
+
+      return [...withoutPlaceholder, ...added];
+    });
   };
 
   /** Persist computed budgets after modal confirm. */
@@ -197,121 +241,129 @@ export function Calculator({
         />
       </div>
 
-      <section className="panel" data-tour="tour-calculator-income">
-        <div className="panel-head">
-          <h2>Income</h2>
-          <p className="panel-sub">Prefills from wallet income — edits stay on this screen</p>
-        </div>
-        <label className="fld-label">Gross amount</label>
-        <div className="amount-field">
-          <span className="amount-cur">{cur.symbol}</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            inputMode="decimal"
-            placeholder="0.00"
-            value={grossDraft}
-            onChange={(e) => {
-              markDirty();
-              setGrossDraft(stripNegativeInput(e.target.value));
-            }}
-            onKeyDown={preventNegativeKeys}
-            onWheel={preventWheelChange}
-          />
-        </div>
-      </section>
+      <div className="calculator-setup-grid">
+        <section className="panel" data-tour="tour-calculator-income">
+          <div className="panel-head">
+            <h2>Income</h2>
+            <p className="panel-sub">Prefills from wallet income — edits stay on this screen</p>
+          </div>
+          <label className="fld-label">Gross amount</label>
+          <div className="amount-field">
+            <span className="amount-cur">{cur.symbol}</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={grossDraft}
+              onChange={(e) => {
+                markDirty();
+                setGrossDraft(stripNegativeInput(e.target.value));
+              }}
+              onKeyDown={preventNegativeKeys}
+              onWheel={preventWheelChange}
+            />
+          </div>
+        </section>
 
-      <section className="panel" data-tour="tour-calculator-tax">
-        <div className="panel-head">
-          <h2>Tax Collection</h2>
-          <p className="panel-sub">
-            Custom titles and percentages — not saved. MY presets are estimates only.
-          </p>
-        </div>
-        <div className="calculator-presets">
-          {MY_TAX_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              className="mini-btn"
-              title={preset.description}
-              onClick={() => applyTaxPreset(preset)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-        <div className="calculator-tax-list">
-          {taxLines.map((line) => (
-            <div key={line.id} className="calculator-tax-row">
-              <div className="calculator-tax-title">
-                <label className="fld-label">Title</label>
-                <input
-                  className="text-in"
-                  type="text"
-                  value={line.title}
-                  placeholder="Tax name"
-                  onChange={(e) => {
-                    markDirty();
-                    patchTax(line.id, { title: e.target.value });
-                  }}
-                />
-              </div>
-              <div className="calculator-tax-pct">
-                <label className="fld-label">Percent</label>
-                <div className="calculator-pct-field">
+        <section className="panel" data-tour="tour-calculator-tax">
+          <div className="panel-head">
+            <h2>Tax Collection</h2>
+            <p className="panel-sub">
+              Custom titles and percentages — not saved. Toggle MY presets on to add lines, off to
+              remove them (multiple allowed; estimates only).
+            </p>
+          </div>
+          <div className="calculator-presets" role="group" aria-label="Tax presets">
+            {MY_TAX_PRESETS.map((preset) => {
+              const pressed = activeTaxPresetIds.has(preset.id);
+
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className={"mini-btn calculator-preset-toggle" + (pressed ? " is-active" : "")}
+                  title={preset.description}
+                  aria-pressed={pressed}
+                  onClick={() => toggleTaxPreset(preset)}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="calculator-tax-list">
+            {taxLines.map((line) => (
+              <div key={line.id} className="calculator-tax-row">
+                <div className="calculator-tax-title">
+                  <label className="fld-label">Title</label>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={line.pct}
+                    className="text-in"
+                    type="text"
+                    value={line.title}
+                    placeholder="Tax name"
                     onChange={(e) => {
                       markDirty();
-                      patchTax(line.id, { pct: stripNegativeInput(e.target.value) });
+                      patchTax(line.id, { title: e.target.value });
                     }}
-                    onKeyDown={preventNegativeKeys}
-                    onWheel={preventWheelChange}
                   />
-                  <span className="calculator-pct-suffix">%</span>
                 </div>
+                <div className="calculator-tax-pct">
+                  <label className="fld-label">Percent</label>
+                  <div className="calculator-pct-field">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={line.pct}
+                      onChange={(e) => {
+                        markDirty();
+                        patchTax(line.id, { pct: stripNegativeInput(e.target.value) });
+                      }}
+                      onKeyDown={preventNegativeKeys}
+                      onWheel={preventWheelChange}
+                    />
+                    <span className="calculator-pct-suffix">%</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn calculator-tax-remove"
+                  aria-label="Remove Tax Line"
+                  disabled={taxLines.length <= 1}
+                  onClick={() => {
+                    markDirty();
+                    removeTax(line.id);
+                  }}
+                >
+                  <Icon name="trash" size={16} />
+                </button>
               </div>
-              <button
-                type="button"
-                className="icon-btn calculator-tax-remove"
-                aria-label="Remove Tax Line"
-                disabled={taxLines.length <= 1}
-                onClick={() => {
-                  markDirty();
-                  removeTax(line.id);
-                }}
-              >
-                <Icon name="trash" size={16} />
-              </button>
-            </div>
-          ))}
-        </div>
-        {!taxOk ? (
-          <p className="calculator-warn" role="status">
-            Tax percentages cannot exceed 100%.
-          </p>
-        ) : null}
-        <div className="calculator-row-actions">
-          <button
-            type="button"
-            className="ghost-btn sm"
-            onClick={() => {
-              markDirty();
-              addTax();
-            }}
-          >
-            Add Tax Line
-          </button>
-          <span className="calculator-meta">Total tax {formatPct(taxSum)}</span>
-        </div>
-      </section>
+            ))}
+          </div>
+          {!taxOk ? (
+            <p className="calculator-warn" role="status">
+              Tax percentages cannot exceed 100%.
+            </p>
+          ) : null}
+          <div className="calculator-row-actions">
+            <button
+              type="button"
+              className="ghost-btn sm"
+              onClick={() => {
+                markDirty();
+                addTax();
+              }}
+            >
+              Add Tax Line
+            </button>
+            <span className="calculator-meta">Total tax {formatPct(taxSum)}</span>
+          </div>
+        </section>
+      </div>
 
       <section className="panel" data-tour="tour-calculator-allocate">
         <div className="panel-head">
@@ -326,6 +378,35 @@ export function Calculator({
           />
         ) : (
           <>
+            <div
+              className={
+                "calculator-alloc-progress" +
+                (allocOk
+                  ? " calculator-alloc-progress--ok"
+                  : remainingAlloc < 0
+                    ? " calculator-alloc-progress--over"
+                    : " calculator-alloc-progress--under")
+              }
+              role="status"
+              aria-label={`Allocated ${formatPct(allocSum)}`}
+            >
+              <div className="calculator-alloc-progress-head">
+                <span>Allocation</span>
+                <span className="num">
+                  {formatPct(allocSum)}
+                  {allocOk
+                    ? " — ready"
+                    : ` — ${formatPct(Math.abs(remainingAlloc))} ${remainingAlloc > 0 ? "left" : "over"}`}
+                </span>
+              </div>
+              <div className="calculator-alloc-track" aria-hidden="true">
+                <div
+                  className="calculator-alloc-fill"
+                  style={{ width: `${Math.min(Math.max(allocSum, 0), 100)}%` }}
+                />
+              </div>
+            </div>
+
             <div className="calculator-alloc-list">
               {expenseCategories.map((c) => {
                 const pct = parseNonNeg(pctByCat[c.id] ?? "");
@@ -337,44 +418,35 @@ export function Calculator({
                       <CatGlyph glyph={c.glyph} id={c.id} />
                       <span>{c.name}</span>
                     </div>
-                    <div className="calculator-pct-field">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={pctByCat[c.id] ?? ""}
-                        onChange={(e) => {
-                          markDirty();
-                          setPctByCat((prev) => ({
-                            ...prev,
-                            [c.id]: stripNegativeInput(e.target.value),
-                          }));
-                        }}
-                        onKeyDown={preventNegativeKeys}
-                        onWheel={preventWheelChange}
-                        aria-label={`${c.name} percent`}
-                      />
-                      <span className="calculator-pct-suffix">%</span>
+                    <div className="calculator-alloc-controls">
+                      <div className="calculator-alloc-amt num">
+                        {fmtMoney(amount, { currency })}
+                      </div>
+                      <div className="calculator-pct-field">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          placeholder="0"
+                          value={pctByCat[c.id] ?? ""}
+                          onChange={(e) => {
+                            markDirty();
+                            setPctByCat((prev) => ({
+                              ...prev,
+                              [c.id]: stripNegativeInput(e.target.value),
+                            }));
+                          }}
+                          onKeyDown={preventNegativeKeys}
+                          onWheel={preventWheelChange}
+                          aria-label={`${c.name} percent`}
+                        />
+                        <span className="calculator-pct-suffix">%</span>
+                      </div>
                     </div>
-                    <div className="calculator-alloc-amt num">{fmtMoney(amount, { currency })}</div>
                   </div>
                 );
               })}
-            </div>
-            <div className="calculator-row-actions">
-              <span
-                className={
-                  "calculator-meta" + (allocOk ? " calculator-meta--ok" : " calculator-meta--warn")
-                }
-                role="status"
-              >
-                Allocated {formatPct(allocSum)}
-                {allocOk
-                  ? " — ready"
-                  : ` — ${formatPct(Math.abs(remainingAlloc))} ${remainingAlloc > 0 ? "left" : "over"}`}
-              </span>
             </div>
           </>
         )}

@@ -2063,7 +2063,7 @@ export function Insights({
         </div>
       </div>
 
-      <section className="panel">
+      <section className="panel insights-savings" data-tour="tour-insights-savings">
         <div className="panel-head">
           <div>
             <h2>Saving Insights</h2>
@@ -2095,7 +2095,7 @@ export function Insights({
           />
         </div>
         {savingsInsights.headlines.length ? (
-          <ul className="piggy-headlines" style={{ marginTop: "var(--sp-4)" }}>
+          <ul className="piggy-headlines piggy-headlines--spaced">
             {savingsInsights.headlines.map((h) => (
               <li key={h.id} className={`piggy-headline piggy-headline--${h.tone}`}>
                 {h.text}
@@ -2103,7 +2103,7 @@ export function Insights({
             ))}
           </ul>
         ) : (
-          <p className="panel-sub" style={{ marginTop: "var(--sp-3)" }}>
+          <p className="panel-sub piggy-headlines-empty">
             Keep saving to unlock streaks, pace, and projections here.
           </p>
         )}

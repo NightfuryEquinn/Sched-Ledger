@@ -923,7 +923,7 @@ function EmptyState({ title, sub }: { title: ReactNode; sub?: ReactNode }) {
 /** One ranked finding card — tone stripe, optional metric chip, confidence pill. */
 function InsightCard({ insight }: { insight: Insight }) {
   return (
-    <div className={"insight-card tone-" + insight.tone}>
+    <article className={"insight-card tone-" + insight.tone}>
       <div className="insight-card-head">
         <span className="insight-card-title">{insight.title}</span>
         <span className={"profile-confidence conf-" + insight.confidence.level}>
@@ -937,7 +937,7 @@ function InsightCard({ insight }: { insight: Insight }) {
         </div>
       ) : null}
       <p className="insight-card-body">{insight.body}</p>
-    </div>
+    </article>
   );
 }
 

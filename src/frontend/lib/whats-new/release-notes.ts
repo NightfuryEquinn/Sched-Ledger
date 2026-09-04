@@ -36,6 +36,48 @@ export type ReleaseNotes = {
  */
 export const RELEASE_NOTES: ReleaseNotes[] = [
   {
+    version: "4.4.5",
+    date: "September 2026",
+    lead: "Wide desktop layouts get denser two-column reading for Budgets, Taxonomy, Transactions, and Upcoming; Calculator becomes a setup cockpit; Capital cards stay one column until 1280px; Transparency diagrams stack top-to-bottom; Insights and Fuel keep their editorial polish with a warmer light theme; dark mode contrast meets WCAG AA.",
+    highlights: [
+      {
+        icon: "insights",
+        title: "Insights and Fuel, redesigned",
+        body: "What Stands Out, Spending Habit, Income Profile, Saving Insights, and Fuel Insights use a responsive bento layout with clearer metric cards, pastel tone washes, and denser signal tiles on phone, tablet, and desktop.",
+      },
+      {
+        icon: "budget",
+        title: "Wide-screen Budgets, Taxonomy, and lists",
+        body: "From 1280px up, Budget by Category, Your Taxonomy, the Transactions list, and Schedule Upcoming switch to two-column card grids so long rows stop stretching across the monitor.",
+      },
+      {
+        icon: "calculator",
+        title: "Calculator cockpit",
+        body: "Income and Tax Collection sit side-by-side on larger screens. Allocate by Category shows a live percentage progress bar and responsive allocation cards with Azeret Mono amounts.",
+      },
+      {
+        icon: "capital",
+        title: "Capital cards stay readable",
+        body: "Capitals and Vehicles keep a single-column card stack until 1280px, then open to two columns so stats and actions are not cramped on laptop widths.",
+      },
+      {
+        icon: "shield",
+        title: "Vertical Transparency diagrams",
+        body: "Hosting, data relationships, and the encrypted write path render top-to-bottom on every screen width, with diagrams capped for comfortable reading instead of horizontal sprawl.",
+      },
+      {
+        icon: "sparkle",
+        title: "Softer light mode and frameless chrome",
+        body: "The light theme shifts from cool blue-white to a warm bone canvas. The sidebar and topbar drop their framing borders so the main canvas reads as one continuous surface. Type remains Young Serif, Schibsted Grotesk, and Azeret Mono — self-hosted SIL OFL.",
+      },
+      {
+        icon: "info",
+        title: "Accessible dark mode contrast",
+        body: "Dark theme tokens now target WCAG 2.1 AA: brighter secondary labels, a lighter accent with dark ink on filled buttons, clearer card and input borders, stronger profile and progress colors, and calendar chip text that stays readable on charcoal surfaces.",
+      },
+    ],
+  },
+  {
     version: "4.3.5",
     date: "September 2026",
     lead: "Your notification email survives a PWA clear and re-sign-in, Data & privacy saves it more reliably, and What's New now reaches brand-new accounts after onboarding.",

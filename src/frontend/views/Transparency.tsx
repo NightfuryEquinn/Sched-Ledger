@@ -119,6 +119,11 @@ const COLLECTIONS: CollectionDoc[] = [
       },
       { key: "catId", value: '"bill" | "custom" | …' },
       { key: "date", value: '"2026-07-20"' },
+      {
+        key: "endDate? / endTime?",
+        value: "multi-day span bounds",
+        note: "inclusive last day; end clock on timed spans",
+      },
       { key: "allDay / time / repeat", value: "schedule metadata" },
       { key: "exceptDates? / until?", value: "recurrence exceptions / end date" },
       { key: "notify / lead", value: "reminder settings (plaintext for cron)" },
@@ -295,59 +300,6 @@ const COLLECTIONS: CollectionDoc[] = [
 
 const RELATIONSHIP_CHART = `flowchart TB
   subgraph Client["Browser client"]
-    UI["React UI<br/>sidebar · tab bar + More sheet"]
-    Key["In-memory ledger key<br/>from wallet signature"]
-    LS["localStorage<br/>identities · session · theme · tour<br/>active wallet · prefs · whatsnew"]
-  end
-
-  subgraph API["API / MongoDB"]
-    Users["users"]
-    Profile["ledger_profiles"]
-    Wallets["financial_wallets<br/>enc + payload"]
-    Cats["category_taxonomies<br/>enc + payload"]
-    Exp["expenses<br/>enc + payload"]
-    Ev["events<br/>enc + payload"]
-    Todos["todo_lists<br/>enc + payload"]
-    Caps["capital_plans<br/>enc + payload"]
-    Vehicles["vehicles<br/>enc + payload"]
-    Fills["vehicle_fills<br/>enc + payload"]
-    Consent["consent"]
-    Auth["auth_nonces · sessions"]
-    Push["push_subscriptions"]
-    Logs["reminder_logs · budget_alert_logs"]
-  end
-
-  UI --> Key
-  UI --> LS
-  UI -->|"session cookie"| API
-  Key -->|"AES-256-GCM encrypt/decrypt"| Wallets
-  Key -->|"AES-256-GCM encrypt/decrypt"| Cats
-  Key -->|"AES-256-GCM encrypt/decrypt"| Exp
-  Key -->|"AES-256-GCM encrypt/decrypt"| Ev
-  Key -->|"AES-256-GCM encrypt/decrypt"| Todos
-  Key -->|"AES-256-GCM encrypt/decrypt"| Caps
-  Key -->|"AES-256-GCM encrypt/decrypt"| Vehicles
-  Key -->|"AES-256-GCM encrypt/decrypt"| Fills
-  Users -->|"owns"| Profile
-  Users -->|"owns"| Wallets
-  Users -->|"owns"| Cats
-  Users -->|"owns"| Exp
-  Users -->|"owns"| Ev
-  Users -->|"owns"| Todos
-  Users -->|"owns"| Caps
-  Users -->|"owns"| Vehicles
-  Users -->|"owns"| Consent
-  Users --> Auth
-  Users --> Push
-  Vehicles -->|"owns"| Fills
-  Fills -.->|"optional link"| Exp
-  Ev --> Logs
-  Wallets --> Logs
-`;
-
-/** Mobile: stack client above API with TB-only subgraphs (avoids side-by-side). */
-const RELATIONSHIP_CHART_MOBILE = `flowchart TB
-  subgraph Client["Browser client"]
     direction TB
     UI["React UI<br/>sidebar · tab bar + More sheet"]
     Key["In-memory ledger key<br/>from wallet signature"]
@@ -395,9 +347,15 @@ const RELATIONSHIP_CHART_MOBILE = `flowchart TB
   Key -.->|"AES-256-GCM"| Exp
   Key -.->|"AES-256-GCM"| Ev
   Key -.->|"AES-256-GCM"| Todos
+  Key -.->|"AES-256-GCM"| Caps
+  Key -.->|"AES-256-GCM"| Vehicles
+  Key -.->|"AES-256-GCM"| Fills
 `;
 
-const E2EE_CHART = `flowchart LR
+/** Mobile uses the same top-to-bottom relationship map as desktop. */
+const RELATIONSHIP_CHART_MOBILE = RELATIONSHIP_CHART;
+
+const E2EE_CHART = `flowchart TB
   Plain["Plain fields<br/>dates · kinds · schedule metadata<br/>reminder prefs · link ids"]
   Enc["AES-256-GCM encrypt<br/>with ledger key"]
   Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
@@ -411,21 +369,10 @@ const E2EE_CHART = `flowchart LR
 `;
 
 /** Mobile: same write path stacked top-to-bottom. */
-const E2EE_CHART_MOBILE = `flowchart TB
-  Plain["Plain fields<br/>dates · kinds · schedule metadata<br/>reminder prefs · link ids"]
-  Enc["AES-256-GCM encrypt<br/>with ledger key"]
-  Doc["Mongo document<br/>enc: 1<br/>payload: base64 blob"]
-  DB[("MongoDB")]
-  DbOut["Fetch document"]
-  Decr["AES-256-GCM decrypt<br/>in browser"]
-  Ready["UI sees plaintext<br/>E2EE fields stay ciphertext on server"]
+const E2EE_CHART_MOBILE = E2EE_CHART;
 
-  Plain --> Enc --> Doc --> DB
-  DB --> DbOut --> Decr --> Ready
-`;
-
-/** Hosting and scheduler roles — free-tier stack. */
-const SYSTEM_CHART = `flowchart LR
+/** Hosting and scheduler roles — free-tier stack (vertical for readability). */
+const SYSTEM_CHART = `flowchart TB
   Browser["Browser<br/>unlock · encrypt · PWA cache"]
   Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
   Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
@@ -440,19 +387,7 @@ const SYSTEM_CHART = `flowchart LR
   Vercel -->|"send push"| PushSvc
 `;
 
-const SYSTEM_CHART_MOBILE = `flowchart TB
-  Browser["Browser<br/>unlock · encrypt · PWA cache"]
-  Vercel["Vercel Hobby<br/>host SPA + API<br/>Analytics only"]
-  Atlas[("MongoDB Atlas M0<br/>ciphertext + metadata")]
-  Cron["cron-job.org<br/>HTTP poll every ~15 min"]
-  Resend["Resend<br/>reminder / alert email"]
-  PushSvc["FCM · APNs · Mozilla<br/>Web Push delivery"]
-
-  Browser --> Vercel --> Atlas
-  Cron --> Vercel
-  Vercel --> Resend
-  Vercel --> PushSvc
-`;
+const SYSTEM_CHART_MOBILE = SYSTEM_CHART;
 
 const MOBILE_MQ = "(max-width: 860px)";
 
@@ -595,13 +530,14 @@ export function Transparency() {
               about every fifteen minutes for email reminders, push notifications, and recurring
               expense rows. Optional email uses Resend; push delivery uses FCM, Apple Push, or
               Mozilla&apos;s service depending on the browser. UI typefaces (Young Serif, Schibsted
-              Grotesk, Azeret Mono) ship with the app as self-hosted SIL OFL files — no third-party
-              font CDN. On desktop you navigate from the sidebar; on phone and tablet portrait a
-              five-tab bar (Overview, Schedule, Transactions, To-Do, More) opens a sheet for the
-              remaining views. A device passphrase wraps your in-app recovery key on this browser;
-              encrypted backups download to your machine only. The installable PWA may cache
-              ciphertext locally for offline reads — saves still need the network. Older rows may
-              still carry legacy plaintext columns from before E2EE payloads.
+              Grotesk, Azeret Mono from <code>fonts.css</code>) ship with the app as self-hosted SIL
+              OFL files — no third-party font CDN. Mermaid diagrams below stack top-to-bottom so
+              they stay readable at every width. On desktop you navigate from the sidebar; on phone
+              and tablet portrait a five-tab bar (Overview, Schedule, Transactions, To-Do, More)
+              opens a sheet for the remaining views. A device passphrase wraps your in-app recovery
+              key on this browser; encrypted backups download to your machine only. The installable
+              PWA may cache ciphertext locally for offline reads — saves still need the network.
+              Older rows may still carry legacy plaintext columns from before E2EE payloads.
             </p>
           </div>
         </div>
@@ -625,16 +561,17 @@ export function Transparency() {
             <h2>What the Server Can Infer</h2>
             <p className="panel-sub">
               Even with E2EE, plaintext metadata remains for queries and accurate schedule reminders
-              (day-level dates and lead times are intentional — not bucketed). Owned documents are
-              keyed by an opaque <code>accountId</code> (<code>users._id</code>); the SIWE wallet
-              address lives only on <code>users</code> for login. The server can still see that
-              address, session cookies (HttpOnly, rotated on sliding renewal), wallet
-              currencies/funding modes, expense dates/kinds/recurrence flags, schedule timing, your
-              account notify email and reminder lead times, and that a budget-alert or reminder
-              delivery occurred — but not transaction amounts, wallet names, category trees, notes,
-              event titles, or to-do text. Budget alerts are a deliberate exception: the client
-              sends cleartext <code>spent</code>, <code>budget</code>, <code>categoryName</code>,
-              and optional <code>walletName</code> so the email or push can name the category and
+              (day-level dates, multi-day <code>endDate</code> / <code>endTime</code> span bounds,
+              and lead times are intentional — not bucketed). Owned documents are keyed by an opaque{" "}
+              <code>accountId</code> (<code>users._id</code>); the SIWE wallet address lives only on{" "}
+              <code>users</code> for login. The server can still see that address, session cookies
+              (HttpOnly, rotated on sliding renewal), wallet currencies/funding modes, expense
+              dates/kinds/recurrence flags, schedule timing including multi-day spans, your account
+              notify email and reminder lead times, and that a budget-alert or reminder delivery
+              occurred — but not transaction amounts, wallet names, category trees, notes, event
+              titles, or to-do text. Budget alerts are a deliberate exception: the client sends
+              cleartext <code>spent</code>, <code>budget</code>, <code>categoryName</code>, and
+              optional <code>walletName</code> so the email or push can name the category and
               amounts. Schedule reminders with notify on also store <code>notifyDetails</code> — the
               title, budget hold, and comments the notification carries — only while notify is
               enabled; switching it off deletes that copy. Linking a bill payment stores plaintext{" "}
@@ -698,7 +635,8 @@ export function Transparency() {
           <div>
             <h2>Diagrams</h2>
             <p className="panel-sub">
-              Visual maps of hosting, collection links, and the encrypted write path
+              Visual maps of hosting, collection links, and the encrypted write path — top-to-bottom
+              for comfortable reading
             </p>
           </div>
         </div>

@@ -808,8 +808,8 @@ export function describeIncomeTrend(m: IncomeMetrics): string {
   if (change < 5) return "Steady — within 5% across the window.";
 
   return m.growthPct > 0
-    ? `Up ${change}% vs the first half of the window.`
-    : `Down ${change}% vs the first half of the window.`;
+    ? `Up ${change}% vs the first half of the window. Scroll horizontal.`
+    : `Down ${change}% vs the first half of the window. Scroll horizontal.`;
 }
 
 /** Distinct months carrying income, from a pre-filtered list. */

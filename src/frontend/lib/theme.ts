@@ -4,11 +4,16 @@
    The design system lives in styles/ledger.css (tokens for color,
    radius, spacing). This module only handles the light/dark preference
    and exposes the accent color to SVG charts.
+
+   Dark theme tokens in ledger.css target WCAG 2.1 AA contrast
+   (≥ 4.5:1 normal text, ≥ 3.0:1 large text / UI). getAccent() reads the
+   live --accent custom property so charts pick up the dark-mode accent
+   (#7aa5e9) after applyTheme flips data-theme.
    ──────────────────────────────────────────────────────────────────── */
 
 export type ThemePreference = "light" | "dark" | "system";
 
-/** Default accent — keep in sync with --accent in ledger.css. */
+/** Default accent — keep in sync with --accent in ledger.css (light theme). */
 const DEFAULT_ACCENT = "#4a6fa5";
 
 const THEME_KEY = "ledger:theme";
@@ -48,7 +53,7 @@ export function applyTheme(dark: boolean): void {
   root.style.colorScheme = dark ? "dark" : "light";
 }
 
-/** Read the live accent token (used by SVG charts that can't use CSS vars). */
+/** Read the live accent token (light or dark --accent; used by SVG charts that can't use CSS vars). */
 export function getAccent(): string {
   return (
     getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || DEFAULT_ACCENT

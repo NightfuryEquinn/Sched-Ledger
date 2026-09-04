@@ -22,12 +22,40 @@ function PaceStatus({ plan }: { plan: CapitalPace }) {
   return null;
 }
 
+type PaceMetric = {
+  label: string;
+  value: string;
+};
+
+/** Collect the paced metrics shown under one Capitals plan name. */
+function paceMetrics(plan: CapitalPace, money: (n: number) => string): PaceMetric[] {
+  const metrics: PaceMetric[] = [{ label: "Set aside", value: money(plan.saved) }];
+
+  if (plan.unspent !== plan.saved) {
+    metrics.push({ label: "Unspent", value: money(plan.unspent) });
+  }
+  if (plan.remainingNeed > 0) {
+    metrics.push({ label: "To go", value: money(plan.remainingNeed) });
+  }
+  if (plan.monthlyPace > 0) {
+    metrics.push({ label: "Pace", value: `${money(plan.monthlyPace)}/mo` });
+  }
+  if (plan.requiredMonthly) {
+    metrics.push({ label: "Needed", value: `${money(plan.requiredMonthly)}/mo` });
+  }
+  if (plan.projectedCompletion) {
+    metrics.push({ label: "Projected", value: plan.projectedCompletion });
+  }
+
+  return metrics;
+}
+
 /**
- * The Capitals half of Saving Insights: one line per plan with what is set
+ * The Capitals half of Saving Insights: one card per plan with what is set
  * aside, how much of that is still unspent, what is left, the pace it is being
- * saved at, and where that leaves it against the target date. Shared by the Piggies and Insights views, which
- * format money differently (Insights can convert currency), so `money` comes
- * from the caller.
+ * saved at, and where that leaves it against the target date. Shared by the
+ * Piggies and Insights views, which format money differently (Insights can
+ * convert currency), so `money` comes from the caller.
  */
 export function CapitalPaceList({
   plans,
@@ -42,18 +70,23 @@ export function CapitalPaceList({
     <div className="capital-pace-list">
       {plans.map((plan) => (
         <div key={plan.planId} className="capital-pace-row">
-          <span className="capital-pace-glyph">{plan.glyph}</span>
+          <span className="capital-pace-glyph" aria-hidden="true">
+            {plan.glyph}
+          </span>
           <div className="capital-pace-main">
-            <span className="capital-pace-name">{plan.name}</span>
-            <span className="capital-pace-meta">
-              {money(plan.saved)} set aside
-              {plan.unspent !== plan.saved ? ` · ${money(plan.unspent)} unspent` : ""}
-              {plan.remainingNeed > 0 ? ` · ${money(plan.remainingNeed)} to go` : ""}
-              {plan.monthlyPace > 0 ? ` · ${money(plan.monthlyPace)}/mo pace` : ""}
-              {plan.requiredMonthly ? ` · ${money(plan.requiredMonthly)}/mo needed` : ""}
-            </span>
+            <div className="capital-pace-head">
+              <span className="capital-pace-name">{plan.name}</span>
+              <PaceStatus plan={plan} />
+            </div>
+            <div className="capital-pace-metrics">
+              {paceMetrics(plan, money).map((metric) => (
+                <div key={metric.label} className="capital-pace-metric">
+                  <span className="capital-pace-metric-label">{metric.label}</span>
+                  <span className="capital-pace-metric-value">{metric.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <PaceStatus plan={plan} />
         </div>
       ))}
     </div>
