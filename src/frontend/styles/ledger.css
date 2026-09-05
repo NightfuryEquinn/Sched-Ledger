@@ -2647,14 +2647,15 @@ textarea::placeholder {
   /*
    * Columns size themselves (6 for the habit trail, 6 or 12 for income) rather
    * than dividing a fixed track count — a fixed `repeat(N, minmax(0,1fr))`
-   * still lets each column shrink below a usable width at N=12, which both
-   * ellipsizes every amount and, since a grid item's own min-width defaults to
-   * its content size, can blow out the panel itself. Auto-flow with a floor
-   * width fills the row evenly when everything fits and scrolls in place
-   * — inside the panel, not past it — when it doesn't.
+   * still lets each column shrink below its label, which both ellipsizes
+   * traits/amounts and, without an inner scroller, can blow out the panel.
+   * max-content as the floor keeps DRIP / CLOCKWORK / Peak-and-Valley and
+   * full money strings visible; 1fr still shares leftover space evenly.
+   * Overflow scrolls in place — inside the panel, not past it — when the
+   * months cannot fit.
    */
   grid-auto-flow: column;
-  grid-auto-columns: minmax(64px, 1fr);
+  grid-auto-columns: minmax(max-content, 1fr);
   overflow-x: auto;
   align-items: end;
   gap: 8px;
@@ -2668,7 +2669,7 @@ textarea::placeholder {
   align-items: center;
   gap: 4px;
   height: 100%;
-  min-width: 0;
+  min-width: min-content;
   min-height: 44px;
   padding: 0;
   border: none;
@@ -2711,9 +2712,6 @@ textarea::placeholder {
 
 .ptrl-style {
   margin: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 10.5px;
   font-weight: 600;
@@ -7893,13 +7891,6 @@ textarea::placeholder {
   }
   .capital-pace-metrics {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  }
-  /* Twelve months never fit across a phone. With the amount hidden above,
-     only the month abbreviation needs to fit, so the floor can shrink from
-     the base rule's 64px down to 30px. Auto-flow/overflow are already set
-     by the base .ptrl-grid rule. */
-  .ptrl-grid {
-    grid-auto-columns: minmax(30px, 1fr);
   }
   .profile-title {
     font-size: 20px;
