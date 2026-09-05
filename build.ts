@@ -61,6 +61,7 @@ await Bun.write(htmlPath, patched);
 const apiDir = path.join(root, "api");
 await mkdir(apiDir, { recursive: true });
 await rm(path.join(apiDir, "index.js"), { force: true });
+await rm(path.join(apiDir, "handler.js"), { force: true });
 await rm(path.join(apiDir, "vercel-api.js"), { force: true });
 
 /* Drop prior hashed email assets from the old type:"file" import approach. */
@@ -87,9 +88,9 @@ if (!api.success) {
   process.exit(1);
 }
 
-await rename(path.join(apiDir, "vercel-api.js"), path.join(apiDir, "index.js"));
+await rename(path.join(apiDir, "vercel-api.js"), path.join(apiDir, "handler.js"));
 
-const apiBundle = path.join(apiDir, "index.js");
+const apiBundle = path.join(apiDir, "handler.js");
 const { size } = await Bun.file(apiBundle).stat();
 console.log(` ${path.relative(root, apiBundle)}  ${(size / 1024).toFixed(1)} KB`);
 console.log(` embedded email logo  ${(logoBytes.byteLength / 1024).toFixed(1)} KB`);

@@ -11,40 +11,11 @@
  * Requires MONGODB_URI (and optional MONGODB_DB) from the environment / .env.
  */
 
-import { ObjectId, MongoClient, type Db } from "mongodb";
+import { MongoClient, type Db } from "mongodb";
 import { ACCOUNT_STALE_DAYS, ACCOUNT_STALE_MS } from "../src/lib/account-retention";
 import { COLLECTIONS } from "../src/db/collections";
 import { resolveMongoUri } from "../src/db/resolve-uri";
-
-/** Collections keyed by opaque accountId. */
-const OWNED_BY_ACCOUNT_ID = [
-  COLLECTIONS.ledgerProfiles,
-  COLLECTIONS.financialWallets,
-  COLLECTIONS.categoryTaxonomies,
-  COLLECTIONS.expenses,
-  COLLECTIONS.events,
-  COLLECTIONS.todoLists,
-  COLLECTIONS.capitalPlans,
-  COLLECTIONS.vehicles,
-  COLLECTIONS.vehicleFills,
-  COLLECTIONS.consent,
-  COLLECTIONS.budgetAlertLogs,
-  COLLECTIONS.reminderLogs,
-  COLLECTIONS.pushSubscriptions,
-  COLLECTIONS.sessions,
-] as const;
-
-type DeleteCounts = Record<string, number>;
-
-/** Escape a string for safe use inside a RegExp. */
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/** Case-insensitive exact match for a wallet address field. */
-function addressMatch(address: string) {
-  return { $regex: `^${escapeRegex(address)}$`, $options: "i" };
-}
+import { addressMatch, formatCounts, purgeAccount } from "./lib/purge-account";
 
 /** Print CLI help. */
 function printHelp(): void {
@@ -115,99 +86,13 @@ async function resolveLastActivity(
   return createdAt instanceof Date ? createdAt : new Date(0);
 }
 
-/** Delete (or count) all data owned by one account. */
-async function purgeAccount(
-  db: Db,
-  opts: {
-    accountId: string;
-    address: string | undefined;
-    dryRun: boolean;
-  },
-): Promise<DeleteCounts> {
-  const { accountId, address, dryRun } = opts;
-  const counts: DeleteCounts = {};
-
-  const events = await db
-    .collection(COLLECTIONS.events)
-    .find({ accountId })
-    .project({ _id: 1 })
-    .toArray();
-  const eventIds = events.map((ev) => ev._id);
-
-  if (eventIds.length) {
-    const filter = { eventId: { $in: eventIds } };
-    if (dryRun) {
-      counts[COLLECTIONS.reminderLogs] = await db
-        .collection(COLLECTIONS.reminderLogs)
-        .countDocuments(filter);
-    } else {
-      const result = await db.collection(COLLECTIONS.reminderLogs).deleteMany(filter);
-      counts[COLLECTIONS.reminderLogs] = result.deletedCount;
-    }
-  }
-
-  for (const name of OWNED_BY_ACCOUNT_ID) {
-    const filter = { accountId };
-    if (dryRun) {
-      counts[name] = await db.collection(name).countDocuments(filter);
-    } else {
-      const result = await db.collection(name).deleteMany(filter);
-      counts[name] = result.deletedCount;
-    }
-  }
-
-  /* Legacy sessions that still key by address only. */
-  if (address) {
-    const legacySessionFilter = {
-      address: addressMatch(address),
-      accountId: { $exists: false },
-    };
-    if (dryRun) {
-      counts["sessions(legacy)"] = await db
-        .collection(COLLECTIONS.sessions)
-        .countDocuments(legacySessionFilter);
-    } else {
-      const result = await db.collection(COLLECTIONS.sessions).deleteMany(legacySessionFilter);
-      counts["sessions(legacy)"] = result.deletedCount;
-    }
-
-    const nonceFilter = { address: addressMatch(address) };
-    if (dryRun) {
-      counts[COLLECTIONS.authNonces] = await db
-        .collection(COLLECTIONS.authNonces)
-        .countDocuments(nonceFilter);
-    } else {
-      const result = await db.collection(COLLECTIONS.authNonces).deleteMany(nonceFilter);
-      counts[COLLECTIONS.authNonces] = result.deletedCount;
-    }
-  }
-
-  const userFilter = { _id: new ObjectId(accountId) };
-  if (dryRun) {
-    counts[COLLECTIONS.users] = await db.collection(COLLECTIONS.users).countDocuments(userFilter);
-  } else {
-    const result = await db.collection(COLLECTIONS.users).deleteOne(userFilter);
-    counts[COLLECTIONS.users] = result.deletedCount;
-  }
-
-  return counts;
-}
-
-/** Format a counts map as a compact summary string. */
-function formatCounts(counts: DeleteCounts): string {
-  return (
-    Object.entries(counts)
-      .filter(([, n]) => n > 0)
-      .map(([name, n]) => `${name}=${n}`)
-      .join(" ") || "(no docs)"
-  );
-}
-
 /** Run the stale-user prune (or dry-run). */
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+
   if (args.includes("--help") || args.includes("-h")) {
     printHelp();
+
     return;
   }
 
@@ -220,6 +105,7 @@ async function main(): Promise<void> {
   }
 
   const rawUri = process.env.MONGODB_URI;
+
   if (!rawUri) {
     throw new Error("MONGODB_URI is not set. Add it to your .env file.");
   }
@@ -263,11 +149,13 @@ async function main(): Promise<void> {
 
     if (!stale.length) {
       console.log("Nothing to prune.");
+
       return;
     }
 
     if (!dryRun && !yes) {
       const ok = await confirm(`Delete ${stale.length} stale account(s) and all their data?`);
+
       if (!ok) {
         console.log("Aborted.");
         process.exit(1);
@@ -275,6 +163,7 @@ async function main(): Promise<void> {
     }
 
     let purged = 0;
+
     for (const row of stale) {
       const counts = await purgeAccount(db, {
         accountId: row.accountId,
@@ -298,8 +187,10 @@ async function main(): Promise<void> {
 main().catch((err) => {
   const message = err instanceof Error ? err.message : String(err);
   console.error("Failed:", message);
+
   if (err instanceof Error && err.cause) {
     console.error("Cause:", err.cause instanceof Error ? err.cause.message : err.cause);
   }
+
   process.exit(1);
 });

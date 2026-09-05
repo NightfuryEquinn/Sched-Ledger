@@ -1,12 +1,12 @@
-# Sched Ledger
+# Custos
 
-**[Website](https://nightfuryequinn.github.io/Sched-Ledger/)** · **[Open the app](https://sched-ledger.vercel.app)**
+**[Website](https://nightfuryequinn.github.io/Custos/)** · **[Open the app](https://custos-kappa.vercel.app)**
 
 Private expense ledger, schedule, and to-do app. Track spending across multiple wallets and currencies, plan events with email and push reminders, and sign in with a Web3 wallet — no email or password required.
 
 Built with **Bun**, **Hono**, **MongoDB**, and **React**.
 
-![Sched Ledger](src/frontend/assets/logo.png)
+![Custos](src/frontend/assets/logo.png)
 
 ## Features
 
@@ -82,7 +82,7 @@ api/index.ts              # Vercel serverless entry (re-exports bundled handler)
 src/
 ├── index.ts              # Bun dev/prod server (API + SPA)
 ├── index.html
-├── vercel-api.ts         # API bundle source (built → api/index.js)
+├── vercel-api.ts         # API bundle source (built → api/handler.js)
 ├── api/
 │   ├── app.ts            # Hono app + error handler
 │   ├── lib/              # auth, cache, email, push, reminders, reminder-details, pagination,
@@ -126,7 +126,7 @@ public/                   # PWA manifest + service worker (copied into dist/ on 
 scripts/                  # MongoDB maintenance (drop/list, stale-user prune, reminder_log backfill)
 tests/                    # auth, crypto, calculator, spending, schedule, budget/holds, pagination,
                           # cron scans, push routes, security headers, whats-new, insights, vehicles
-build.ts                  # Production build (dist/ + api/index.js)
+build.ts                  # Production build (dist/ + api/handler.js)
 ```
 
 ## Setup
@@ -145,7 +145,7 @@ Create a `.env` file in the project root (see `.env.example`):
 | `APP_TIMEZONE`          | No         | Server default IANA timezone for cron/reminders (fallback: `Asia/Kuala_Lumpur`)                                                          |
 | `CRON_SECRET`           | For cron   | Bearer token for `GET /api/cron/reminders`                                                                                               |
 | `RESEND_API_KEY`        | For email  | Resend API key for schedule reminders and budget alerts                                                                                  |
-| `EMAIL_FROM`            | No         | Sender address (default: `Sched Ledger <onboarding@resend.dev>`)                                                                         |
+| `EMAIL_FROM`            | No         | Sender address (default: `Custos <onboarding@resend.dev>`)                                                                               |
 | `VAPID_PUBLIC_KEY`      | For push   | Web Push application server key (generate with `npx web-push generate-vapid-keys`)                                                       |
 | `VAPID_PRIVATE_KEY`     | For push   | Web Push private key — pairs with `VAPID_PUBLIC_KEY`                                                                                     |
 | `VAPID_SUBJECT`         | For push   | Contact URL for the push services, e.g. `mailto:you@example.com`                                                                         |
@@ -311,7 +311,7 @@ All mutating routes require a valid session cookie. Auth endpoints have stricter
 ## Production (self-hosted)
 
 ```bash
-bun run build   # static frontend → dist/; API bundle → api/index.js
+bun run build   # static frontend → dist/; API bundle → api/handler.js
 NODE_ENV=production bun src/index.ts
 ```
 
@@ -319,7 +319,7 @@ Set `NODE_ENV=production` so session cookies are marked `Secure` over HTTPS. For
 
 ## Deploy on Vercel
 
-The API is bundled into `api/index.js` during `bun run build` so Vercel can resolve TypeScript path aliases at runtime. Scheduled tasks (reminder emails and recurring expenses) are triggered by an external cron job — see [Scheduled tasks (cron-job.org)](#scheduled-tasks-cron-joborg) below.
+The API is bundled into `api/handler.js` during `bun run build` so Vercel can resolve TypeScript path aliases at runtime. Scheduled tasks (reminder emails and recurring expenses) are triggered by an external cron job — see [Scheduled tasks (cron-job.org)](#scheduled-tasks-cron-joborg) below.
 
 ### Environment variables
 
@@ -366,7 +366,7 @@ The reminder handler does not use a fixed daily schedule. It polls the database 
 
 1. Create a free account at [cron-job.org](https://console.cron-job.org/signup).
 2. **Create cronjob** with:
-   - **Title:** e.g. `Sched Ledger reminders`
+   - **Title:** e.g. `Custos reminders`
    - **URL:** `https://<your-app>.vercel.app/api/cron/reminders`
    - **Schedule:** every **15 minutes** (cron expression `*/15 * * * *`)
    - **Request method:** `GET`
@@ -420,7 +420,7 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" -H "Content-Type: application/j
 
 ## License
 
-Sched Ledger is proprietary ([LICENSE](LICENSE)). The repository is public for **transparency and evaluation**.
+Custos is proprietary ([LICENSE](LICENSE)). The repository is public for **transparency and evaluation**.
 
 - **Free to use** on the Licensor’s official hosted app (full features), under the in-app Terms. Optional anonymized category-total sharing is opt-in/out — your choice, changeable anytime.
 - **Not free to self-host, rebrand, claim as your product, or offer as a competing service.** Those uses need a written commercial agreement (monthly fee, collaboration, or copyright buyout).

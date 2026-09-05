@@ -2,7 +2,15 @@ import { E2EE_VERSION } from "@/schemas/encryption";
 import { getAddress } from "ethers";
 import { normalizeRecurring, type RecurringField } from "@/lib/recurring";
 
-export const DERIVATION_MESSAGE_PREFIX = "Sched Ledger data encryption key v1";
+/** Current ledger-key derivation message prefix (Custos). */
+export const DERIVATION_MESSAGE_PREFIX = "Custos data encryption key v1";
+
+/**
+ * Pre-rename prefix — unlock falls back here, then rekeyLedgerToCustos migrates.
+ * Remove after every account has unlocked once on a build that runs rekey
+ * (local keyGeneration === "custos").
+ */
+export const LEGACY_DERIVATION_MESSAGE_PREFIX = "Sched Ledger data encryption key v1";
 
 export type ExpenseSecrets = {
   sub: string;
@@ -86,8 +94,12 @@ export type VehicleFillSecrets = {
   station: string;
 };
 
-export function buildDerivationMessage(address: string): string {
-  return `${DERIVATION_MESSAGE_PREFIX}\n\nAddress: ${getAddress(address)}`;
+/** Build the SIWE-style message whose signature derives the ledger AES key. */
+export function buildDerivationMessage(
+  address: string,
+  prefix: string = DERIVATION_MESSAGE_PREFIX,
+): string {
+  return `${prefix}\n\nAddress: ${getAddress(address)}`;
 }
 
 function hexToBytes(hex: string): Uint8Array {

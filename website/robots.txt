@@ -1,9 +1,9 @@
-# Sched Ledger — promotional site
-# Note: on a GitHub Pages *project* site this file lives under /Sched-Ledger/ and is
+# Custos — promotional site
+# Note: on a GitHub Pages *project* site this file lives under /Custos/ and is
 # therefore ignored by crawlers (robots.txt is only honoured at the host root). It is
 # kept here so it takes effect immediately if a custom domain is configured.
 
 User-agent: *
 Allow: /
 
-Sitemap: https://nightfuryequinn.github.io/Sched-Ledger/sitemap.xml
+Sitemap: https://nightfuryequinn.github.io/Custos/sitemap.xml

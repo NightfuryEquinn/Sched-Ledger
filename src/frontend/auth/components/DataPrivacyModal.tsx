@@ -307,8 +307,8 @@ export function DataPrivacyModal({ account, onClose, onSignedOut }: DataPrivacyM
           <div className="dm-sec">
             <span className="fld-label">Budget alerts</span>
             <p className="dm-lead">
-              When a category reaches 80% of its monthly budget (or goes over), Sched Ledger can
-              notify you. Spend amounts stay encrypted — only the alert summary is sent.
+              When a category reaches 80% of its monthly budget (or goes over), Custos can notify
+              you. Spend amounts stay encrypted — only the alert summary is sent.
             </p>
             <div className="consent-card">
               <div className="consent-top">
@@ -393,7 +393,7 @@ export function DataPrivacyModal({ account, onClose, onSignedOut }: DataPrivacyM
                 <div>
                   <div className="consent-title">Share Anonymized Category Totals</div>
                   <p className="consent-desc">
-                    Sched Ledger is free on the official host with full features. We are a freemium,
+                    Custos is free on the official host with full features. We are a freemium,
                     customer-based app and may fund the service with optional insights. When on, we
                     share de-identified category totals with vetted research &amp; advertising
                     partners — not your name, wallet address, notes, or decrypted amounts (those

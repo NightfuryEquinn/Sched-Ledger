@@ -11,7 +11,8 @@ import { base64ToBytes, bytesToBase64 } from "./device-vault";
 
 const RECORDS_KEY = "ledger:biometric:v1";
 const ASKED_KEY = "ledger:biometric:asked:v1";
-const PRF_INFO = new TextEncoder().encode("sched-ledger-biometric-v1");
+const PRF_INFO = new TextEncoder().encode("custos-biometric-v1");
+const LEGACY_PRF_INFO = new TextEncoder().encode("sched-ledger-biometric-v1");
 
 type BiometricRecord = {
   credentialId: string; // base64
@@ -75,11 +76,14 @@ export function markAskedToEnrollBiometric(address: string) {
   }
 }
 
-async function deriveWrapKey(prfOutput: ArrayBuffer): Promise<CryptoKey> {
+async function deriveWrapKey(
+  prfOutput: ArrayBuffer,
+  info: Uint8Array = PRF_INFO,
+): Promise<CryptoKey> {
   const material = await crypto.subtle.importKey("raw", prfOutput, "HKDF", false, ["deriveKey"]);
 
   return crypto.subtle.deriveKey(
-    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: PRF_INFO },
+    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info },
     material,
     { name: "AES-GCM", length: 256 },
     false,
@@ -103,7 +107,7 @@ export async function enrollBiometric(
   const credential = (await navigator.credentials.create({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rp: { name: "Sched Ledger" },
+      rp: { name: "Custos" },
       user: { id: userId, name: address, displayName: codename },
       pubKeyCredParams: [{ type: "public-key", alg: -7 }],
       authenticatorSelection: {
@@ -183,7 +187,19 @@ export async function unlockWithBiometric(address: string): Promise<string> {
 
     return new TextDecoder().decode(plaintext);
   } catch {
-    throw new Error("Face ID could not unlock this device.");
+    /* Pre-rename enrollments used a different HKDF info string. */
+    try {
+      const legacyKey = await deriveWrapKey(prfResults.first, LEGACY_PRF_INFO);
+      const plaintext = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: base64ToBytes(record.iv) },
+        legacyKey,
+        base64ToBytes(record.ciphertext),
+      );
+
+      return new TextDecoder().decode(plaintext);
+    } catch {
+      throw new Error("Face ID could not unlock this device.");
+    }
   }
 }
 

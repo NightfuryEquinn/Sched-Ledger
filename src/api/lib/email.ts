@@ -59,7 +59,7 @@ async function getLogoAttachment(): Promise<LogoAttachment> {
   };
 }
 
-/** Send a transactional email via Resend, embedding the Sched Ledger logo. */
+/** Send a transactional email via Resend, embedding the Custos logo. */
 export async function sendEmail(
   input: SendEmailInput,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
@@ -71,7 +71,7 @@ export async function sendEmail(
     return { ok: false, error: "RESEND_API_KEY not configured" };
   }
 
-  const from = process.env.EMAIL_FROM?.trim() || "Sched Ledger <onboarding@resend.dev>";
+  const from = process.env.EMAIL_FROM?.trim() || "Custos <onboarding@resend.dev>";
   const logo = await getLogoAttachment();
 
   const res = await fetch("https://api.resend.com/emails", {

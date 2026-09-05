@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Sched Ledger — Private, encrypted expense ledger and schedule",
-  "short_name": "Sched Ledger",
+  "name": "Custos — Private, encrypted expense ledger and schedule",
+  "short_name": "Custos",
   "description": "Private expense ledger, schedule, and to-do app. Track spending across wallets and 29 currencies, plan bills with email and push reminders, and sign in with a Web3 wallet — no email or password required.",
   "categories": ["finance", "productivity", "utilities"],
   "lang": "en",

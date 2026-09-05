@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════════
-   Sched Ledger — global stylesheet
+   Custos — global stylesheet
    ────────────────────────────────────────────────────────────────────
    Contents
      1.  Design tokens (accent, type, radius, spacing, themes)
@@ -215,7 +215,7 @@ h3 {
 }
 
 .brand--auth {
-  margin-bottom: 26px;
+  margin-bottom: 32px;
   padding: 0;
 }
 
@@ -233,7 +233,9 @@ h3 {
 }
 
 .brand--auth .brand-logo {
-  max-width: min(240px, 100%);
+  max-width: min(280px, 100%);
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 :root[data-theme="dark"] .brand-logo {
@@ -6746,51 +6748,159 @@ textarea::placeholder {
 
 /* ── 12. Auth screen ──────────────────────────────────────────────── */
 .auth-wrap {
+  position: relative;
+  isolation: isolate;
   min-height: 100%;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 20px;
+  padding: 48px 24px;
+  padding-top: max(48px, env(safe-area-inset-top));
+  padding-bottom: max(48px, env(safe-area-inset-bottom));
+  background: #f7f6f3;
+  color: #111111;
+}
+
+:root[data-theme="dark"] .auth-wrap {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.auth-ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 15%, rgba(0, 0, 0, 0.035), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 80%, rgba(0, 0, 0, 0.025), transparent 55%);
+  animation: auth-ambient-drift 28s ease-in-out infinite alternate;
+}
+
+:root[data-theme="dark"] .auth-ambient {
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 15%, rgba(255, 255, 255, 0.03), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 80%, rgba(255, 255, 255, 0.02), transparent 55%);
+}
+
+@keyframes auth-ambient-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(1.5%, -1%, 0);
+  }
 }
 
 .auth-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-2xl);
-  box-shadow: var(--shadow);
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   width: 100%;
-  max-width: 440px;
-  padding: 34px;
+  max-width: 28rem;
+  padding: 0;
+}
+
+.auth-card--tight {
+  max-width: 24rem;
+}
+
+.auth-wrap .primary-btn {
+  background: #111111;
+  color: #ffffff;
+  border-radius: 6px;
+  box-shadow: none;
+  min-height: 44px;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.auth-wrap .primary-btn:hover:not(:disabled) {
+  background: #333333;
+  filter: none;
+}
+
+.auth-wrap .primary-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.auth-wrap .ghost-btn {
+  border-radius: 6px;
+  border: 1px solid #eaeaea;
+  background: transparent;
+  color: #111111;
+  box-shadow: none;
+  min-height: 44px;
+}
+
+.auth-wrap .ghost-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme="dark"] .auth-wrap .primary-btn {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+:root[data-theme="dark"] .auth-wrap .primary-btn:hover:not(:disabled) {
+  background: var(--ink-soft);
+  filter: none;
+}
+
+:root[data-theme="dark"] .auth-wrap .ghost-btn {
+  border-color: var(--border);
+  color: var(--ink);
 }
 
 .auth-h1 {
   font-family: var(--font-display);
-  font-size: 33px;
+  font-size: clamp(28px, 5vw, 36px);
   font-weight: 400;
-  letter-spacing: -0.4px;
-  margin-bottom: 13px;
-  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 14px;
+  line-height: 1.1;
+  color: #111111;
+}
+
+:root[data-theme="dark"] .auth-h1 {
+  color: var(--ink);
 }
 
 .auth-h2 {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: clamp(22px, 4vw, 26px);
   font-weight: 400;
-  margin-bottom: 18px;
-  letter-spacing: -0.15px;
+  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #111111;
+}
+
+:root[data-theme="dark"] .auth-h2 {
+  color: var(--ink);
 }
 
 .auth-lead {
-  color: var(--ink-soft);
+  color: #787774;
   font-size: 15px;
-  line-height: 1.55;
-  margin-bottom: 26px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+:root[data-theme="dark"] .auth-lead {
+  color: var(--ink-soft);
 }
 
 .auth-actions {
   display: flex;
   flex-direction: row;
-  gap: 11px;
+  gap: 12px;
 }
 
 .auth-actions .primary-btn,
@@ -6812,55 +6922,40 @@ textarea::placeholder {
 
 .auth-injected {
   display: block;
-  margin: 18px auto 0;
+  margin: 20px auto 0;
   text-align: center;
   width: 100%;
-}
-
-.auth-feat {
-  list-style: none;
-  margin: 26px 0 0;
-  padding: 22px 0 0;
-  border-top: 1px solid var(--hair);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.auth-feat li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13.5px;
-  color: var(--ink-soft);
-}
-
-.auth-feat li svg {
-  color: var(--ok);
-  width: 17px;
-  height: 17px;
-  flex: none;
+  min-height: 44px;
 }
 
 .auth-back {
-  color: var(--ink-faint);
-  font-size: 13.5px;
+  color: #787774;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
 }
 
 .auth-back:hover {
+  color: #111111;
+}
+
+:root[data-theme="dark"] .auth-back:hover {
   color: var(--ink);
 }
 
 .auth-error {
-  background: color-mix(in srgb, var(--danger) 13%, transparent);
-  color: var(--danger);
+  background: #fdebec;
+  color: #9f2f2d;
   font-size: 13px;
   font-weight: 600;
-  border-radius: var(--r-md);
-  padding: 10px 13px;
+  border-radius: 8px;
+  padding: 12px 14px;
   margin-bottom: 14px;
+  border: 1px solid rgba(159, 47, 45, 0.12);
 }
 
 .auth-error--gap {
@@ -6870,6 +6965,15 @@ textarea::placeholder {
 
 .auth-share-card {
   margin: 4px 0 16px;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+:root[data-theme="dark"] .auth-share-card {
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .auth-share-choices {
@@ -6884,25 +6988,39 @@ textarea::placeholder {
   align-items: flex-start;
   gap: 4px;
   width: 100%;
-  padding: 12px 14px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--ink);
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid #eaeaea;
+  background: #ffffff;
+  color: #111111;
   text-align: left;
   cursor: pointer;
+  min-height: 44px;
   transition:
     border-color 0.15s ease,
-    background 0.15s ease;
+    background 0.15s ease,
+    box-shadow 0.2s ease;
 }
 
 .auth-share-choice:hover:not(:disabled) {
-  border-color: var(--ink-faint);
+  border-color: #cfcfcf;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .auth-share-choice.is-selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: #111111;
+  background: #f9f9f8;
+}
+
+:root[data-theme="dark"] .auth-share-choice {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .auth-share-choice.is-selected {
+  border-color: var(--ink);
+  background: var(--surface-2);
 }
 
 .auth-share-choice:disabled {
@@ -6917,8 +7035,12 @@ textarea::placeholder {
 
 .auth-share-choice-hint {
   font-size: 12.5px;
-  color: var(--ink-faint);
+  color: #787774;
   line-height: 1.45;
+}
+
+:root[data-theme="dark"] .auth-share-choice-hint {
+  color: var(--ink-faint);
 }
 
 .auth-terms-line {
@@ -6936,8 +7058,28 @@ textarea::placeholder {
 .gen-load {
   text-align: center;
   padding: 54px 0;
-  color: var(--ink-soft);
+  color: #787774;
   font-size: 14.5px;
+}
+
+@media (max-width: 560px) {
+  .auth-wrap {
+    padding: 28px 16px;
+    padding-top: max(28px, env(safe-area-inset-top));
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+    align-items: flex-start;
+  }
+
+  .auth-card {
+    padding-top: 12px;
+  }
+}
+
+@media (max-width: 860px) {
+  .auth-wrap {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
 }
 
 .loading-bloom {
@@ -8319,8 +8461,9 @@ textarea::placeholder {
     font-size: 13px;
   }
   .auth-card {
-    padding: 26px 22px;
+    padding-top: 8px;
   }
+
   .auth-h1 {
     font-size: 28px;
   }

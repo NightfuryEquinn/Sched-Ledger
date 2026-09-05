@@ -93,6 +93,7 @@ typings/
 # Nuxt.js build / generate output
 .nuxt
 dist
+api/handler.js
 api/index.js
 api/logo-*.png
 

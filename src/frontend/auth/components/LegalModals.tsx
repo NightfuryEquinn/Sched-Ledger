@@ -42,17 +42,17 @@ export function TermsModal({ onClose }: LegalModalProps) {
         </div>
         <div className="modal-body modal-scroll">
           <p className="dm-lead">
-            Last updated August 25, 2026. By using Sched Ledger you agree to these terms.
+            Last updated August 25, 2026. By using Custos you agree to these terms.
           </p>
 
           <div className="dm-sec">
             <span className="fld-label">Service</span>
             <p className="legal-p">
-              Sched Ledger is a private expense ledger and schedule app. You sign in with a Web3
-              wallet identity. We do not require an email or password. You are responsible for
-              safeguarding your wallet keys and recovery phrase. Prefer creating a ledger-only
-              identity in the app rather than reconnecting a funded exchange or hot wallet, so the
-              login address is less likely to be correlated with on-chain activity.
+              Custos is a private expense ledger and schedule app. You sign in with a Web3 wallet
+              identity. We do not require an email or password. You are responsible for safeguarding
+              your wallet keys and recovery phrase. Prefer creating a ledger-only identity in the
+              app rather than reconnecting a funded exchange or hot wallet, so the login address is
+              less likely to be correlated with on-chain activity.
             </p>
           </div>
 
@@ -63,9 +63,9 @@ export function TermsModal({ onClose }: LegalModalProps) {
             <p className="legal-p">
               The public may use the Licensor&apos;s official hosted app free of charge with full
               features. That free path applies only to the official host. Self-hosting, rebranding,
-              claiming Sched Ledger as your product, or offering a competing product or hosted
-              service requires a written commercial agreement with the Licensor (monthly fee,
-              collaboration, or copyright buyout). Contact{" "}
+              claiming Custos as your product, or offering a competing product or hosted service
+              requires a written commercial agreement with the Licensor (monthly fee, collaboration,
+              or copyright buyout). Contact{" "}
               <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.
             </p>
           </div>
@@ -88,8 +88,8 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <div className="dm-sec">
             <span className="fld-label">Freemium &amp; optional data sharing</span>
             <p className="legal-p">
-              Sched Ledger is free on the official host. We are a freemium, customer-based product
-              and may fund the service through optional insights. With your consent, we may share
+              Custos is free on the official host. We are a freemium, customer-based product and may
+              fund the service through optional insights. With your consent, we may share
               de-identified category totals with vetted research and advertising partners — not your
               name, wallet address, notes, or decrypted ledger amounts. Transaction amounts, titles,
               and notes remain end-to-end encrypted. You choose opt-in or opt-out at signup and may
@@ -114,12 +114,12 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <div className="dm-sec">
             <span className="fld-label">Software license</span>
             <p className="legal-p">
-              The Sched Ledger source code is proprietary (Sched Ledger Proprietary License). The
-              repository is public for transparency and evaluation. Using this hosted service does
-              not grant you rights to copy, modify, redistribute, self-host, rebrand, or offer Sched
-              Ledger as a competing commercial product or hosted service except under a separate
-              written commercial agreement with the Licensor. See the project LICENSE file and
-              Copyright notice.
+              The Custos source code is proprietary (Custos Proprietary License). The repository is
+              public for transparency and evaluation. Using this hosted service does not grant you
+              rights to copy, modify, redistribute, self-host, rebrand, or offer Sched Ledger as a
+              competing commercial product or hosted service except under a separate written
+              commercial agreement with the Licensor. See the project LICENSE file and Copyright
+              notice.
             </p>
           </div>
 
@@ -128,9 +128,9 @@ export function TermsModal({ onClose }: LegalModalProps) {
           <div className="dm-sec">
             <span className="fld-label">Availability &amp; disclaimer</span>
             <p className="legal-p">
-              The service is provided as-is. We may change or discontinue features. Sched Ledger is
-              not financial, tax, or legal advice. Reminder emails may be delayed or skipped
-              depending on your settings and scheduling infrastructure.
+              The service is provided as-is. We may change or discontinue features. Custos is not
+              financial, tax, or legal advice. Reminder emails may be delayed or skipped depending
+              on your settings and scheduling infrastructure.
             </p>
           </div>
 
@@ -187,19 +187,19 @@ export function CopyrightModal({ onClose }: LegalModalProps) {
         <div className="modal-body modal-scroll">
           <div className="dm-sec">
             <p className="legal-p legal-p--lead">
-              © 2026 Yip Zi Xian / Sched Ledger. All rights reserved except where a written
-              agreement grants otherwise.
+              © 2026 Yip Zi Xian / Custos. All rights reserved except where a written agreement
+              grants otherwise.
             </p>
             <p className="legal-p">
-              Sched Ledger and its accompanying materials are licensed under the Sched Ledger
-              Proprietary License. The source repository is public for transparency and private
-              evaluation. You may use the Licensor&apos;s official hosted app free of charge with
-              full features under the Terms &amp; Conditions.
+              Custos and its accompanying materials are licensed under the Custos Proprietary
+              License. The source repository is public for transparency and private evaluation. You
+              may use the Licensor&apos;s official hosted app free of charge with full features
+              under the Terms &amp; Conditions.
             </p>
             <p className="legal-p">
-              You may not claim Sched Ledger as your product, self-host it, redistribute it for
-              others to use, or offer it as a competing product or hosted service without a written
-              commercial agreement (monthly fee, collaboration, or copyright buyout). Contact{" "}
+              You may not claim Custos as your product, self-host it, redistribute it for others to
+              use, or offer it as a competing product or hosted service without a written commercial
+              agreement (monthly fee, collaboration, or copyright buyout). Contact{" "}
               <a href="mailto:xianzyip8@gmail.com">xianzyip8@gmail.com</a>.
             </p>
             <p className="legal-p">The software is provided as-is, without warranty of any kind.</p>

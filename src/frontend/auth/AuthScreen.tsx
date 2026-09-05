@@ -5,7 +5,7 @@ import { Icon } from "@/frontend/components/ui";
 import { api } from "@/frontend/lib/api";
 import type { Account, IdentityRecord } from "@/frontend/lib/types";
 import { getAddress } from "ethers";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Identicon } from "./components/Identicon";
 import {
   checkQuizAnswers,
@@ -59,6 +59,26 @@ type AuthMode =
   | "consent-choice";
 
 type SharingChoice = "in" | "out";
+
+/** Full-bleed auth page chrome shared by every AuthMode screen. */
+function AuthShell({
+  children,
+  cardRef,
+  tight,
+}: {
+  children: ReactNode;
+  cardRef: RefObject<HTMLDivElement | null>;
+  tight?: boolean;
+}) {
+  return (
+    <div className="auth-wrap">
+      <div className="auth-ambient" aria-hidden="true" />
+      <div ref={cardRef} className={`auth-card${tight ? " auth-card--tight" : ""}`}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 /** Persist vaulted (or injected) identity, unlock E2EE, and enter the app. */
 async function finishAuth(
@@ -479,275 +499,260 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "create" && !draft) {
     return (
-      <div className="auth-wrap">
-        <div ref={cardRef} className="auth-card">
-          <div className="gen-load">
-            <LoadingBloom label="Generating your keys…" />
-          </div>
+      <AuthShell cardRef={cardRef} tight>
+        <div className="gen-load">
+          <LoadingBloom label="Generating your keys…" />
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   if (mode === "create" && draft) {
     return (
-      <div className="auth-wrap">
-        <div ref={cardRef} className="auth-card">
-          <button className="auth-back" type="button" onClick={reset}>
-            ← Back
-          </button>
-          <h2 className="auth-h2">Meet Your New Identity</h2>
-          <div className="identity-hero">
-            <Identicon address={draft.address} size={54} radius={15} />
-            <div>
-              <div className="ih-name">{codenameFor(draft.address)}</div>
-              <div className="ih-addr num">{shortAddr(draft.address)}</div>
-            </div>
+      <AuthShell cardRef={cardRef} tight>
+        <button className="auth-back" type="button" onClick={reset}>
+          ← Back
+        </button>
+        <h2 className="auth-h2">Meet Your New Identity</h2>
+        <div className="identity-hero">
+          <Identicon address={draft.address} size={54} radius={15} />
+          <div>
+            <div className="ih-name">{codenameFor(draft.address)}</div>
+            <div className="ih-addr num">{shortAddr(draft.address)}</div>
           </div>
-          <div className="recovery">
-            <div className="rec-label">
-              <Icon name="key" size={15} /> Recovery Phrase{" "}
-              <span className="rec-warn">— write this down</span>
-            </div>
-            <div className="phrase-grid">
-              {words.map((w, i) => (
-                <span key={i} className="word">
-                  <b>{i + 1}</b>
-                  {w}
-                </span>
-              ))}
-            </div>
-            <div className="rec-row2">
-              <button
-                className="mini-btn"
-                type="button"
-                onClick={() => {
-                  copyText(draft.mnemonic);
-                  setPhraseCopied(true);
-                  setTimeout(() => setPhraseCopied(false), 1200);
-                }}
-              >
-                <Icon name={phraseCopied ? "check" : "copy"} size={14} />{" "}
-                {phraseCopied ? "Copied" : "Copy"}
-              </button>
-              <button className="mini-btn" type="button" onClick={doGenerate}>
-                <Icon name="repeat" size={14} /> Regenerate
-              </button>
-            </div>
-          </div>
-          <p className="rec-note2">
-            This phrase is the only way to recover your ledger. We can't reset it, and anyone who
-            has it controls your data.
-          </p>
-          <label className="toggle-line">
-            <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />{" "}
-            <span className="toggle-ui" /> I've saved my recovery phrase
-          </label>
-          {error ? <div className="auth-error">{error}</div> : null}
-          <button
-            className="primary-btn lg full"
-            type="button"
-            disabled={!saved || busy}
-            onClick={startQuiz}
-          >
-            Continue
-          </button>
         </div>
-      </div>
+        <div className="recovery">
+          <div className="rec-label">
+            <Icon name="key" size={15} /> Recovery Phrase{" "}
+            <span className="rec-warn">— write this down</span>
+          </div>
+          <div className="phrase-grid">
+            {words.map((w, i) => (
+              <span key={i} className="word">
+                <b>{i + 1}</b>
+                {w}
+              </span>
+            ))}
+          </div>
+          <div className="rec-row2">
+            <button
+              className="mini-btn"
+              type="button"
+              onClick={() => {
+                copyText(draft.mnemonic);
+                setPhraseCopied(true);
+                setTimeout(() => setPhraseCopied(false), 1200);
+              }}
+            >
+              <Icon name={phraseCopied ? "check" : "copy"} size={14} />{" "}
+              {phraseCopied ? "Copied" : "Copy"}
+            </button>
+            <button className="mini-btn" type="button" onClick={doGenerate}>
+              <Icon name="repeat" size={14} /> Regenerate
+            </button>
+          </div>
+        </div>
+        <p className="rec-note2">
+          This phrase is the only way to recover your ledger. We can't reset it, and anyone who has
+          it controls your data.
+        </p>
+        <label className="toggle-line">
+          <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />{" "}
+          <span className="toggle-ui" /> I've saved my recovery phrase
+        </label>
+        {error ? <div className="auth-error">{error}</div> : null}
+        <button
+          className="primary-btn lg full"
+          type="button"
+          disabled={!saved || busy}
+          onClick={startQuiz}
+        >
+          Continue
+        </button>
+      </AuthShell>
     );
   }
 
   if (mode === "quiz" && draft) {
     return (
-      <div className="auth-wrap">
-        <div ref={cardRef} className="auth-card">
-          <button
-            className="auth-back"
-            type="button"
-            onClick={() => {
-              setMode("create");
-              setError("");
-            }}
-          >
-            ← Back
-          </button>
-          <h2 className="auth-h2">Confirm Your Phrase</h2>
-          <p className="auth-lead">
-            Enter the requested words from your recovery phrase to make sure you wrote them down.
-          </p>
-          <div className="vault-quiz">
-            {quizIndices.map((idx) => (
-              <label key={idx} className="fld-label vault-quiz-row">
-                Word {idx + 1}
-                <input
-                  className="text-in"
-                  type="text"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={quizAnswers[idx] ?? ""}
-                  onChange={(e) => setQuizAnswers((prev) => ({ ...prev, [idx]: e.target.value }))}
-                />
-              </label>
-            ))}
-          </div>
-          {error ? <div className="auth-error">{error}</div> : null}
-          <button className="primary-btn lg full" type="button" onClick={startPassphrase}>
-            Continue
-          </button>
+      <AuthShell cardRef={cardRef} tight>
+        <button
+          className="auth-back"
+          type="button"
+          onClick={() => {
+            setMode("create");
+            setError("");
+          }}
+        >
+          ← Back
+        </button>
+        <h2 className="auth-h2">Confirm Your Phrase</h2>
+        <p className="auth-lead">
+          Enter the requested words from your recovery phrase to make sure you wrote them down.
+        </p>
+        <div className="vault-quiz">
+          {quizIndices.map((idx) => (
+            <label key={idx} className="fld-label vault-quiz-row">
+              Word {idx + 1}
+              <input
+                className="text-in"
+                type="text"
+                autoComplete="off"
+                spellCheck={false}
+                value={quizAnswers[idx] ?? ""}
+                onChange={(e) => setQuizAnswers((prev) => ({ ...prev, [idx]: e.target.value }))}
+              />
+            </label>
+          ))}
         </div>
-      </div>
+        {error ? <div className="auth-error">{error}</div> : null}
+        <button className="primary-btn lg full" type="button" onClick={startPassphrase}>
+          Continue
+        </button>
+      </AuthShell>
     );
   }
 
   if (mode === "passphrase" && draft) {
     return (
-      <div className="auth-wrap">
-        <div ref={cardRef} className="auth-card">
-          <button
-            className="auth-back"
-            type="button"
-            onClick={() => {
-              setMode(quizIndices.length ? "quiz" : "restore");
-              setError("");
-            }}
-          >
-            ← Back
-          </button>
-          <h2 className="auth-h2">Device Passphrase</h2>
-          <p className="auth-lead">
-            Encrypt your recovery key on this device. The server never receives this passphrase —
-            only ciphertext syncs to the cloud.
-          </p>
-          <label className="fld-label">
-            Passphrase
-            <input
-              className="text-in"
-              type="password"
-              autoComplete="new-password"
-              value={passphrase}
-              onChange={(e) => setPassphrase(e.target.value)}
-            />
-          </label>
-          <label className="fld-label">
-            Confirm passphrase
-            <input
-              className="text-in"
-              type="password"
-              autoComplete="new-password"
-              value={passphrase2}
-              onChange={(e) => setPassphrase2(e.target.value)}
-            />
-          </label>
-          <p className="rec-note2">
-            At least 8 characters. You will need this passphrase to unlock Sched Ledger on this
-            browser.
-          </p>
-          {error ? <div className="auth-error">{error}</div> : null}
-          <button
-            className="primary-btn lg full"
-            type="button"
-            disabled={busy}
-            onClick={() => void sealAndEnter()}
-          >
-            {busy ? "Signing…" : "Sign & Enter Ledger"}
-          </button>
-        </div>
-      </div>
+      <AuthShell cardRef={cardRef} tight>
+        <button
+          className="auth-back"
+          type="button"
+          onClick={() => {
+            setMode(quizIndices.length ? "quiz" : "restore");
+            setError("");
+          }}
+        >
+          ← Back
+        </button>
+        <h2 className="auth-h2">Device Passphrase</h2>
+        <p className="auth-lead">
+          Encrypt your recovery key on this device. The server never receives this passphrase — only
+          ciphertext syncs to the cloud.
+        </p>
+        <label className="fld-label">
+          Passphrase
+          <input
+            className="text-in"
+            type="password"
+            autoComplete="new-password"
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+          />
+        </label>
+        <label className="fld-label">
+          Confirm passphrase
+          <input
+            className="text-in"
+            type="password"
+            autoComplete="new-password"
+            value={passphrase2}
+            onChange={(e) => setPassphrase2(e.target.value)}
+          />
+        </label>
+        <p className="rec-note2">
+          At least 8 characters. You will need this passphrase to unlock Custos on this browser.
+        </p>
+        {error ? <div className="auth-error">{error}</div> : null}
+        <button
+          className="primary-btn lg full"
+          type="button"
+          disabled={busy}
+          onClick={() => void sealAndEnter()}
+        >
+          {busy ? "Signing…" : "Sign & Enter Ledger"}
+        </button>
+      </AuthShell>
     );
   }
 
   if (mode === "device-unlock" && pendingIdn) {
     return (
-      <div className="auth-wrap">
-        <div ref={cardRef} className="auth-card">
-          <button
-            className="auth-back"
-            type="button"
-            onClick={() => {
-              setMode("restore");
-              setPendingIdn(null);
-              setError("");
-            }}
-          >
-            ← Back
-          </button>
-          <h2 className="auth-h2">Unlock this Device</h2>
-          <p className="auth-lead">Enter the passphrase that encrypts your key on this browser.</p>
-          <div className="identity-hero">
-            <Identicon address={pendingIdn.address} size={44} radius={12} />
-            <div>
-              <div className="ih-name">
-                {pendingIdn.codename || codenameFor(pendingIdn.address)}
-              </div>
-              <div className="ih-addr num">{shortAddr(pendingIdn.address)}</div>
-            </div>
+      <AuthShell cardRef={cardRef} tight>
+        <button
+          className="auth-back"
+          type="button"
+          onClick={() => {
+            setMode("restore");
+            setPendingIdn(null);
+            setError("");
+          }}
+        >
+          ← Back
+        </button>
+        <h2 className="auth-h2">Unlock this Device</h2>
+        <p className="auth-lead">Enter the passphrase that encrypts your key on this browser.</p>
+        <div className="identity-hero">
+          <Identicon address={pendingIdn.address} size={44} radius={12} />
+          <div>
+            <div className="ih-name">{pendingIdn.codename || codenameFor(pendingIdn.address)}</div>
+            <div className="ih-addr num">{shortAddr(pendingIdn.address)}</div>
           </div>
-          {canBiometricUnlock ? (
-            <button
-              className="primary-btn lg full face-id-btn"
-              type="button"
-              disabled={busy}
-              onClick={() => void biometricUnlock()}
-            >
-              <Icon name="shield" size={17} /> Unlock with Face ID
-            </button>
-          ) : null}
-          <label className="fld-label">
-            {canBiometricUnlock ? "Or enter your passphrase" : "Device Passphrase"}
-            <input
-              className="text-in"
-              type="password"
-              autoComplete="current-password"
-              value={unlockPass}
-              onChange={(e) => setUnlockPass(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void unlockDeviceVault();
-              }}
-            />
-          </label>
-          {error ? <div className="auth-error">{error}</div> : null}
-          <button
-            className={canBiometricUnlock ? "ghost-btn lg full" : "primary-btn lg full"}
-            type="button"
-            disabled={busy || !unlockPass}
-            onClick={() => void unlockDeviceVault()}
-          >
-            {busy ? "Unlocking…" : "Unlock & Sign In"}
-          </button>
         </div>
-      </div>
+        {canBiometricUnlock ? (
+          <button
+            className="primary-btn lg full face-id-btn"
+            type="button"
+            disabled={busy}
+            onClick={() => void biometricUnlock()}
+          >
+            <Icon name="shield" size={17} /> Unlock with Face ID
+          </button>
+        ) : null}
+        <label className="fld-label">
+          {canBiometricUnlock ? "Or enter your passphrase" : "Device Passphrase"}
+          <input
+            className="text-in"
+            type="password"
+            autoComplete="current-password"
+            value={unlockPass}
+            onChange={(e) => setUnlockPass(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void unlockDeviceVault();
+            }}
+          />
+        </label>
+        {error ? <div className="auth-error">{error}</div> : null}
+        <button
+          className={canBiometricUnlock ? "ghost-btn lg full" : "primary-btn lg full"}
+          type="button"
+          disabled={busy || !unlockPass}
+          onClick={() => void unlockDeviceVault()}
+        >
+          {busy ? "Unlocking…" : "Unlock & Sign In"}
+        </button>
+      </AuthShell>
     );
   }
 
   if (mode === "biometric-offer") {
     return (
-      <div className="auth-wrap">
-        <div ref={cardRef} className="auth-card">
-          <h2 className="auth-h2">Use Face ID on this Device?</h2>
-          <p className="auth-lead">
-            Skip typing your passphrase next time — unlock Sched Ledger with Face ID or Touch ID on
-            this browser. Your passphrase is encrypted with your biometric key and never leaves this
-            device.
-          </p>
-          {offerError ? <div className="auth-error">{offerError}</div> : null}
-          <button
-            className="primary-btn lg full"
-            type="button"
-            disabled={offerBusy}
-            onClick={() => void acceptBiometricOffer()}
-          >
-            <Icon name="shield" size={17} /> {offerBusy ? "Setting up…" : "Enable Face ID"}
-          </button>
-          <button
-            className="ghost-btn lg full u-gap-top"
-            type="button"
-            disabled={offerBusy}
-            onClick={declineBiometricOffer}
-          >
-            Not Now
-          </button>
-        </div>
-      </div>
+      <AuthShell cardRef={cardRef} tight>
+        <h2 className="auth-h2">Use Face ID on this Device?</h2>
+        <p className="auth-lead">
+          Skip typing your passphrase next time — unlock Custos with Face ID or Touch ID on this
+          browser. Your passphrase is encrypted with your biometric key and never leaves this
+          device.
+        </p>
+        {offerError ? <div className="auth-error">{offerError}</div> : null}
+        <button
+          className="primary-btn lg full"
+          type="button"
+          disabled={offerBusy}
+          onClick={() => void acceptBiometricOffer()}
+        >
+          <Icon name="shield" size={17} /> {offerBusy ? "Setting up…" : "Enable Face ID"}
+        </button>
+        <button
+          className="ghost-btn lg full u-gap-top"
+          type="button"
+          disabled={offerBusy}
+          onClick={declineBiometricOffer}
+        >
+          Not Now
+        </button>
+      </AuthShell>
     );
   }
 
@@ -756,83 +761,77 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
     return (
       <>
-        <div className="auth-wrap">
-          <div ref={cardRef} className="auth-card">
-            <h2 className="auth-h2">Before You Enter</h2>
-            <p className="auth-lead">
-              Sched Ledger is free on the official host with full features. We are a freemium,
-              customer-based app — optional anonymized insights help us keep the lights on. Your
-              encrypted amounts, titles, and notes stay private either way.
+        <AuthShell cardRef={cardRef} tight>
+          <h2 className="auth-h2">Before You Enter</h2>
+          <p className="auth-lead">
+            Custos is free on the official host with full features. We are a freemium,
+            customer-based app — optional anonymized insights help us keep the lights on. Your
+            encrypted amounts, titles, and notes stay private either way.
+          </p>
+
+          <div className="consent-card auth-share-card">
+            <div className="consent-title">Optional data sharing</div>
+            <p className="consent-desc">
+              Opt in to share de-identified category totals with vetted research and advertising
+              partners — not your name, wallet address, notes, or decrypted ledger amounts. You can
+              change this anytime under Account → Data &amp; privacy.
             </p>
-
-            <div className="consent-card auth-share-card">
-              <div className="consent-title">Optional data sharing</div>
-              <p className="consent-desc">
-                Opt in to share de-identified category totals with vetted research and advertising
-                partners — not your name, wallet address, notes, or decrypted ledger amounts. You
-                can change this anytime under Account → Data &amp; privacy.
-              </p>
-              <div
-                className="auth-share-choices"
-                role="radiogroup"
-                aria-label="Data sharing choice"
-              >
-                <button
-                  type="button"
-                  className={`auth-share-choice${sharingChoice === "in" ? " is-selected" : ""}`}
-                  aria-pressed={sharingChoice === "in"}
-                  disabled={busy}
-                  onClick={() => setSharingChoice("in")}
-                >
-                  <span className="auth-share-choice-label">Opt in</span>
-                  <span className="auth-share-choice-hint">Share anonymized category totals</span>
-                </button>
-                <button
-                  type="button"
-                  className={`auth-share-choice${sharingChoice === "out" ? " is-selected" : ""}`}
-                  aria-pressed={sharingChoice === "out"}
-                  disabled={busy}
-                  onClick={() => setSharingChoice("out")}
-                >
-                  <span className="auth-share-choice-label">Opt out</span>
-                  <span className="auth-share-choice-hint">
-                    Do not share — free features unchanged
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <label className="toggle-line auth-terms-line">
-              <input
-                type="checkbox"
-                checked={termsAccepted}
+            <div className="auth-share-choices" role="radiogroup" aria-label="Data sharing choice">
+              <button
+                type="button"
+                className={`auth-share-choice${sharingChoice === "in" ? " is-selected" : ""}`}
+                aria-pressed={sharingChoice === "in"}
                 disabled={busy}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-              />
-              <span className="toggle-ui" />
-              <span>
-                I agree to the{" "}
-                <button
-                  type="button"
-                  className="link-btn auth-terms-link"
-                  onClick={() => setTermsOpen(true)}
-                >
-                  Terms &amp; Conditions
-                </button>
-              </span>
-            </label>
-
-            {error ? <div className="auth-error">{error}</div> : null}
-            <button
-              className="primary-btn lg full"
-              type="button"
-              disabled={!canContinue}
-              onClick={() => void confirmConsentAndEnter()}
-            >
-              {busy ? "Signing…" : "Continue to Ledger"}
-            </button>
+                onClick={() => setSharingChoice("in")}
+              >
+                <span className="auth-share-choice-label">Opt in</span>
+                <span className="auth-share-choice-hint">Share anonymized category totals</span>
+              </button>
+              <button
+                type="button"
+                className={`auth-share-choice${sharingChoice === "out" ? " is-selected" : ""}`}
+                aria-pressed={sharingChoice === "out"}
+                disabled={busy}
+                onClick={() => setSharingChoice("out")}
+              >
+                <span className="auth-share-choice-label">Opt out</span>
+                <span className="auth-share-choice-hint">
+                  Do not share — free features unchanged
+                </span>
+              </button>
+            </div>
           </div>
-        </div>
+
+          <label className="toggle-line auth-terms-line">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              disabled={busy}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+            />
+            <span className="toggle-ui" />
+            <span>
+              I agree to the{" "}
+              <button
+                type="button"
+                className="link-btn auth-terms-link"
+                onClick={() => setTermsOpen(true)}
+              >
+                Terms &amp; Conditions
+              </button>
+            </span>
+          </label>
+
+          {error ? <div className="auth-error">{error}</div> : null}
+          <button
+            className="primary-btn lg full"
+            type="button"
+            disabled={!canContinue}
+            onClick={() => void confirmConsentAndEnter()}
+          >
+            {busy ? "Signing…" : "Continue to Ledger"}
+          </button>
+        </AuthShell>
         {termsOpen ? <TermsModal onClose={() => setTermsOpen(false)} /> : null}
       </>
     );
@@ -840,113 +839,95 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
   if (mode === "restore") {
     return (
-      <div className="auth-wrap">
-        <div ref={cardRef} className="auth-card">
-          <button className="auth-back" type="button" onClick={reset}>
-            ← Back
-          </button>
-          <h2 className="auth-h2">Welcome Back</h2>
-          {identities.length ? (
-            <div className="known">
-              <span className="known-label">On this device</span>
-              {identities.map((i) => (
-                <button
-                  key={i.address}
-                  className="known-row"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void selectKnown(i)}
-                >
-                  <Identicon address={i.address} size={40} />
-                  <span className="kr-main">
-                    <span className="kr-name">{i.codename || codenameFor(i.address)}</span>
-                    <span className="kr-addr num">{shortAddr(i.address)}</span>
-                  </span>
-                  <Icon name="chevR" size={18} />
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <div className="or-div">
-            <span>import a recovery phrase</span>
+      <AuthShell cardRef={cardRef} tight>
+        <button className="auth-back" type="button" onClick={reset}>
+          ← Back
+        </button>
+        <h2 className="auth-h2">Welcome Back</h2>
+        {identities.length ? (
+          <div className="known">
+            <span className="known-label">On this device</span>
+            {identities.map((i) => (
+              <button
+                key={i.address}
+                className="known-row"
+                type="button"
+                disabled={busy}
+                onClick={() => void selectKnown(i)}
+              >
+                <Identicon address={i.address} size={40} />
+                <span className="kr-main">
+                  <span className="kr-name">{i.codename || codenameFor(i.address)}</span>
+                  <span className="kr-addr num">{shortAddr(i.address)}</span>
+                </span>
+                <Icon name="chevR" size={18} />
+              </button>
+            ))}
           </div>
-          <textarea
-            className="phrase-in"
-            placeholder="Enter your 12- or 24-word recovery phrase, separated by spaces"
-            value={phrase}
-            onChange={(e) => setPhrase(e.target.value)}
-          />
-          {error ? <div className="auth-error">{error}</div> : null}
-          <button
-            className="primary-btn lg full"
-            type="button"
-            disabled={busy || !phrase.trim()}
-            onClick={() => void doImport()}
-          >
-            {busy ? "Restoring…" : "Restore Identity"}
-          </button>
-          {walletClient.hasInjected() ? (
-            <button
-              className="ghost-btn full u-gap-top"
-              type="button"
-              disabled={busy}
-              onClick={() => void connectInjected()}
-            >
-              <Icon name="wallet" size={17} /> {busy ? "Connecting…" : "Connect Browser Wallet"}
-            </button>
-          ) : null}
+        ) : null}
+        <div className="or-div">
+          <span>import a recovery phrase</span>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="auth-wrap">
-      <div ref={cardRef} className="auth-card">
-        <Brand variant="auth" />
-        <h1 className="auth-h1">Private by Design.</h1>
-        <p className="auth-lead">No email. No password. Just a cryptographic key only you hold.</p>
-        <div className="auth-actions">
-          <button className="primary-btn lg" type="button" onClick={startCreate}>
-            <Icon name="shield" size={18} /> Create New
-          </button>
-          <button
-            className="ghost-btn lg"
-            type="button"
-            onClick={() => {
-              setError("");
-              setMode("restore");
-            }}
-          >
-            <Icon name="key" size={17} /> Open Existing
-          </button>
-        </div>
+        <textarea
+          className="phrase-in"
+          placeholder="Enter your 12- or 24-word recovery phrase, separated by spaces"
+          value={phrase}
+          onChange={(e) => setPhrase(e.target.value)}
+        />
+        {error ? <div className="auth-error">{error}</div> : null}
+        <button
+          className="primary-btn lg full"
+          type="button"
+          disabled={busy || !phrase.trim()}
+          onClick={() => void doImport()}
+        >
+          {busy ? "Restoring…" : "Restore Identity"}
+        </button>
         {walletClient.hasInjected() ? (
           <button
-            className="link-btn auth-injected"
+            className="ghost-btn full u-gap-top"
             type="button"
             disabled={busy}
             onClick={() => void connectInjected()}
           >
-            {busy ? "Connecting…" : "Or Connect Your Browser Wallet"}
+            <Icon name="wallet" size={17} /> {busy ? "Connecting…" : "Connect Browser Wallet"}
           </button>
         ) : null}
-        {error ? <div className="auth-error auth-error--gap">{error}</div> : null}
-        <ul className="auth-feat">
-          <li>
-            <Icon name="check" /> No email or password required to sign in
-          </li>
-          <li>
-            <Icon name="check" /> Encrypted cloud sync — server stores ciphertext
-          </li>
-          <li>
-            <Icon name="check" /> Sign in by signing with your key
-          </li>
-          <li>
-            <Icon name="check" /> Ledger-only key reduces on-chain correlation
-          </li>
-        </ul>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell cardRef={cardRef}>
+      <Brand variant="auth" />
+      <h1 className="auth-h1">Private by Design.</h1>
+      <p className="auth-lead">No email. No password. Just a cryptographic key only you hold.</p>
+      <div className="auth-actions">
+        <button className="primary-btn lg" type="button" onClick={startCreate}>
+          <Icon name="shield" size={18} /> Create New
+        </button>
+        <button
+          className="ghost-btn lg"
+          type="button"
+          onClick={() => {
+            setError("");
+            setMode("restore");
+          }}
+        >
+          <Icon name="key" size={17} /> Open Existing
+        </button>
       </div>
-    </div>
+      {walletClient.hasInjected() ? (
+        <button
+          className="link-btn auth-injected"
+          type="button"
+          disabled={busy}
+          onClick={() => void connectInjected()}
+        >
+          {busy ? "Connecting…" : "Or Connect Your Browser Wallet"}
+        </button>
+      ) : null}
+      {error ? <div className="auth-error auth-error--gap">{error}</div> : null}
+    </AuthShell>
   );
 }

@@ -1,6 +1,6 @@
-# Sched Ledger — hosted app
+# Custos — hosted app
 User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://sched-ledger.vercel.app/sitemap.xml
+Sitemap: https://custos-kappa.vercel.app/sitemap.xml

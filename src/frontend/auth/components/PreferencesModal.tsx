@@ -36,7 +36,7 @@ type PreferencesModalProps = {
    reverted — a denied permission can only be undone in browser settings. */
 const FAILURE_NOTE: Record<string, string> = {
   unsupported:
-    "This browser cannot receive push notifications. On iPhone or iPad, add Sched Ledger to your Home Screen first.",
+    "This browser cannot receive push notifications. On iPhone or iPad, add Custos to your Home Screen first.",
   denied:
     "Notifications are blocked for this site. Allow them in your browser's site settings, then try again.",
   unconfigured: "Push notifications are not configured on this server yet.",
@@ -159,7 +159,7 @@ export function PreferencesModal({ account, onClose }: PreferencesModalProps) {
             <span className="fld-label">Push notifications</span>
             <p className="dm-lead">
               Get event reminders on this device at the same time the reminder email goes out — even
-              when Sched Ledger is closed. Reminders are checked every 15 minutes.
+              when Custos is closed. Reminders are checked every 15 minutes.
             </p>
             <div className="consent-card">
               <div className="consent-top">
@@ -203,7 +203,7 @@ export function PreferencesModal({ account, onClose }: PreferencesModalProps) {
               <div className="dm-sec">
                 <span className="fld-label">Face ID</span>
                 <p className="dm-lead">
-                  Unlock Sched Ledger on this device with Face ID or Touch ID instead of typing your
+                  Unlock Custos on this device with Face ID or Touch ID instead of typing your
                   device passphrase.
                 </p>
                 <div className="consent-card">
@@ -212,9 +212,9 @@ export function PreferencesModal({ account, onClose }: PreferencesModalProps) {
                       <div className="consent-title">Unlock With Face ID</div>
                       <p className="consent-desc">
                         Your passphrase is encrypted with a key tied to your biometric check and
-                        never leaves this device. Turning this off removes it from Sched Ledger —
-                        the saved Face ID/Touch ID entry itself stays in your device's settings
-                        until removed there.
+                        never leaves this device. Turning this off removes it from Custos — the
+                        saved Face ID/Touch ID entry itself stays in your device's settings until
+                        removed there.
                       </p>
                     </div>
                     <label className="switch">

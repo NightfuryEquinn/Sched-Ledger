@@ -64,7 +64,7 @@ describe("auth session routes", () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { message: string; nonce: string; expiresAt: string };
-    expect(body.message).toContain("Sched Ledger wants you to sign in");
+    expect(body.message).toContain("Custos wants you to sign in");
     expect(body.nonce).toBeTruthy();
 
     const { authNonces } = getCollections(memory as unknown as Db);

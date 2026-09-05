@@ -182,8 +182,8 @@ export function UnlockScreen({
           <Brand />
           <h1>Use Face ID on this Device?</h1>
           <p className="auth-lead">
-            Skip typing your passphrase next time — unlock Sched Ledger with Face ID or Touch ID on
-            this browser. Your passphrase is encrypted with your biometric key and never leaves this
+            Skip typing your passphrase next time — unlock Custos with Face ID or Touch ID on this
+            browser. Your passphrase is encrypted with your biometric key and never leaves this
             device.
           </p>
           {offerError ? <p className="auth-error">{offerError}</p> : null}

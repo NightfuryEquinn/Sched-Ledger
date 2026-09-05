@@ -1,6 +1,13 @@
-/** Vercel serverless entry point — lazily delegates to the bundled API handler emitted by `bun run build`. */
-export default async function handler(req: Request): Promise<Response> {
-  const mod = await import("./index.js");
+/**
+ * Vercel Bun serverless entry.
+ * The runtime expects a Bun.serve-style export (`{ fetch }`); the build
+ * bundle is a Hono app with that shape — do not call it as a plain function.
+ */
+export default {
+  /** Load the API bundle and forward the request to Hono. */
+  async fetch(req: Request): Promise<Response> {
+    const mod = await import("./handler.js");
 
-  return mod.default(req);
-}
+    return mod.default.fetch(req);
+  },
+};

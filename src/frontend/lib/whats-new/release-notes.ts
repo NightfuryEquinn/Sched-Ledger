@@ -270,7 +270,7 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
         icon: "info",
         title: "Your call on the tour",
         body:
-          "The first time you sign in, Sched Ledger asks whether you want the guided walk-through or would rather explore " +
+          "The first time you sign in, Custos asks whether you want the guided walk-through or would rather explore " +
           "on your own. Pick either — the answer is saved to your account, so it follows you to every device instead of " +
           "being asked again on each new browser.",
       },
@@ -618,14 +618,14 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
         title: "Install icon, fixed",
         body:
           "The home-screen icon and splash screen were pointing at a path that didn't exist in " +
-          "production. Installing Sched Ledger now shows the right icon immediately.",
+          "production. Installing Custos now shows the right icon immediately.",
       },
     ],
   },
   {
     version: "1.0.0",
     date: "August 2026",
-    lead: "Sched Ledger reaches 1.0. Here is what your ledger can do now.",
+    lead: "Custos reaches 1.0. Here is what your ledger can do now.",
     highlights: [
       {
         icon: "calendar",
@@ -674,7 +674,7 @@ export const RELEASE_NOTES: ReleaseNotes[] = [
         title: "Yours to take with you",
         body:
           "Export and re-import transactions, schedule and to-do lists as CSV, or take an encrypted " +
-          "backup. Install Sched Ledger to your home screen and it keeps working offline for reads.",
+          "backup. Install Custos to your home screen and it keeps working offline for reads.",
       },
     ],
   },

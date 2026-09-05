@@ -62,7 +62,7 @@ export function TourWelcomeModal({ onGuided, onExplore, onClosed }: TourWelcomeM
         aria-labelledby="tour-welcome-title"
       >
         <div className="modal-head">
-          <h3 id="tour-welcome-title">Welcome to Sched Ledger</h3>
+          <h3 id="tour-welcome-title">Welcome to Custos</h3>
         </div>
 
         <div className="modal-body">

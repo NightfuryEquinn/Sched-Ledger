@@ -1,4 +1,4 @@
-export const LOGO_CONTENT_ID = "sched-ledger-logo";
+export const LOGO_CONTENT_ID = "custos-logo";
 
 type DetailRow = {
   label: string;
@@ -17,7 +17,7 @@ export function escapeHtml(s: string): string {
 
 /** Brand mark markup shared by all transactional email templates. */
 export function emailLogoHtml(): string {
-  return `<img src="cid:${LOGO_CONTENT_ID}" alt="Sched Ledger" width="96" height="96" style="display:block;width:96px;height:96px;margin:0 0 28px;border:0" />`;
+  return `<img src="cid:${LOGO_CONTENT_ID}" alt="Custos" width="96" height="96" style="display:block;width:96px;height:96px;margin:0 0 28px;border:0" />`;
 }
 
 /** Render label/value rows inside a card-style table block. */
@@ -76,7 +76,7 @@ export function wrapEmailBody(opts: {
   footer?: string;
 }): string {
   const commentsHtml = opts.comments?.length ? emailCommentsBlock(opts.comments) : "";
-  const footer = opts.footer ?? "— Sched Ledger";
+  const footer = opts.footer ?? "— Custos";
 
   return `<!DOCTYPE html>
 <html>

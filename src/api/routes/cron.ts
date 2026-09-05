@@ -55,7 +55,7 @@ cronRoutes.post("/notify-release", async (c) => {
 
   const { version } = notifyReleaseSchema.parse(await c.req.json());
   const result = await broadcastPush({
-    title: "Sched Ledger updated",
+    title: "Custos updated",
     body: `Version ${version} is live. Tap to see what's new.`,
     tag: "release-notify",
     url: "/",

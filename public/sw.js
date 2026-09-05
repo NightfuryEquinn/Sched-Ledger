@@ -1,5 +1,5 @@
-/* Sched Ledger service worker — app shell cache only (read path). */
-const SHELL_CACHE = "sched-ledger-shell-v3";
+/* Custos service worker — app shell cache only (read path). */
+const SHELL_CACHE = "custos-shell-v1";
 const SHELL_URLS = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -61,7 +61,7 @@ self.addEventListener("fetch", (event) => {
 
 /* ── Web Push ─────────────────────────────────────────────────────── */
 
-const PUSH_FALLBACK = { title: "Sched Ledger", body: "You have an upcoming event.", url: "/" };
+const PUSH_FALLBACK = { title: "Custos", body: "You have an upcoming event.", url: "/" };
 
 self.addEventListener("push", (event) => {
   let data = PUSH_FALLBACK;

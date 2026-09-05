@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 /*
  * Transparency — read-only data map
  * ─────────────────────────────────
- * Shows how Sched Ledger persists data: collection relationships,
+ * Shows how Custos persists data: collection relationships,
  * E2EE write path, and each document's keys (with example values).
  */
 
@@ -522,7 +522,7 @@ export function Transparency() {
           <div>
             <h2>How the Whole System Works</h2>
             <p className="panel-sub">
-              Sched Ledger is private by design: your browser derives a ledger key from your wallet
+              Custos is private by design: your browser derives a ledger key from your wallet
               signature, encrypts secrets with AES-256-GCM, and syncs ciphertext to MongoDB Atlas.
               Vercel hosts the app and API (plus Analytics / Speed Insights) but does not run cron.
               cron-job.org is the only scheduler — it polls

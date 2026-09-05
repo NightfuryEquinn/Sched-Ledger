@@ -502,8 +502,7 @@ const VIEW_STEPS: Record<ViewId, TourStep[]> = {
     step(
       "transparency-nav",
       "Transparency",
-      "A read-only map of how Sched Ledger stores your data in MongoDB." +
-        moreNavHint("transparency"),
+      "A read-only map of how Custos stores your data in MongoDB." + moreNavHint("transparency"),
       navTarget("transparency"),
       "right",
     ),

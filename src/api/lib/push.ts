@@ -33,7 +33,7 @@ function ensureVapid(): boolean {
   if (!pushConfigured()) return false;
 
   /* Push services require a contact URL; mailto is the conventional form. */
-  const subject = process.env.VAPID_SUBJECT?.trim() || "mailto:noreply@sched-ledger.app";
+  const subject = process.env.VAPID_SUBJECT?.trim() || "mailto:noreply@custos.app";
   webpush.setVapidDetails(
     subject,
     process.env.VAPID_PUBLIC_KEY!.trim(),

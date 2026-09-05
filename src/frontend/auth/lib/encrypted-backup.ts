@@ -15,11 +15,15 @@ import type {
   Vehicle,
 } from "@/frontend/lib/types";
 
-export const BACKUP_FORMAT = "sched-ledger-backup" as const;
+export const BACKUP_FORMAT = "custos-backup" as const;
+/** Pre-rename backup format — accepted on import only. */
+export const LEGACY_BACKUP_FORMAT = "sched-ledger-backup" as const;
 export const BACKUP_VERSION = 1 as const;
 
+type BackupFormat = typeof BACKUP_FORMAT | typeof LEGACY_BACKUP_FORMAT;
+
 export type LedgerBackupPlain = {
-  format: typeof BACKUP_FORMAT;
+  format: BackupFormat;
   version: typeof BACKUP_VERSION;
   exportedAt: string;
   address: string;
@@ -35,13 +39,18 @@ export type LedgerBackupPlain = {
 };
 
 type EncryptedBackupFile = {
-  format: typeof BACKUP_FORMAT;
+  format: BackupFormat;
   version: typeof BACKUP_VERSION;
   address: string;
   exportedAt: string;
   /** AES-GCM ciphertext of LedgerBackupPlain, keyed by the ledger E2EE key. */
   payload: string;
 };
+
+/** Whether a format string is a known encrypted backup identifier. */
+function isKnownBackupFormat(format: unknown): format is BackupFormat {
+  return format === BACKUP_FORMAT || format === LEGACY_BACKUP_FORMAT;
+}
 
 /** Build a plaintext backup snapshot from in-memory ledger data. */
 export function buildBackupPlain(input: {
@@ -76,12 +85,14 @@ export async function encryptBackup(
   key: CryptoKey,
   plain: LedgerBackupPlain,
 ): Promise<EncryptedBackupFile> {
+  const normalized: LedgerBackupPlain = { ...plain, format: BACKUP_FORMAT };
+
   return {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
-    address: plain.address,
-    exportedAt: plain.exportedAt,
-    payload: await encryptJson(key, plain),
+    address: normalized.address,
+    exportedAt: normalized.exportedAt,
+    payload: await encryptJson(key, normalized),
   };
 }
 
@@ -90,13 +101,13 @@ export async function decryptBackup(
   key: CryptoKey,
   file: EncryptedBackupFile,
 ): Promise<LedgerBackupPlain> {
-  if (file.format !== BACKUP_FORMAT || file.version !== BACKUP_VERSION) {
+  if (!isKnownBackupFormat(file.format) || file.version !== BACKUP_VERSION) {
     throw new Error("Unsupported backup format.");
   }
 
   const plain = await decryptJson<LedgerBackupPlain>(key, file.payload);
 
-  if (plain.format !== BACKUP_FORMAT || plain.version !== BACKUP_VERSION) {
+  if (!isKnownBackupFormat(plain.format) || plain.version !== BACKUP_VERSION) {
     throw new Error("Backup contents are invalid.");
   }
 
@@ -117,12 +128,12 @@ export function parseBackupFile(raw: string): EncryptedBackupFile {
 
   if (
     !file ||
-    file.format !== BACKUP_FORMAT ||
+    !isKnownBackupFormat(file.format) ||
     file.version !== BACKUP_VERSION ||
     typeof file.payload !== "string" ||
     typeof file.address !== "string"
   ) {
-    throw new Error("Not a Sched Ledger encrypted backup.");
+    throw new Error("Not a Custos encrypted backup.");
   }
 
   return file;
@@ -135,7 +146,7 @@ export function downloadEncryptedBackup(file: EncryptedBackupFile, filename?: st
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename ?? `sched-ledger-backup-${stamp}.json`;
+  a.download = filename ?? `custos-backup-${stamp}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

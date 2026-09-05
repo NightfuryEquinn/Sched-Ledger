@@ -1,5 +1,6 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { ledgerKeyStore } from "@/frontend/lib/crypto/key-store";
+import { setKeyGeneration } from "@/frontend/lib/crypto/key-generation";
 import { unlockLedgerKey } from "@/frontend/lib/crypto/unlock";
 import { buildDerivationMessage, decryptJson, encryptJson } from "@/frontend/lib/crypto/e2ee";
 import type { IdentityRecord } from "@/frontend/lib/types";
@@ -65,6 +66,8 @@ describe("unlockLedgerKey", () => {
       injected: false,
       codename: "tester",
     };
+    /* Skip the API probe path used for legacy→Custos migration. */
+    setKeyGeneration(idn.address, "custos");
     await unlockLedgerKey(idn);
     expect(ledgerKeyStore.isUnlocked(idn.address)).toBe(true);
 

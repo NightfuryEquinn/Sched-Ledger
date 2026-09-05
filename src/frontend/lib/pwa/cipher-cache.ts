@@ -4,7 +4,7 @@
  * Read-only offline fallback — no offline write queue.
  */
 
-const DB_NAME = "sched-ledger-cache";
+const DB_NAME = "custos-cache";
 const DB_VERSION = 1;
 const STORE = "api-gets";
 

@@ -83,16 +83,25 @@ describe("encrypted backup", () => {
       todoLists: [],
     });
     const file = await encryptBackup(key, plain);
-    expect(file.format).toBe("sched-ledger-backup");
+    expect(file.format).toBe("custos-backup");
     const restored = await decryptBackup(key, file);
     expect(restored.expenses).toEqual(plain.expenses);
     expect(restored.address).toBe(address);
   });
 
+  test("parseBackupFile accepts legacy format id", () => {
+    const raw = JSON.stringify({
+      format: "sched-ledger-backup",
+      version: 1,
+      address: "0xabc",
+      exportedAt: "2026-01-01T00:00:00.000Z",
+      payload: "x",
+    });
+    expect(parseBackupFile(raw).format).toBe("sched-ledger-backup");
+  });
+
   test("parseBackupFile rejects garbage", () => {
     expect(() => parseBackupFile("{not json")).toThrow();
-    expect(() => parseBackupFile(JSON.stringify({ format: "other" }))).toThrow(
-      /Not a Sched Ledger/,
-    );
+    expect(() => parseBackupFile(JSON.stringify({ format: "other" }))).toThrow(/Not a Custos/);
   });
 });
