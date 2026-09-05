@@ -286,6 +286,14 @@ describe("computeHabitMetrics", () => {
   });
 });
 
+describe("habit chart tags", () => {
+  test("every style has a four-letter chart tag", () => {
+    for (const style of Object.values(HABIT_STYLES)) {
+      expect(style.tag).toMatch(/^[A-Z]{4}$/);
+    }
+  });
+});
+
 describe("scoreHabitStyles backward compatibility", () => {
   for (const [id, fixture] of Object.entries(ARCHETYPE_FIXTURES) as [HabitStyleId, Expense[]][]) {
     test(`${id} fixture: scoreHabitStyles matches computeHabitMetrics().scores`, () => {
@@ -465,8 +473,10 @@ describe("habitTrajectory", () => {
     expect(trail[2]!.styleId).toBeNull();
     expect(trail[0]!.status).toBe("ready");
     expect(trail[0]!.styleId).toBe("clockwork");
+    expect(trail[0]!.tag).toBe("CLCK");
     expect(trail[5]!.status).toBe("ready");
     expect(trail[5]!.styleId).toBe("dripper");
+    expect(trail[5]!.tag).toBe("DRIP");
   });
 
   test("describeHabitShift names both styles across a transition", () => {
@@ -484,6 +494,7 @@ describe("habitTrajectory", () => {
         status: "ready",
         styleId: "clockwork",
         trait: "Clockwork",
+        tag: "CLCK",
         topScore: 0.5,
         activeDays: 5,
         txCount: 5,
@@ -495,6 +506,7 @@ describe("habitTrajectory", () => {
         status: "insufficient",
         styleId: null,
         trait: "",
+        tag: "",
         topScore: 0,
         activeDays: 2,
         txCount: 2,
