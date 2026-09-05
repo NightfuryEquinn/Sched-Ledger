@@ -1638,7 +1638,7 @@ export function Insights({
                         }}
                       />
                       <p className="ptrl-label">{monthLabel(pt.monthKey, false).split(" ")[0]}</p>
-                      <p className="ptrl-style">{isReady ? pt.trait : "—"}</p>
+                      <p className="ptrl-style">{isReady ? pt.tag : "—"}</p>
                     </button>
                   );
                 })}

@@ -35,6 +35,8 @@ type HabitStyleMeta = {
   title: string;
   /** Short trait label used in the blend line ("with a Burst streak"). */
   trait: string;
+  /** Four-letter tag under each habit-trail bar (e.g. DRIP, PEAK). */
+  tag: string;
   temperament: string;
   pattern: string;
   behavior: string;
@@ -45,6 +47,7 @@ export const HABIT_STYLES: Record<HabitStyleId, HabitStyleMeta> = {
     id: "clockwork",
     title: "The Clockwork Spender",
     trait: "Clockwork",
+    tag: "CLCK",
     temperament: "Reserved / Predictable",
     pattern:
       "Fixed amounts occurring at identical intervals — the same charge on the same cadence.",
@@ -55,6 +58,7 @@ export const HABIT_STYLES: Record<HabitStyleId, HabitStyleMeta> = {
     id: "burst",
     title: "The Burst Spender",
     trait: "Burst",
+    tag: "BRST",
     temperament: "Impulsive / Reactive",
     pattern:
       "Long quiet stretches interrupted by a cluster of high-frequency, varying-amount transactions over 24–48 hours.",
@@ -65,6 +69,7 @@ export const HABIT_STYLES: Record<HabitStyleId, HabitStyleMeta> = {
     id: "dripper",
     title: "The Steady Dripper",
     trait: "Drip",
+    tag: "DRIP",
     temperament: "Habitual / Mindless",
     pattern:
       "Low amounts at high frequency — small charges appearing almost daily throughout the period.",
@@ -75,6 +80,7 @@ export const HABIT_STYLES: Record<HabitStyleId, HabitStyleMeta> = {
     id: "peakValley",
     title: "The Peak-and-Valley Spender",
     trait: "Peak-and-Valley",
+    tag: "PEAK",
     temperament: "Cyclical / Thoughtful",
     pattern:
       "Large spikes right after a recurring calendar day (payday), then a steady taper toward the next cycle.",
@@ -85,6 +91,7 @@ export const HABIT_STYLES: Record<HabitStyleId, HabitStyleMeta> = {
     id: "accumulator",
     title: "The Calculated Accumulator",
     trait: "Batch",
+    tag: "BTCH",
     temperament: "Strategic / Deliberate",
     pattern:
       "Transactions pile onto a single day of the week or month, in large consolidated amounts rather than many small ones.",
@@ -95,6 +102,7 @@ export const HABIT_STYLES: Record<HabitStyleId, HabitStyleMeta> = {
     id: "nomad",
     title: "The Erratic Nomad",
     trait: "Erratic",
+    tag: "ERRA",
     temperament: "Chaotic / Unstructured",
     pattern: "Irregular intervals and unpredictable amounts with no clear link to calendar cycles.",
     behavior:
@@ -1029,6 +1037,7 @@ type HabitTrajectoryPoint = {
   status: "insufficient" | "ready";
   styleId: HabitStyleId | null;
   trait: string;
+  tag: string;
   topScore: number;
   activeDays: number;
   txCount: number;
@@ -1070,6 +1079,7 @@ export function habitTrajectory(
         status: "insufficient",
         styleId: null,
         trait: "",
+        tag: "",
         topScore: 0,
         activeDays,
         txCount: list.length,
@@ -1087,6 +1097,7 @@ export function habitTrajectory(
       status: "ready",
       styleId,
       trait: HABIT_STYLES[styleId].trait,
+      tag: HABIT_STYLES[styleId].tag,
       topScore: ranked[0]![1],
       activeDays,
       txCount: list.length,

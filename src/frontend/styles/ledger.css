@@ -2648,9 +2648,9 @@ textarea::placeholder {
    * Columns size themselves (6 for the habit trail, 6 or 12 for income) rather
    * than dividing a fixed track count — a fixed `repeat(N, minmax(0,1fr))`
    * still lets each column shrink below its label, which both ellipsizes
-   * traits/amounts and, without an inner scroller, can blow out the panel.
-   * max-content as the floor keeps DRIP / CLOCKWORK / Peak-and-Valley and
-   * full money strings visible; 1fr still shares leftover space evenly.
+   * tags/amounts and, without an inner scroller, can blow out the panel.
+   * max-content as the floor keeps four-letter tags (DRIP, PEAK) and full
+   * money strings visible; 1fr still shares leftover space evenly.
    * Overflow scrolls in place — inside the panel, not past it — when the
    * months cannot fit.
    */
@@ -2659,7 +2659,7 @@ textarea::placeholder {
   overflow-x: auto;
   align-items: end;
   gap: 8px;
-  min-height: 150px;
+  min-height: 200px;
   padding-bottom: 2px;
 }
 
@@ -2667,6 +2667,7 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   height: 100%;
   min-width: min-content;
@@ -2702,11 +2703,9 @@ textarea::placeholder {
 
 .ptrl-label {
   margin: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11.5px;
+  font-size: 12.5px;
+  line-height: 1.3;
   color: var(--ink-faint);
 }
 
@@ -2715,7 +2714,7 @@ textarea::placeholder {
   white-space: nowrap;
   font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--profile-accent, var(--ink-faint));
 }
