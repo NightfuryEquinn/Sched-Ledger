@@ -15,9 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "bun run lint && bun run format:check && bun test tests && bun run typecheck && bun run knip",
-    "db:list": "bun scripts/drop-collections.ts --list",
-    "db:drop": "bun scripts/drop-collections.ts",
-    "db:drop:all": "bun scripts/drop-collections.ts --all",
+    "db:wipe-account": "bun scripts/wipe-account.ts",
     "db:prune-stale": "bun scripts/prune-stale-users.ts"
   },
   "dependencies": {

@@ -36,8 +36,6 @@ export type RateLimitDocument = {
   resetAt: Date;
 };
 
-export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
-
 type UserDocument = Omit<User, "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   createdAt: Date;
