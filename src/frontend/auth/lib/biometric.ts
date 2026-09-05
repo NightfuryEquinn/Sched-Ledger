@@ -11,8 +11,10 @@ import { base64ToBytes, bytesToBase64 } from "./device-vault";
 
 const RECORDS_KEY = "ledger:biometric:v1";
 const ASKED_KEY = "ledger:biometric:asked:v1";
-const PRF_INFO = new TextEncoder().encode("custos-biometric-v1");
-const LEGACY_PRF_INFO = new TextEncoder().encode("sched-ledger-biometric-v1");
+const PRF_INFO: Uint8Array<ArrayBuffer> = new TextEncoder().encode("custos-biometric-v1");
+const LEGACY_PRF_INFO: Uint8Array<ArrayBuffer> = new TextEncoder().encode(
+  "sched-ledger-biometric-v1",
+);
 
 type BiometricRecord = {
   credentialId: string; // base64
@@ -76,9 +78,10 @@ export function markAskedToEnrollBiometric(address: string) {
   }
 }
 
+/** HKDF-derive an AES-GCM wrapping key from a WebAuthn PRF output. */
 async function deriveWrapKey(
   prfOutput: ArrayBuffer,
-  info: Uint8Array = PRF_INFO,
+  info: Uint8Array<ArrayBuffer> = PRF_INFO,
 ): Promise<CryptoKey> {
   const material = await crypto.subtle.importKey("raw", prfOutput, "HKDF", false, ["deriveKey"]);
 
